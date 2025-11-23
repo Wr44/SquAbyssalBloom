@@ -1,13 +1,19 @@
 package fr.heta__h.squ_abyssal_bloom
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import net.minecraft.client.Minecraft
+import net.minecraft.world.entity.EntityType
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
+import net.neoforged.neoforge.client.event.EntityRenderersEvent
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -16,7 +22,7 @@ import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
 
 
 @Mod(Squ_abyssal_bloom.ID)
-@EventBusSubscriber(bus = EventBusSubscriber.Bus.MOD)
+@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
 object Squ_abyssal_bloom {
     const val ID = "squ_abyssal_bloom"
 
@@ -28,6 +34,7 @@ object Squ_abyssal_bloom {
 
         
         ModBlocks.REGISTRY.register(MOD_BUS)
+        ModEntities.register(MOD_BUS)
 
         val obj = runForDist(clientTarget = {
             MOD_BUS.addListener(::onClientSetup)
@@ -53,5 +60,20 @@ object Squ_abyssal_bloom {
     @SubscribeEvent
     fun onCommonSetup(event: FMLCommonSetupEvent) {
         LOGGER.log(Level.INFO, "Hello! This is working!")
+    }
+
+    @SubscribeEvent
+    fun registerEntityRenderers(event: EntityRenderersEvent.RegisterRenderers) {
+        ModEntities.registerEntityRenderers(event)
+    }
+
+    @SubscribeEvent
+    fun registerLayerDefinitions(event: EntityRenderersEvent.RegisterLayerDefinitions) {
+        ModEntities.registerLayerDefinitions(event)
+    }
+
+    @SubscribeEvent
+    fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
+        ModEntities.onRegisterAttributes(event)
     }
 }
