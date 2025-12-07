@@ -24,7 +24,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     override fun tick() {
         super.tick()
 
-        if (level.isClientSide) {
+        if (this.level().isClientSide) {
             
             val targetAnim = if (this.isUnderWater) {
                 BarnacleAnimationState.STILL_MOUTH_CLOSE
@@ -36,7 +36,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             playAnimation(targetAnim)
 
             
-            animationUsage.
+
         }
     }
 
@@ -46,7 +46,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             anim.anim?.let { animDef ->
                 animationUsage.stop()
                 animationUsage.start(this.tickCount)
-                animationUsage.setAnimation(animDef) 
+                
             }
         }
     }

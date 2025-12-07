@@ -23,7 +23,7 @@ import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
 
 @Mod(Squ_abyssal_bloom.ID)
 @EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
-object Squ_abyssal_bloom {
+object  Squ_abyssal_bloom {
     const val ID = "squ_abyssal_bloom"
 
     
@@ -34,7 +34,7 @@ object Squ_abyssal_bloom {
 
         
         ModBlocks.REGISTRY.register(MOD_BUS)
-        ModEntities.register(MOD_BUS)
+        ModEntities.ENTITY_TYPES.register(MOD_BUS)
 
         val obj = runForDist(clientTarget = {
             MOD_BUS.addListener(::onClientSetup)
