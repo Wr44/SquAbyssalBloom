@@ -30,12 +30,12 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
     override fun submit(
         renderState: BarnacleRenderState,
         poseStack: PoseStack,
-        collector: SubmitNodeCollector,
-        camera: CameraRenderState
+        nodeCollector: SubmitNodeCollector,
+        cameraRenderState: CameraRenderState
     ) {
         poseStack.pushPose()
         poseStack.scale(2f, 2f, 2f) 
-        super.submit(renderState, poseStack, collector, camera)
+        super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
         poseStack.popPose()
     }
 
