@@ -27,17 +27,17 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
     private val bd: ModelPart = bouche.getChild("bd")
     private val hd: ModelPart = bouche.getChild("hd")
 
-    private val stillMouthCloseAnimation = BarnacleAnimation.still_mouth_close?.bake(modelPart)
-    private val stillMouthOpenAnimation = BarnacleAnimation.still_mouth_open?.bake(modelPart)
-    private val mouthOpenAnimation = BarnacleAnimation.mouth_open?.bake(modelPart)
-    private val mouthCloseAnimation = BarnacleAnimation.mouth_close?.bake(modelPart)
-    private val moveStillAnimation = BarnacleAnimation.move_still?.bake(modelPart)
-    private val moveRushAnimation = BarnacleAnimation.move_rush?.bake(modelPart)
-    private val fleeStillAnimation = BarnacleAnimation.flee_still?.bake(modelPart)
-    private val fleeRushAnimation = BarnacleAnimation.flee_rush?.bake(modelPart)
-    private val swallowAnimation = BarnacleAnimation.swallow?.bake(modelPart)
-    private val swallowStartAnimation = BarnacleAnimation.swallow_start?.bake(modelPart)
-    private val swallowStopAnimation = BarnacleAnimation.swallow_stop?.bake(modelPart)
+    private val stillMouthCloseAnimation : KeyframeAnimation = BarnacleAnimation.still_mouth_close.get().bake(modelPart)
+    private val stillMouthOpenAnimation : KeyframeAnimation = BarnacleAnimation.still_mouth_open.get().bake(modelPart)
+    private val mouthOpenAnimation : KeyframeAnimation = BarnacleAnimation.mouth_open.get().bake(modelPart)
+    private val mouthCloseAnimation : KeyframeAnimation = BarnacleAnimation.mouth_close.get().bake(modelPart)
+    private val moveStillAnimation : KeyframeAnimation = BarnacleAnimation.move_still.get().bake(modelPart)
+    private val moveRushAnimation : KeyframeAnimation = BarnacleAnimation.move_rush.get().bake(modelPart)
+    private val fleeStillAnimation : KeyframeAnimation = BarnacleAnimation.flee_still.get().bake(modelPart)
+    private val fleeRushAnimation : KeyframeAnimation = BarnacleAnimation.flee_rush.get().bake(modelPart)
+    private val swallowAnimation : KeyframeAnimation = BarnacleAnimation.swallow.get().bake(modelPart)
+    private val swallowStartAnimation : KeyframeAnimation = BarnacleAnimation.swallow_start.get().bake(modelPart)
+    private val swallowStopAnimation : KeyframeAnimation = BarnacleAnimation.swallow_stop.get().bake(modelPart)
 
     companion object {
         
@@ -143,23 +143,8 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
     override fun setupAnim(renderState: BarnacleRenderState) {
         super.setupAnim(renderState)
 
-        when (renderState.animationState) {
-            BarnacleAnimationState.STILL_MOUTH_CLOSE -> {
-                (stillMouthCloseAnimation)?.apply(renderState.animationUsage, renderState.animationTime)
-                println("Applying STILL_MOUTH_CLOSE animation" )
-                println("Animation Time: ${renderState.animationTime}" )
-            }
-            BarnacleAnimationState.STILL_MOUTH_OPEN -> stillMouthOpenAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.MOUTH_OPEN -> mouthOpenAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.MOUTH_CLOSE -> mouthCloseAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.MOVE_STILL -> moveStillAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.MOVE_RUSH -> moveRushAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.FLEE_STILL -> fleeStillAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.FLEE_RUSH -> fleeRushAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.SWALLOW -> swallowAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.SWALLOW_START -> swallowStartAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-            BarnacleAnimationState.SWALLOW_STOP -> swallowStopAnimation?.apply(renderState.animationUsage, renderState.animationTime)
-        }
-    }
+        stillMouthCloseAnimation.apply(renderState.stillMouthCloseAnimationState, renderState.ageInTicks)
 
+        
+    }
 }

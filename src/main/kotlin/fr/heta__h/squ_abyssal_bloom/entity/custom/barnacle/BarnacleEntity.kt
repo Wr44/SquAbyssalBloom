@@ -43,7 +43,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     fun playAnimation(anim: BarnacleAnimationState) {
         if (animationState != anim) {
             animationState = anim
-            anim.anim?.let { animDef ->
+            anim.anim.let { animDef ->
                 animationUsage.stop()
                 animationUsage.start(this.tickCount)
                 
