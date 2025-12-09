@@ -11,74 +11,74 @@ object BarnacleAnimation {
     val mouth_open: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/mouth_open.json"
+            "barnacle/mouth_open"
         )
     )
 
     val mouth_close: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/mouth_close.json"
+            "barnacle/mouth_close"
         )
     )
     val move_still: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/move_still.json"
+            "barnacle/move_still"
         )
     )
 
     val move_rush: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/move_rush.json"
+            "barnacle/move_rush"
         )
     )
     val flee_still: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/flee_still.json"
+            "barnacle/flee_still"
         )
     )
 
     val flee_rush: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/flee_rush.json"
+            "barnacle/flee_rush"
         )
     )
     val still_mouth_close: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "barnacle/still_mouth_close.json"
+            "barnacle/still_mouth_close"
         )
     )
 
     val still_mouth_open: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/still_mouth_open.json"
+            "barnacle/still_mouth_open"
         )
     )
 
     val swallow: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/swallow.json"
+            "barnacle/swallow"
         )
     )
 
     val swallow_stop: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/swallow_stop.json"
+            "barnacle/swallow_stop"
         )
     )
 
     val swallow_start: AnimationHolder = AnimationLoader.INSTANCE.getAnimationHolder(
         ResourceLocation.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
-            "animations/entity/barnacle/swallow_start.json"
+            "barnacle/swallow_start"
         )
     )
 }
