@@ -13,6 +13,7 @@ import net.minecraft.world.entity.MobCategory
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.client.event.EntityRenderersEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
+import net.neoforged.neoforge.registries.DeferredHolder
 import net.neoforged.neoforge.registries.DeferredRegister
 
 object ModEntities {
@@ -24,13 +25,14 @@ object ModEntities {
         ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.withDefaultNamespace("barnacle"))
 
 
-    val BARNACLE = ENTITY_TYPES.register("barnacle") { _: ResourceLocation ->
+    val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity?>> = ENTITY_TYPES.register("barnacle", { _: ResourceLocation ->
         EntityType.Builder.of({ type, level -> BarnacleEntity(type, level) }, MobCategory.MONSTER)
             .sized(2f, 1.25f)
             .clientTrackingRange(8)
             .updateInterval(3)
             .build(BARNACLE_KEY)
-    }
+        }
+    )
 
     fun registerEntityRenderers(event: EntityRenderersEvent.RegisterRenderers) {
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
