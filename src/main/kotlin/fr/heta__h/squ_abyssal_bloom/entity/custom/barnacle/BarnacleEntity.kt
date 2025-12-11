@@ -33,23 +33,33 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         if (this.level().isClientSide) {
             this.setupAnimationStates()
-            
+
         }
     }
 
     private fun setupAnimationStates() {
         if (!this.stillMouthCloseAnimationState.isStarted) {
-        this.stillMouthCloseAnimationState.start(this.tickCount)
+            this.stillMouthCloseAnimationState.start(this.tickCount)
         }
     }
 
-    
+    private fun resetAnimationStates() {
+        this.stillMouthCloseAnimationState.stop()
+        this.stillMouthOpenAnimationState.stop()
+        this.openMouthAnimationState.stop()
+        this.closeMouthAnimationState.stop()
+        this.moveStillAnimationState.stop()
+        this.moveRushAnimationState.stop()
+        this.fleeStillAnimationState.stop()
+        this.fleeRushAnimationState.stop()
+        this.swallowAnimationState.stop()
+        this.swallowStartAnimationState.stop()
+        this.swallowStopAnimationState.stop()
+    }
 
-    
+
     override fun aiStep() {
         super.aiStep()
-
-        
 
         if (this.isUnderWater) {
             this.timeExposedInAir = 0
