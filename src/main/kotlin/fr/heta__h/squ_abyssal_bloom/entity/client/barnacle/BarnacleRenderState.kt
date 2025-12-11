@@ -4,8 +4,8 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.world.entity.AnimationState
 
 class BarnacleRenderState : LivingEntityRenderState() {
-    var stillMouseCloseAnimationState = AnimationState()
-    var stillMouseOpenAnimationState = AnimationState()
+    var stillMouthCloseAnimationState = AnimationState()
+    var stillMouthOpenAnimationState = AnimationState()
     var moveStillAnimationState = AnimationState()
     var moveRushAnimationState = AnimationState()
     var openMouthAnimationState = AnimationState()

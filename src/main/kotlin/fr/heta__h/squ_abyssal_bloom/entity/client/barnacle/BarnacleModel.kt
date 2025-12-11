@@ -130,8 +130,8 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
     override fun setupAnim(renderState: BarnacleRenderState) {
         super.setupAnim(renderState)
 
-        this.stillMouthOpenAnimation.apply(renderState.stillMouseOpenAnimationState, renderState.ageInTicks)
-        this.stillMouthCloseAnimation.apply(renderState.stillMouseCloseAnimationState, renderState.ageInTicks)
+        this.stillMouthOpenAnimation.apply(renderState.stillMouthOpenAnimationState, renderState.ageInTicks)
+        this.stillMouthCloseAnimation.apply(renderState.stillMouthCloseAnimationState, renderState.ageInTicks)
         this.mouthOpenAnimation.apply(renderState.openMouthAnimationState, renderState.ageInTicks)
         this.mouthCloseAnimation.apply(renderState.closeMouthAnimationState, renderState.ageInTicks)
         this.moveStillAnimation.apply(renderState.moveStillAnimationState, renderState.ageInTicks)

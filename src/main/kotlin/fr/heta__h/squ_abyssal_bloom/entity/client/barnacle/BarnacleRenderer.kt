@@ -49,8 +49,8 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.extractRenderState(entity, state, partialTicks)
-        state.stillMouseCloseAnimationState.copyFrom(entity.stillMouthCloseAnimationState)
-        state.stillMouseOpenAnimationState.copyFrom(entity.stillMouthOpenAnimationState)
+        state.stillMouthCloseAnimationState.copyFrom(entity.stillMouthCloseAnimationState)
+        state.stillMouthOpenAnimationState.copyFrom(entity.stillMouthOpenAnimationState)
         state.moveStillAnimationState.copyFrom(entity.moveStillAnimationState)
         state.moveRushAnimationState.copyFrom(entity.moveRushAnimationState)
         state.openMouthAnimationState.copyFrom(entity.openMouthAnimationState)
