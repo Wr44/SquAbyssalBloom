@@ -40,7 +40,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
-    fun playAnimation(anim: BarnacleAnimationState) {
+    private fun setupAnimationStates() {
+        if (!this.animationUsage.isStarted) {
+            this.animationUsage.start(this.tickCount)
+        }
+    }
+
+    /*fun playAnimation(anim: BarnacleAnimationState) {
         if (animationState != anim) {
             animationState = anim
             anim.anim.let { animDef ->

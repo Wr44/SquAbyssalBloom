@@ -1,8 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.entity.client.barnacle
 
-import net.neoforged.neoforge.client.entity.animation.json.AnimationHolder
+import net.minecraft.client.animation.AnimationDefinition
 
-enum class BarnacleAnimationState(val anim: AnimationHolder) {
+enum class BarnacleAnimationState(val anim: AnimationDefinition) {
     STILL_MOUTH_CLOSE(BarnacleAnimation.mouth_close),
     STILL_MOUTH_OPEN(BarnacleAnimation.mouth_open),
     MOUTH_OPEN(BarnacleAnimation.mouth_open),

@@ -6,11 +6,7 @@ import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.client.model.geom.PartPose
-import net.minecraft.client.model.geom.builders.CubeDeformation
-import net.minecraft.client.model.geom.builders.CubeListBuilder
-import net.minecraft.client.model.geom.builders.LayerDefinition
-import net.minecraft.client.model.geom.builders.MeshDefinition
-import net.minecraft.client.model.geom.builders.PartDefinition
+import net.minecraft.client.model.geom.builders.*
 import net.minecraft.resources.ResourceLocation
 
 class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(modelPart) {
@@ -27,17 +23,17 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
     private val bd: ModelPart = bouche.getChild("bd")
     private val hd: ModelPart = bouche.getChild("hd")
 
-    private val stillMouthCloseAnimation : KeyframeAnimation = BarnacleAnimation.still_mouth_close.get().bake(modelPart)
-    private val stillMouthOpenAnimation : KeyframeAnimation = BarnacleAnimation.still_mouth_open.get().bake(modelPart)
-    private val mouthOpenAnimation : KeyframeAnimation = BarnacleAnimation.mouth_open.get().bake(modelPart)
-    private val mouthCloseAnimation : KeyframeAnimation = BarnacleAnimation.mouth_close.get().bake(modelPart)
-    private val moveStillAnimation : KeyframeAnimation = BarnacleAnimation.move_still.get().bake(modelPart)
-    private val moveRushAnimation : KeyframeAnimation = BarnacleAnimation.move_rush.get().bake(modelPart)
-    private val fleeStillAnimation : KeyframeAnimation = BarnacleAnimation.flee_still.get().bake(modelPart)
-    private val fleeRushAnimation : KeyframeAnimation = BarnacleAnimation.flee_rush.get().bake(modelPart)
-    private val swallowAnimation : KeyframeAnimation = BarnacleAnimation.swallow.get().bake(modelPart)
-    private val swallowStartAnimation : KeyframeAnimation = BarnacleAnimation.swallow_start.get().bake(modelPart)
-    private val swallowStopAnimation : KeyframeAnimation = BarnacleAnimation.swallow_stop.get().bake(modelPart)
+    private val stillMouthCloseAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_close.bake(modelPart)
+    private val stillMouthOpenAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_open.bake(modelPart)
+    private val mouthOpenAnimation: KeyframeAnimation = BarnacleAnimation.mouth_open.bake(modelPart)
+    private val mouthCloseAnimation: KeyframeAnimation = BarnacleAnimation.mouth_close.bake(modelPart)
+    private val moveStillAnimation: KeyframeAnimation = BarnacleAnimation.move_still.bake(modelPart)
+    private val moveRushAnimation: KeyframeAnimation = BarnacleAnimation.move_rush.bake(modelPart)
+    private val fleeStillAnimation: KeyframeAnimation = BarnacleAnimation.flee_still.bake(modelPart)
+    private val fleeRushAnimation: KeyframeAnimation = BarnacleAnimation.flee_rush.bake(modelPart)
+    private val swallowAnimation: KeyframeAnimation = BarnacleAnimation.swallow.bake(modelPart)
+    private val swallowStartAnimation: KeyframeAnimation = BarnacleAnimation.swallow_start.bake(modelPart)
+    private val swallowStopAnimation: KeyframeAnimation = BarnacleAnimation.swallow_stop.bake(modelPart)
 
     companion object {
         
@@ -48,92 +44,92 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
             val meshdefinition: MeshDefinition = MeshDefinition()
             val partdefinition: PartDefinition = meshdefinition.root
 
-            val root: PartDefinition = partdefinition.addOrReplaceChild(
+            val root = partdefinition.addOrReplaceChild(
                 "root",
                 CubeListBuilder.create(),
-                PartPose.offsetAndRotation(1.75f, 21.536f, 5.0715f, 0.0f, 3.1416f, 0.0f)
+                PartPose.offsetAndRotation(0.0f, 18.925f, 2.1f, 0.0f, 3.1416f, 0.0f)
             )
 
-            val langue: PartDefinition = root.addOrReplaceChild(
-                "langue",
+            val tongue = root.addOrReplaceChild(
+                "tongue",
                 CubeListBuilder.create().texOffs(0, 0)
-                    .addBox(-1.0f, -2.0f, -2.0f, 2.0f, 2.0f, 2.0f, CubeDeformation(0.0f)),
-                PartPose.offset(1.75f, -1.536f, 7.2285f)
+                    .addBox(-1.0f, -1.0f, 0.0f, 2.0f, 2.0f, 2.0f, CubeDeformation(0.0f)),
+                PartPose.offset(0.0f, -0.025f, 3.4f)
             )
 
-            val loca: PartDefinition? =
-                langue.addOrReplaceChild("loca", CubeListBuilder.create(), PartPose.offset(0.0f, -1.0f, -0.3f))
+            tongue.addOrReplaceChild("tipOfTongue", CubeListBuilder.create(), PartPose.offset(0.0f, 0.0f, 0.0f))
 
-            val tenatcules: PartDefinition = root.addOrReplaceChild(
-                "tenatcules",
-                CubeListBuilder.create(),
-                PartPose.offsetAndRotation(1.75f, -2.292f, -10.3856f, 0.0f, 0.0f, 3.1416f)
-            )
+            val tentacles =
+                root.addOrReplaceChild("tentacles", CubeListBuilder.create(), PartPose.offset(0.0f, -0.025f, -5.9f))
 
-            val fpos_r1: PartDefinition? = tenatcules.addOrReplaceChild(
+            tentacles.addOrReplaceChild(
                 "fpos_r1",
-                CubeListBuilder.create().texOffs(26, 25)
-                    .addBox(-10.0f, -13.0f, -1.0f, 11.0f, 13.0f, 0.0f, CubeDeformation(0.0f)),
-                PartPose.offsetAndRotation(4.0f, -2.7561f, -6.3859f, -1.6017f, -0.0308f, -0.7849f)
-            )
-
-            val fneg_r1: PartDefinition? = tenatcules.addOrReplaceChild(
-                "fneg_r1",
                 CubeListBuilder.create().texOffs(26, 25).mirror()
-                    .addBox(-1.0f, -13.0f, -1.0f, 11.0f, 13.0f, 0.0f, CubeDeformation(0.0f)).mirror(false),
-                PartPose.offsetAndRotation(-4.0f, -2.7561f, -6.3859f, -1.6017f, 0.0308f, 0.7849f)
+                    .addBox(-5.5f, -0.1f, 0.0f, 11.0f, 13.0f, 0.0f, CubeDeformation(0.0f)).mirror(false),
+                PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, -1.5708f, 0.0f, -0.7854f)
             )
 
-            val tete: PartDefinition? = root.addOrReplaceChild(
-                "tete",
+            tentacles.addOrReplaceChild(
+                "fneg_r1",
+                CubeListBuilder.create().texOffs(26, 25)
+                    .addBox(-5.5f, -0.1f, 0.0f, 11.0f, 13.0f, 0.0f, CubeDeformation(0.0f)),
+                PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, -1.5708f, 0.0f, 0.7854f)
+            )
+
+            root.addOrReplaceChild(
+                "head",
                 CubeListBuilder.create().texOffs(0, 30)
-                    .addBox(-1.0f, -8.0f, -1.0f, 8.0f, 8.0f, 10.0f, CubeDeformation(0.0f)),
-                PartPose.offset(-1.25f, 1.364f, -3.0715f)
+                    .addBox(-4.0f, -4.0f, -5.0f, 8.0f, 8.0f, 10.0f, CubeDeformation(0.0f)),
+                PartPose.offset(0.0f, -0.025f, -0.9f)
             )
 
-            val bouche: PartDefinition =
-                root.addOrReplaceChild("bouche", CubeListBuilder.create(), PartPose.offset(-2.25f, 2.464f, 6.2285f))
+            val mouth = root.addOrReplaceChild("mouth", CubeListBuilder.create(), PartPose.offset(0.0f, 0.075f, 3.4f))
 
-            val arriere: PartDefinition? = bouche.addOrReplaceChild(
-                "arriere",
+            mouth.addOrReplaceChild(
+                "back",
                 CubeListBuilder.create().texOffs(40, 0)
-                    .addBox(-4.6364f, -5.4546f, -0.5f, 10.0f, 10.0f, 1.0f, CubeDeformation(0.0f))
-                    .texOffs(40, 0).addBox(-4.6364f, -5.4546f, -0.5f, 10.0f, 10.0f, 1.0f, CubeDeformation(0.0f)),
-                PartPose.offset(3.6364f, -4.5454f, -0.5f)
+                    .addBox(-5.0f, -5.0f, -0.5f, 10.0f, 10.0f, 1.0f, CubeDeformation(0.025f)),
+                PartPose.offset(0.0f, 0.0f, 0.5f)
             )
 
-            val hg: PartDefinition? = bouche.addOrReplaceChild(
-                "hg",
+            mouth.addOrReplaceChild(
+                "topLeftMouthPart",
                 CubeListBuilder.create().texOffs(0, 0)
-                    .addBox(4.0f, -10.0f, -1.0f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)),
-                PartPose.offset(0.0f, 0.0f, 0.0f)
+                    .addBox(0.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)),
+                PartPose.offset(0.0f, 0.0f, 0.5f)
             )
 
-            val bg: PartDefinition =
-                bouche.addOrReplaceChild("bg", CubeListBuilder.create(), PartPose.offset(-1.0f, -1.0f, 0.0f))
+            val bottomLeftMouthPart = mouth.addOrReplaceChild(
+                "bottomLeftMouthPart",
+                CubeListBuilder.create(),
+                PartPose.offset(0.0f, 0.0f, 0.5f)
+            )
 
-            val bg_r1: PartDefinition? = bg.addOrReplaceChild(
-                "bg_r1",
+            bottomLeftMouthPart.addOrReplaceChild(
+                "bottomLeftMouthPart_r1",
                 CubeListBuilder.create().texOffs(0, 0)
-                    .addBox(-4.0f, 0.0f, -1.0f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)),
-                PartPose.offsetAndRotation(10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.5708f)
+                    .addBox(0.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)),
+                PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.5708f)
             )
 
-            val bd: PartDefinition =
-                bouche.addOrReplaceChild("bd", CubeListBuilder.create(), PartPose.offset(9.0f, -9.0f, 0.0f))
-
-            val bd_r1: PartDefinition? = bd.addOrReplaceChild(
-                "bd_r1",
-                CubeListBuilder.create().texOffs(0, 0).mirror()
-                    .addBox(-9.0f, 0.0f, -1.0f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)).mirror(false),
-                PartPose.offsetAndRotation(-10.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.5708f)
+            val bottomRightMouthPart = mouth.addOrReplaceChild(
+                "bottomRightMouthPart",
+                CubeListBuilder.create(),
+                PartPose.offset(0.0f, 0.0f, 0.5f)
             )
 
-            val hd: PartDefinition? = bouche.addOrReplaceChild(
-                "hd",
+            bottomRightMouthPart.addOrReplaceChild(
+                "bottomRightMouthPart_r1",
                 CubeListBuilder.create().texOffs(0, 0).mirror()
-                    .addBox(-10.0f, -1.0f, -1.0f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)).mirror(false),
-                PartPose.offset(9.0f, -9.0f, 0.0f)
+                    .addBox(-5.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)).mirror(false),
+                PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.5708f)
+            )
+
+            mouth.addOrReplaceChild(
+                "topRightMouthPart",
+                CubeListBuilder.create().texOffs(0, 0).mirror()
+                    .addBox(-5.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)).mirror(false),
+                PartPose.offset(0.0f, 0.0f, 0.5f)
             )
 
             return LayerDefinition.create(meshdefinition, 64, 64)
