@@ -8,10 +8,19 @@ import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.level.Level
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
-    var animationUsage = AnimationState()
+    var stillMouthCloseAnimationState = AnimationState()
+    var stillMouthOpenAnimationState = AnimationState()
+    var openMouthAnimationState = AnimationState()
+    var closeMouthAnimationState = AnimationState()
+    var moveStillAnimationState = AnimationState()
+    var moveRushAnimationState = AnimationState()
+    var fleeStillAnimationState = AnimationState()
+    var fleeRushAnimationState = AnimationState()
+    var swallowAnimationState = AnimationState()
+    var swallowStartAnimationState = AnimationState()
+    var swallowStopAnimationState = AnimationState()
 
-    
-    
+
     private var timeExposedInAir = 0
 
 
@@ -29,8 +38,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     }
 
     private fun setupAnimationStates() {
-        if (!this.animationUsage.isStarted) {
-            this.animationUsage.start(this.tickCount)
+        if (!this.stillMouthCloseAnimationState.isStarted) {
+        this.stillMouthCloseAnimationState.start(this.tickCount)
         }
     }
 
