@@ -49,6 +49,7 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.extractRenderState(entity, state, partialTicks)
+        state.animationUsage.copyFrom(entity.animationUsage)
 
         
         if (state.animationState != entity.animationState) {
