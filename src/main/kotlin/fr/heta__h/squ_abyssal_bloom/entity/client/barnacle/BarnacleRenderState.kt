@@ -5,6 +5,6 @@ import net.minecraft.world.entity.AnimationState
 
 class BarnacleRenderState : LivingEntityRenderState() {
     var animationUsage = AnimationState()
-    var animationState: BarnacleAnimationState = BarnacleAnimationState.STILL_MOUTH_CLOSE
-    var animationTime: Float = 0f
+    
+    
 }

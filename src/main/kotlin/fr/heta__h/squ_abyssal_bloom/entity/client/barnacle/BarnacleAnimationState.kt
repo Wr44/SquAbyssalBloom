@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.client.barnacle
 
 import net.minecraft.client.animation.AnimationDefinition
 
-enum class BarnacleAnimationState(val anim: AnimationDefinition) {
+enum class BarnacleAnimationState(anim: AnimationDefinition) {
     STILL_MOUTH_CLOSE(BarnacleAnimation.mouth_close),
     STILL_MOUTH_OPEN(BarnacleAnimation.mouth_open),
     MOUTH_OPEN(BarnacleAnimation.mouth_open),

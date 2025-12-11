@@ -52,15 +52,9 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
         state.animationUsage.copyFrom(entity.animationUsage)
 
         
-        if (state.animationState != entity.animationState) {
-            
-            state.animationUsage.stop()
-            state.animationUsage.start(entity.tickCount)
-        }
-
-        state.animationState = entity.animationState
-        state.animationUsage = entity.animationUsage
-        state.animationTime = entity.animationTime
+        
+        
+        
     }
 
 }

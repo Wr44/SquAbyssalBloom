@@ -9,11 +9,13 @@ import net.minecraft.world.level.Level
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
     var animationUsage = AnimationState()
+
+    
+    
     private var timeExposedInAir = 0
 
 
     override fun registerGoals() {
-        super.registerGoals()
         
     }
 
@@ -21,18 +23,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         super.tick()
 
         if (this.level().isClientSide) {
+            this.setupAnimationStates()
             
-            val targetAnim = if (this.isUnderWater) {
-                BarnacleAnimationState.STILL_MOUTH_CLOSE
-            } else {
-                BarnacleAnimationState.MOUTH_OPEN
-            }
-
-            
-            playAnimation(targetAnim)
-
-            
-
         }
     }
 
@@ -42,26 +34,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
-    /*fun playAnimation(anim: BarnacleAnimationState) {
-        if (animationState != anim) {
-            animationState = anim
-            anim.anim.let { animDef ->
-                animationUsage.stop()
-                animationUsage.start(this.tickCount)
-                
-            }
-        }
-    }
+    
 
     
     override fun aiStep() {
         super.aiStep()
 
-        if (!animationUsage.isStarted) {
-            animationUsage.start(this.tickCount)
-        }
-
-        animationTime += 0.05f 
+        
 
         if (this.isUnderWater) {
             this.timeExposedInAir = 0

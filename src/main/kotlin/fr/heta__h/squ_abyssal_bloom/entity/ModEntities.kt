@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
+import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs.CREATIVE_MODE_TAB
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceKey
@@ -25,14 +26,14 @@ object ModEntities {
         ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.withDefaultNamespace("barnacle"))
 
 
-    val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> = ENTITY_TYPES.register("barnacle", { _: ResourceLocation ->
-        EntityType.Builder.of({ type, level -> BarnacleEntity(type, level) }, MobCategory.MONSTER)
-            .sized(2f, 1.25f)
-            .clientTrackingRange(8)
-            .updateInterval(3)
-            .build(BARNACLE_KEY)
-        }
-    )
+    val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> =
+        ENTITY_TYPES.register("barnacle", { _: ResourceLocation ->
+            EntityType.Builder.of({ type, level -> BarnacleEntity(type, level) }, MobCategory.MONSTER)
+                .sized(2f, 1.25f)
+                .clientTrackingRange(8)
+                .updateInterval(3)
+                .build(BARNACLE_KEY)
+        })
 
     fun registerEntityRenderers(event: EntityRenderersEvent.RegisterRenderers) {
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
@@ -46,5 +47,9 @@ object ModEntities {
 
     fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
         event.put(BARNACLE.get(), BarnacleEntity.createAttributes().build())
+    }
+
+    fun register(eventBus: IEventBus) {
+        ENTITY_TYPES.register(eventBus)
     }
 }

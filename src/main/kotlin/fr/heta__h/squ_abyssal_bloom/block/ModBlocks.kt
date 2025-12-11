@@ -4,5 +4,5 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import net.neoforged.neoforge.registries.DeferredRegister
 
 object ModBlocks {
-    val REGISTRY = DeferredRegister.createBlocks(Squ_abyssal_bloom.ID)
+    val REGISTRY: DeferredRegister.Blocks = DeferredRegister.createBlocks(Squ_abyssal_bloom.ID)
 }

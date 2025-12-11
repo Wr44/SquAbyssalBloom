@@ -3,6 +3,8 @@ package fr.heta__h.squ_abyssal_bloom
 import fr.deotexh.cubicbezier.CubicBezier
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
+import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.client.Minecraft
 import net.minecraft.client.animation.Keyframe
 import net.minecraft.resources.ResourceLocation
@@ -26,7 +28,7 @@ import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
 
 @Mod(Squ_abyssal_bloom.ID)
 @EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
-object  Squ_abyssal_bloom {
+object Squ_abyssal_bloom {
     const val ID = "squ_abyssal_bloom"
 
     
@@ -37,7 +39,9 @@ object  Squ_abyssal_bloom {
 
         
         ModBlocks.REGISTRY.register(MOD_BUS)
-        ModEntities.ENTITY_TYPES.register(MOD_BUS)
+        ModEntities.register(MOD_BUS)
+        ModItems.register(MOD_BUS)
+        ModCreativeModeTabs.register(MOD_BUS)
 
         val obj = runForDist(clientTarget = {
             MOD_BUS.addListener(::onClientSetup)
@@ -84,10 +88,17 @@ object  Squ_abyssal_bloom {
     fun registerJsonAnimationTypes(event: RegisterJsonAnimationTypesEvent) {
         event.registerInterpolation(
             ResourceLocation.fromNamespaceAndPath("minecraft", "bezier"),
-            fun(animationVecCache: Vector3f, keyframeDelta: Float, keyframes: Array<out Keyframe>, currentKeyframe: Int, nextKeyframe: Int, scale: Float): Vector3f {
+            fun(
+                animationVecCache: Vector3f,
+                keyframeDelta: Float,
+                keyframes: Array<out Keyframe>,
+                currentKeyframe: Int,
+                nextKeyframe: Int,
+                scale: Float
+            ): Vector3f {
                 val currentPos: Vector3fc = keyframes[currentKeyframe].postTarget()
                 val nextPos: Vector3fc = keyframes[nextKeyframe].preTarget()
-                return CubicBezier.applyToVector3F(currentPos, nextPos, keyframeDelta,animationVecCache)
+                return CubicBezier.applyToVector3F(currentPos, nextPos, keyframeDelta, animationVecCache)
             }
         )
     }
