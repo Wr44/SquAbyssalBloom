@@ -7,6 +7,8 @@ import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.client.Minecraft
 import net.minecraft.client.animation.Keyframe
+import net.minecraft.client.data.models.BlockModelGenerators
+import net.minecraft.client.data.models.ItemModelGenerators
 import net.minecraft.resources.ResourceLocation
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -16,6 +18,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.client.event.EntityRenderersEvent
 import net.neoforged.neoforge.client.event.RegisterJsonAnimationTypesEvent
+import net.neoforged.neoforge.data.event.GatherDataEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
@@ -84,22 +87,24 @@ object Squ_abyssal_bloom {
         ModEntities.onRegisterAttributes(event)
     }
 
-    @SubscribeEvent
-    fun registerJsonAnimationTypes(event: RegisterJsonAnimationTypesEvent) {
-        event.registerInterpolation(
-            ResourceLocation.fromNamespaceAndPath("minecraft", "bezier"),
-            fun(
-                animationVecCache: Vector3f,
-                keyframeDelta: Float,
-                keyframes: Array<out Keyframe>,
-                currentKeyframe: Int,
-                nextKeyframe: Int,
-                scale: Float
-            ): Vector3f {
-                val currentPos: Vector3fc = keyframes[currentKeyframe].postTarget()
-                val nextPos: Vector3fc = keyframes[nextKeyframe].preTarget()
-                return CubicBezier.applyToVector3F(currentPos, nextPos, keyframeDelta, animationVecCache)
-            }
-        )
-    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }

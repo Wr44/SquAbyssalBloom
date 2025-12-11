@@ -2,6 +2,9 @@ package fr.heta__h.squ_abyssal_bloom.item
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import net.minecraft.client.data.models.BlockModelGenerators
+import net.minecraft.client.data.models.ItemModelGenerators
+import net.minecraft.client.data.models.model.ModelTemplates
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.SpawnEggItem
 import net.neoforged.bus.api.IEventBus
