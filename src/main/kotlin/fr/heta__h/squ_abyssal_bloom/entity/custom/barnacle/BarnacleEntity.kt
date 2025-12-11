@@ -1,8 +1,5 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
-import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
-import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimationState
-import net.minecraft.client.animation.AnimationDefinition
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
@@ -11,10 +8,9 @@ import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.level.Level
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
-    var animationState: BarnacleAnimationState = BarnacleAnimationState.STILL_MOUTH_CLOSE
     var animationUsage = AnimationState()
     private var timeExposedInAir = 0
-    var animationTime: Float = 0f
+
 
     override fun registerGoals() {
         super.registerGoals()

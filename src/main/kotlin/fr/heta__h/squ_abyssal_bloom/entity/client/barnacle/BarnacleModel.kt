@@ -11,18 +11,6 @@ import net.minecraft.resources.ResourceLocation
 
 class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(modelPart) {
 
-    private val root: ModelPart = modelPart.getChild("root")
-    private val langue: ModelPart = root.getChild("langue")
-    private val loca: ModelPart = langue.getChild("loca")
-    private val tentacules: ModelPart = root.getChild("tenatcules")
-    private val tete: ModelPart = root.getChild("tete")
-    private val bouche: ModelPart = root.getChild("bouche")
-    private val arriere: ModelPart = bouche.getChild("arriere")
-    private val hg: ModelPart = bouche.getChild("hd")
-    private val bg: ModelPart = bouche.getChild("bd")
-    private val bd: ModelPart = bouche.getChild("bd")
-    private val hd: ModelPart = bouche.getChild("hd")
-
     private val stillMouthCloseAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_close.bake(modelPart)
     private val stillMouthOpenAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_open.bake(modelPart)
     private val mouthOpenAnimation: KeyframeAnimation = BarnacleAnimation.mouth_open.bake(modelPart)
@@ -37,8 +25,11 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
 
     companion object {
         
-        val LAYER_LOCATION: ModelLayerLocation = ModelLayerLocation(ResourceLocation.fromNamespaceAndPath(
-            Squ_abyssal_bloom.ID, "barnacle"), "main")
+        val LAYER_LOCATION: ModelLayerLocation = ModelLayerLocation(
+            ResourceLocation.fromNamespaceAndPath(
+                Squ_abyssal_bloom.ID, "barnacle"
+            ), "main"
+        )
 
         fun createBodyLayer(): LayerDefinition {
             val meshdefinition: MeshDefinition = MeshDefinition()

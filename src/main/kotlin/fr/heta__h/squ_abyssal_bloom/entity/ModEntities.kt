@@ -25,7 +25,7 @@ object ModEntities {
         ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.withDefaultNamespace("barnacle"))
 
 
-    val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity?>> = ENTITY_TYPES.register("barnacle", { _: ResourceLocation ->
+    val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> = ENTITY_TYPES.register("barnacle", { _: ResourceLocation ->
         EntityType.Builder.of({ type, level -> BarnacleEntity(type, level) }, MobCategory.MONSTER)
             .sized(2f, 1.25f)
             .clientTrackingRange(8)
