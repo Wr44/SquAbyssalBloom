@@ -9,6 +9,8 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.MobRenderer
 import net.minecraft.client.renderer.state.CameraRenderState
 import net.minecraft.resources.ResourceLocation
+import kotlin.math.atan2
+import kotlin.math.sqrt
 
 class BarnacleRenderer(context: EntityRendererProvider.Context) :
     MobRenderer<BarnacleEntity, BarnacleRenderState, BarnacleModel>(
@@ -34,6 +36,15 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
         cameraRenderState: CameraRenderState
     ) {
         poseStack.pushPose()
+
+        val dir = renderState.direction
+        if (dir.lengthSqr() > 0.0001) {
+            val yaw = (atan2(dir.z, dir.x) - Math.PI / 2).toFloat()
+            val pitch = -atan2(dir.y, sqrt(dir.x * dir.x + dir.z * dir.z)).toFloat()
+
+            poseStack.mulPose(com.mojang.math.Axis.YP.rotation(yaw))
+            poseStack.mulPose(com.mojang.math.Axis.XP.rotation(pitch))
+        }
         poseStack.scale(2f, 2f, 2f) 
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
         poseStack.popPose()
@@ -60,6 +71,7 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
         state.swallowAnimationState.copyFrom(entity.swallowAnimationState)
         state.swallowStartAnimationState.copyFrom(entity.swallowStartAnimationState)
         state.swallowStopAnimationState.copyFrom(entity.swallowStopAnimationState)
+        state.direction = entity.directionMob
     }
 
 }

@@ -32,10 +32,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     private var timeExposedInAir = 0
     private var moveStillStartTick = 0
     private var moveRushStartTick = 0
-    private var direction: Vec3 = Vec3.ZERO
+    var directionMob: Vec3 = Vec3.ZERO
 
-    private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * 60).toInt()
-    private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * 60).toInt()
+    private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * 30).toInt()
+    private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * 30).toInt()
 
     private var lastGoalState = -1
     private var lastRushPhase: Boolean? = null
@@ -80,21 +80,29 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
             if (currentGoal != lastGoalState) {
                 resetAnimationStates()
-                print("Changing animation to goal state $currentGoal\n")
                 lastGoalState = currentGoal
             } else if (currentGoal == 4 && currentRush != lastRushPhase) {
-                print("Changing animation to rush phase $currentRush\n")
                 resetAnimationStates()
                 lastRushPhase = currentRush
             }
 
             when (currentGoal) {
-                0 -> if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
-                else moveStillAnimationState.startIfStopped(tickCount)
-                1 -> fleeRushAnimationState.startIfStopped(tickCount)
-                2 -> openMouthAnimationState.startIfStopped(tickCount)
-                3 -> swallowStartAnimationState.startIfStopped(tickCount)
-                4 -> moveRushAnimationState.startIfStopped(tickCount)
+                4 ->  {
+                    if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
+                    else moveStillAnimationState.startIfStopped(tickCount)
+                }
+                3 -> {
+                    moveStillAnimationState.startIfStopped(tickCount)
+                }
+                2 -> {
+                    openMouthAnimationState.startIfStopped(tickCount)
+                }
+                1 -> {
+                    swallowAnimationState.startIfStopped(tickCount)
+                }
+                0 -> {
+                    fleeStillAnimationState.startIfStopped(tickCount)
+                }
             }
         }
     }
@@ -177,7 +185,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         override fun start() {
             resetAnimationStates()
-            direction = getRandomDirection()
+            directionMob = getRandomDirection()
             moveStillStartTick = tickCount
             entityData.set(RUSH_PHASE, false)
         }
@@ -190,10 +198,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                     if (tickCount - moveRushStartTick >= moveRushDuration) {
                         entityData.set(RUSH_PHASE, false)
                         moveStillStartTick = tickCount
-                        if (random.nextDouble() < 0.2) direction = getRandomDirection()
+                        if (random.nextDouble() < 0.2) directionMob = getRandomDirection()
                     } else {
                         val t = tickCount - moveRushStartTick
-                        deltaMovement = direction.scale(barnacleSpeed(t.toDouble(), moveRushDuration.toDouble(), 1.5))
+                        deltaMovement = directionMob.scale(barnacleSpeed(t.toDouble(), moveRushDuration.toDouble(), 1.5))
                     }
                 } else {
                     if (tickCount - moveStillStartTick >= moveStillDuration) {

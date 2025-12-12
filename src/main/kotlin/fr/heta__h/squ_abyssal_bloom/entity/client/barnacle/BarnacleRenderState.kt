@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.client.barnacle
 
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.world.entity.AnimationState
+import net.minecraft.world.phys.Vec3
 
 class BarnacleRenderState : LivingEntityRenderState() {
     var stillMouthCloseAnimationState = AnimationState()
@@ -15,4 +16,5 @@ class BarnacleRenderState : LivingEntityRenderState() {
     var swallowAnimationState = AnimationState()
     var swallowStartAnimationState = AnimationState()
     var swallowStopAnimationState = AnimationState()
+    var direction: Vec3 = Vec3.ZERO
 }

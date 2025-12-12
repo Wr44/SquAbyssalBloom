@@ -8,8 +8,12 @@ import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.client.model.geom.PartPose
 import net.minecraft.client.model.geom.builders.*
 import net.minecraft.resources.ResourceLocation
+import kotlin.math.atan2
+import kotlin.math.sqrt
 
 class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(modelPart) {
+
+    private val barnacleRoot: ModelPart = root.getChild("root")
 
     private val stillMouthCloseAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_close.bake(modelPart)
     private val stillMouthOpenAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_open.bake(modelPart)
@@ -141,6 +145,5 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
         this.swallowAnimation.apply(renderState.swallowAnimationState, renderState.ageInTicks)
         this.swallowStartAnimation.apply(renderState.swallowStartAnimationState, renderState.ageInTicks)
         this.swallowStopAnimation.apply(renderState.swallowStopAnimationState, renderState.ageInTicks)
-
     }
 }
