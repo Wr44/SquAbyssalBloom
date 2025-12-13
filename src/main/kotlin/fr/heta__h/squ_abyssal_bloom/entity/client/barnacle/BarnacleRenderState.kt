@@ -16,5 +16,4 @@ class BarnacleRenderState : LivingEntityRenderState() {
     var swallowAnimationState = AnimationState()
     var swallowStartAnimationState = AnimationState()
     var swallowStopAnimationState = AnimationState()
-    var direction: Vec3 = Vec3.ZERO
 }

@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
+import net.minecraft.util.Mth
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
@@ -12,8 +13,10 @@ import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
+import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
 
@@ -32,7 +35,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     private var timeExposedInAir = 0
     private var moveStillStartTick = 0
     private var moveRushStartTick = 0
-    var directionMob: Vec3 = Vec3.ZERO
+    private var directionMob: Vec3 = Vec3.ZERO
 
     private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * 30).toInt()
     private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * 30).toInt()
@@ -71,13 +74,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     override fun tick() {
         super.tick()
-
+        updateBodyRotation()
         if (level().isClientSide) {
             isNoGravity = true
-
             val currentGoal = entityData.get(CURRENT_GOAL_STATE)
             val currentRush = entityData.get(RUSH_PHASE)
-
             if (currentGoal != lastGoalState) {
                 resetAnimationStates()
                 lastGoalState = currentGoal
@@ -85,24 +86,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 resetAnimationStates()
                 lastRushPhase = currentRush
             }
-
             when (currentGoal) {
-                4 ->  {
-                    if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
-                    else moveStillAnimationState.startIfStopped(tickCount)
-                }
-                3 -> {
-                    moveStillAnimationState.startIfStopped(tickCount)
-                }
-                2 -> {
-                    openMouthAnimationState.startIfStopped(tickCount)
-                }
-                1 -> {
-                    swallowAnimationState.startIfStopped(tickCount)
-                }
-                0 -> {
-                    fleeStillAnimationState.startIfStopped(tickCount)
-                }
+                4 -> if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
+                else moveStillAnimationState.startIfStopped(tickCount)
+                3 -> moveStillAnimationState.startIfStopped(tickCount)
+                2 -> openMouthAnimationState.startIfStopped(tickCount)
+                1 -> swallowAnimationState.startIfStopped(tickCount)
+                0 -> fleeStillAnimationState.startIfStopped(tickCount)
             }
         }
     }
@@ -134,54 +124,69 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
+    private fun getRandomDirection(): Vec3 {
+        val x = (this.random.nextDouble() * 2) - 1
+        val y = (this.random.nextDouble() * 2) - 1
+        val z = (this.random.nextDouble() * 2) - 1
+        return Vec3(x, y, z).normalize()
+    }
+
+    fun updateBodyRotation() {
+        val movement = deltaMovement
+        val distSqr = movement.lengthSqr()
+
+        
+        if (distSqr < 0.01) return
+
+        
+        val targetYaw = (atan2(movement.z, movement.x) * (180.0 / Math.PI)).toFloat() - 90f
+        yHeadRot = rotLerpDegrees(yHeadRot, targetYaw + 20f, 3f) 
+        yRot = yHeadRot 
+        
+        val deltaYaw = Mth.wrapDegrees(yHeadRot - yBodyRot)
+        if (deltaYaw < -20f) yBodyRot -= 4f
+        else if (deltaYaw > 20f) yBodyRot += 4f
+
+        
+        val horizontalDist = sqrt(movement.x * movement.x + movement.z * movement.z).coerceAtLeast(0.001)
+        val targetPitch = (-atan2(movement.y, horizontalDist) * (180.0 / Math.PI)).toFloat()
+        xRot = rotLerpDegrees(xRot, targetPitch + 10f, 3f) 
+    }
+
+    private fun rotLerpDegrees(current: Float, target: Float, maxChange: Float): Float {
+        val delta = Mth.wrapDegrees(target - current)
+        return current + delta.coerceIn(-maxChange, maxChange)
+    }
+
+    private fun barnacleSpeed(t: Double, tMax: Double, vMax: Double, k: Double = 2.0): Double {
+        val ratio = (t / tMax).coerceIn(0.0, 1.0)
+        return vMax * (1.0 - ratio).pow(k)
+    }
+
     inner class BarnacleFleeGoal : Goal() {
-        override fun canUse(): Boolean {
-            entityData.set(CURRENT_GOAL_STATE, 1)
-            return false
-        }
+        override fun canUse(): Boolean = false
     }
 
     inner class BarnacleAttackGoal : Goal() {
-        override fun canUse(): Boolean {
-            entityData.set(CURRENT_GOAL_STATE, 2)
-            return false
-        }
+        override fun canUse(): Boolean = false
     }
 
     inner class BarnacleGrabGoal : Goal() {
-        override fun canUse(): Boolean {
-            entityData.set(CURRENT_GOAL_STATE, 3)
-            return false
-        }
+        override fun canUse(): Boolean = false
     }
 
     inner class BarnacleSwimTowardsGoal : Goal() {
-        override fun canUse(): Boolean {
-            entityData.set(CURRENT_GOAL_STATE, 4)
-            return false
-        }
+        override fun canUse(): Boolean = false
     }
 
     inner class BarnacleIdleGoal : Goal() {
 
         override fun canUse(): Boolean {
-            entityData.set(CURRENT_GOAL_STATE, 0)
+            entityData.set(CURRENT_GOAL_STATE, 4)
             return true
         }
 
         override fun requiresUpdateEveryTick(): Boolean = true
-
-        private fun barnacleSpeed(t: Double, tMax: Double, vMax: Double, k: Double = 2.0): Double {
-            val ratio = (t / tMax).coerceIn(0.0, 1.0)
-            return vMax * (1.0 - ratio).pow(k)
-        }
-
-        private fun getRandomDirection(): Vec3 {
-            val x = (this@BarnacleEntity.random.nextDouble() * 2) - 1
-            val y = ((this@BarnacleEntity.random.nextDouble() * 2) - 1) / 2
-            val z = (this@BarnacleEntity.random.nextDouble() * 2) - 1
-            return Vec3(x, y, z).normalize()
-        }
 
         override fun start() {
             resetAnimationStates()
@@ -193,12 +198,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         override fun tick() {
             if (!level().isClientSide) {
                 val isRush = entityData.get(RUSH_PHASE)
-
                 if (isRush) {
                     if (tickCount - moveRushStartTick >= moveRushDuration) {
                         entityData.set(RUSH_PHASE, false)
                         moveStillStartTick = tickCount
-                        if (random.nextDouble() < 0.2) directionMob = getRandomDirection()
+                        directionMob = getRandomDirection()
                     } else {
                         val t = tickCount - moveRushStartTick
                         deltaMovement = directionMob.scale(barnacleSpeed(t.toDouble(), moveRushDuration.toDouble(), 1.5))

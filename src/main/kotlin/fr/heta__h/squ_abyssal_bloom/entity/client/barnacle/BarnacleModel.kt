@@ -8,6 +8,7 @@ import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.client.model.geom.PartPose
 import net.minecraft.client.model.geom.builders.*
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.entity.Relative.position
 import kotlin.math.atan2
 import kotlin.math.sqrt
 
@@ -133,6 +134,13 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
 
     override fun setupAnim(renderState: BarnacleRenderState) {
         super.setupAnim(renderState)
+
+        val degToRad = Math.PI / 180.0
+
+        barnacleRoot.xRot = (renderState.xRot * degToRad).toFloat()
+        barnacleRoot.yRot = (renderState.yRot * degToRad).toFloat()
+
+        print("Rotations: xRot=${barnacleRoot.xRot}, yRot=${barnacleRoot.yRot}\n")
 
         this.stillMouthOpenAnimation.apply(renderState.stillMouthOpenAnimationState, renderState.ageInTicks)
         this.stillMouthCloseAnimation.apply(renderState.stillMouthCloseAnimationState, renderState.ageInTicks)
