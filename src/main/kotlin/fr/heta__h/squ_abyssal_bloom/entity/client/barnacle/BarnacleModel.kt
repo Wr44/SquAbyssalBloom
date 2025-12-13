@@ -11,8 +11,6 @@ import net.minecraft.resources.ResourceLocation
 
 class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(modelPart) {
 
-    private val barnacleRoot: ModelPart = root.getChild("root")
-
     private val stillMouthCloseAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_close.bake(modelPart)
     private val stillMouthOpenAnimation: KeyframeAnimation = BarnacleAnimation.still_mouth_open.bake(modelPart)
     private val mouthOpenAnimation: KeyframeAnimation = BarnacleAnimation.mouth_open.bake(modelPart)
