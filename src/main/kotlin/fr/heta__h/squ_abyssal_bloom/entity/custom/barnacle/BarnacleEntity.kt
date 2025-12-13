@@ -4,19 +4,18 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
-import net.minecraft.util.Mth
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.MoverType
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
-import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.pow
-import kotlin.math.sqrt
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
 
@@ -35,7 +34,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     private var timeExposedInAir = 0
     private var moveStillStartTick = 0
     private var moveRushStartTick = 0
-    private var directionMob: Vec3 = Vec3.ZERO
+    private var lookControl = SmoothSwimmingLookControl(this, 10)
 
     private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * 30).toInt()
     private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * 30).toInt()
@@ -48,6 +47,12 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.INT)
         private val RUSH_PHASE: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DIR_X: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DIR_Y: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DIR_Z: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.FLOAT)
 
         fun createAttributes(): AttributeSupplier.Builder =
             createMonsterAttributes()
@@ -62,6 +67,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         super.defineSynchedData(builder)
         builder.define(CURRENT_GOAL_STATE, 0)
         builder.define(RUSH_PHASE, false)
+        builder.define(DIR_X, 0f)
+        builder.define(DIR_Y, 0f)
+        builder.define(DIR_Z, 0f)
     }
 
     override fun registerGoals() {
@@ -74,9 +82,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     override fun tick() {
         super.tick()
-        updateBodyRotation()
         if (level().isClientSide) {
-            isNoGravity = true
+            updateBodyRotation()
             val currentGoal = entityData.get(CURRENT_GOAL_STATE)
             val currentRush = entityData.get(RUSH_PHASE)
             if (currentGoal != lastGoalState) {
@@ -124,6 +131,17 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
+    override fun travel(travelVector: Vec3) {
+        if (isEffectiveAi && isInWater) {
+            moveRelative(0.01f, travelVector)
+            move(MoverType.SELF, deltaMovement)
+            deltaMovement = deltaMovement.scale(0.9)
+        } else {
+            super.travel(travelVector)
+        }
+    }
+
+
     private fun getRandomDirection(): Vec3 {
         val x = (this.random.nextDouble() * 2) - 1
         val y = (this.random.nextDouble() * 2) - 1
@@ -132,35 +150,33 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     }
 
     fun updateBodyRotation() {
-        val movement = deltaMovement
-        val distSqr = movement.lengthSqr()
+        var movement = deltaMovement
+        if (movement.lengthSqr() < 0.01) movement = getDirectionFromData()
 
-        
-        if (distSqr < 0.01) return
-
-        
-        val targetYaw = (atan2(movement.z, movement.x) * (180.0 / Math.PI)).toFloat() - 90f
-        yHeadRot = rotLerpDegrees(yHeadRot, targetYaw + 20f, 3f) 
-        yRot = yHeadRot 
-        
-        val deltaYaw = Mth.wrapDegrees(yHeadRot - yBodyRot)
-        if (deltaYaw < -20f) yBodyRot -= 4f
-        else if (deltaYaw > 20f) yBodyRot += 4f
-
-        
-        val horizontalDist = sqrt(movement.x * movement.x + movement.z * movement.z).coerceAtLeast(0.001)
-        val targetPitch = (-atan2(movement.y, horizontalDist) * (180.0 / Math.PI)).toFloat()
-        xRot = rotLerpDegrees(xRot, targetPitch + 10f, 3f) 
+        val targetX = x + 100 * movement.x
+        val targetY = y + 100 * movement.y
+        val targetZ = z + 100 * movement.z
+        lookControl.setLookAt(targetX, targetY, targetZ)
+        lookControl.tick()
     }
 
-    private fun rotLerpDegrees(current: Float, target: Float, maxChange: Float): Float {
-        val delta = Mth.wrapDegrees(target - current)
-        return current + delta.coerceIn(-maxChange, maxChange)
-    }
 
     private fun barnacleSpeed(t: Double, tMax: Double, vMax: Double, k: Double = 2.0): Double {
         val ratio = (t / tMax).coerceIn(0.0, 1.0)
         return vMax * (1.0 - ratio).pow(k)
+    }
+
+    private fun setDirectionInData(direction: Vec3) {
+        entityData.set(DIR_X, direction.x.toFloat())
+        entityData.set(DIR_Y, direction.y.toFloat())
+        entityData.set(DIR_Z, direction.z.toFloat())
+    }
+
+    private fun getDirectionFromData(): Vec3 {
+        val x = entityData.get(DIR_X).toDouble()
+        val y = entityData.get(DIR_Y).toDouble()
+        val z = entityData.get(DIR_Z).toDouble()
+        return Vec3(x, y, z)
     }
 
     inner class BarnacleFleeGoal : Goal() {
@@ -181,38 +197,84 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     inner class BarnacleIdleGoal : Goal() {
 
-        override fun canUse(): Boolean {
-            entityData.set(CURRENT_GOAL_STATE, 4)
-            return true
-        }
-
+        override fun canUse(): Boolean = true
+        override fun canContinueToUse(): Boolean = true
         override fun requiresUpdateEveryTick(): Boolean = true
+        override fun isInterruptable(): Boolean = true
 
         override fun start() {
-            resetAnimationStates()
-            directionMob = getRandomDirection()
-            moveStillStartTick = tickCount
-            entityData.set(RUSH_PHASE, false)
+            if (!level().isClientSide) {
+                entityData.set(CURRENT_GOAL_STATE, 4)
+                entityData.set(RUSH_PHASE, false)
+                moveStillStartTick = tickCount
+
+                setDirectionInData(getRandomDirection().normalize())
+                deltaMovement = Vec3.ZERO
+            }
         }
 
         override fun tick() {
-            if (!level().isClientSide) {
-                val isRush = entityData.get(RUSH_PHASE)
-                if (isRush) {
-                    if (tickCount - moveRushStartTick >= moveRushDuration) {
-                        entityData.set(RUSH_PHASE, false)
-                        moveStillStartTick = tickCount
-                        directionMob = getRandomDirection()
-                    } else {
-                        val t = tickCount - moveRushStartTick
-                        deltaMovement = directionMob.scale(barnacleSpeed(t.toDouble(), moveRushDuration.toDouble(), 1.5))
+            if (level().isClientSide) return
+
+            val isRush = entityData.get(RUSH_PHASE)
+
+            if (isRush) {
+                handleRush()
+            } else {
+                handleIdle()
+            }
+        }
+
+        private fun handleIdle() {
+            if (tickCount - moveStillStartTick >= moveStillDuration) {
+                entityData.set(RUSH_PHASE, true)
+                moveRushStartTick = tickCount
+            }
+        }
+
+        private fun handleRush() {
+            val t = tickCount - moveRushStartTick
+
+            if (t >= moveRushDuration) {
+                entityData.set(RUSH_PHASE, false)
+                moveStillStartTick = tickCount
+
+                deltaMovement = Vec3.ZERO
+
+                if (random.nextDouble() < 0.33) setDirectionInData(getRandomDirection().normalize())
+                return
+            }
+
+            if (this@BarnacleEntity.isUnderWater) {
+                val world = level()
+                val maxDistance = 10
+                val currentPos = blockPosition()
+
+                var blocksUp = 0
+                for (i in 1..maxDistance) {
+                    val posAbove = currentPos.above(i)
+                    val blockState = world.getBlockState(posAbove)
+                    if (blockState.isAir) {
+                        break
                     }
-                } else {
-                    if (tickCount - moveStillStartTick >= moveStillDuration) {
-                        entityData.set(RUSH_PHASE, true)
-                        moveRushStartTick = tickCount
-                    }
+                    blocksUp++
                 }
+
+                var dir = getDirectionFromData()
+
+                if (blocksUp < maxDistance) {
+                    val adjustFactor = (maxDistance - blocksUp).toDouble() / maxDistance.toDouble()
+                    val adjustedY = dir.y - adjustFactor * 0.5
+                    dir = Vec3(dir.x, adjustedY, dir.z).normalize()
+                    setDirectionInData(dir)
+                }
+
+                val speed = barnacleSpeed(t.toDouble(), moveRushDuration.toDouble(), 1.5)
+                deltaMovement = Vec3(
+                    dir.x * speed,
+                    dir.y * speed,
+                    dir.z * speed
+                )
             }
         }
     }
