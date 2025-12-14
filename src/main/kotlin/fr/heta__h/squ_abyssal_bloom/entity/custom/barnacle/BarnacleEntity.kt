@@ -8,12 +8,16 @@ import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.MoverType
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl
 import net.minecraft.world.entity.ai.goal.Goal
+import net.minecraft.world.entity.monster.Guardian
 import net.minecraft.world.entity.monster.Monster
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.level.GameType
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
 import kotlin.math.atan2
@@ -106,7 +110,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                         stillMouthCloseAnimationState.startIfStopped(tickCount)
                     }
                 }
-                3 -> moveStillAnimationState.startIfStopped(tickCount)
+                3 -> {
+                    if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
+                    else moveStillAnimationState.startIfStopped(tickCount)
+                }
                 2 -> openMouthAnimationState.startIfStopped(tickCount)
                 1 -> swallowAnimationState.startIfStopped(tickCount)
                 0 -> fleeStillAnimationState.startIfStopped(tickCount)
@@ -231,6 +238,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return true
     }
 
+
     private fun setDirectionInData(direction: Vec3) {
         entityData.set(DIR_X, direction.x.toFloat())
         entityData.set(DIR_Y, direction.y.toFloat())
@@ -257,13 +265,115 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     }
 
     inner class BarnacleSwimTowardsGoal : Goal() {
-        override fun canUse(): Boolean = false
+
+        val radius = 40.0
+        private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * 22).toInt()
+        private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * 22).toInt()
+        val target: LivingEntity?
+            get() {
+                val players = this@BarnacleEntity.level().getEntitiesOfClass(
+                    Player::class.java,
+                    this@BarnacleEntity.boundingBox.inflate(radius)
+                ).filter { it.gameMode() == GameType.SURVIVAL }
+                    .sortedBy { it.distanceToSqr(this@BarnacleEntity) }
+
+                val guardians = this@BarnacleEntity.level().getEntitiesOfClass(
+                    Guardian::class.java,
+                    this@BarnacleEntity.boundingBox.inflate(radius)
+                ).sortedBy { it.distanceToSqr(this@BarnacleEntity) }
+
+                return when {
+                    players.isNotEmpty() -> players.first()
+                    guardians.isNotEmpty() -> guardians.first()
+                    else -> null
+                }
+            }
+        val dir
+            get() : Vec3? {
+                val tgt = target ?: return null
+                return tgt.position().subtract(this@BarnacleEntity.position()).normalize()
+            }
+
+
+        override fun canUse(): Boolean {
+
+            val playerNearby = this@BarnacleEntity.level().getEntitiesOfClass(
+                Player::class.java,
+                this@BarnacleEntity.boundingBox.inflate(radius)
+            ).any { player -> player.gameMode() == GameType.SURVIVAL }
+
+            val guardianNearby = this@BarnacleEntity.level().getEntitiesOfClass(
+                Guardian::class.java,
+                this@BarnacleEntity.boundingBox.inflate(radius)
+            ).isNotEmpty()
+
+            return playerNearby || guardianNearby
+        }
+
+        override fun requiresUpdateEveryTick(): Boolean = true
+        override fun isInterruptable(): Boolean = true
+
+        override fun start() {
+            if (!level().isClientSide) {
+                entityData.set(RUSH_PHASE, false)
+                entityData.set(CURRENT_GOAL_STATE, 3)
+                animationStartTick = tickCount
+
+                setDirectionInData(dir ?: getRandomDirection().normalize())
+                deltaMovement = Vec3.ZERO
+            }
+        }
+
+        override fun tick() {
+            if (level().isClientSide) return
+
+            val isRush = entityData.get(RUSH_PHASE)
+
+            if (isRush) {
+                handleRush()
+            } else {
+                handleIdle()
+            }
+        }
+
+        private fun handleIdle() {
+            val t = tickCount - animationStartTick
+
+            if (t >= moveStillDuration) {
+                entityData.set(RUSH_PHASE, true)
+                animationStartTick = tickCount
+            }
+
+            deltaMovement = Vec3.ZERO
+        }
+
+        private fun handleRush() {
+            val t = tickCount - animationStartTick
+
+            if (t >= moveRushDuration) {
+                entityData.set(RUSH_PHASE, false)
+                animationStartTick = tickCount
+
+                deltaMovement = Vec3.ZERO
+                return
+            }
+
+            val direction = dir ?: getRandomDirection()
+            setDirectionInData(direction)
+
+            val speed = barnacleSpeed(t.toDouble(), moveRushDuration.toDouble(), 1.5, 3.0)
+            deltaMovement = Vec3(
+                direction.x * speed,
+                direction.y * speed,
+                direction.z * speed
+            )
+        }
     }
+
 
     inner class BarnacleIdleGoal : Goal() {
 
         override fun canUse(): Boolean = true
-        override fun canContinueToUse(): Boolean = true
         override fun requiresUpdateEveryTick(): Boolean = true
         override fun isInterruptable(): Boolean = true
 
