@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
+import net.minecraft.util.Mth
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.MoverType
@@ -14,10 +15,11 @@ import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.Vec3
+import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.pow
+import kotlin.math.sqrt
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
 
@@ -92,6 +94,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 lastGoalState = currentGoal
             } else if (currentGoal == 4 && currentRush != lastRushPhase) {
                 resetAnimationStates()
+                println("On passe de rush $lastRushPhase à $currentRush")
                 lastRushPhase = currentRush
             }
             when (currentGoal) {
@@ -156,14 +159,45 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return Vec3(x, y, z).normalize()
     }
 
-    fun updateBodyRotation() {
-        var movement = deltaMovement
-        movement = getDirectionFromData()
+    private var lastYaw = 0f
+    private var lastPitch = 0f
+    private var lastUpdateTick: Int = 0
 
-        val targetX = x + 100 * movement.x
-        val targetY = y + 100 * movement.y
-        val targetZ = z + 100 * movement.z
-        lookControl.setLookAt(targetX, targetY, targetZ)
+    fun updateBodyRotation() {
+        val dir = getDirectionFromData()
+        if (dir.lengthSqr() < 1e-6) return
+
+        val horizontalLength = sqrt(dir.x * dir.x + dir.z * dir.z)
+        val targetPitchRad = atan2(dir.y, horizontalLength)
+        val targetYawRad = atan2(dir.z, dir.x)
+
+        var targetPitch = Math.toDegrees(targetPitchRad).toFloat()
+        var targetYaw = Math.toDegrees(targetYawRad).toFloat()
+
+        targetYaw = (targetYaw - 90.0).toFloat()
+        targetYaw = Mth.wrapDegrees(targetYaw)
+        targetPitch = -Mth.wrapDegrees(targetPitch)
+
+        
+        val deltaTicks = (tickCount - lastUpdateTick).coerceAtLeast(1)
+        val lerpFactor = (deltaTicks / 20f).coerceIn(0f, 1f) 
+
+        yRot = Mth.rotLerp(lerpFactor, lastYaw, targetYaw)
+        xRot = Mth.rotLerp(lerpFactor, lastPitch, targetPitch)
+        yHeadRot = yRot
+        yBodyRot = yRot
+
+        lastYaw = yRot
+        lastPitch = xRot
+        lastUpdateTick = tickCount
+
+        val lookDistance = 10.0
+        val lookPos = position().add(
+            dir.x * lookDistance,
+            dir.y * lookDistance,
+            dir.z * lookDistance
+        )
+        lookControl.setLookAt(lookPos.x, lookPos.y, lookPos.z)
         lookControl.tick()
     }
 
