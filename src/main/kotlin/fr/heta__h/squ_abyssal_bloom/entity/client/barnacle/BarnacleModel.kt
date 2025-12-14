@@ -6,7 +6,10 @@ import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.client.model.geom.PartPose
-import net.minecraft.client.model.geom.builders.*
+import net.minecraft.client.model.geom.builders.CubeDeformation
+import net.minecraft.client.model.geom.builders.CubeListBuilder
+import net.minecraft.client.model.geom.builders.LayerDefinition
+import net.minecraft.client.model.geom.builders.MeshDefinition
 import net.minecraft.resources.ResourceLocation
 
 class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(modelPart) {
@@ -31,58 +34,59 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
         )
 
         fun createBodyLayer(): LayerDefinition {
-            val meshdefinition: MeshDefinition = MeshDefinition()
-            val partdefinition: PartDefinition = meshdefinition.root
+            val meshdefinition = MeshDefinition()
+            val partdefinition = meshdefinition.root
 
             val root = partdefinition.addOrReplaceChild(
                 "root",
                 CubeListBuilder.create(),
-                PartPose.offsetAndRotation(0.0f, 18.925f, 2.1f, 0.0f, 3.1416f, 0.0f)
+                PartPose.offsetAndRotation(0.0f, 17.925f, -0.9f, 0.0f, 3.1416f, 0.0f)
             )
 
             val tongue = root.addOrReplaceChild(
                 "tongue",
                 CubeListBuilder.create().texOffs(0, 0)
                     .addBox(-1.0f, -1.0f, 0.0f, 2.0f, 2.0f, 2.0f, CubeDeformation(0.0f)),
-                PartPose.offset(0.0f, -0.025f, 3.4f)
+                PartPose.offset(0.0f, -0.025f, -1.6f)
             )
 
-            tongue.addOrReplaceChild("tipOfTongue", CubeListBuilder.create(), PartPose.offset(0.0f, 0.0f, 0.0f))
+            val tipOfTongue =
+                tongue.addOrReplaceChild("tipOfTongue", CubeListBuilder.create(), PartPose.offset(0.0f, 0.0f, 0.0f))
 
             val tentacles =
-                root.addOrReplaceChild("tentacles", CubeListBuilder.create(), PartPose.offset(0.0f, -0.025f, -5.9f))
+                root.addOrReplaceChild("tentacles", CubeListBuilder.create(), PartPose.offset(0.0f, -0.025f, -10.9f))
 
-            tentacles.addOrReplaceChild(
+            val fpos_r1 = tentacles.addOrReplaceChild(
                 "fpos_r1",
                 CubeListBuilder.create().texOffs(26, 25).mirror()
                     .addBox(-5.5f, -0.1f, 0.0f, 11.0f, 13.0f, 0.0f, CubeDeformation(0.0f)).mirror(false),
                 PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, -1.5708f, 0.0f, -0.7854f)
             )
 
-            tentacles.addOrReplaceChild(
+            val fneg_r1 = tentacles.addOrReplaceChild(
                 "fneg_r1",
                 CubeListBuilder.create().texOffs(26, 25)
                     .addBox(-5.5f, -0.1f, 0.0f, 11.0f, 13.0f, 0.0f, CubeDeformation(0.0f)),
                 PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, -1.5708f, 0.0f, 0.7854f)
             )
 
-            root.addOrReplaceChild(
+            val head = root.addOrReplaceChild(
                 "head",
                 CubeListBuilder.create().texOffs(0, 30)
                     .addBox(-4.0f, -4.0f, -5.0f, 8.0f, 8.0f, 10.0f, CubeDeformation(0.0f)),
-                PartPose.offset(0.0f, -0.025f, -0.9f)
+                PartPose.offset(0.0f, -0.025f, -5.9f)
             )
 
-            val mouth = root.addOrReplaceChild("mouth", CubeListBuilder.create(), PartPose.offset(0.0f, 0.075f, 3.4f))
+            val mouth = root.addOrReplaceChild("mouth", CubeListBuilder.create(), PartPose.offset(0.0f, 0.075f, -1.6f))
 
-            mouth.addOrReplaceChild(
+            val back = mouth.addOrReplaceChild(
                 "back",
                 CubeListBuilder.create().texOffs(40, 0)
                     .addBox(-5.0f, -5.0f, -0.5f, 10.0f, 10.0f, 1.0f, CubeDeformation(0.025f)),
                 PartPose.offset(0.0f, 0.0f, 0.5f)
             )
 
-            mouth.addOrReplaceChild(
+            val topLeftMouthPart = mouth.addOrReplaceChild(
                 "topLeftMouthPart",
                 CubeListBuilder.create().texOffs(0, 0)
                     .addBox(0.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)),
@@ -95,7 +99,7 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
                 PartPose.offset(0.0f, 0.0f, 0.5f)
             )
 
-            bottomLeftMouthPart.addOrReplaceChild(
+            val bottomLeftMouthPart_r1 = bottomLeftMouthPart.addOrReplaceChild(
                 "bottomLeftMouthPart_r1",
                 CubeListBuilder.create().texOffs(0, 0)
                     .addBox(0.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)),
@@ -108,18 +112,24 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
                 PartPose.offset(0.0f, 0.0f, 0.5f)
             )
 
-            bottomRightMouthPart.addOrReplaceChild(
+            val bottomRightMouthPart_r1 = bottomRightMouthPart.addOrReplaceChild(
                 "bottomRightMouthPart_r1",
                 CubeListBuilder.create().texOffs(0, 0).mirror()
                     .addBox(-5.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)).mirror(false),
                 PartPose.offsetAndRotation(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.5708f)
             )
 
-            mouth.addOrReplaceChild(
+            val topRightMouthPart = mouth.addOrReplaceChild(
                 "topRightMouthPart",
                 CubeListBuilder.create().texOffs(0, 0).mirror()
                     .addBox(-5.0f, -5.0f, -0.5f, 5.0f, 5.0f, 20.0f, CubeDeformation(0.0f)).mirror(false),
                 PartPose.offset(0.0f, 0.0f, 0.5f)
+            )
+
+            val bone = partdefinition.addOrReplaceChild(
+                "bone",
+                CubeListBuilder.create(),
+                PartPose.offset(0.0f, 17.925f, -0.9f)
             )
 
             return LayerDefinition.create(meshdefinition, 64, 64)
@@ -130,6 +140,7 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
         super.setupAnim(renderState)
         this.root.xRot = renderState.xRot * (Math.PI.toFloat() / 180f)
         this.root.yRot = renderState.yRot * (Math.PI.toFloat() / 180f)
+        this.root.zRot = 0f
 
         this.stillMouthOpenAnimation.apply(renderState.stillMouthOpenAnimationState, renderState.ageInTicks)
         this.stillMouthCloseAnimation.apply(renderState.stillMouthCloseAnimationState, renderState.ageInTicks)

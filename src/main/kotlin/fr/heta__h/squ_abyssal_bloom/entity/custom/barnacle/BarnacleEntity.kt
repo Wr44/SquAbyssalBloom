@@ -158,7 +158,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     fun updateBodyRotation() {
         var movement = deltaMovement
-        if (movement.lengthSqr() < 0.01) movement = getDirectionFromData()
+        movement = getDirectionFromData()
 
         val targetX = x + 100 * movement.x
         val targetY = y + 100 * movement.y

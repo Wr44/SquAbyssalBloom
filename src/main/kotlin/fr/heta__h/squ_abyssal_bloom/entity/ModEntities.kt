@@ -29,7 +29,7 @@ object ModEntities {
     val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> =
         ENTITY_TYPES.register("barnacle", { _: ResourceLocation ->
             EntityType.Builder.of({ type, level -> BarnacleEntity(type, level) }, MobCategory.MONSTER)
-                .sized(2f, 1.25f)
+                .sized(3f, 1.75f)
                 .clientTrackingRange(8)
                 .updateInterval(3)
                 .build(BARNACLE_KEY)
