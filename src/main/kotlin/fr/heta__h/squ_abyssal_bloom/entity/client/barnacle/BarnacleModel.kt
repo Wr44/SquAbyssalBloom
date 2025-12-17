@@ -40,7 +40,7 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
             val root = partdefinition.addOrReplaceChild(
                 "root",
                 CubeListBuilder.create(),
-                PartPose.offsetAndRotation(0.0f, 17.925f, -0.9f, 0.0f, 3.1416f, 0.0f)
+                PartPose.offsetAndRotation(0.0f, 17.925f, -0.9f, 0.0f, -3.1416f, 0.0f)
             )
 
             val tongue = root.addOrReplaceChild(
@@ -138,9 +138,7 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
 
     override fun setupAnim(renderState: BarnacleRenderState) {
         super.setupAnim(renderState)
-        this.root.xRot = renderState.xRot * (Math.PI.toFloat() / 180f)
-        this.root.yRot = renderState.yRot * (Math.PI.toFloat() / 180f)
-        this.root.zRot = 0f
+
 
         this.stillMouthOpenAnimation.apply(renderState.stillMouthOpenAnimationState, renderState.ageInTicks)
         this.stillMouthCloseAnimation.apply(renderState.stillMouthCloseAnimationState, renderState.ageInTicks)
