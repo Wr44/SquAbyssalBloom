@@ -1,0 +1,31 @@
+package fr.heta__h.squ_abyssal_bloom.sound
+
+import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import net.minecraft.core.registries.Registries
+import net.minecraft.resources.ResourceLocation
+import net.minecraft.sounds.SoundEvent
+import net.neoforged.bus.api.IEventBus
+import net.neoforged.neoforge.registries.DeferredHolder
+import net.neoforged.neoforge.registries.DeferredRegister
+import java.util.function.Supplier
+
+object ModSounds {
+    val SOUNDS: DeferredRegister<SoundEvent> =
+        DeferredRegister.create(Registries.SOUND_EVENT, Squ_abyssal_bloom.ID)
+
+    val BARNACLE_AMBIENT = SOUNDS.register("barnacle_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BARNACLE_DEATH = SOUNDS.register("barnacle_death") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BARNACLE_HURT = SOUNDS.register("barnacle_hurt") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    fun register(eventBus: IEventBus) {
+        SOUNDS.register(eventBus)
+    }
+}

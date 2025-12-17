@@ -1,11 +1,14 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
+import net.minecraft.sounds.SoundEvent
 import net.minecraft.util.Mth
+import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
@@ -45,6 +48,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     private var lastGoalState = -1
     private var lastRushPhase: Boolean? = null
+    private var lastIsIdle: Boolean? = null
+    private var animationResetScheduled = false
 
     companion object {
         private val CURRENT_GOAL_STATE: EntityDataAccessor<Int> =
@@ -91,32 +96,64 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         super.tick()
         if (level().isClientSide) {
             updateBodyRotation()
-            val currentGoal = entityData.get(CURRENT_GOAL_STATE)
-            val currentRush = entityData.get(RUSH_PHASE)
-            if (currentGoal != lastGoalState) {
-                resetAnimationStates()
-                lastGoalState = currentGoal
-            } else if (currentGoal == 4 && currentRush != lastRushPhase) {
-                resetAnimationStates()
-                println("On passe de rush $lastRushPhase à $currentRush")
-                lastRushPhase = currentRush
-            }
-            when (currentGoal) {
-                4 -> {
-                    if (!entityData.get(IS_IDLE)) {
-                        if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
-                        else moveStillAnimationState.startIfStopped(tickCount)
-                    } else {
-                        stillMouthCloseAnimationState.startIfStopped(tickCount)
+            if (!isUnderWater) {
+                if (!animationResetScheduled) {
+                    resetAnimationStates()
+                    animationResetScheduled = true
+                }
+            } else {
+                val currentGoal = entityData.get(CURRENT_GOAL_STATE)
+                val currentRush = entityData.get(RUSH_PHASE)
+                val currentIsIdle = entityData.get(IS_IDLE)
+
+                
+                var needsReset = false
+
+                if (currentGoal != lastGoalState) {
+                    needsReset = true
+                    lastGoalState = currentGoal
+                    lastRushPhase = null
+                    lastIsIdle = null
+                }
+
+                if (currentGoal == 3 || currentGoal == 4) {
+                    if (currentRush != lastRushPhase) {
+                        needsReset = true
+                        lastRushPhase = currentRush
+                    }
+
+                    if (currentGoal == 4 && currentIsIdle != lastIsIdle) {
+                        needsReset = true
+                        lastIsIdle = currentIsIdle
                     }
                 }
-                3 -> {
-                    if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
-                    else moveStillAnimationState.startIfStopped(tickCount)
+
+                
+                if (needsReset || animationResetScheduled) {
+                    resetAnimationStates()
+                    animationResetScheduled = false
                 }
-                2 -> openMouthAnimationState.startIfStopped(tickCount)
-                1 -> swallowAnimationState.startIfStopped(tickCount)
-                0 -> fleeStillAnimationState.startIfStopped(tickCount)
+
+                
+                when (currentGoal) {
+                    4 -> {
+                        if (currentIsIdle) {
+                            stillMouthCloseAnimationState.startIfStopped(tickCount)
+                        } else {
+                            if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
+                            else moveStillAnimationState.startIfStopped(tickCount)
+                        }
+                    }
+
+                    3 -> {
+                        if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
+                        else moveStillAnimationState.startIfStopped(tickCount)
+                    }
+
+                    2 -> openMouthAnimationState.startIfStopped(tickCount)
+                    1 -> swallowAnimationState.startIfStopped(tickCount)
+                    0 -> fleeStillAnimationState.startIfStopped(tickCount)
+                }
             }
         }
     }
@@ -145,6 +182,15 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             if (timeExposedInAir >= 200) {
                 hurt(damageSources().drown(), 1.0f)
             }
+            if (onGround() || deltaMovement.y == 0.0) {
+                deltaMovement = deltaMovement.add(0.0, 0.45, 0.0)
+                val horizontalDir = getRandomDirection().normalize()
+                deltaMovement = deltaMovement.add(horizontalDir.x * 0.1, 0.0, horizontalDir.z * 0.1)
+                yRot = atan2(horizontalDir.z, horizontalDir.x).toFloat() * (180f / Math.PI.toFloat()) - 90f
+                setDirectionInData(horizontalDir)
+                setOnGround(false)
+                hasImpulse = true
+            }
         }
     }
 
@@ -157,6 +203,27 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             super.travel(travelVector)
         }
     }
+
+    override fun getAmbientSound(): SoundEvent? {
+        return ModSounds.BARNACLE_AMBIENT.get()
+    }
+
+    override fun playAmbientSound() {
+        val soundEvent = this.ambientSound
+        if (soundEvent != null) {
+            this.playSound(soundEvent, getSoundVolume()*1.5f, this.voicePitch)
+        }
+    }
+
+    override fun getHurtSound(source: DamageSource): SoundEvent? = ModSounds.BARNACLE_HURT.get()
+
+
+    override fun getDeathSound(): SoundEvent? = ModSounds.BARNACLE_DEATH.get()
+
+
+    override fun getSoundVolume(): Float = 1.3f
+
+    override fun getAmbientSoundInterval(): Int = 550
 
 
     private fun getRandomDirection(): Vec3 {
@@ -171,6 +238,26 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     private var lastUpdateTick: Int = 0
 
     fun updateBodyRotation() {
+
+        if (!isUnderWater) {
+            val dir = getDirectionFromData()
+            if (dir.lengthSqr() < 1e-6) return
+            val targetYawRad = atan2(dir.z, dir.x)
+            var targetYaw = Math.toDegrees(targetYawRad).toFloat()
+            targetYaw = (targetYaw - 90.0).toFloat()
+            targetYaw = Mth.wrapDegrees(targetYaw)
+            val deltaTicks = (tickCount - lastUpdateTick).coerceAtLeast(1)
+            val lerpFactor = (deltaTicks / 20f).coerceIn(0f, 1f)
+            yRot = Mth.rotLerp(lerpFactor, lastYaw, targetYaw)
+            xRot = 0f
+            yHeadRot = yRot
+            yBodyRot = yRot
+            lastYaw = yRot
+            lastPitch = xRot
+            lastUpdateTick = tickCount
+            return
+        }
+
         val dir = getDirectionFromData()
         if (dir.lengthSqr() < 1e-6) return
 
@@ -291,7 +378,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         val dir
             get() : Vec3? {
                 val tgt = target ?: return null
-                return tgt.position().subtract(this@BarnacleEntity.position()).normalize()
+                val targetPos = tgt.position().add(0.0, 1.0, 0.0)
+                return targetPos.subtract(this@BarnacleEntity.position()).normalize()
             }
 
 
@@ -307,7 +395,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 this@BarnacleEntity.boundingBox.inflate(radius)
             ).isNotEmpty()
 
-            return playerNearby || guardianNearby
+            return (playerNearby || guardianNearby) && isUnderWater
         }
 
         override fun requiresUpdateEveryTick(): Boolean = true
@@ -321,6 +409,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
                 setDirectionInData(dir ?: getRandomDirection().normalize())
                 deltaMovement = Vec3.ZERO
+            } else {
+                resetAnimationStates()
             }
         }
 
@@ -373,7 +463,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     inner class BarnacleIdleGoal : Goal() {
 
-        override fun canUse(): Boolean = true
+        override fun canUse(): Boolean = isUnderWater
         override fun requiresUpdateEveryTick(): Boolean = true
         override fun isInterruptable(): Boolean = true
 

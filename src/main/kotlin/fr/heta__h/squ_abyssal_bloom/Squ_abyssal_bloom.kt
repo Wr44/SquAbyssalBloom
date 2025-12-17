@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.client.Minecraft
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -35,6 +36,7 @@ object Squ_abyssal_bloom {
         ModBlocks.REGISTRY.register(MOD_BUS)
         ModEntities.register(MOD_BUS)
         ModItems.register(MOD_BUS)
+        ModSounds.register(MOD_BUS)
         ModCreativeModeTabs.register(MOD_BUS)
 
         val obj = runForDist(clientTarget = {
@@ -77,25 +79,4 @@ object Squ_abyssal_bloom {
     fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
         ModEntities.onRegisterAttributes(event)
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
