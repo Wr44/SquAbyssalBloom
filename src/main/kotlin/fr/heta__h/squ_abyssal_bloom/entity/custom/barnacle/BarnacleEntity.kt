@@ -311,7 +311,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         if (dir.lengthSqr() < 1e-6) return
 
         val horizontalLength = sqrt(dir.x * dir.x + dir.z * dir.z)
-        val targetPitchRad = atan2(dir.y, horizontalLength)
+        val targetPitchRad = atan2(-dir.y, horizontalLength)
         val targetYawRad = atan2(dir.z, dir.x)
 
         var targetPitch = Math.toDegrees(targetPitchRad).toFloat()
@@ -319,7 +319,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         targetYaw = (targetYaw - 90.0).toFloat()
         targetYaw = Mth.wrapDegrees(targetYaw)
-        targetPitch = -Mth.wrapDegrees(targetPitch)
+        targetPitch = Mth.wrapDegrees(targetPitch)
 
         val deltaTicks = (tickCount - lastUpdateTick).coerceAtLeast(1)
         val lerpFactor = (deltaTicks / 5f).coerceIn(0f, 1f) 

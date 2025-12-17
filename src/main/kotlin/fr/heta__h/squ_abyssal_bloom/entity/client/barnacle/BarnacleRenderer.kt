@@ -35,9 +35,8 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
     ) {
         poseStack.pushPose()
 
-        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(renderState.yRot + 180f))
-
-        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(-renderState.xRot))
+        
+        poseStack.mulPose(com.mojang.math.Axis.XP.rotationDegrees(renderState.xRot))
 
         poseStack.scale(2f, 2f, 2f) 
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)

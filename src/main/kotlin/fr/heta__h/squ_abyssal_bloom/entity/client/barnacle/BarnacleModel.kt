@@ -40,7 +40,7 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
             val root = partdefinition.addOrReplaceChild(
                 "root",
                 CubeListBuilder.create(),
-                PartPose.offsetAndRotation(0.0f, 17.925f, -0.9f, 0.0f, -3.1416f, 0.0f)
+                PartPose.offsetAndRotation(0.0f, 17.925f, -0.9f, 0.0f, 3.1416f, 0.0f)
             )
 
             val tongue = root.addOrReplaceChild(
