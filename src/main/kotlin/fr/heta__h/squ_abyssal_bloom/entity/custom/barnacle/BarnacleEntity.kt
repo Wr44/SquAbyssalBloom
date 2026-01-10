@@ -7,9 +7,9 @@ import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.sounds.SoundEvent
-import net.minecraft.util.Mth
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.AnimationState
+import net.minecraft.world.entity.EntityReference
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.MoverType
@@ -23,10 +23,10 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.GameType
 import net.minecraft.world.level.Level
 import net.minecraft.world.phys.Vec3
+import java.util.Optional
 import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.pow
-import kotlin.math.sqrt
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
 
@@ -45,6 +45,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     private var timeExposedInAir = 0
     private var animationStartTick = 0
     private var lookControl = SmoothSwimmingLookControl(this, 10)
+    val target: LivingEntity?
+        get() = getMyTarget(5.5)
+    val dir
+        get() : Vec3? = getMyDir(target)
 
     private var lastGoalState = -1
     private var lastRushPhase: Boolean? = null
@@ -61,6 +65,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val MOUTH_OPEN: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val TARGET: EntityDataAccessor<Optional<EntityReference<LivingEntity?>?>?> =
+            SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.OPTIONAL_LIVING_ENTITY_REFERENCE)
         private val DIR_X: EntityDataAccessor<Float> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.FLOAT)
         private val DIR_Y: EntityDataAccessor<Float> =
@@ -83,6 +89,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         builder.define(RUSH_PHASE, false)
         builder.define(IS_IDLE, false)
         builder.define(MOUTH_OPEN, false)
+        builder.define(TARGET,
+            Optional.ofNullable(target?.let { EntityReference.of(it) } ) as Optional<EntityReference<LivingEntity?>?>
+        )
         builder.define(DIR_X, 0f)
         builder.define(DIR_Y, 0f)
         builder.define(DIR_Z, 0f)
@@ -110,8 +119,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 val currentRush = entityData.get(RUSH_PHASE)
                 val currentIsIdle = entityData.get(IS_IDLE)
                 val currentMouthOpen = entityData.get(MOUTH_OPEN)
+                val currentTarget = entityData.get(TARGET)?.orElse(null)?.getEntity(level(), LivingEntity::class.java as Class<LivingEntity?>)
 
-                
                 var needsReset = false
 
                 if (currentGoal != lastGoalState) {
@@ -170,7 +179,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                     2 -> {
                         if (currentMouthOpen) {
                             closeMouthAnimationState.startIfStopped(tickCount)
-                        } else {
+                        } else if (currentTarget != null) {
                             openMouthAnimationState.startIfStopped(tickCount)
                         }
                     }
@@ -179,6 +188,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                     0 -> fleeStillAnimationState.startIfStopped(tickCount)
                 }
             }
+        } else {
+            entityData.set(
+                TARGET,
+                Optional.ofNullable(target?.let { EntityReference.of(it) } ) as Optional<EntityReference<LivingEntity?>?>
+            )
         }
     }
 
@@ -228,7 +242,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
-    fun getTarget(radius: Double): LivingEntity? {
+    fun getMyTarget(radius: Double): LivingEntity? {
             val players = this@BarnacleEntity.level().getEntitiesOfClass(
                 Player::class.java,
                 this@BarnacleEntity.boundingBox.inflate(radius)
@@ -247,7 +261,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             }
         }
 
-    fun getDir(target: LivingEntity?) : Vec3? {
+    fun getMyDir(target: LivingEntity?) : Vec3? {
             val tgt = target ?: return null
             val targetPos = tgt.position().add(0.0, 1.0, 0.0)
             return targetPos.subtract(this@BarnacleEntity.position()).normalize()
@@ -287,59 +301,24 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     private var lastUpdateTick: Int = 0
 
     fun updateBodyRotation() {
-
-        if (!isUnderWater) {
-            val dir = getDirectionFromData()
-            if (dir.lengthSqr() < 1e-6) return
-            val targetYawRad = atan2(dir.z, dir.x)
-            var targetYaw = Math.toDegrees(targetYawRad).toFloat()
-            targetYaw = (targetYaw - 90.0).toFloat()
-            targetYaw = Mth.wrapDegrees(targetYaw)
-        val deltaTicks = (tickCount - lastUpdateTick).coerceAtLeast(1)
-        val lerpFactor = (deltaTicks / 5f).coerceIn(0f, 1f) 
-        yRot = Mth.rotLerp(lerpFactor, lastYaw, targetYaw)
-        xRot = 0f
-        yHeadRot = yRot
-        yBodyRot = yRot
-        lastYaw = yRot
-        lastPitch = xRot
-        lastUpdateTick = tickCount
-        return
-        }
-
         val dir = getDirectionFromData()
         if (dir.lengthSqr() < 1e-6) return
 
-        val horizontalLength = sqrt(dir.x * dir.x + dir.z * dir.z)
-        val targetPitchRad = atan2(-dir.y, horizontalLength)
-        val targetYawRad = atan2(dir.z, dir.x)
+        if (isUnderWater) {
+            val lookDistance = 10.0
 
-        var targetPitch = Math.toDegrees(targetPitchRad).toFloat()
-        var targetYaw = Math.toDegrees(targetYawRad).toFloat()
+            val lookPos = position().add(
+                dir.x * lookDistance,
+                dir.y * lookDistance,
+                dir.z * lookDistance
+            )
 
-        targetYaw = (targetYaw - 90.0).toFloat()
-        targetYaw = Mth.wrapDegrees(targetYaw)
-        targetPitch = Mth.wrapDegrees(targetPitch)
-
-        val deltaTicks = (tickCount - lastUpdateTick).coerceAtLeast(1)
-        val lerpFactor = (deltaTicks / 5f).coerceIn(0f, 1f) 
-
-        yRot = Mth.rotLerp(lerpFactor, lastYaw, targetYaw)
-        xRot = Mth.rotLerp(lerpFactor, lastPitch, targetPitch)
-        yHeadRot = yRot
-        yBodyRot = yRot
-
-        lastYaw = yRot
-        lastPitch = xRot
-        lastUpdateTick = tickCount
-
-        val lookDistance = 10.0
-        val lookPos = position().add(
-            dir.x * lookDistance,
-            dir.y * lookDistance,
-            dir.z * lookDistance
-        )
-        lookControl.setLookAt(lookPos.x, lookPos.y, lookPos.z)
+            lookControl.setLookAt(
+                lookPos.x,
+                lookPos.y,
+                lookPos.z
+            )
+        }
         lookControl.tick()
     }
 
@@ -402,10 +381,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         private val targetDistance = 4.0 
         private var initialVelocity = Vec3.ZERO
 
-        val target: LivingEntity?
-            get() = getTarget(5.5)
-        val dir
-            get() : Vec3? = getDir(target)
 
         override fun canUse(): Boolean = isUnderWater && (target != null || entityData.get(MOUTH_OPEN))
         override fun requiresUpdateEveryTick(): Boolean = true
@@ -491,10 +466,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * 22).toInt()
         private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * 22).toInt()
-        val target: LivingEntity?
-            get() = getTarget(40.0)
-        val dir
-            get() : Vec3? = getDir(target)
 
         override fun canUse(): Boolean = target != null && isUnderWater
         override fun requiresUpdateEveryTick(): Boolean = true
