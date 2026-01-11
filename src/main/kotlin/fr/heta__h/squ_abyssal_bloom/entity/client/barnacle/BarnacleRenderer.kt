@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.client.barnacle
 
 import com.mojang.blaze3d.vertex.PoseStack
+import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import net.minecraft.client.animation.KeyframeAnimation
@@ -24,9 +25,6 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
         )
     }
 
-    private val barnacleModel: BarnacleModel = this.model
-    private var currentAnimation: KeyframeAnimation? = null
-
     override fun submit(
         renderState: BarnacleRenderState,
         poseStack: PoseStack,
@@ -43,12 +41,27 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
 
     override fun getTextureLocation(state: BarnacleRenderState): ResourceLocation = TEXTURE
 
+    override fun setupRotations(
+        state: BarnacleRenderState,
+        poseStack: PoseStack,
+        rotationYaw: Float,
+        partialTicks: Float
+    ) {
+        super.setupRotations(state, poseStack, rotationYaw, partialTicks)
+
+        poseStack.mulPose(Axis.XP.rotationDegrees(-state.xRot))
+    }
+
     override fun extractRenderState(
         entity: BarnacleEntity,
         state: BarnacleRenderState,
         partialTicks: Float
     ) {
         super.extractRenderState(entity, state, partialTicks)
+
+        state.xRot = entity.getViewXRot(partialTicks)
+        state.yRot = entity.getViewYRot(partialTicks)
+
         state.stillMouthCloseAnimationState.copyFrom(entity.stillMouthCloseAnimationState)
         state.stillMouthOpenAnimationState.copyFrom(entity.stillMouthOpenAnimationState)
         state.moveStillAnimationState.copyFrom(entity.moveStillAnimationState)
