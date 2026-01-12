@@ -25,6 +25,14 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val BARNACLE_OPEN_MOUTH = SOUNDS.register("barnacle_open_mouth") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BARNACLE_CLOSE_MOUTH = SOUNDS.register("barnacle_close_mouth") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
     fun register(eventBus: IEventBus) {
         SOUNDS.register(eventBus)
     }

@@ -15,7 +15,6 @@ import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
-import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.monster.Guardian
 import net.minecraft.world.entity.monster.Monster
@@ -62,6 +61,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val MOUTH_OPEN: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val IS_SWALLOWING: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val TARGET: EntityDataAccessor<Optional<EntityReference<LivingEntity?>?>?> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.OPTIONAL_LIVING_ENTITY_REFERENCE)
         private val DIR_X: EntityDataAccessor<Float> =
@@ -86,12 +87,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         builder.define(RUSH_PHASE, false)
         builder.define(IS_IDLE, false)
         builder.define(MOUTH_OPEN, false)
+        builder.define(IS_SWALLOWING, false)
         builder.define(TARGET,
-            Optional.ofNullable(myTarget?.let { EntityReference.of(it) } ) as Optional<EntityReference<LivingEntity?>?>
+            Optional.empty<EntityReference<LivingEntity>>() as Optional<EntityReference<LivingEntity?>?>
         )
         builder.define(DIR_X, 0f)
         builder.define(DIR_Y, 0f)
-        builder.define(DIR_Z, 0f)
+        builder.define(DIR_Z, 1f)
     }
 
     override fun registerGoals() {
@@ -104,9 +106,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     override fun tick() {
         super.tick()
+
+        updateBodyRotation()
+
         if (level().isClientSide) {
             
-            updateBodyRotation()
             if (!isUnderWater) {
                 if (!animationResetScheduled) {
                     resetAnimationStates()
@@ -234,7 +238,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             if (timeExposedInAir >= 200) {
                 hurt(damageSources().drown(), 2.0f)
             }
-            if (onGround() || deltaMovement.y == 0.0) {
+
+            if (onGround() && tickCount > 20) {
                 deltaMovement = deltaMovement.add(0.0, 0.45, 0.0)
                 val horizontalDir = getRandomDirection().normalize()
                 deltaMovement = deltaMovement.add(horizontalDir.x * 0.1, 0.0, horizontalDir.z * 0.1)
@@ -242,7 +247,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 setDirectionInData(horizontalDir)
                 setOnGround(false)
                 hasImpulse = true
-                playSound(getFlopSound(), getSoundVolume(), this.voicePitch)
+                playSound(getFlopSound())
             }
         }
     }
@@ -364,6 +369,25 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return true
     }
 
+    private fun maintenirCible(tgt: LivingEntity) {
+        val dir = getDirectionFromData() ?: return
+
+        val holdPos = this.position().add(dir.scale(4.5))
+
+        tgt.deltaMovement = Vec3.ZERO
+        tgt.hasImpulse = true
+        tgt.fallDistance = 0.0
+
+        if (tgt is ServerPlayer) {
+            tgt.connection.teleport(holdPos.x, holdPos.y, holdPos.z, tgt.yRot, tgt.xRot)
+
+            tgt.connection.send(ClientboundSetEntityMotionPacket(tgt))
+        } else {
+            tgt.setPos(holdPos.x, holdPos.y, holdPos.z)
+        }
+    }
+
+
 
     private fun setDirectionInData(direction: Vec3) {
         entityData.set(DIR_X, direction.x.toFloat())
@@ -385,12 +409,21 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     inner class BarnacleAttackGoal : Goal() {
         override fun canUse(): Boolean = false
-    }
+        private val startSwallowDuration = ceil(BarnacleAnimation.swallow_start.lengthInSeconds * 21).toInt()
+        private val stopSwallowDuration = ceil(BarnacleAnimation.swallow_stop.lengthInSeconds * 21).toInt()
+        private val slallowDuration = ceil(BarnacleAnimation.swallow.lengthInSeconds * 21).toInt()
 
+        init {
+            this.flags = EnumSet.of(Flag.MOVE, Flag.LOOK)
+        }
+    }
     inner class BarnacleGrabGoal : Goal() {
         private val openMouthDuration = ceil(BarnacleAnimation.mouth_open.lengthInSeconds * 21).toInt()
-        private val closeMoutDuration = ceil(BarnacleAnimation.mouth_close.lengthInSeconds * 21).toInt()
-        private val targetDistance = 4.0
+        private val closeMouthDuration = ceil(BarnacleAnimation.mouth_close.lengthInSeconds * 21).toInt()
+
+        private val openSoundDelay = 2
+        private val closeSoundDelay = openSoundDelay
+
         private var initialVelocity = Vec3.ZERO
         private var isClosing = false
 
@@ -400,14 +433,12 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         override fun canUse(): Boolean = isUnderWater && (myTarget != null || isClosing)
 
-
         override fun start() {
             if (!level().isClientSide) {
                 entityData.set(CURRENT_GOAL_STATE, 2)
                 animationStartTick = tickCount
                 initialVelocity = deltaMovement
                 isClosing = false
-
                 myTarget?.let { setDirectionInData(getMyDir(it) ?: getRandomDirection().normalize()) }
             }
         }
@@ -429,13 +460,17 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
             if (tgt != null && tgt.isAlive) {
                 isClosing = false
-
                 maintenirCible(tgt)
 
                 if (!isMouthOpen) {
+                    if (t == openSoundDelay) {
+                        playSound(ModSounds.BARNACLE_OPEN_MOUTH.get())
+                    }
+
                     if (t >= openMouthDuration) {
                         animationStartTick = tickCount
                         entityData.set(MOUTH_OPEN, true)
+
                         deltaMovement = Vec3.ZERO
                     } else {
                         val slowdownFactor = (1.0 - (t.toDouble() / openMouthDuration.toDouble())).coerceAtLeast(0.0)
@@ -448,58 +483,14 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             else if (isClosing) {
                 deltaMovement = Vec3.ZERO
 
-                if (t >= closeMoutDuration) {
+                if (t == closeSoundDelay) {
+                    playSound(ModSounds.BARNACLE_CLOSE_MOUTH.get())
+                }
+
+                if (t >= closeMouthDuration) {
                     isClosing = false
                 }
             }
-
-        }
-
-        
-        private fun maintenirCible(tgt: LivingEntity) {
-            val viewVector = calculateViewVector(this@BarnacleEntity.xRot, this@BarnacleEntity.yRot)
-
-            val realDistance = 4.0 + (3 / 2.0) + (tgt.bbWidth / 2.0)
-
-            val holdPosition = this@BarnacleEntity.eyePosition.add(viewVector.scale(realDistance))
-
-            val attractionVector = holdPosition.subtract(tgt.position())
-            val distSq = attractionVector.lengthSqr()
-
-            val maxSpeed = 1.2
-            val pullStrength = 0.25
-
-            var newVelocity = attractionVector.scale(pullStrength)
-
-            if (newVelocity.lengthSqr() > maxSpeed * maxSpeed) {
-                newVelocity = newVelocity.normalize().scale(maxSpeed)
-            }
-
-            if (!tgt.isInWater) {
-                newVelocity = newVelocity.multiply(1.0, 0.8, 1.0)
-            }
-
-            tgt.deltaMovement = newVelocity
-            tgt.hasImpulse = true
-            tgt.fallDistance = 0.0
-
-            if (tgt is ServerPlayer) {
-                tgt.connection.send(ClientboundSetEntityMotionPacket(tgt))
-            }
-
-            if (distSq > 16.0) {
-                tgt.setPos(holdPosition.x, holdPosition.y, holdPosition.z)
-            }
-        }
-
-        private fun calculateViewVector(xRot: Float, yRot: Float): Vec3 {
-            val f = xRot * (Math.PI.toFloat() / 180f)
-            val g = -yRot * (Math.PI.toFloat() / 180f)
-            val h = kotlin.math.cos(g)
-            val i = kotlin.math.sin(g)
-            val j = kotlin.math.cos(f)
-            val k = kotlin.math.sin(f)
-            return Vec3((i * j).toDouble(), (-k).toDouble(), (h * j).toDouble())
         }
 
         override fun stop() {
