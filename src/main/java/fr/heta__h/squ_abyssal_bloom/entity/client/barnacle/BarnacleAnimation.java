@@ -214,7 +214,7 @@ public class BarnacleAnimation {
 
     public static final AnimationDefinition swallow = AnimationDefinition.Builder.withLength(0.375F).looping()
             .addAnimation("tongue", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.1667F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 12.7F), AnimationChannel.Interpolations.CATMULLROM)
+                    new Keyframe(0.1667F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 4.7F), AnimationChannel.Interpolations.CATMULLROM)
             ))
             .addAnimation("tipOfTongue", new AnimationChannel(AnimationChannel.Targets.POSITION,
                     new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.3F), AnimationChannel.Interpolations.LINEAR),
@@ -267,7 +267,7 @@ public class BarnacleAnimation {
 
     public static final AnimationDefinition swallow_stop = AnimationDefinition.Builder.withLength(0.375F)
             .addAnimation("tongue", new AnimationChannel(AnimationChannel.Targets.SCALE,
-                    new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 12.7F), AnimationChannel.Interpolations.CATMULLROM),
+                    new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 4.7F), AnimationChannel.Interpolations.CATMULLROM),
                     new Keyframe(0.2083F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM)
             ))
             .addAnimation("tipOfTongue", new AnimationChannel(AnimationChannel.Targets.POSITION,
@@ -314,7 +314,7 @@ public class BarnacleAnimation {
     public static final AnimationDefinition swallow_start = AnimationDefinition.Builder.withLength(0.2083F)
             .addAnimation("tongue", new AnimationChannel(AnimationChannel.Targets.SCALE,
                     new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 16.7F), AnimationChannel.Interpolations.LINEAR),
-                    new Keyframe(0.2083F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 12.7F), AnimationChannel.Interpolations.LINEAR)
+                    new Keyframe(0.2083F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 4.7F), AnimationChannel.Interpolations.LINEAR)
             ))
             .addAnimation("tipOfTongue", new AnimationChannel(AnimationChannel.Targets.POSITION,
                     new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.3F), AnimationChannel.Interpolations.LINEAR),
