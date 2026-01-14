@@ -118,141 +118,144 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         if (this.isUnderWater) updateBodyRotation()
 
         if (level().isClientSide) {
-
             if (!isUnderWater) {
                 if (!animationResetScheduled) {
                     resetAnimationStates()
                     animationResetScheduled = true
                 }
-            } else {
-                val currentGoal = entityData.get(CURRENT_GOAL_STATE)
-                val currentRush = entityData.get(RUSH_PHASE)
-                val currentIsIdle = entityData.get(IS_IDLE)
-                val currentMouthOpen = entityData.get(MOUTH_OPEN)
-                val currentSwallowing = entityData.get(IS_SWALLOWING)
+                return
+            }
 
-                val rawTarget = entityData.get(TARGET)?.orElse(null)?.getEntity(level(), LivingEntity::class.java as Class<LivingEntity?>)
-                val currentTarget = if (rawTarget != null && rawTarget.isAlive) rawTarget else null
+            val currentGoal = entityData.get(CURRENT_GOAL_STATE)
+            val currentRush = entityData.get(RUSH_PHASE)
+            val currentIsIdle = entityData.get(IS_IDLE)
+            val currentMouthOpen = entityData.get(MOUTH_OPEN)
+            val currentSwallowing = entityData.get(IS_SWALLOWING)
 
-                var needsReset = false
-                var keepClosingDuringReset = false
+            val currentTarget: LivingEntity? by lazy {
+                entityData.get(TARGET)?.orElse(null)
+                    ?.getEntity(level(), LivingEntity::class.java as Class<LivingEntity?>) ?: null
+            }
 
-                
-                if (currentGoal != lastGoalState) {
-                    needsReset = true
+            var needsReset = false
+            var keepClosingDuringReset = false
+            var keepSwallowStopDuringReset = false
 
-                    if (lastGoalState == 2 && currentGoal != 1) {
-                        closeMouthAnimationState.startIfStopped(tickCount)
-                        keepClosingDuringReset = true
-                    }
+            if (currentGoal != lastGoalState) {
+                needsReset = true
 
-                    lastGoalState = currentGoal
-                    lastRushPhase = null
-                    lastIsIdle = null
-                    lastMouthOpen = null
-                    lastSwallowing = null
+                if (lastGoalState == 2 && currentGoal != 1) {
+                    closeMouthAnimationState.startIfStopped(tickCount)
+                    keepClosingDuringReset = true
                 }
 
-                if (currentGoal == 3 || currentGoal == 4 || currentGoal == 0) {
-                    if (currentRush != lastRushPhase) {
-                        needsReset = true
-                        lastRushPhase = currentRush
-                    }
-                    if (currentGoal == 4 && currentIsIdle != lastIsIdle) {
-                        needsReset = true
-                        lastIsIdle = currentIsIdle
-                    }
+                if (lastGoalState == 1) {
+                    swallowStopAnimationState.startIfStopped(tickCount)
+                    keepSwallowStopDuringReset = true
                 }
 
-                if (currentGoal == 2) {
-                    if (currentMouthOpen != lastMouthOpen) {
-                        lastMouthOpen = currentMouthOpen
-                        needsReset = false
-                    }
-                } else if (currentGoal == 1) {
-                    if (currentSwallowing != lastSwallowing) {
-                        lastSwallowing = currentSwallowing
-                    }
-                }
+                lastGoalState = currentGoal
+                lastRushPhase = null
+                lastIsIdle = null
+                lastMouthOpen = null
+                lastSwallowing = null
+            }
 
-                if (needsReset || animationResetScheduled) {
-                    resetAnimationStates(keepClosingDuringReset)
-                    animationResetScheduled = false
-                }
-
+            if (!needsReset) {
                 when (currentGoal) {
+                    0, 3 -> if (currentRush != lastRushPhase) needsReset = true
                     4 -> {
-                        if (currentIsIdle) {
-                            stillMouthCloseAnimationState.startIfStopped(tickCount)
-                        } else {
-                            if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
-                            else moveStillAnimationState.startIfStopped(tickCount)
-                        }
+                        if (currentRush != lastRushPhase) needsReset = true
+                        if (currentIsIdle != lastIsIdle) needsReset = true
                     }
+                    2 -> if (currentMouthOpen != lastMouthOpen) needsReset = false
+                    1 -> if (currentSwallowing != lastSwallowing) needsReset = false
+                }
+            }
 
-                    3 -> {
+            lastRushPhase = currentRush
+            lastIsIdle = currentIsIdle
+            lastMouthOpen = currentMouthOpen
+            lastSwallowing = currentSwallowing
+
+            if (needsReset || animationResetScheduled) {
+                resetAnimationStates(keepClosingDuringReset, keepSwallowStopDuringReset)
+                animationResetScheduled = false
+            }
+
+            when (currentGoal) {
+                4 -> {
+                    if (currentIsIdle) {
+                        stillMouthCloseAnimationState.startIfStopped(tickCount)
+                    } else {
                         if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
                         else moveStillAnimationState.startIfStopped(tickCount)
                     }
+                }
 
-                    2 -> {
-                        val isMouthOpen = entityData.get(MOUTH_OPEN)
-                        if (currentTarget != null) {
-                            if (!isMouthOpen) {
-                                openMouthAnimationState.startIfStopped(tickCount)
-                                stillMouthOpenAnimationState.stop()
-                            } else {
-                                openMouthAnimationState.stop()
-                                stillMouthOpenAnimationState.startIfStopped(tickCount)
-                            }
-                            closeMouthAnimationState.stop()
-                        } else {
+                3 -> {
+                    if (currentRush) moveRushAnimationState.startIfStopped(tickCount)
+                    else moveStillAnimationState.startIfStopped(tickCount)
+                }
+
+                2 -> {
+                    if (currentTarget != null) {
+                        if (!currentMouthOpen) {
+                            openMouthAnimationState.startIfStopped(tickCount)
                             stillMouthOpenAnimationState.stop()
+                        } else {
                             openMouthAnimationState.stop()
-                            closeMouthAnimationState.startIfStopped(tickCount)
+                            stillMouthOpenAnimationState.startIfStopped(tickCount)
                         }
+                        closeMouthAnimationState.stop()
+                    } else {
+                        stillMouthOpenAnimationState.stop()
+                        openMouthAnimationState.stop()
+                        closeMouthAnimationState.startIfStopped(tickCount)
                     }
+                }
 
-                    1 -> {
-                        val isSwallowing = entityData.get(IS_SWALLOWING)
-
-                        if (currentTarget != null) {
-                            swallowStopAnimationState.stop()
-
-                            if (!isSwallowing) {
-                                swallowStartAnimationState.startIfStopped(tickCount)
-                                swallowAnimationState.stop()
-                            } else {
-                                swallowStartAnimationState.stop()
-                                swallowAnimationState.startIfStopped(tickCount)
-                            }
+                1 -> {
+                    if (currentTarget != null && currentTarget!!.isAlive) {
+                        swallowStopAnimationState.stop()
+                        if (!currentSwallowing) {
+                            swallowStartAnimationState.startIfStopped(tickCount)
+                            swallowAnimationState.stop()
                         } else {
                             swallowStartAnimationState.stop()
-                            swallowAnimationState.stop()
-                            swallowStopAnimationState.startIfStopped(tickCount)
+                            swallowAnimationState.startIfStopped(tickCount)
                         }
+                    } else {
+                        swallowStartAnimationState.stop()
+                        swallowAnimationState.stop()
+                        swallowStopAnimationState.startIfStopped(tickCount)
                     }
+                }
 
-                    0 -> {
-                        if (currentRush) {
-                            fleeRushAnimationState.startIfStopped(tickCount)
-                            fleeStillAnimationState.stop()
-                        } else {
-                            fleeStillAnimationState.startIfStopped(tickCount)
-                            fleeRushAnimationState.stop()
-                        }
+                0 -> {
+                    if (currentRush) {
+                        fleeRushAnimationState.startIfStopped(tickCount)
+                        fleeStillAnimationState.stop()
+                    } else {
+                        fleeStillAnimationState.startIfStopped(tickCount)
+                        fleeRushAnimationState.stop()
                     }
                 }
             }
         } else {
-            entityData.set(
-                TARGET,
-                Optional.ofNullable(myTarget?.let { EntityReference.of(it) } ) as Optional<EntityReference<LivingEntity?>?>
-            )
+            val newTargetRef = myTarget?.let { EntityReference.of(it) }
+            val currentSyncedTarget = entityData.get(TARGET)?.orElse(null) ?: null
+
+            if (newTargetRef != currentSyncedTarget) {
+                entityData.set(
+                    TARGET,
+                    Optional.ofNullable(newTargetRef) as Optional<EntityReference<LivingEntity?>?>
+                )
+            }
         }
     }
 
-    private fun resetAnimationStates(keepClosing: Boolean = false) {
+    private fun resetAnimationStates(keepClosing: Boolean = false, keepSwallowStop: Boolean = false) {
         stillMouthCloseAnimationState.stop()
         stillMouthOpenAnimationState.stop()
         openMouthAnimationState.stop()
@@ -267,7 +270,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         fleeRushAnimationState.stop()
         swallowAnimationState.stop()
         swallowStartAnimationState.stop()
-        swallowStopAnimationState.stop()
+
+        if (!keepSwallowStop) {
+            swallowStopAnimationState.stop()
+        }
     }
 
     override fun aiStep() {
@@ -346,17 +352,17 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         val players = this.level().getEntitiesOfClass(
             Player::class.java,
             this.boundingBox.inflate(radius)
-        ).filter { (it.gameMode() == GameType.SURVIVAL || it.gameMode() == GameType.ADVENTURE) && !it.hasEffect(MobEffects.INVISIBILITY) }
+        ).filter { (it.gameMode() == GameType.SURVIVAL || it.gameMode() == GameType.ADVENTURE) && !it.hasEffect(MobEffects.INVISIBILITY) && it.isAlive}
 
         val guardians = this.level().getEntitiesOfClass(
             Guardian::class.java,
             this.boundingBox.inflate(radius)
-        )
+        ).filter { it.isAlive }
 
         val mannequins = this.level().getEntitiesOfClass(
             Mannequin::class.java,
             this.boundingBox.inflate(radius)
-        )
+        ).filter { it.isAlive }
 
         val validPlayers = players.filter { isClosestBarnacle(it, radius) }
             .sortedBy { it.distanceToSqr(this) }
@@ -660,13 +666,18 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             val t = tickCount - animationStartTick
             val isSwallowing = entityData.get(IS_SWALLOWING)
             val target = myTarget
+            val isHealthCritical = this@BarnacleEntity.health / this@BarnacleEntity.maxHealth <= 0.25f
 
             if (target == null || !target.isAlive || this@BarnacleEntity.health/this@BarnacleEntity.maxHealth <= 0.25f) {
                 if (!isFinishingAnimation) {
                     isFinishingAnimation = true
                     animationStartTick = tickCount
                     entityData.set(IS_SWALLOWING, false)
-                    entityData.set(MOUTH_OPEN, false)
+
+                    if (isHealthCritical) {
+                        entityData.set(MOUTH_OPEN, false)
+                    }
+
                     return
                 }
 
@@ -709,9 +720,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         override fun stop() {
             if (!level().isClientSide) {
                 entityData.set(IS_SWALLOWING, false)
-                entityData.set(MOUTH_OPEN, false)
                 isFinishingAnimation = false
+
+                if (this@BarnacleEntity.health / this@BarnacleEntity.maxHealth <= 0.25f) {
+                    entityData.set(MOUTH_OPEN, false)
+                }
             }
+
         }
     }
 
