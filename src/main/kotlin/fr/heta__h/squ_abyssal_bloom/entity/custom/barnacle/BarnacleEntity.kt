@@ -114,7 +114,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     override fun tick() {
         super.tick()
 
-        updateBodyRotation()
+        if (this.isUnderWater) updateBodyRotation()
 
         if (level().isClientSide) {
 
@@ -278,6 +278,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 val horizontalDir = getRandomDirection().normalize()
                 deltaMovement = deltaMovement.add(horizontalDir.x * 0.1, 0.0, horizontalDir.z * 0.1)
                 yRot = atan2(horizontalDir.z, horizontalDir.x).toFloat() * (180f / Math.PI.toFloat()) - 90f
+                xRot = 0f
                 setDirectionInData(horizontalDir)
                 setOnGround(false)
                 hasImpulse = true
@@ -323,10 +324,21 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
 
     fun getMyTarget(radius: Double): LivingEntity? {
+        val attacker = this.lastHurtByMob
+        if (attacker != null && attacker.isAlive) {
+            if (this.distanceToSqr(attacker) <= radius * radius) {
+                val isValidPlayer = if (attacker is Player) !attacker.isCreative && !attacker.isSpectator else true
+
+                if (attacker != this && isValidPlayer) {
+                    return attacker
+                }
+            }
+        }
+
         val players = this.level().getEntitiesOfClass(
             Player::class.java,
             this.boundingBox.inflate(radius)
-        ).filter { it.gameMode() == GameType.SURVIVAL }
+        ).filter { (it.gameMode() == GameType.SURVIVAL || it.gameMode() == GameType.ADVENTURE) && !it.hasEffect(MobEffects.INVISIBILITY) }
 
         val guardians = this.level().getEntitiesOfClass(
             Guardian::class.java,
@@ -462,8 +474,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
-
-
     private fun setDirectionInData(direction: Vec3) {
         entityData.set(DIR_X, direction.x.toFloat())
         entityData.set(DIR_Y, direction.y.toFloat())
@@ -488,7 +498,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         private val swallowDuration = ceil(BarnacleAnimation.swallow.lengthInSeconds * 20).toInt()
 
         private val closeSoundDelay = 2
-        private val factor = Pair(4.5, 1.0)
+        private val factor = Pair(4.5, 1.5)
 
         private var isFinishingAnimation: Boolean = false
 
