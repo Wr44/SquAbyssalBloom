@@ -23,7 +23,7 @@ object ModEntities {
 
 
     val BARNACLE_KEY: ResourceKey<EntityType<*>> =
-        ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.withDefaultNamespace("barnacle"))
+        ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "barnacle"))
 
 
     val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> =

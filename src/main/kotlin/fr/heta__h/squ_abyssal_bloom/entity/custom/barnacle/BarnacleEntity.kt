@@ -1,9 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
+import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Holder
+import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
@@ -541,6 +543,16 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
+    fun swallowDamageSource(): DamageSource {
+        return DamageSource(
+            level().registryAccess()
+                .lookupOrThrow(Registries.DAMAGE_TYPE)
+                .getOrThrow(ModDamagesTypes.BARNACLE_SWALLOW),
+            this
+        )
+    }
+
+
     inner class BarnacleFleeGoal : Goal() {
 
         private val moveStillDuration =
@@ -731,7 +743,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 maintenirCible(target, holdDist)
 
                 if (t % ceil(swallowDuration / 2.0).toInt() == 0) {
-                    target.hurt(damageSources().mobAttack(this@BarnacleEntity), 3f)
+                    target.hurt(swallowDamageSource(), 3f)
                 }
             }
         }
