@@ -32,7 +32,7 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
         cameraRenderState: CameraRenderState
     ) {
         poseStack.pushPose()
-        poseStack.scale(2f, 2f, 2f) 
+        poseStack.scale(2f, 2f, 2f)
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
         poseStack.popPose()
     }

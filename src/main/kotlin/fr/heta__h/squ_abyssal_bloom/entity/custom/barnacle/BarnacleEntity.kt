@@ -82,7 +82,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         fun createAttributes(): AttributeSupplier.Builder =
             createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 40.0)
+                .add(Attributes.MAX_HEALTH, 60.0)
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.25)
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0)
@@ -556,8 +556,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 if (threat != null) {
                     setFleeDirection(threat)
                 }
-
-                deltaMovement = deltaMovement.add(0.0, 0.1, 0.0)
             }
         }
 
@@ -626,6 +624,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 entityData.set(RUSH_PHASE, false)
                 entityData.set(IS_IDLE, false)
                 deltaMovement = Vec3.ZERO
+                isPlaying = false
             }
         }
     }
