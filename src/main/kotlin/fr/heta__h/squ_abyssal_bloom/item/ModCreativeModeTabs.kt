@@ -19,11 +19,14 @@ object ModCreativeModeTabs {
     val SPAWN_EGG_TAB: Supplier<CreativeModeTab> = CREATIVE_MODE_TAB.register(
         "spawn_egg_tab"
     ) { ->
-        CreativeModeTab.builder().icon { ItemStack(ModItems.BARNACLE_SPAWN_EGG.get()) }
+        CreativeModeTab.builder()
+            .icon { ItemStack(ModItems.BARNACLE_SPAWN_EGG.get()) }
             .title(Component.translatable("creativetab.squ_abyssal_bloom.spawn_eggs"))
             .displayItems { itemDisplayParameters, output ->
-                output.accept { ModItems.BARNACLE_SPAWN_EGG.get() }
-            }.build()
+                output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
+                output.accept(ModItems.BARNACLE_TOOTH.get())
+            }
+            .build()
     }
 
     fun register(eventBus: IEventBus) {

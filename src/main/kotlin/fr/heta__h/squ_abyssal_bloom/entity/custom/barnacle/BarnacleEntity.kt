@@ -4,7 +4,6 @@ import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
-import net.minecraft.core.Holder
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -16,7 +15,6 @@ import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.Mth.wrapDegrees
 import net.minecraft.world.damagesource.DamageSource
-import net.minecraft.world.effect.MobEffect
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.*
@@ -68,6 +66,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     private var lastMouthOpen: Boolean? = null
     private var lastSwallowing: Boolean? = null
     private var animationResetScheduled = false
+
+    init {
+        this.xpReward = 10
+    }
 
     companion object {
         private val CURRENT_GOAL_STATE: EntityDataAccessor<Int> =
@@ -427,7 +429,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     override fun getAmbientSoundInterval(): Int = 550
 
-
     private fun getRandomDirection(): Vec3 {
         val x = (this.random.nextDouble() * 2) - 1
         val y = (this.random.nextDouble() * 2) - 1
@@ -537,7 +538,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return Vec3(x, y, z)
     }
 
-    private inline fun ensureGoalState(state: Int) {
+    private fun ensureGoalState(state: Int) {
         if (entityData.get(CURRENT_GOAL_STATE) != state) {
             entityData.set(CURRENT_GOAL_STATE, state)
         }

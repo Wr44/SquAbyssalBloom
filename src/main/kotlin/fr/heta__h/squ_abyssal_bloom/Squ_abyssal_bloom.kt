@@ -1,11 +1,13 @@
 package fr.heta__h.squ_abyssal_bloom
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.Screen
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
@@ -53,7 +55,17 @@ object Squ_abyssal_bloom {
     
     private fun onClientSetup(event: FMLClientSetupEvent) {
         LOGGER.log(Level.INFO, "Initializing client...")
+
+        ModConfig.loadConfig()
+
+        event.container.registerExtensionPoint(
+            net.neoforged.neoforge.client.gui.IConfigScreenFactory::class.java,
+            net.neoforged.neoforge.client.gui.IConfigScreenFactory { minecraft, parent ->
+                ModConfig.createConfigScreen(parent)
+            }
+        )
     }
+
 
     
     private fun onServerSetup(event: FMLDedicatedServerSetupEvent) {

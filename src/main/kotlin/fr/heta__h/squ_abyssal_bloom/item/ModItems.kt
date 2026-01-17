@@ -19,6 +19,10 @@ object ModItems {
         "barnacle_spawn_egg"
     ) { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.BARNACLE.get())) }
 
+    val BARNACLE_TOOTH: DeferredItem<Item> = ITEMS.registerItem(
+        "barnacle_tooth"
+    ) { properties -> Item(properties) }
+
     fun register(eventBus: IEventBus) {
         ITEMS.register(eventBus)
     }
