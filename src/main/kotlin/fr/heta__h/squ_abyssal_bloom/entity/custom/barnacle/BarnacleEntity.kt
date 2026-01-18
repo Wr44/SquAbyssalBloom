@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
@@ -27,6 +28,7 @@ import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.GameType
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.phys.Vec3
 import java.util.*
 import kotlin.math.abs
@@ -519,8 +521,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 net.minecraft.core.particles.ParticleTypes.SQUID_INK,
                 this.x, this.eyeY, this.z,
                 500,
-                2.0, 2.0, 4.0, 
-                0.1 
+                2.0, 2.0, 4.0,
+                0.3
             )
         }
     }
@@ -1055,20 +1057,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         private fun adjustDirectionForObstacles(dirIn: Vec3): Vec3 {
             val world = level()
-            val pos = blockPosition()
             val maxDistance = 10
-
-            var blocksUp = 0
-            for (i in 1..maxDistance) {
-                if (world.getBlockState(pos.above(i)).isAir) break
-                blocksUp++
-            }
+            val blocksUp = findWaterSurface(world, this@BarnacleEntity.blockPosition())
 
             var dir = dirIn
 
             if (blocksUp < maxDistance) {
-                val adjust =
-                    (maxDistance - blocksUp).toDouble() / maxDistance
+                val adjust = (maxDistance - blocksUp).toDouble() / maxDistance
                 dir = Vec3(dir.x, dir.y - adjust * 0.5, dir.z).normalize()
                 setDirectionInData(dir)
             } else if (!hasWaterAhead(dir)) {

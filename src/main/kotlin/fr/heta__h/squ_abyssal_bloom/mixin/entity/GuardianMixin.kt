@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 
 
-@Mixin(Guardian::class)
+@Mixin(Guardian::class, remap = false)
 open class GuardianMixin protected constructor(type: EntityType<out Monster?>, level: Level) : Monster(type, level) {
     @Inject(method = ["registerGoals"], at = [At("TAIL")])
     private fun addBarnacleTarget(ci: CallbackInfo?) {

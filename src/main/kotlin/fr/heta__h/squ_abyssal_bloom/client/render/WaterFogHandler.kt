@@ -2,84 +2,90 @@ package fr.heta__h.squ_abyssal_bloom.client.render
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getDepthFactor
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.isLargeBodyWater
 import net.minecraft.core.BlockPos
-import net.minecraft.core.Direction
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.LivingEntity
-import net.minecraft.world.level.Level
-import net.minecraft.world.level.material.Fluids.WATER
+import net.minecraft.world.level.material.FogType
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.ViewportEvent
-import kotlin.math.exp
 import kotlin.math.pow
 
-
-@EventBusSubscriber(
-    modid = Squ_abyssal_bloom.ID,
-    value = [Dist.CLIENT]
-)
+@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
 object WaterFogHandler {
 
-     @SubscribeEvent
-     fun onRenderFog(event: ViewportEvent.ComputeFogColor) {
-         if (!ModConfig.enableAbyssFog) return
+    private const val FOG_START_SHALLOW = 5.0
+    private const val FOG_END_SHALLOW = 40.0
+    private const val FOG_START_DEEP = 0.1
+    private const val FOG_END_DEEP = 8.0
 
-         val camera = event.camera
-         val entity = camera.entity
 
-         val living = entity as? LivingEntity ?: return
-         if (!living.isInWater || living.hasEffect(MobEffects.NIGHT_VISION)) return
-         val level = living.level()
-         val camPos = BlockPos.containing(camera.position)
+    @SubscribeEvent
+    fun onComputeFogColor(event: ViewportEvent.ComputeFogColor) {
+        if (!ModConfig.enableAbyssFog) return
 
-         if (!isLargeWaterBody(level, camPos)) return
-         val surfaceY = findWaterSurface(level, camPos)
+        val camera = event.camera
+        if (camera.fluidInCamera != FogType.WATER) return
 
-         val waterDepth = surfaceY + 1 - camera.position.y
+        val entity = camera.entity as? LivingEntity ?: return
+        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
-         val depthNorm = (waterDepth / 70.0).coerceIn(0.0, 1.0)
-         val depthFactor = depthNorm.pow(2.0)
+        val level = entity.level()
+        val camPos = BlockPos.containing(camera.position)
 
-         val r = (0.04 * (1 - depthFactor)).toFloat().coerceIn(0f, 1f)
-         val g = (0.08 * (1 - depthFactor)).toFloat().coerceIn(0f, 1f)
-         val b = (0.2  * (1 - depthFactor)).toFloat().coerceIn(0f, 1f)
+        val surfaceY = findWaterSurface(level, camPos)
+        val currentDepth = surfaceY + 1 - camera.position.y
 
-         event.red = r
-         event.green = g
-         event.blue = b
+        if (!isLargeBodyWater(level, camPos, 5)) return
 
-     }
+        val depthFactor = getDepthFactor(currentDepth)
+        if (depthFactor <= 0.0) return
 
-    private fun findWaterSurface(level: Level, start: BlockPos): Int {
-        val pos = start.mutable()
-        while (pos.y < level.maxY) {
-            if (!level.getBlockState(pos).fluidState.`is`(WATER)) {
-                return pos.y - 1
-            }
+        val strength = depthFactor.pow(1.3).toFloat()
 
-            pos.move(Direction.UP)
-        }
-        return start.y
+        event.red = lerp(event.red, 0.0f, strength)
+        event.green = lerp(event.green, 0.0f, strength)
+        event.blue = lerp(event.blue, 0.0f, strength)
     }
 
-    private fun isLargeWaterBody(level: Level, center: BlockPos): Boolean {
-        val radius = 4
-        val y = center.y
-        var count = 0
-        val size = (radius * 2 + 1) * (radius * 2 + 1)
+    @SubscribeEvent
+    fun onRenderFog(event: ViewportEvent.RenderFog) {
+        if (!ModConfig.enableAbyssFog) return
 
-        for (dx in -radius..radius) {
-            for (dz in -radius..radius) {
-                val pos = BlockPos(center.x + dx, y, center.z + dz)
-                if (level.getBlockState(pos).fluidState.`is`(WATER)) {
-                    count++
-                }
-            }
-        }
+        val camera = event.camera
+        if (camera.fluidInCamera != FogType.WATER) return
 
-        return count >= size * 0.75
+        val entity = camera.entity as? LivingEntity ?: return
+        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
+
+        val level = entity.level()
+        val camPos = BlockPos.containing(camera.position)
+
+        if (!isLargeBodyWater(level, camPos, 5)) return
+
+        val surfaceY = findWaterSurface(level, camPos)
+        val currentDepth = surfaceY + 1 - camera.position.y
+
+        if (currentDepth < 2.0) return
+
+        val depthFactor = getDepthFactor(currentDepth)
+        if (depthFactor <= 0.0) return
+
+        val aggressiveness = depthFactor.pow(1.8)
+
+        val fogStartDistance = FOG_START_SHALLOW - (FOG_START_SHALLOW - FOG_START_DEEP) * aggressiveness
+        val fogEndDistance = FOG_END_SHALLOW - (FOG_END_SHALLOW - FOG_END_DEEP) * aggressiveness
+
+        event.nearPlaneDistance = fogStartDistance.toFloat()
+        event.farPlaneDistance = fogEndDistance.toFloat()
+    }
+
+    private fun lerp(start: Float, end: Float, delta: Float): Float {
+        return start + delta * (end - start)
     }
 
 }

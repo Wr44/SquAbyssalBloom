@@ -1,13 +1,12 @@
 package fr.heta__h.squ_abyssal_bloom
 
-import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.block.MyModBlocks
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.screens.Screen
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
@@ -35,7 +34,7 @@ object Squ_abyssal_bloom {
         LOGGER.log(Level.INFO, "Hello world!")
 
         
-        ModBlocks.REGISTRY.register(MOD_BUS)
+        MyModBlocks.REGISTRY.register(MOD_BUS)
         ModEntities.register(MOD_BUS)
         ModItems.register(MOD_BUS)
         ModSounds.register(MOD_BUS)
