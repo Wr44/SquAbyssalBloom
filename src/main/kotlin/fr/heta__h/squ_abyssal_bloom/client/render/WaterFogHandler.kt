@@ -37,13 +37,12 @@ object WaterFogHandler {
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position)
 
-        val surfaceY = findWaterSurface(level, camPos)
-        val currentDepth = surfaceY + 1 - camera.position.y
+        val currentDepth = findWaterSurface(level, camPos)
 
         if (!isLargeBodyWater(level, camPos, 5)) return
 
-        val depthFactor = getDepthFactor(currentDepth)
-        if (depthFactor <= 0.0) return
+        var depthFactor = getDepthFactor(currentDepth.toDouble())
+        if (depthFactor <= 0.0) depthFactor = 0.0
 
         val strength = depthFactor.pow(1.3).toFloat()
 
@@ -67,13 +66,12 @@ object WaterFogHandler {
 
         if (!isLargeBodyWater(level, camPos, 5)) return
 
-        val surfaceY = findWaterSurface(level, camPos)
-        val currentDepth = surfaceY + 1 - camera.position.y
+        val currentDepth = findWaterSurface(level, camPos)
 
         if (currentDepth < 2.0) return
 
-        val depthFactor = getDepthFactor(currentDepth)
-        if (depthFactor <= 0.0) return
+        var depthFactor = getDepthFactor(currentDepth.toDouble())
+        if (depthFactor <= 0.0) depthFactor = 0.0
 
         val aggressiveness = depthFactor.pow(1.8)
 

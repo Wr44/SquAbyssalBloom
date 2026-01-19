@@ -6,15 +6,15 @@ import net.minecraft.world.level.Level
 import net.minecraft.world.level.material.Fluids
 
 object ModUtilities {
-    fun findWaterSurface(level: Level, start: BlockPos, maxDistance: Int = 200): Double {
+    fun findWaterSurface(level: Level, start: BlockPos): Int {
         val startY = start.y
-        for (dy in 0..maxDistance) {
+        for (dy in 0..level.maxY - 1) {
             val pos = start.above(dy)
             if (!level.getFluidState(pos).`is`(Fluids.WATER)) {
-                return pos.y.toDouble() - startY.toDouble()
+                return pos.y - startY
             }
         }
-        return maxDistance.toDouble()
+        return ((level.maxY - 1) - startY)
     }
 
 
