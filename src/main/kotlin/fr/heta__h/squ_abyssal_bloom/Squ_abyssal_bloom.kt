@@ -15,6 +15,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.client.event.EntityRenderersEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
+import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
 import org.apache.logging.log4j.Level
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -89,5 +90,10 @@ object Squ_abyssal_bloom {
     @SubscribeEvent
     fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
         ModEntities.onRegisterAttributes(event)
+    }
+
+    @SubscribeEvent
+    fun onRegisterSpawnPlacements(event: RegisterSpawnPlacementsEvent) {
+        ModEntities.registerSpawnPlacements(event)
     }
 }

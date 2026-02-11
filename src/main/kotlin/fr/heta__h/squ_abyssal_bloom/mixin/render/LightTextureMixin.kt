@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.render
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getDepthFactor
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.isLargeBodyWater
@@ -33,7 +34,6 @@ open class LightTextureMixin {
         if (!ModConfig.enableAbyssFog) return originalValue
 
         val mc = Minecraft.getInstance()
-
         val camera = mc.gameRenderer.mainCamera
         if (camera.fluidInCamera != FogType.WATER) return originalValue
 
@@ -42,17 +42,15 @@ open class LightTextureMixin {
 
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position)
-
         if (!isLargeBodyWater(level, camPos, 5)) return originalValue
 
-        val depth = findWaterSurface(level, camPos)
-        val depthFactor = getDepthFactor(depth.toDouble())
+        val smoothedDepth = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5)
+        val depthFactor = smoothedDepth.coerceAtLeast(0.0)
         if (depthFactor <= 0.0) return originalValue
 
         val factor = exp(-depthFactor * 2.2)
 
-        println("Original Gamma: $originalValue, Depth: $depth, Depth Factor: $depthFactor, Modified Factor: $factor")
-
         return originalValue * factor
     }
+
 }

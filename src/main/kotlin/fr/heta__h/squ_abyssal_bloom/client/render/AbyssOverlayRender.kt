@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.client.render
 import com.mojang.blaze3d.vertex.VertexConsumer
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getDepthFactor
 import net.minecraft.client.Minecraft
@@ -33,12 +34,11 @@ object AbyssOverlayRender {
 
         val level = mc.level ?: return
         val camPos = BlockPos.containing(camera.position)
-        val currentDepth = findWaterSurface(level, camPos)
-        var depthFactor = getDepthFactor(currentDepth.toDouble())
 
-        if (depthFactor <= 0.0) depthFactor = 0.0
+        val depthFactor = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5).coerceAtLeast(0.0)
 
-        val alpha = (depthFactor.pow(1.5)).toFloat().coerceIn(0.0f, 1.0f)
+        
+        val alpha = (depthFactor.pow(0.5)).toFloat().coerceIn(0.0f, 1.0f)
         if (alpha < 0.05f) return
 
         val poseStack = event.poseStack

@@ -2,8 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.client.render
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getDepthFactor
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.isLargeBodyWater
 import net.minecraft.core.BlockPos
 import net.minecraft.world.effect.MobEffects
@@ -37,18 +36,16 @@ object WaterFogHandler {
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position)
 
-        val currentDepth = findWaterSurface(level, camPos)
-
         if (!isLargeBodyWater(level, camPos, 5)) return
 
-        var depthFactor = getDepthFactor(currentDepth.toDouble())
-        if (depthFactor <= 0.0) depthFactor = 0.0
+        var depthFactor = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5)
+        depthFactor = depthFactor.coerceAtLeast(0.0)
 
-        val strength = depthFactor.pow(1.3).toFloat()
+        val eased = depthFactor.pow(0.5)
 
-        event.red = lerp(event.red, 0.0f, strength)
-        event.green = lerp(event.green, 0.0f, strength)
-        event.blue = lerp(event.blue, 0.0f, strength)
+        event.red = lerp(event.red, 0.0f, eased.toFloat())
+        event.green = lerp(event.green, 0.0f, eased.toFloat())
+        event.blue = lerp(event.blue, 0.0f, eased.toFloat())
     }
 
     @SubscribeEvent
@@ -66,17 +63,13 @@ object WaterFogHandler {
 
         if (!isLargeBodyWater(level, camPos, 5)) return
 
-        val currentDepth = findWaterSurface(level, camPos)
+        val depthFactor = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5).coerceAtLeast(0.0)
+        if (depthFactor < 0.05) return
 
-        if (currentDepth < 2.0) return
+        val eased = depthFactor.pow(0.5)
 
-        var depthFactor = getDepthFactor(currentDepth.toDouble())
-        if (depthFactor <= 0.0) depthFactor = 0.0
-
-        val aggressiveness = depthFactor.pow(1.8)
-
-        val fogStartDistance = FOG_START_SHALLOW - (FOG_START_SHALLOW - FOG_START_DEEP) * aggressiveness
-        val fogEndDistance = FOG_END_SHALLOW - (FOG_END_SHALLOW - FOG_END_DEEP) * aggressiveness
+        val fogStartDistance = FOG_START_SHALLOW - (FOG_START_SHALLOW - FOG_START_DEEP) * eased
+        val fogEndDistance = FOG_END_SHALLOW - (FOG_END_SHALLOW - FOG_END_DEEP) * eased
 
         event.nearPlaneDistance = fogStartDistance.toFloat()
         event.farPlaneDistance = fogEndDistance.toFloat()

@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.Registries
@@ -14,6 +15,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
+import net.minecraft.tags.FluidTags
 import net.minecraft.util.Mth.wrapDegrees
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
@@ -28,7 +30,6 @@ import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.GameType
 import net.minecraft.world.level.Level
-import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.phys.Vec3
 import java.util.*
 import kotlin.math.abs
@@ -384,13 +385,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             this.boundingBox.inflate(radius)
         ).filter { it.isAlive }
 
-        val validPlayers = players.filter { isClosestBarnacle(it, radius) }
+        val validPlayers = players.filter { isClosestBarnacle(it, radius) && ModUtilities.hasClearPath(level(), this@BarnacleEntity, it) }
             .sortedBy { it.distanceToSqr(this) }
 
-        val validGuardians = guardians.filter { isClosestBarnacle(it, radius) }
+        val validGuardians = guardians.filter { isClosestBarnacle(it, radius) && ModUtilities.hasClearPath(level(), this@BarnacleEntity, it) }
             .sortedBy { it.distanceToSqr(this) }
 
-        val validMannequins = mannequins.filter { isClosestBarnacle(it, radius) }
+        val validMannequins = mannequins.filter { isClosestBarnacle(it, radius) && ModUtilities.hasClearPath(level(), this@BarnacleEntity, it) }
             .sortedBy { it.distanceToSqr(this) }
 
         return when {
@@ -1058,7 +1059,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         private fun adjustDirectionForObstacles(dirIn: Vec3): Vec3 {
             val world = level()
             val maxDistance = 10
-            val blocksUp = findWaterSurface(world, this@BarnacleEntity.blockPosition())
+            val blocksUp = findWaterSurface(world, this@BarnacleEntity.blockPosition(), 1)
 
             var dir = dirIn
 
