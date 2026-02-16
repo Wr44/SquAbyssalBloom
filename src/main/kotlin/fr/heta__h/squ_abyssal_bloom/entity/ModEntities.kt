@@ -3,7 +3,10 @@ package fr.heta__h.squ_abyssal_bloom.entity
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraModel
+import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
@@ -40,18 +43,39 @@ object ModEntities {
                 .build(BARNACLE_KEY)
         }
 
+    val GHOAST_CHIMAERA_KEY: ResourceKey<EntityType<*>> =
+        ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "ghost_chimera"))
+
+    val GHOST_CHIMAERA: DeferredHolder<EntityType<*>, EntityType<GhostChimaeraEntity>> =
+        ENTITY_TYPES.register("ghost_chimera") { _: ResourceLocation ->
+            EntityType.Builder.of({ type, level -> GhostChimaeraEntity(type, level) }, MobCategory.UNDERGROUND_WATER_CREATURE)
+                .sized(7.5f, 3f)
+                .clientTrackingRange(8)
+                .updateInterval(3)
+                .build(GHOAST_CHIMAERA_KEY)
+        }
+
     fun registerEntityRenderers(event: EntityRenderersEvent.RegisterRenderers) {
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
+        event.registerEntityRenderer(GHOST_CHIMAERA.get() as EntityType<out GhostChimaeraEntity>, ::GhostChimaeraRenderer)
     }
 
     fun registerLayerDefinitions(event: EntityRenderersEvent.RegisterLayerDefinitions) {
-        event.registerLayerDefinition(BarnacleModel.LAYER_LOCATION) {
-            BarnacleModel.createBodyLayer()
-        }
+        event.registerLayerDefinition(
+            BarnacleModel.LAYER_LOCATION,
+            BarnacleModel::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            GhostChimaeraModel.LAYER_LOCATION,
+            GhostChimaeraModel::createBodyLayer
+        )
     }
+
 
     fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
         event.put(BARNACLE.get(), BarnacleEntity.createAttributes().build())
+        event.put(GHOST_CHIMAERA.get(), GhostChimaeraEntity.createAttributes().build())
     }
 
     fun register(eventBus: IEventBus) {

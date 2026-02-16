@@ -37,7 +37,6 @@ object AbyssOverlayRender {
 
         val depthFactor = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5).coerceAtLeast(0.0)
 
-        
         val alpha = (depthFactor.pow(0.5)).toFloat().coerceIn(0.0f, 1.0f)
         if (alpha < 0.05f) return
 

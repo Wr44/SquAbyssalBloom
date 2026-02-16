@@ -626,7 +626,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
             return level()
                 .getNearestPlayer(this@BarnacleEntity, 17.0)
-                ?.takeIf { !it.isCreative && !it.isSpectator }
+                ?.takeIf { !it.isCreative && !it.isSpectator && !it.hasEffect(MobEffects.INVISIBILITY) && it.isAlive }
         }
 
         private fun setFleeDirection(threat: LivingEntity) {
@@ -673,7 +673,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             val speed = barnacleSpeed(
                 t.toDouble(),
                 moveRushDuration.toDouble(),
-                2.0,
+                3.0,
                 3.0
             )
 
@@ -962,8 +962,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             val speed = barnacleSpeed(
                 t.toDouble(),
                 moveRushDuration.toDouble(),
-                1.5,
-                3.0
+                2.0,
+                2.5
             )
 
             deltaMovement = dir.scale(speed)
