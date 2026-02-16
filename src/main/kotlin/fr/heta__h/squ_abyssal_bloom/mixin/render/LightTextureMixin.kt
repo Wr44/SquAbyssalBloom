@@ -37,11 +37,11 @@ open class LightTextureMixin {
         val camera = mc.gameRenderer.mainCamera
         if (camera.fluidInCamera != FogType.WATER) return originalValue
 
-        val entity = camera.entity as? LivingEntity ?: return originalValue
+        val entity = camera.entity() as? LivingEntity ?: return originalValue
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return originalValue
 
         val level = entity.level()
-        val camPos = BlockPos.containing(camera.position)
+        val camPos = BlockPos.containing(camera.position())
         if (!isLargeBodyWater(level, camPos, 5)) return originalValue
 
         val smoothedDepth = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5)

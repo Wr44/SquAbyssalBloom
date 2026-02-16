@@ -27,54 +27,45 @@ import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
 @EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
 object Squ_abyssal_bloom {
     const val ID = "squ_abyssal_bloom"
-
-    
     val LOGGER: Logger = LogManager.getLogger(ID)
 
     init {
-        LOGGER.log(Level.INFO, "Hello world!")
+        LOGGER.info("Hello world!")
 
-        
         MyModBlocks.REGISTRY.register(MOD_BUS)
         ModEntities.register(MOD_BUS)
         ModItems.register(MOD_BUS)
         ModSounds.register(MOD_BUS)
         ModCreativeModeTabs.register(MOD_BUS)
 
-        val obj = runForDist(clientTarget = {
-            MOD_BUS.addListener(::onClientSetup)
-            Minecraft.getInstance()
-        }, serverTarget = {
-            MOD_BUS.addListener(::onServerSetup)
-            "test"
-        })
-
-        println(obj)
+        runForDist(
+            clientTarget = {
+                MOD_BUS.addListener(::onClientSetup)
+            },
+            serverTarget = {
+                MOD_BUS.addListener(::onServerSetup)
+            }
+        )
     }
 
-    
     private fun onClientSetup(event: FMLClientSetupEvent) {
-        LOGGER.log(Level.INFO, "Initializing client...")
-
+        LOGGER.info("Initializing client...")
         ModConfig.loadConfig()
-
         event.container.registerExtensionPoint(
             net.neoforged.neoforge.client.gui.IConfigScreenFactory::class.java,
-            net.neoforged.neoforge.client.gui.IConfigScreenFactory { minecraft, parent ->
+            net.neoforged.neoforge.client.gui.IConfigScreenFactory { _, parent ->
                 ModConfig.createConfigScreen(parent)
             }
         )
     }
 
-
-    
     private fun onServerSetup(event: FMLDedicatedServerSetupEvent) {
-        LOGGER.log(Level.INFO, "Server starting...")
+        LOGGER.info("Server starting...")
     }
 
     @SubscribeEvent
     fun onCommonSetup(event: FMLCommonSetupEvent) {
-        LOGGER.log(Level.INFO, "Hello! This is working!")
+        LOGGER.info("Hello! This is working!")
     }
 
     @SubscribeEvent

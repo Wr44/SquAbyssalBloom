@@ -8,7 +8,7 @@ import net.minecraft.client.model.geom.builders.CubeDeformation
 import net.minecraft.client.model.geom.builders.CubeListBuilder
 import net.minecraft.client.model.geom.builders.LayerDefinition
 import net.minecraft.client.model.geom.builders.MeshDefinition
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 
 class GhostChimaeraModel(rootPart: ModelPart) : EntityModel<GhostChimaeraRenderState>(rootPart) {
 
@@ -24,7 +24,7 @@ class GhostChimaeraModel(rootPart: ModelPart) : EntityModel<GhostChimaeraRenderS
     private val flipper = root.getChild("Flipper")
 
     companion object {
-        val LAYER_LOCATION = ModelLayerLocation(ResourceLocation.fromNamespaceAndPath("modid", "ghostchimaera"), "main")
+        val LAYER_LOCATION = ModelLayerLocation(Identifier.fromNamespaceAndPath("modid", "ghostchimaera"), "main")
 
         fun createBodyLayer(): LayerDefinition {
             val meshdefinition = MeshDefinition()

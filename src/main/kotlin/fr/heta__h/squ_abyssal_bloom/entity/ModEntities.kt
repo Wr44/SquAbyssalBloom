@@ -11,7 +11,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceKey
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 import net.minecraft.tags.FluidTags
 import net.minecraft.util.RandomSource
 import net.minecraft.world.entity.EntitySpawnReason
@@ -32,10 +32,10 @@ object ModEntities {
         DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, Squ_abyssal_bloom.ID)
 
     val BARNACLE_KEY: ResourceKey<EntityType<*>> =
-        ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "barnacle"))
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "barnacle"))
 
     val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> =
-        ENTITY_TYPES.register("barnacle") { _: ResourceLocation ->
+        ENTITY_TYPES.register("barnacle") { _: Identifier ->
             EntityType.Builder.of({ type, level -> BarnacleEntity(type, level) }, MobCategory.MONSTER)
                 .sized(3f, 1.75f)
                 .clientTrackingRange(8)
@@ -44,10 +44,10 @@ object ModEntities {
         }
 
     val GHOAST_CHIMAERA_KEY: ResourceKey<EntityType<*>> =
-        ResourceKey.create(Registries.ENTITY_TYPE, ResourceLocation.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "ghost_chimera"))
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "ghost_chimera"))
 
     val GHOST_CHIMAERA: DeferredHolder<EntityType<*>, EntityType<GhostChimaeraEntity>> =
-        ENTITY_TYPES.register("ghost_chimera") { _: ResourceLocation ->
+        ENTITY_TYPES.register("ghost_chimera") { _: Identifier ->
             EntityType.Builder.of({ type, level -> GhostChimaeraEntity(type, level) }, MobCategory.UNDERGROUND_WATER_CREATURE)
                 .sized(7.5f, 3f)
                 .clientTrackingRange(8)

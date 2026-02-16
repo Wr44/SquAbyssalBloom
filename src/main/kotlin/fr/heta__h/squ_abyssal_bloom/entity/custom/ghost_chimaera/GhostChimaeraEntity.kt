@@ -24,7 +24,7 @@ class GhostChimaeraEntity(type: EntityType<out AgeableWaterCreature>, level: Lev
         p0: ServerLevel,
         p1: AgeableMob
     ): AgeableMob? {
-        TODO("Not yet implemented")
+        return null
     }
 
     init {

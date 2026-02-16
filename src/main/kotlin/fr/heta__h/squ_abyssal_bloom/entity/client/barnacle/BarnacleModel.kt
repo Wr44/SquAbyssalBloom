@@ -10,7 +10,7 @@ import net.minecraft.client.model.geom.builders.CubeDeformation
 import net.minecraft.client.model.geom.builders.CubeListBuilder
 import net.minecraft.client.model.geom.builders.LayerDefinition
 import net.minecraft.client.model.geom.builders.MeshDefinition
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 
 class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(modelPart) {
 
@@ -28,7 +28,7 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
 
     companion object {
         val LAYER_LOCATION: ModelLayerLocation = ModelLayerLocation(
-            ResourceLocation.fromNamespaceAndPath(
+            Identifier.fromNamespaceAndPath(
                 Squ_abyssal_bloom.ID, "barnacle"
             ), "main"
         )

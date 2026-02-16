@@ -4,12 +4,11 @@ import com.mojang.blaze3d.vertex.VertexConsumer
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getDepthFactor
 import net.minecraft.client.Minecraft
-import net.minecraft.client.renderer.RenderType
+import net.minecraft.client.renderer.rendertype.RenderType
+import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.core.BlockPos
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 import net.minecraft.world.level.material.FogType
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
@@ -21,7 +20,7 @@ import kotlin.math.pow
 @EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
 object AbyssOverlayRender {
 
-    private val WHITE_TEXTURE = ResourceLocation.withDefaultNamespace("textures/misc/white.png")
+    private val WHITE_TEXTURE = Identifier.withDefaultNamespace("textures/misc/white.png")
 
 
     @SubscribeEvent
@@ -33,7 +32,7 @@ object AbyssOverlayRender {
         if (camera.fluidInCamera != FogType.WATER) return
 
         val level = mc.level ?: return
-        val camPos = BlockPos.containing(camera.position)
+        val camPos = BlockPos.containing(camera.position())
 
         val depthFactor = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5).coerceAtLeast(0.0)
 
@@ -46,7 +45,7 @@ object AbyssOverlayRender {
 
         val matrix4f = poseStack.last().pose()
 
-        val renderType = RenderType.entityTranslucent(WHITE_TEXTURE)
+        val renderType = RenderTypes.entityTranslucent(WHITE_TEXTURE)
 
         val bufferSource = mc.renderBuffers().bufferSource()
         val buffer = bufferSource.getBuffer(renderType)

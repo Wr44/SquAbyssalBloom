@@ -4,12 +4,11 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
-import net.minecraft.client.animation.KeyframeAnimation
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.MobRenderer
 import net.minecraft.client.renderer.state.CameraRenderState
-import net.minecraft.resources.ResourceLocation
+import net.minecraft.resources.Identifier
 
 class BarnacleRenderer(context: EntityRendererProvider.Context) :
     MobRenderer<BarnacleEntity, BarnacleRenderState, BarnacleModel>(
@@ -19,7 +18,7 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
     ) {
 
     companion object {
-        private val TEXTURE = ResourceLocation.fromNamespaceAndPath(
+        private val TEXTURE = Identifier.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
             "textures/entity/barnacle/barnacle.png"
         )
@@ -39,7 +38,7 @@ class BarnacleRenderer(context: EntityRendererProvider.Context) :
 
     override fun createRenderState(): BarnacleRenderState = BarnacleRenderState()
 
-    override fun getTextureLocation(state: BarnacleRenderState): ResourceLocation = TEXTURE
+    override fun getTextureLocation(state: BarnacleRenderState): Identifier = TEXTURE
 
     override fun setupRotations(
         state: BarnacleRenderState,

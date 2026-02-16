@@ -30,11 +30,11 @@ object WaterFogHandler {
         val camera = event.camera
         if (camera.fluidInCamera != FogType.WATER) return
 
-        val entity = camera.entity as? LivingEntity ?: return
+        val entity = camera.entity() as? LivingEntity ?: return
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
         val level = entity.level()
-        val camPos = BlockPos.containing(camera.position)
+        val camPos = BlockPos.containing(camera.position())
 
         if (!isLargeBodyWater(level, camPos, 5)) return
 
@@ -55,11 +55,11 @@ object WaterFogHandler {
         val camera = event.camera
         if (camera.fluidInCamera != FogType.WATER) return
 
-        val entity = camera.entity as? LivingEntity ?: return
+        val entity = camera.entity() as? LivingEntity ?: return
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
         val level = entity.level()
-        val camPos = BlockPos.containing(camera.position)
+        val camPos = BlockPos.containing(camera.position())
 
         if (!isLargeBodyWater(level, camPos, 5)) return
 

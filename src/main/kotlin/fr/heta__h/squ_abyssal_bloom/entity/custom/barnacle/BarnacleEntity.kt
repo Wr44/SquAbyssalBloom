@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
+import net.minecraft.core.component.DataComponentType
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -16,7 +17,6 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
-import net.minecraft.tags.FluidTags
 import net.minecraft.util.Mth.wrapDegrees
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
@@ -89,7 +89,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val IS_SWALLOWING: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.BOOLEAN)
-        private val TARGET: EntityDataAccessor<Optional<EntityReference<LivingEntity?>?>?> =
+        val TARGET: EntityDataAccessor<Optional<EntityReference<LivingEntity>>> =
             SynchedEntityData.defineId(
                 BarnacleEntity::class.java,
                 EntityDataSerializers.OPTIONAL_LIVING_ENTITY_REFERENCE
@@ -119,7 +119,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         builder.define(IS_SWALLOWING, false)
         builder.define(
             TARGET,
-            Optional.empty<EntityReference<LivingEntity>>() as Optional<EntityReference<LivingEntity?>?>
+            Optional.empty<EntityReference<LivingEntity>>()
         )
         builder.define(DIR_X, 0f)
         builder.define(DIR_Y, 0f)
@@ -154,10 +154,16 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             val currentMouthOpen = entityData.get(MOUTH_OPEN)
             val currentSwallowing = entityData.get(IS_SWALLOWING)
 
-            val currentTarget: LivingEntity? by lazy {
-                entityData.get(TARGET)?.orElse(null)
-                    ?.getEntity(level(), LivingEntity::class.java as Class<LivingEntity?>) ?: null
+            fun getCurrentTarget(): LivingEntity? {
+                val data: SynchedEntityData = this.getEntityData()
+                val optional: Optional<EntityReference<LivingEntity>> = data.get(TARGET)
+
+                if (!optional.isPresent) return null
+
+                val ref: EntityReference<LivingEntity> = optional.get()
+                return ref.getEntity(level(), LivingEntity::class.java)
             }
+
 
             var needsReset = false
             var keepClosingDuringReset = false
@@ -222,7 +228,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 }
 
                 2 -> {
-                    if (currentTarget != null) {
+                    if (getCurrentTarget() != null) {
                         if (!currentMouthOpen) {
                             openMouthAnimationState.startIfStopped(tickCount)
                             stillMouthOpenAnimationState.stop()
@@ -239,7 +245,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 }
 
                 1 -> {
-                    if (currentTarget != null && currentTarget!!.isAlive) {
+                    if (getCurrentTarget() != null && getCurrentTarget()!!.isAlive) {
                         swallowStopAnimationState.stop()
                         if (!currentSwallowing) {
                             swallowStartAnimationState.startIfStopped(tickCount)
@@ -272,7 +278,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             if (newTargetRef != currentSyncedTarget) {
                 entityData.set(
                     TARGET,
-                    Optional.ofNullable(newTargetRef) as Optional<EntityReference<LivingEntity?>?>
+                    Optional.ofNullable(newTargetRef)
                 )
             }
         }
@@ -318,7 +324,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 xRot = 0f
                 setDirectionInData(horizontalDir)
                 setOnGround(false)
-                hasImpulse = true
                 playSound(getFlopSound())
             }
         }
@@ -423,10 +428,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
-    override fun getHurtSound(source: DamageSource): SoundEvent? = ModSounds.BARNACLE_HURT.get()
+    override fun getHurtSound(source: DamageSource): SoundEvent = ModSounds.BARNACLE_HURT.get()
 
 
-    override fun getDeathSound(): SoundEvent? = ModSounds.BARNACLE_DEATH.get()
+    override fun getDeathSound(): SoundEvent = ModSounds.BARNACLE_DEATH.get()
 
     fun getFlopSound(): SoundEvent {
         return SoundEvents.GUARDIAN_FLOP
@@ -499,7 +504,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         val holdPos = this.position().add(dir.scale(factor))
 
         tgt.deltaMovement = Vec3.ZERO
-        tgt.hasImpulse = true
         tgt.fallDistance = 0.0
         tgt.addEffect(MobEffectInstance(MobEffects.BLINDNESS, 40, 1, true, false))
 
@@ -562,6 +566,19 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 .getOrThrow(ModDamagesTypes.BARNACLE_SWALLOW),
             this
         )
+    }
+
+    override fun dropCustomDeathLoot(level: ServerLevel, source: DamageSource, recentlyHit: Boolean) {
+        super.dropCustomDeathLoot(level, source, recentlyHit)
+
+        for (stack in stomach) {
+            if (!stack.isEmpty) {
+                val itemEntity = ItemEntity(level, x, y, z, stack)
+                itemEntity.setDefaultPickUpDelay()
+                level.addFreshEntity(itemEntity)
+            }
+        }
+        stomach.clear()
     }
 
 
