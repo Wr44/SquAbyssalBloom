@@ -12,7 +12,13 @@ class EntityConfigRenderer(
     private val entityProvider: () -> LivingEntity?
 ) : ImageRenderer {
 
-    private val height = 120
+    companion object {
+        private const val HEIGHT = 120
+        private const val PROFILE_ANGLE = 150f
+        private val BASE_ROTATION = Quaternionf()
+            .rotateZ(Math.PI.toFloat())
+            .rotateX(Math.toRadians(-10.0).toFloat())
+    }
 
     override fun render(
         graphics: GuiGraphics?,
@@ -21,54 +27,55 @@ class EntityConfigRenderer(
         renderWidth: Int,
         tickDelta: Float
     ): Int {
-        if (graphics == null) return 0
 
         val entity = entityProvider() ?: return 0
         val mc = Minecraft.getInstance()
-        if (mc.level == null) return 0
+        if (graphics == null) return 0
 
-        val maxDimension = max(entity.bbWidth, entity.bbHeight)
-        val dynamicScale = (38f / maxDimension.coerceAtLeast(0.1f))
+        val maxDimension = max(entity.bbWidth, entity.bbHeight).coerceAtLeast(0.1f)
+        val scale = 50f / maxDimension
 
-        val x0 = x
-        val y0 = y
         val x1 = x + renderWidth
-        val y1 = y + height
+        val y1 = y + HEIGHT
 
-        val bestProfileAngle = 150f
+        val prevYBody = entity.yBodyRot
+        val prevYHead = entity.yHeadRot
+        val prevYRot = entity.yRot
+        val prevXRot = entity.xRot
 
-        entity.yBodyRot = bestProfileAngle
-        entity.yBodyRotO = bestProfileAngle
-        entity.yHeadRot = bestProfileAngle
-        entity.yHeadRotO = bestProfileAngle
-        entity.yRot = bestProfileAngle
-        entity.yRotO = bestProfileAngle
-        entity.xRot = 0f
-        entity.xRotO = 0f
+        try {
+            entity.yBodyRot = PROFILE_ANGLE
+            entity.yBodyRotO = PROFILE_ANGLE
+            entity.yHeadRot = PROFILE_ANGLE
+            entity.yHeadRotO = PROFILE_ANGLE
+            entity.yRot = PROFILE_ANGLE
+            entity.yRotO = PROFILE_ANGLE
+            entity.xRot = 0f
+            entity.xRotO = 0f
 
-        val quaternion = Quaternionf()
-            .rotateZ(Math.PI.toFloat())
-            .rotateX(Math.toRadians(-10.0).toFloat())
+            val dispatcher = mc.entityRenderDispatcher
+            val renderState = dispatcher.extractEntity(entity, tickDelta)
 
-        val dispatcher = mc.entityRenderDispatcher
-        val renderState = try {
-            dispatcher.extractEntity(entity, 0f)
-        } catch (e: Exception) {
+            graphics.submitEntityRenderState(
+                renderState,
+                scale,
+                Vector3f(0f, 0f, 0f),
+                BASE_ROTATION,
+                null,
+                x, y, x1, y1
+            )
+
+        } catch (_: Exception) {
             return 0
+        } finally {
+            entity.yBodyRot = prevYBody
+            entity.yHeadRot = prevYHead
+            entity.yRot = prevYRot
+            entity.xRot = prevXRot
         }
 
-        graphics.submitEntityRenderState(
-            renderState,
-            dynamicScale,
-            Vector3f(0f, 0f, 0f),
-            quaternion,
-            null,
-            x0, y0, x1, y1
-        )
-
-        return height
+        return HEIGHT
     }
 
-    override fun close() {
-    }
+    override fun close() {}
 }

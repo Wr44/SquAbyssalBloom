@@ -23,6 +23,10 @@ object ModItems {
         "barnacle_tooth"
     ) { properties -> Item(properties) }
 
+    val GUARDIAN_EYE: DeferredItem<Item> = ITEMS.registerItem(
+        "guardian_eye"
+    ) { properties -> Item(properties) }
+
     fun register(eventBus: IEventBus) {
         ITEMS.register(eventBus)
     }

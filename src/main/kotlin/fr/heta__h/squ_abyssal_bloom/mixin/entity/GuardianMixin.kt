@@ -1,7 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity
 
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
-import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal
 import net.minecraft.world.entity.monster.Guardian

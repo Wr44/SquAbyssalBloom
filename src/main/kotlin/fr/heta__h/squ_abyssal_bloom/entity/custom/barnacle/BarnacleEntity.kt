@@ -6,7 +6,6 @@ import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
-import net.minecraft.core.component.DataComponentType
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -25,7 +24,6 @@ import net.minecraft.world.entity.*
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.goal.Goal
-import net.minecraft.world.entity.decoration.Mannequin
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Guardian
 import net.minecraft.world.entity.monster.Monster
@@ -33,6 +31,8 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.GameType
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.storage.ValueInput
+import net.minecraft.world.level.storage.ValueOutput
 import net.minecraft.world.phys.Vec3
 import java.util.*
 import kotlin.math.abs
@@ -57,12 +57,15 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     private var timeExposedInAir = 0
     private var animationStartTick = 0
+    private var regenCooldown = 0
+    private var cachedTarget: LivingEntity? = null
+    private var lastTargetScanTick: Int = -10
 
     val myTarget: LivingEntity?
         get() = getMyTarget(5.5)
-    private inline val healthRatio: Float
+    private val healthRatio: Float
         get() = this.health / this.maxHealth
-    private inline val isHealthCritical: Boolean
+    private val isHealthCritical: Boolean
         get() = healthRatio <= 0.25f
     private var stomach: MutableList<ItemStack> = mutableListOf()
 
@@ -307,9 +310,22 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     override fun aiStep() {
         super.aiStep()
+        if (level().isClientSide) return
         if (isUnderWater) {
             timeExposedInAir = 0
             airSupply = maxAirSupply
+
+            val notInCombat = lastHurtByMobTimestamp + 100 < tickCount
+            if (notInCombat && health < maxHealth) {
+                regenCooldown++
+                if (regenCooldown >= 100) {
+                    heal(1.0f)
+                    regenCooldown = 0
+                }
+            } else {
+                regenCooldown = 0
+            }
+
         } else {
             timeExposedInAir++
             if (timeExposedInAir >= 200) {
@@ -326,16 +342,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 setOnGround(false)
                 playSound(getFlopSound())
             }
-        }
-    }
-
-    override fun travel(travelVector: Vec3) {
-        if (isEffectiveAi && isInWater) {
-            moveRelative(0.01f, travelVector)
-            move(MoverType.SELF, deltaMovement)
-            deltaMovement = deltaMovement.scale(0.9)
-        } else {
-            super.travel(travelVector)
         }
     }
 
@@ -366,49 +372,35 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
 
     fun getMyTarget(radius: Double): LivingEntity? {
-        val attacker = this.lastHurtByMob
-        if (attacker != null && attacker.isAlive) {
-            if (this.distanceToSqr(attacker) <= radius * radius) {
-                val isValidPlayer = if (attacker is Player) !attacker.isCreative && !attacker.isSpectator else true
-
-                if (attacker != this && isValidPlayer) {
-                    return attacker
-                }
+        if (this.tickCount < lastTargetScanTick + 5) {
+            val target = cachedTarget
+            if (target != null && target.isAlive && this.distanceToSqr(target) <= radius * radius) {
+                return target
             }
         }
 
-        val players = this.level().getEntitiesOfClass(
-            Player::class.java,
-            this.boundingBox.inflate(radius)
-        ).filter {
-            (it.gameMode() == GameType.SURVIVAL || it.gameMode() == GameType.ADVENTURE) && !it.hasEffect(MobEffects.INVISIBILITY) && it.isAlive
-        }
+        val searchBox = boundingBox.inflate(radius)
+        cachedTarget = level().getEntitiesOfClass(
+            LivingEntity::class.java,
+            searchBox
+        ) { entity ->
+            when (entity) {
+                is Player ->
+                    (entity.gameMode() == GameType.SURVIVAL ||
+                            entity.gameMode() == GameType.ADVENTURE) &&
+                            !entity.hasEffect(MobEffects.INVISIBILITY)
 
-        val guardians = this.level().getEntitiesOfClass(
-            Guardian::class.java,
-            this.boundingBox.inflate(radius)
-        ).filter { it.isAlive }
+                is Guardian -> true
+                else -> false
+            } &&
+                    entity.isAlive &&
+                    isClosestBarnacle(entity, radius) &&
+                    ModUtilities.hasClearPath(level(), this, entity)
+        }.minByOrNull { it.distanceToSqr(this) }
 
-        val mannequins = this.level().getEntitiesOfClass(
-            Mannequin::class.java,
-            this.boundingBox.inflate(radius)
-        ).filter { it.isAlive }
+        lastTargetScanTick = this.tickCount
 
-        val validPlayers = players.filter { isClosestBarnacle(it, radius) && ModUtilities.hasClearPath(level(), this@BarnacleEntity, it) }
-            .sortedBy { it.distanceToSqr(this) }
-
-        val validGuardians = guardians.filter { isClosestBarnacle(it, radius) && ModUtilities.hasClearPath(level(), this@BarnacleEntity, it) }
-            .sortedBy { it.distanceToSqr(this) }
-
-        val validMannequins = mannequins.filter { isClosestBarnacle(it, radius) && ModUtilities.hasClearPath(level(), this@BarnacleEntity, it) }
-            .sortedBy { it.distanceToSqr(this) }
-
-        return when {
-            validPlayers.isNotEmpty() -> validPlayers.first()
-            validGuardians.isNotEmpty() -> validGuardians.first()
-            validMannequins.isNotEmpty() -> validMannequins.first()
-            else -> null
-        }
+        return cachedTarget
     }
 
     fun getMyDir(target: LivingEntity?): Vec3? {
@@ -450,7 +442,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     private fun updateBodyRotation() {
         val dir = getDirectionFromData()
-        if (dir.lengthSqr() < 1e-6) return
+        if (dir.lengthSqr() < 0.01) return
 
         val targetYaw = (atan2(dir.z, dir.x) * (180.0 / Math.PI)).toFloat() - 90.0f
         val targetPitch = (atan2(dir.y, sqrt(dir.x * dir.x + dir.z * dir.z)) * (180.0 / Math.PI)).toFloat()
@@ -553,6 +545,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return Vec3(x, y, z)
     }
 
+
     private fun ensureGoalState(state: Int) {
         if (entityData.get(CURRENT_GOAL_STATE) != state) {
             entityData.set(CURRENT_GOAL_STATE, state)
@@ -579,6 +572,24 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             }
         }
         stomach.clear()
+    }
+
+    override fun addAdditionalSaveData(output: ValueOutput) {
+        super.addAdditionalSaveData(output)
+        val validItems = this.stomach.filter { !it.isEmpty }
+
+        output.store("stomach", ItemStack.CODEC.listOf(), validItems)
+    }
+
+    override fun readAdditionalSaveData(input: ValueInput) {
+        super.readAdditionalSaveData(input)
+
+        val loadedItems = input.read("stomach", ItemStack.CODEC.listOf())
+
+        stomach.clear()
+        loadedItems.ifPresent { items ->
+            stomach.addAll(items)
+        }
     }
 
 
@@ -726,11 +737,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         private val swallowDuration =
             ceil(BarnacleAnimation.swallow.lengthInSeconds * 20).toInt()
 
-        private val closeSoundDelay = 2
         private val startDist = 4.5
         private val holdDist = 1.5
 
-        private var drop: MutableList<ItemStack> = mutableListOf()
         private var isFinishingAnimation = false
         private var isCapturingDrops = false
 
@@ -752,6 +761,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
             ensureGoalState(1)
             animationStartTick = tickCount
+            isFinishingAnimation = false
 
             myTarget?.let {
                 setDirectionInData(getMyDir(it) ?: getRandomDirection().normalize())
@@ -765,12 +775,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             val target = myTarget
             val isSwallowing = entityData.get(IS_SWALLOWING)
 
-            if (target == null || isHealthCritical) {
+            if (target == null || isHealthCritical || (!target.isAlive && isSwallowing)) {
                 handleFinish(t)
                 return
             }
-
-            isFinishingAnimation = false
 
             if (!isSwallowing) {
                 if (t >= startSwallowDuration) {
@@ -789,12 +797,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                     maintenirCible(target, dist)
                 }
             } else {
-
-                if (!target.isAlive) {
-                    handleFinish(t)
-                    return
-                }
-
                 deltaMovement = Vec3.ZERO
                 maintenirCible(target, holdDist)
 
@@ -809,7 +811,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             if (world.isClientSide) return
 
             if (!isFinishingAnimation) {
-
                 playSound(ModSounds.BARNACLE_CLOSE_MOUTH.get())
 
                 isFinishingAnimation = true
@@ -826,6 +827,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             deltaMovement = Vec3.ZERO
 
             if (stomach.isNotEmpty()) {
+
                 if (t >= 3) {
                     val stack = stomach.removeAt(0)
                     val lookDir = getDirectionFromData()
@@ -854,10 +856,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             if (level().isClientSide) return
             entityData.set(IS_SWALLOWING, false)
             isCapturingDrops = false
+            isFinishingAnimation = false
 
             if (isHealthCritical) {
                 entityData.set(MOUTH_OPEN, false)
-                isFinishingAnimation = false
             }
         }
     }
@@ -967,22 +969,42 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     inner class BarnacleSwimTowardsGoal : Goal() {
 
-        private val moveStillDuration =
-            ceil(BarnacleAnimation.move_still.lengthInSeconds * 22).toInt()
-        private val moveRushDuration =
-            ceil(BarnacleAnimation.move_rush.lengthInSeconds * 22).toInt()
+        private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * 22).toInt()
+        private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * 22).toInt()
 
-        private val swimTarget: LivingEntity?
-            get() = getMyTarget(55.0)
+        private var lockedTarget: LivingEntity? = null
 
         init {
             flags = EnumSet.of(Flag.MOVE, Flag.LOOK)
         }
 
-        override fun canUse(): Boolean =
-            swimTarget != null && isUnderWater && !isHealthCritical
+
+        override fun canUse(): Boolean {
+            val target = getMyTarget(55.0)
+
+            if (target != null && isUnderWater && !isHealthCritical && this@BarnacleEntity.hasLineOfSight(target)) {
+                lockedTarget = target
+                return true
+            }
+            return false
+        }
+
+        override fun canContinueToUse(): Boolean {
+            if (lockedTarget is Player) {
+                val player = lockedTarget as Player
+                if (player.gameMode() == GameType.CREATIVE || player.gameMode() == GameType.SPECTATOR || player.hasEffect(MobEffects.INVISIBILITY)) {
+                    return false
+                }
+            }
+
+            return lockedTarget?.isAlive == true &&
+                    isUnderWater &&
+                    !isHealthCritical &&
+                    this@BarnacleEntity.hasLineOfSight(lockedTarget!!)
+        }
 
         override fun requiresUpdateEveryTick() = true
+
         override fun isInterruptable() = true
 
         override fun start() {
@@ -996,18 +1018,14 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             entityData.set(IS_IDLE, false)
             animationStartTick = tickCount
 
-            setDirectionInData(
-                getMyDir(swimTarget) ?: getRandomDirection().normalize()
-            )
-
+            val dir = getMyDir(lockedTarget) ?: getRandomDirection().normalize()
+            setDirectionInData(dir)
             deltaMovement = Vec3.ZERO
         }
 
         override fun tick() {
             if (level().isClientSide) return
-
             ensureGoalState(3)
-
             if (entityData.get(RUSH_PHASE)) {
                 handleRush()
             } else {
@@ -1015,7 +1033,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             }
         }
 
+        override fun stop() {
+            lockedTarget = null
+            deltaMovement = Vec3.ZERO
+        }
+
         private fun handleIdle() {
+
             if (tickCount - animationStartTick >= moveStillDuration) {
                 entityData.set(RUSH_PHASE, true)
                 animationStartTick = tickCount
@@ -1025,16 +1049,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         private fun handleRush() {
             val t = tickCount - animationStartTick
-
             if (t >= moveRushDuration) {
                 entityData.set(RUSH_PHASE, false)
                 animationStartTick = tickCount
                 deltaMovement = Vec3.ZERO
                 return
             }
-
-            val dir =
-                getMyDir(swimTarget) ?: getRandomDirection().normalize()
+            val dir = getMyDir(lockedTarget) ?: getRandomDirection().normalize()
 
             setDirectionInData(dir)
 
@@ -1048,8 +1069,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             deltaMovement = dir.scale(speed)
         }
     }
-
-
     inner class BarnacleIdleGoal : Goal() {
 
         private val moveStillDuration =

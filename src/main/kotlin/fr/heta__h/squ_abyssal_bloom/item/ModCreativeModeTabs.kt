@@ -23,8 +23,9 @@ object ModCreativeModeTabs {
             .icon { ItemStack(ModItems.BARNACLE_SPAWN_EGG.get()) }
             .title(Component.translatable("creativetab.squ_abyssal_bloom.spawn_eggs"))
             .displayItems { itemDisplayParameters, output ->
-                output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
                 output.accept(ModItems.BARNACLE_TOOTH.get())
+                output.accept(ModItems.GUARDIAN_EYE.get())
+                output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
             }
             .build()
     }
