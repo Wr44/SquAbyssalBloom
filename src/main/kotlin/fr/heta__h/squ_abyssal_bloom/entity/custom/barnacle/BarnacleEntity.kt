@@ -372,7 +372,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
 
     fun getMyTarget(radius: Double): LivingEntity? {
-        if (this.tickCount < lastTargetScanTick + 5) {
+        if (this.tickCount < lastTargetScanTick + 5 ) {
             val target = cachedTarget
             if (target != null && target.isAlive && this.distanceToSqr(target) <= radius * radius) {
                 return target
@@ -461,9 +461,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return current + f
     }
 
-    private fun barnacleSpeed(t: Double, tMax: Double, vMax: Double, k: Double = 2.0): Double {
-        val ratio = (t / tMax).coerceIn(0.0, 1.0)
-        return vMax * (1.0 - ratio).pow(k)
+    private fun barnacleSpeed(t: Float, tMax: Float, vMax: Float, k: Float = 2.0f): Float {
+        val ratio = (t / tMax).coerceIn(0.0f, 1.0f)
+        return vMax * (1.0f - ratio).pow(k)
     }
 
     private fun hasWaterAhead(
@@ -670,6 +670,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 mobThreat != null && playerThreat != null -> {
                     if (distanceToSqr(mobThreat) < distanceToSqr(playerThreat)) mobThreat else playerThreat
                 }
+
                 mobThreat != null -> mobThreat
                 playerThreat != null -> playerThreat
                 else -> null
@@ -718,13 +719,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
             val dir = getDirectionFromData()
             val speed = barnacleSpeed(
-                t.toDouble(),
-                moveRushDuration.toDouble(),
-                3.0,
-                3.0
+                t.toFloat(),
+                moveRushDuration.toFloat(),
+                3.0f,
+                3.0f
             )
 
-            deltaMovement = dir.scale(speed)
+            deltaMovement = dir.scale(speed.toDouble())
         }
     }
 
@@ -837,12 +838,18 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                     itemEntity.deltaMovement = lookDir.scale(0.3).add(0.0, 0.2, 0.0)
                     world.addFreshEntity(itemEntity)
 
-                    world.playSound(null, blockPosition(), SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_INSIDE, SoundSource.HOSTILE, 0.5f, 0.5f)
+                    world.playSound(
+                        null,
+                        blockPosition(),
+                        SoundEvents.BUBBLE_COLUMN_WHIRLPOOL_INSIDE,
+                        SoundSource.HOSTILE,
+                        0.5f,
+                        0.5f
+                    )
 
                     animationStartTick = tickCount
                 }
-            }
-            else {
+            } else {
                 val fastStop = stopSwallowDuration / 2
 
                 if (t >= fastStop) {
@@ -992,7 +999,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         override fun canContinueToUse(): Boolean {
             if (lockedTarget is Player) {
                 val player = lockedTarget as Player
-                if (player.gameMode() == GameType.CREATIVE || player.gameMode() == GameType.SPECTATOR || player.hasEffect(MobEffects.INVISIBILITY)) {
+                if (player.gameMode() == GameType.CREATIVE || player.gameMode() == GameType.SPECTATOR || player.hasEffect(
+                        MobEffects.INVISIBILITY
+                    )
+                ) {
                     return false
                 }
             }
@@ -1060,15 +1070,16 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             setDirectionInData(dir)
 
             val speed = barnacleSpeed(
-                t.toDouble(),
-                moveRushDuration.toDouble(),
-                2.0,
-                2.5
+                t.toFloat(),
+                moveRushDuration.toFloat(),
+                2.0f,
+                2.5f
             )
 
-            deltaMovement = dir.scale(speed)
+            deltaMovement = dir.scale(speed.toDouble())
         }
     }
+
     inner class BarnacleIdleGoal : Goal() {
 
         private val moveStillDuration =
@@ -1146,12 +1157,12 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
             val dir = adjustDirectionForObstacles(getDirectionFromData())
             val speed = barnacleSpeed(
-                t.toDouble(),
-                moveRushDuration.toDouble(),
-                1.0
+                t.toFloat(),
+                moveRushDuration.toFloat(),
+                1.0f
             )
 
-            deltaMovement = dir.scale(speed)
+            deltaMovement = dir.scale(speed.toDouble())
         }
 
         private fun adjustDirectionForObstacles(dirIn: Vec3): Vec3 {
