@@ -20,7 +20,7 @@ class GhostChimaeraModel(rootPart: ModelPart) : EntityModel<GhostChimaeraRenderS
     private val lowerLower = startTail.getChild("LowerLower")
     private val headToros = root.getChild("HeadToros")
     private val nose = headToros.getChild("Nose")
-    private val eyes = root.getChild("Eyes")
+    val eyes: ModelPart = root.getChild("Eyes")
     private val flipper = root.getChild("Flipper")
 
     companion object {

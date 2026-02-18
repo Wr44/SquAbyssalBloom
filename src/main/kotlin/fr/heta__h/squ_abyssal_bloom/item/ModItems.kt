@@ -6,6 +6,7 @@ import net.minecraft.client.data.models.BlockModelGenerators
 import net.minecraft.client.data.models.ItemModelGenerators
 import net.minecraft.client.data.models.model.ModelTemplates
 import net.minecraft.world.item.Item
+import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.SpawnEggItem
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.registries.DeferredItem
@@ -25,7 +26,7 @@ object ModItems {
 
     val GUARDIAN_EYE: DeferredItem<Item> = ITEMS.registerItem(
         "guardian_eye"
-    ) { properties -> Item(properties) }
+    ) { properties -> Item(properties.rarity(Rarity.UNCOMMON)) }
 
     fun register(eventBus: IEventBus) {
         ITEMS.register(eventBus)

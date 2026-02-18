@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.state.CameraRenderState
 import net.minecraft.resources.Identifier
+import net.minecraft.util.ARGB
 
 class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
     MobRenderer<GhostChimaeraEntity, GhostChimaeraRenderState, GhostChimaeraModel>(
@@ -18,6 +19,10 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
         GhostChimaeraModel(context.bakeLayer(GhostChimaeraModel.LAYER_LOCATION)),
         0f
     ) {
+
+    init {
+        addLayer(GhostChimaeraEyesLayer(this))
+    }
 
     companion object {
         private val TEXTURE = Identifier.fromNamespaceAndPath(
@@ -33,12 +38,13 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
         appearsGlowing: Boolean
     ): RenderType? {
         val texture = getTextureLocation(renderState)
+        return RenderTypes.entityTranslucent(texture)
+    }
 
-        return if (appearsGlowing) {
-            RenderTypes.entityTranslucent(texture)
-        } else {
-            RenderTypes.entityTranslucent(texture)
-        }
+    
+    override fun getModelTint(renderState: GhostChimaeraRenderState): Int {
+        val alpha = (renderState.bodyAlpha * 255).toInt().coerceIn(0, 255)
+        return ARGB.color(alpha, 255, 255, 255)
     }
 
     override fun submit(
@@ -49,7 +55,11 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
     ) {
         poseStack.pushPose()
         poseStack.scale(5f,5f,5f)
+
+        model.eyes.visible = false
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
+        model.eyes.visible = true
+
         poseStack.popPose()
     }
 
@@ -77,6 +87,7 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
 
         state.xRot = entity.getViewXRot(partialTicks)
         state.yRot = entity.getViewYRot(partialTicks)
+        state.bodyAlpha = entity.bodyAlpha
     }
 
 }
