@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event
+package fr.heta__h.squ_abyssal_bloom.event.guardian_s_redistribution
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects

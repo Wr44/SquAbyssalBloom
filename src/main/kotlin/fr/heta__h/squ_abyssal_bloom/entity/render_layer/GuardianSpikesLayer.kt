@@ -49,7 +49,7 @@ class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         val tick = state.ageInTicks
 
         val radius = dimension.first*0.8 + 0.75
-        val centerY = dimension.second/2
+        val centerY = dimension.second
         val rotationSpeed = tick * 0.05f
 
         poseStack.pushPose()
@@ -59,7 +59,9 @@ class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         for (i in 0 until NUMBER_OF_SPIKES) {
             poseStack.pushPose()
 
-            val randomOffsetV = cos(i.toDouble() * 654.321).toFloat() * dimension.second/3
+            val normalizedRandom = cos(i.toDouble() * 654.321).toFloat()
+
+            val randomOffsetV = normalizedRandom * (dimension.second / 3)
 
             val baseAngle = i * (Math.PI.toFloat() * 2.0f / NUMBER_OF_SPIKES)
             val finalAngle = baseAngle + rotationSpeed
