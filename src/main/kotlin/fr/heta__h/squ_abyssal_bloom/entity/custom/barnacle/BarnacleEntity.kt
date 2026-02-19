@@ -388,7 +388,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 is Player ->
                     (entity.gameMode() == GameType.SURVIVAL ||
                             entity.gameMode() == GameType.ADVENTURE) &&
-                            !entity.hasEffect(MobEffects.INVISIBILITY)
+                            !entity.hasEffect(MobEffects.INVISIBILITY
+                            )
 
                 is Guardian -> true
                 else -> false
@@ -494,6 +495,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         val dir = getDirectionFromData() ?: return
 
         val holdPos = this.position().add(dir.scale(factor))
+
+        if (tgt.isPassenger) {
+            tgt.stopRiding()
+        }
 
         tgt.deltaMovement = Vec3.ZERO
         tgt.fallDistance = 0.0
