@@ -5,8 +5,15 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.client.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.GuardianSpikesLayer
+import net.minecraft.client.model.EntityModel
+import net.minecraft.client.player.AbstractClientPlayer
+import net.minecraft.client.renderer.entity.LivingEntityRenderer
+import net.minecraft.client.renderer.entity.player.AvatarRenderer
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
@@ -16,6 +23,7 @@ import net.minecraft.tags.FluidTags
 import net.minecraft.util.RandomSource
 import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.MobCategory
 import net.minecraft.world.entity.SpawnPlacementTypes
 import net.minecraft.world.level.ServerLevelAccessor
@@ -70,12 +78,61 @@ object ModEntities {
             GhostChimaeraModel.LAYER_LOCATION,
             GhostChimaeraModel::createBodyLayer
         )
+
+        event.registerLayerDefinition(
+            GuardianSpikeModel.LAYER_LOCATION,
+            GuardianSpikeModel::createBodyLayer
+        )
     }
 
 
     fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
         event.put(BARNACLE.get(), BarnacleEntity.createAttributes().build())
         event.put(GHOST_CHIMAERA.get(), GhostChimaeraEntity.createAttributes().build())
+    }
+
+    fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
+        val spikeModel = GuardianSpikeModel(event.entityModels.bakeLayer(GuardianSpikeModel.LAYER_LOCATION))
+
+        for (entityType in BuiltInRegistries.ENTITY_TYPE) {
+            val renderer = event.getRenderer(entityType)
+
+            if (renderer is LivingEntityRenderer<*,*,*>) {
+                @Suppress("UNCHECKED_CAST")
+                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
+            }
+        }
+
+        for (entityType in event.skins) {
+
+            val playerRenderer = event.getPlayerRenderer<AvatarRenderer<AbstractClientPlayer>>(entityType)
+
+            if (playerRenderer != null) {
+                @Suppress("UNCHECKED_CAST")
+                val castedRenderer = playerRenderer as LivingEntityRenderer<net.minecraft.world.entity.LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+
+                castedRenderer.addLayer(GuardianSpikesLayer(castedRenderer, spikeModel))
+            }
+        }
+
+        BARNACLE.get().let { entityType ->
+            val renderer = event.getRenderer(entityType)
+            if (renderer is LivingEntityRenderer<*,*,*>) {
+                @Suppress("UNCHECKED_CAST")
+                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
+            }
+        }
+
+        GHOST_CHIMAERA.get().let { entityType ->
+            val renderer = event.getRenderer(entityType)
+            if (renderer is LivingEntityRenderer<*,*,*>) {
+                @Suppress("UNCHECKED_CAST")
+                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
+            }
+        }
     }
 
     fun register(eventBus: IEventBus) {

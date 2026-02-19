@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera
 
+import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
@@ -24,7 +25,7 @@ class GhostChimaeraModel(rootPart: ModelPart) : EntityModel<GhostChimaeraRenderS
     private val flipper = root.getChild("Flipper")
 
     companion object {
-        val LAYER_LOCATION = ModelLayerLocation(Identifier.fromNamespaceAndPath("modid", "ghostchimaera"), "main")
+        val LAYER_LOCATION = ModelLayerLocation(Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "ghostchimaera"), "main")
 
         fun createBodyLayer(): LayerDefinition {
             val meshdefinition = MeshDefinition()

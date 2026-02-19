@@ -1,0 +1,27 @@
+package fr.heta__h.squ_abyssal_bloom.mixin.render
+
+import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
+import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.IGuardianSpikeState
+import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import net.minecraft.client.renderer.entity.LivingEntityRenderer
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
+import net.minecraft.world.entity.LivingEntity
+import org.spongepowered.asm.mixin.Mixin
+import org.spongepowered.asm.mixin.injection.At
+import org.spongepowered.asm.mixin.injection.Inject
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
+
+@Mixin(LivingEntityRenderer::class)
+abstract class LivingEntityRendererMixin<T : LivingEntity, S : LivingEntityRenderState> {
+
+    @Inject(method = ["extractRenderState"], at = [At("TAIL")])
+    private fun guardianRedistributionState(entity: T, state: S?, partialTick: Float, ci: CallbackInfo?) {
+        if (state == null) return
+
+        val hasEffect = entity.getData(ModAttachments.HAS_GUARDIAN_SPIKES)
+
+        if (state is IGuardianSpikeState) {
+            (state as IGuardianSpikeState).setHasGuardianSpikes(hasEffect)
+        }
+    }
+}
