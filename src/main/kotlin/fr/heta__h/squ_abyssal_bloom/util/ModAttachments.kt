@@ -1,0 +1,17 @@
+package fr.heta__h.squ_abyssal_bloom.util
+
+import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import net.minecraft.network.codec.ByteBufCodecs
+import net.neoforged.neoforge.attachment.AttachmentType
+import net.neoforged.neoforge.registries.DeferredRegister
+import net.neoforged.neoforge.registries.NeoForgeRegistries
+
+object ModAttachments {
+    val ATTACHMENTS = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, Squ_abyssal_bloom.ID)
+
+    val HAS_GUARDIAN_SPIKES = ATTACHMENTS.register("has_spikes") { ->
+        AttachmentType.builder { -> false }
+            .sync(ByteBufCodecs.BOOL)
+            .build()
+    }
+}
