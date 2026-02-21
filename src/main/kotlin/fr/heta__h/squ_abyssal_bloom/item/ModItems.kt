@@ -26,7 +26,11 @@ object ModItems {
 
     val GUARDIAN_EYE: DeferredItem<Item> = ITEMS.registerItem(
         "guardian_eye"
-    ) { properties -> Item(properties.rarity(Rarity.UNCOMMON)) }
+    ) { properties -> Item(properties) }
+
+    val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
+        "abyssal_guardian_focalist"
+    ) { properties -> Item(properties) }
 
     fun register(eventBus: IEventBus) {
         ITEMS.register(eventBus)

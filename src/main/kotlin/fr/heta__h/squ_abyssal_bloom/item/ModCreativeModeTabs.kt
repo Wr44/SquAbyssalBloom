@@ -25,6 +25,7 @@ object ModCreativeModeTabs {
             .displayItems { itemDisplayParameters, output ->
                 output.accept(ModItems.BARNACLE_TOOTH.get())
                 output.accept(ModItems.GUARDIAN_EYE.get())
+                output.accept(ModItems.ABYSSAL_GUARDIAN_FOCALIST.get())
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
             }
             .build()

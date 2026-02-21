@@ -499,6 +499,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         tgt.fallDistance = 0.0
         tgt.addEffect(MobEffectInstance(MobEffects.BLINDNESS, 40, 1, true, false))
 
+        if (target?.isPassenger == true) {
+            tgt.stopRiding()
+        }
 
         if (tgt is ServerPlayer) {
             tgt.connection.teleport(holdPos.x, holdPos.y, holdPos.z, tgt.yRot, tgt.xRot)
