@@ -1,11 +1,18 @@
 package fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist
 
+import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.FocalistBeamSyncPayload
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.protocol.game.ClientboundSoundPacket
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.util.Mth
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
@@ -14,6 +21,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.ItemUseAnimation
 import net.minecraft.world.level.Level
 import net.neoforged.neoforge.network.PacketDistributor
+import java.lang.Math.clamp
 import java.lang.Math.toRadians
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -26,9 +34,20 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         const val MIN_CHARGE_TICKS = 20
         const val MAX_CHARGE_TICKS = 80
         const val COOLDOWN = 50
+
         const val BASE_DAMAGE = 7.5f
         const val ADD_DAMAGE = 10f
         const val MAX_LOCK_ANGLE = 45.0
+
+        const val VISION_MIN = 2
+        const val VISION_MAX = 8
+        const val LENS_BASE = 1
+        const val LENS_ADD = 3
+        const val SYPHON_HEAL_FACTOR = 0.33f
+        const val SYPHON_ABSORB_CAP = 4.0f
+        const val SINGULARITY_PULL = 10.0
+        const val SINGULARITY_PULL_FACTOR = 1.8
+        const val SINGULARITY_STUN_DURATION = 100
 
         private val LOCK_DOT_THRESHOLD = cos(toRadians(MAX_LOCK_ANGLE))
 
@@ -69,7 +88,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                 target.x, target.y, target.z,
                 SoundEvents.GUARDIAN_ATTACK,
                 SoundSource.PLAYERS,
-                1f,
+                0.8f,
                 1f
             )
 
@@ -88,24 +107,24 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
             return
         }
 
-        if (!target.isAlive) {
+        if (target == null || !target.isAlive || entity.distanceTo(target) > MAX_RANGE + 2.0 || !isLookingAtTarget(entity, target)) {
             if (!level.isClientSide) entity.releaseUsingItem()
             return
         }
 
-        if (entity.distanceTo(target) > MAX_RANGE + 2.0) {
-            if (!level.isClientSide) entity.releaseUsingItem()
-            return
+        val visionLevel = getEnchantLevel(stack, level, "focused_vision")
+        val aegisLevel = getEnchantLevel(stack, level, "prismarine_aegis")
+
+        if (!level.isClientSide && aegisLevel > 0) {
+            entity.addEffect(MobEffectInstance(ModEffects.GUARDIAN_S_REDISTRIBUTION, 5, 5, false, false))
+            target.addEffect(MobEffectInstance(MobEffects.BLINDNESS, 20, 0, false, false))
         }
 
-        if (!isLookingAtTarget(entity, target)) {
-            if (!level.isClientSide) entity.releaseUsingItem()
-            return
-        }
+        val actualMaxCharge = MAX_CHARGE_TICKS - (visionLevel * VISION_MAX)
 
         val duration = getUseDuration(stack, entity) - timeLeft
 
-        if (duration >= MAX_CHARGE_TICKS) {
+        if (duration >= actualMaxCharge) {
             if (!level.isClientSide) entity.releaseUsingItem()
         }
 
@@ -115,18 +134,24 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                 entity.x, entity.y, entity.z,
                 SoundEvents.GUARDIAN_ATTACK,
                 SoundSource.PLAYERS,
-                1f,
-                1f + (duration / MAX_CHARGE_TICKS.toFloat()) * 0.5f
+                0.8f - (duration / actualMaxCharge)*0.5f,
+                1f + (duration / actualMaxCharge.toFloat()) * 0.5f
             )
 
-            level.playSound(
-                target,
-                target.x, target.y, target.z,
-                SoundEvents.GUARDIAN_ATTACK,
-                SoundSource.PLAYERS,
-                1f,
-                1f + (duration / MAX_CHARGE_TICKS.toFloat()) * 0.5f
-            )
+            if (target is ServerPlayer) {
+                val soundHolder = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.GUARDIAN_ATTACK)
+
+                val soundPacket = ClientboundSoundPacket(
+                    soundHolder,
+                    SoundSource.PLAYERS,
+                    target.x, target.y, target.z,
+                    0.8f - (duration / actualMaxCharge)*0.5f,
+                    1f + (duration / actualMaxCharge.toFloat()) * 0.5f,
+                    target.random.nextLong()
+                )
+
+                target.connection.send(soundPacket)
+            }
         }
     }
 
@@ -150,19 +175,89 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         val ticksUsed = getUseDuration(stack, entity) - timeLeft
 
         if (ticksUsed >= MIN_CHARGE_TICKS && target.isAlive) {
-            val chargeProgress = Mth.clamp(
-                (ticksUsed - MIN_CHARGE_TICKS).toFloat() /
-                        (MAX_CHARGE_TICKS - MIN_CHARGE_TICKS).toFloat(),
+            val visionLevel = getEnchantLevel(stack, level, "focused_vision")
+            val lensLevel = getEnchantLevel(stack, level, "converging_lens")
+            val siphonLevel = getEnchantLevel(stack, level, "siphon")
+            val singularityLevel = getEnchantLevel(stack, level, "singularity")
+
+            val actualMinCharge = MIN_CHARGE_TICKS - (visionLevel * VISION_MIN)
+            val actualMaxCharge = MAX_CHARGE_TICKS - (visionLevel * VISION_MAX)
+
+
+            val chargeProgress = clamp(
+                (ticksUsed - actualMinCharge).toFloat() /
+                        (actualMaxCharge - actualMinCharge).toFloat(),
                 0.0f,
                 1.0f
             )
 
-            val damage = BASE_DAMAGE + (chargeProgress * ADD_DAMAGE)
+            val actualBaseDamage = BASE_DAMAGE + lensLevel * LENS_BASE
+            val actualAddDamage = ADD_DAMAGE + lensLevel * LENS_ADD
+
+            val damage = actualBaseDamage + (chargeProgress * actualAddDamage)
 
             target.hurt(
                 level.damageSources().indirectMagic(entity, entity),
                 damage
             )
+
+            if (siphonLevel > 0) {
+                val healAmount = damage * SYPHON_HEAL_FACTOR
+                val missingHealth = entity.maxHealth - entity.health
+
+                if (healAmount > missingHealth) {
+                    entity.heal(missingHealth)
+                    val excess = healAmount - missingHealth
+                    entity.addEffect(MobEffectInstance(
+                        MobEffects.ABSORPTION,
+                        6000,
+                        2,
+                        false,
+                        false,
+                        false
+                    ))
+                    if (entity.absorptionAmount < SYPHON_ABSORB_CAP) entity.absorptionAmount = excess.coerceIn(0f, SYPHON_ABSORB_CAP)
+                } else {
+                    entity.heal(healAmount)
+                }
+
+                if (entity is ServerPlayer) {
+                    val soundHolder = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.CONDUIT_ACTIVATE)
+
+                    val soundPacket = ClientboundSoundPacket(
+                        soundHolder,
+                        SoundSource.PLAYERS,
+                        entity.x, entity.y, entity.z,
+                        1.2f,
+                        1.5f,
+                        entity.random.nextLong()
+                    )
+
+                    entity.connection.send(soundPacket)
+                }
+            } else if (singularityLevel > 0) {
+                target.addEffect(
+                    MobEffectInstance(MobEffects.SLOWNESS, SINGULARITY_STUN_DURATION, 25, false, false)
+                )
+                val pullBox = target.boundingBox.inflate(SINGULARITY_PULL)
+                val nearbyEntities = level.getEntitiesOfClass(LivingEntity::class.java, pullBox) { it != target && it != entity }
+
+                for (pulled in nearbyEntities) {
+                    val pullVector = target.position().subtract(pulled.position()).normalize().scale(SINGULARITY_PULL_FACTOR)
+                    pulled.deltaMovement = pullVector
+                    pulled.hurtMarked = true
+                }
+
+                level.playSound(
+                    null,
+                    target.x,
+                    target.y,
+                    target.z,
+                    SoundEvents.ILLUSIONER_CAST_SPELL,
+                    SoundSource.PLAYERS,
+                    1.3f,
+                    0.5f)
+            }
 
             level.playSound(
                 null,
