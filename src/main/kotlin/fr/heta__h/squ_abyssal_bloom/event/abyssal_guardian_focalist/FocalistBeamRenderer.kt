@@ -4,10 +4,10 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
+import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.ClientBeamData
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
-import net.minecraft.core.component.DataComponents
 import net.minecraft.resources.Identifier
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.LivingEntity
@@ -26,18 +26,17 @@ object FocalistBeamRenderer {
     @SubscribeEvent
     fun onRenderLevel(event: RenderLevelStageEvent.AfterEntities) {
         val mc = Minecraft.getInstance()
-        val player = mc.player ?: return
         val level = mc.level ?: return
 
-        if (player.isUsingItem && player.useItem.item is AbyssalGuardianFocalistItem) {
-            val stack = player.useItem
+        for (player in level.players()) {
 
-            val focalistItem = stack.item as AbyssalGuardianFocalistItem
-            val targetId = focalistItem.getLockedTargetId(player)
-            val target = level.getEntity(targetId) as? LivingEntity ?: return
+            if (!player.isUsingItem || player.useItem.item !is AbyssalGuardianFocalistItem) continue
+
+            val targetId = ClientBeamData.activeBeams[player.id] ?: continue
+            val target = level.getEntity(targetId) as? LivingEntity ?: continue
 
             val poseStack = event.poseStack
-            val partialTick = mc.deltaTracker.gameTimeDeltaTicks.toFloat()
+            val partialTick = mc.deltaTracker.gameTimeDeltaTicks
             val cameraPos = mc.gameRenderer.mainCamera.position()
 
             val startPos = player.getEyePosition(partialTick).subtract(0.0, 0.2, 0.0)
@@ -49,7 +48,7 @@ object FocalistBeamRenderer {
 
             val attackTime = player.ticksUsingItem + partialTick
             val scale = attackTime / AbyssalGuardianFocalistItem.MAX_CHARGE_TICKS.toFloat()
-            val animationTime = attackTime * 0.5f % 1.0f
+            val animationTime = attackTime * 0.5f
 
             poseStack.pushPose()
 
@@ -81,8 +80,8 @@ object FocalistBeamRenderer {
 
             val f15 = Mth.cos(f3 + Math.PI) * 0.2f
             val f16 = Mth.sin(f3 + Math.PI) * 0.2f
-            val f17 = Mth.cos((f3 + 0.0f).toDouble()) * 0.2f
-            val f18 = Mth.sin((f3 + 0.0f).toDouble()) * 0.2f
+            val f17 = Mth.cos(f3.toDouble()) * 0.2f
+            val f18 = Mth.sin(f3.toDouble()) * 0.2f
             val f19 = Mth.cos(f3 + (Math.PI / 2.0)) * 0.2f
             val f20 = Mth.sin(f3 + (Math.PI / 2.0)) * 0.2f
             val f21 = Mth.cos(f3 + (Math.PI * 1.5)) * 0.2f

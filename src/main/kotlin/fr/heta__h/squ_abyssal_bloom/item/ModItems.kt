@@ -31,7 +31,11 @@ object ModItems {
 
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
-    ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE).durability(115)) }
+    ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
+        .durability(115)
+        .enchantable(15)
+    )
+    }
 
     fun register(eventBus: IEventBus) {
         ITEMS.register(eventBus)

@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import net.minecraft.world.entity.LivingEntity
+import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.MobSpawnEvent
@@ -11,7 +12,7 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.DEDICATED_SERVER])
 object SpawnPreventionEvent {
     private val LOGGER: Logger = LogManager.getLogger(Squ_abyssal_bloom.ID)
 

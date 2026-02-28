@@ -1,11 +1,10 @@
-package fr.heta__h.squ_abyssal_bloom.client.render
+package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
 
 import com.mojang.blaze3d.vertex.VertexConsumer
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
-import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.core.BlockPos
 import net.minecraft.resources.Identifier
@@ -70,7 +69,6 @@ object AbyssOverlayRender {
                 .setNormal(0f, 1f, 0f)
         }
 
-
         v(-size, size, -size); v(-size, size, size); v(size, size, size); v(size, size, -size)
 
         v(-size, -size, -size); v(size, -size, -size); v(size, -size, size); v(-size, -size, size)
@@ -83,4 +81,6 @@ object AbyssOverlayRender {
 
         v(size, -size, size); v(size, -size, -size); v(size, size, -size); v(size, size, size)
     }
+
+
 }

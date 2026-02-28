@@ -11,9 +11,7 @@ abstract class LivingEntityRenderStateMixin : IGuardianSpikeState {
     @Unique
     private var hasGuardianSpikes: Boolean = false
 
-    override fun getHasGuardianSpikes(): Boolean {
-        return this.hasGuardianSpikes
-    }
+    override fun getHasGuardianSpikes(): Boolean = hasGuardianSpikes
 
     override fun setHasGuardianSpikes(value: Boolean) {
         this.hasGuardianSpikes = value
