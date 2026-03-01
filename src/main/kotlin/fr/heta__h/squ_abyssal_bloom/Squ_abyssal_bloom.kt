@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
-import fr.heta__h.squ_abyssal_bloom.effect.potion.ModPotions
+import fr.heta__h.squ_abyssal_bloom.effect.ModPotions
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
