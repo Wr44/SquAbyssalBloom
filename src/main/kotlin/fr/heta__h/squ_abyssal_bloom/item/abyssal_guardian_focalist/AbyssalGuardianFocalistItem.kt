@@ -26,6 +26,7 @@ import java.lang.Math.toRadians
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.cos
+import kotlin.math.max
 
 class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
@@ -204,10 +205,13 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
             if (siphonLevel > 0) {
                 val healAmount = damage * SYPHON_HEAL_FACTOR
                 val missingHealth = entity.maxHealth - entity.health
-
                 if (healAmount > missingHealth) {
-                    entity.heal(missingHealth)
+                    if (missingHealth > 0f) entity.heal(missingHealth)
+
                     val excess = healAmount - missingHealth
+
+                    val targetAbsorption = (entity.absorptionAmount + excess).coerceAtMost(max(SYPHON_ABSORB_CAP, entity.absorptionAmount))
+
                     entity.addEffect(MobEffectInstance(
                         MobEffects.ABSORPTION,
                         6000,
@@ -216,7 +220,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                         false,
                         false
                     ))
-                    if (entity.absorptionAmount < SYPHON_ABSORB_CAP) entity.absorptionAmount = excess.coerceIn(0f, SYPHON_ABSORB_CAP)
+                    entity.absorptionAmount = targetAbsorption
                 } else {
                     entity.heal(healAmount)
                 }
