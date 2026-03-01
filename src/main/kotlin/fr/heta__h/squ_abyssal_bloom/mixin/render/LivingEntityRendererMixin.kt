@@ -1,7 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.render
 
-import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
-import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.IGuardianSpikeState
+import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.AddPropertiesToRenderState
 import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
@@ -20,8 +19,8 @@ abstract class LivingEntityRendererMixin<T : LivingEntity, S : LivingEntityRende
 
         val hasEffect = entity.getData(ModAttachments.HAS_GUARDIAN_SPIKES)
 
-        if (state is IGuardianSpikeState) {
-            (state as IGuardianSpikeState).setHasGuardianSpikes(hasEffect)
+        if (state is AddPropertiesToRenderState) {
+            (state as AddPropertiesToRenderState).setHasGuardianSpikes(hasEffect)
         }
     }
 }

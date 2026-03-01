@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.FocalistBeamSyncPayload
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.playSoundLocal
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.server.level.ServerPlayer
@@ -32,12 +33,12 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
     companion object {
         const val MAX_RANGE = 27.5
-        const val MIN_CHARGE_TICKS = 20
+        const val MIN_CHARGE_TICKS = 30
         const val MAX_CHARGE_TICKS = 80
         const val COOLDOWN = 50
 
         const val BASE_DAMAGE = 7.5f
-        const val ADD_DAMAGE = 10f
+        const val ADD_DAMAGE = 8.5f
         const val MAX_LOCK_ANGLE = 45.0
 
         const val VISION_MIN = 2
@@ -122,8 +123,19 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         }
 
         val actualMaxCharge = MAX_CHARGE_TICKS - (visionLevel * VISION_MAX)
+        val actualMinCharge = MIN_CHARGE_TICKS - (visionLevel * VISION_MIN)
 
         val duration = getUseDuration(stack, entity) - timeLeft
+
+        if (duration == actualMinCharge) {
+            playSoundLocal(
+                entity,
+                SoundEvents.TRIDENT_RETURN,
+                SoundSource.PLAYERS,
+                0.75f,
+                2f
+            )
+        }
 
         if (duration >= actualMaxCharge) {
             if (!level.isClientSide) entity.releaseUsingItem()
@@ -139,20 +151,13 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                 1f + (duration / actualMaxCharge.toFloat()) * 0.5f
             )
 
-            if (target is ServerPlayer) {
-                val soundHolder = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.GUARDIAN_ATTACK)
-
-                val soundPacket = ClientboundSoundPacket(
-                    soundHolder,
-                    SoundSource.PLAYERS,
-                    target.x, target.y, target.z,
-                    0.8f - (duration / actualMaxCharge)*0.5f,
-                    1f + (duration / actualMaxCharge.toFloat()) * 0.5f,
-                    target.random.nextLong()
-                )
-
-                target.connection.send(soundPacket)
-            }
+            playSoundLocal(
+                target,
+                SoundEvents.GUARDIAN_ATTACK,
+                SoundSource.PLAYERS,
+                0.8f - (duration / actualMaxCharge)*0.5f,
+                1f + (duration / actualMaxCharge.toFloat()) * 0.5f
+            )
         }
     }
 
@@ -225,27 +230,25 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                     entity.heal(healAmount)
                 }
 
-                if (entity is ServerPlayer) {
-                    val soundHolder = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.CONDUIT_ACTIVATE)
+                playSoundLocal(
+                    entity,
+                    SoundEvents.CONDUIT_ACTIVATE,
+                    SoundSource.PLAYERS,
+                    1.2f,
+                    1.5f
+                )
 
-                    val soundPacket = ClientboundSoundPacket(
-                        soundHolder,
-                        SoundSource.PLAYERS,
-                        entity.x, entity.y, entity.z,
-                        1.2f,
-                        1.5f,
-                        entity.random.nextLong()
-                    )
-
-                    entity.connection.send(soundPacket)
-                }
             } else if (singularityLevel > 0) {
                 target.addEffect(
                     MobEffectInstance(MobEffects.SLOWNESS, SINGULARITY_STUN_DURATION, 25, false, false)
                 )
                 val pullBox = target.boundingBox.inflate(SINGULARITY_PULL)
-                val nearbyEntities = level.getEntitiesOfClass(LivingEntity::class.java, pullBox) { it != target && it != entity }
-
+                val nearbyEntities = level.getEntitiesOfClass(LivingEntity::class.java, pullBox) {
+                    it != target &&
+                            it != entity &&
+                            it.rootVehicle != entity.rootVehicle &&
+                            it.rootVehicle != target.rootVehicle
+                }
                 for (pulled in nearbyEntities) {
                     val pullVector = target.position().subtract(pulled.position()).normalize().scale(SINGULARITY_PULL_FACTOR)
                     pulled.deltaMovement = pullVector

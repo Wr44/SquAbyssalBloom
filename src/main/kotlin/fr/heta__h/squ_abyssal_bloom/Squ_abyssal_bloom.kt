@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom
 
-import fr.heta__h.squ_abyssal_bloom.block.MyModBlocks
+import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.effect.potion.ModPotions
@@ -33,7 +33,7 @@ object Squ_abyssal_bloom {
     init {
         LOGGER.info("Hello world!")
 
-        MyModBlocks.REGISTRY.register(MOD_BUS)
+        ModBlocks.REGISTRY.register(MOD_BUS)
         ModEntities.register(MOD_BUS)
         ModItems.register(MOD_BUS)
         ModEffects.register(MOD_BUS)

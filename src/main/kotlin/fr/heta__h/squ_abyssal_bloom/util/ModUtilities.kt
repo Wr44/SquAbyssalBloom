@@ -1,18 +1,19 @@
 package fr.heta__h.squ_abyssal_bloom.util
 
-import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
 import net.minecraft.core.BlockPos
-import net.minecraft.util.Mth
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.network.protocol.game.ClientboundSoundPacket
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.sounds.SoundEvent
+import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.item.ItemStack
-import net.minecraft.world.level.BlockAndTintGetter
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.HitResult
-import thedarkcolour.kotlinforforge.neoforge.forge.MOD_CONTEXT
 
 object ModUtilities {
     fun findWaterSurface(
@@ -47,7 +48,7 @@ object ModUtilities {
         return ((depth - abyssDepthStart) / (abyssMaxDepth - abyssDepthStart)).coerceIn(0.0, 1.0)
     }
 
-    fun isLargeBodyWater( level: Level, pos: BlockPos, radius: Int): Boolean {
+    fun isLargeBodyWater(level: Level, pos: BlockPos, radius: Int): Boolean {
         var count = 0
         for (x in -radius..radius) {
             for (z in -radius..radius) {
@@ -114,6 +115,19 @@ object ModUtilities {
         return if (holder.isPresent) {
             net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(holder.get(), stack)
         } else 0
+    }
+
+    fun playSoundLocal(entity: LivingEntity, sound: SoundEvent, source: SoundSource, volume: Float, pitch: Float) {
+        if (entity is ServerPlayer) {
+            entity.connection.send(ClientboundSoundPacket(
+                BuiltInRegistries.SOUND_EVENT.wrapAsHolder(sound),
+                source,
+                entity.x, entity.y, entity.z,
+                volume,
+                pitch,
+                entity.random.nextLong()
+            ))
+        }
     }
 
 }

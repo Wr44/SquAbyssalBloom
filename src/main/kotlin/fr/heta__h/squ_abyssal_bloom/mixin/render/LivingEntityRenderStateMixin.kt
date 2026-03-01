@@ -1,12 +1,12 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.render
 
-import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.IGuardianSpikeState
+import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.AddPropertiesToRenderState
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import org.spongepowered.asm.mixin.Mixin
 import org.spongepowered.asm.mixin.Unique
 
 @Mixin(LivingEntityRenderState::class)
-abstract class LivingEntityRenderStateMixin : IGuardianSpikeState {
+abstract class LivingEntityRenderStateMixin : AddPropertiesToRenderState {
 
     @Unique
     private var hasGuardianSpikes: Boolean = false
@@ -14,6 +14,6 @@ abstract class LivingEntityRenderStateMixin : IGuardianSpikeState {
     override fun getHasGuardianSpikes(): Boolean = hasGuardianSpikes
 
     override fun setHasGuardianSpikes(value: Boolean) {
-        this.hasGuardianSpikes = value
+        hasGuardianSpikes = value
     }
 }

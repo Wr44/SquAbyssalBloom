@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.client.guardian_spike.GuardianSpikeModel
-import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.IGuardianSpikeState
+import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.AddPropertiesToRenderState
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.RenderLayerParent
@@ -15,7 +15,6 @@ import net.minecraft.resources.Identifier
 import org.joml.Quaternionf
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.random.Random
 
 class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
     renderer: RenderLayerParent<S, M>,
@@ -40,7 +39,7 @@ class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         p5: Float
     ) {
 
-        val hasPotion = (state as? IGuardianSpikeState)?.getHasGuardianSpikes() ?: false
+        val hasPotion = (state as? AddPropertiesToRenderState)?.getHasGuardianSpikes() ?: false
         if (!hasPotion) return
 
         val renderType = RenderTypes.entityCutout(TEXTURE)
