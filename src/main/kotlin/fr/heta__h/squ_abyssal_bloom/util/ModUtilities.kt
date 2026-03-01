@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
 import net.minecraft.core.BlockPos
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.BlockAndTintGetter
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
@@ -70,7 +71,7 @@ object ModUtilities {
             ClipContext(
                 start,
                 end,
-                ClipContext.Block.COLLIDER, 
+                ClipContext.Block.COLLIDER,
                 ClipContext.Fluid.NONE,
                 from
             )
@@ -100,6 +101,19 @@ object ModUtilities {
         }
 
         return sum / weightSum
+    }
+
+
+    fun getEnchantLevel(stack: ItemStack, level: Level, enchantName: String): Int {
+        val registry = level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+        val key = net.minecraft.resources.ResourceKey.create(
+            net.minecraft.core.registries.Registries.ENCHANTMENT,
+            net.minecraft.resources.Identifier.fromNamespaceAndPath("squ_abyssal_bloom", enchantName)
+        )
+        val holder = registry.get(key)
+        return if (holder.isPresent) {
+            net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(holder.get(), stack)
+        } else 0
     }
 
 }

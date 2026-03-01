@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.item
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
 import net.minecraft.client.data.models.BlockModelGenerators
 import net.minecraft.client.data.models.ItemModelGenerators
 import net.minecraft.client.data.models.model.ModelTemplates
@@ -26,7 +27,15 @@ object ModItems {
 
     val GUARDIAN_EYE: DeferredItem<Item> = ITEMS.registerItem(
         "guardian_eye"
-    ) { properties -> Item(properties.rarity(Rarity.UNCOMMON)) }
+    ) { properties -> Item(properties) }
+
+    val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
+        "abyssal_guardian_focalist"
+    ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
+        .durability(115)
+        .enchantable(15)
+    )
+    }
 
     fun register(eventBus: IEventBus) {
         ITEMS.register(eventBus)

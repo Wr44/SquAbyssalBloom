@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.client.render
+package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig

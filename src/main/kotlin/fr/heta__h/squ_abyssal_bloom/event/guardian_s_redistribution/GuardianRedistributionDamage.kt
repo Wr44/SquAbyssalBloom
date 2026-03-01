@@ -3,9 +3,12 @@ package fr.heta__h.squ_abyssal_bloom.event.guardian_s_redistribution
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import net.minecraft.client.telemetry.TelemetryProperty
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.level.GameType
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent
@@ -18,6 +21,12 @@ object GuardianRedistributionDamage {
     fun onDamageTaken(event: LivingDamageEvent.Pre) {
         val victim = event.entity
         val attacker = event.source.entity as? LivingEntity ?: return
+        if (attacker is Player) {
+            val gamemode = attacker.gameMode()
+            if (gamemode != null && gamemode != GameType.SURVIVAL && gamemode != GameType.ADVENTURE) {
+                return
+            }
+        }
         if (victim.level().isClientSide) return
         if (!victim.getData(ModAttachments.HAS_GUARDIAN_SPIKES)) return
 
