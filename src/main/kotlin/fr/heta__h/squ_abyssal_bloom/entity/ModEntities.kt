@@ -143,7 +143,7 @@ object ModEntities {
         event.register(
             BARNACLE.get(),
             SpawnPlacementTypes.IN_WATER,
-            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+            Heightmap.Types.OCEAN_FLOOR,
             ::checkBarnacleSpawn,
             RegisterSpawnPlacementsEvent.Operation.REPLACE
         )

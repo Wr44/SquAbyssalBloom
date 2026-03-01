@@ -1,7 +1,6 @@
-package fr.heta__h.squ_abyssal_bloom.effect.potion
+package fr.heta__h.squ_abyssal_bloom.effect
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.core.Holder
 import net.minecraft.core.registries.BuiltInRegistries
@@ -10,7 +9,6 @@ import net.minecraft.world.item.Items
 import net.minecraft.world.item.alchemy.Potion
 import net.minecraft.world.item.alchemy.Potions
 import net.neoforged.bus.api.IEventBus
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent
 import net.neoforged.neoforge.registries.DeferredRegister
 
@@ -21,7 +19,8 @@ object ModPotions {
     val GUARDIAN_S_REDISTRIBUTION: Holder<Potion> =
         POTIONS.register("guardian_s_redistribution") { _ -> Potion(
             "guardian_s_redistribution",
-            MobEffectInstance(ModEffects.GUARDIAN_S_REDISTRIBUTION, 1800))
+            MobEffectInstance(ModEffects.GUARDIAN_S_REDISTRIBUTION, 1800)
+        )
         }
 
     val LONG_GUARDIAN_S_REDISTRIBUTION: Holder<Potion> =
