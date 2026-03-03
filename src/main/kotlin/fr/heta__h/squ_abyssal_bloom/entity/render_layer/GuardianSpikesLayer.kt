@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.client.guardian_spike.GuardianSpikeModel
-import fr.heta__h.squ_abyssal_bloom.mixin.render.`interface`.AddPropertiesToRenderState
+import fr.heta__h.squ_abyssal_bloom.mixin.`interface`.AddPropertiesToRenderState
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.RenderLayerParent

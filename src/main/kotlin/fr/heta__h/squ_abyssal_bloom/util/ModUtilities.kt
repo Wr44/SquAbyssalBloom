@@ -10,6 +10,7 @@ import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.material.Fluids
@@ -128,6 +129,13 @@ object ModUtilities {
                 entity.random.nextLong()
             ))
         }
+    }
+
+    fun isNautilusExtraEquipment(stack: ItemStack): Boolean {
+        if (stack.isEmpty) return false
+
+        val item = stack.item
+        return item == Items.CONDUIT
     }
 
 }

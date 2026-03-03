@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.mixin.entity
+package fr.heta__h.squ_abyssal_bloom.mixin.entity.guardian
 
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import net.minecraft.world.entity.EntityType
@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.Mixin
 import org.spongepowered.asm.mixin.injection.At
 import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
-
 
 @Mixin(Guardian::class, remap = false)
 open class GuardianMixin protected constructor(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
