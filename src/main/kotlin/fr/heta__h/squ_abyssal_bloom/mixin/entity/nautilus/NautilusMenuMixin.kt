@@ -9,7 +9,6 @@ import net.minecraft.world.Container
 import net.minecraft.world.SimpleContainer
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.player.Inventory
-import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.NautilusInventoryMenu
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
@@ -17,14 +16,9 @@ import org.spongepowered.asm.mixin.Mixin
 import org.spongepowered.asm.mixin.injection.At
 import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 
 @Mixin(NautilusInventoryMenu::class)
 abstract class NautilusMenuMixin {
-
-    val EXTRA_SLOT = 38
-    val PLAYER_START = 2
-    val PLAYER_END = 38
 
     @Inject(method = ["<init>"], at = [At("RETURN")])
     private fun addExtraNautilusSlot(
@@ -48,10 +42,10 @@ abstract class NautilusMenuMixin {
                 if (currentSaved.isEmpty && !newItem.isEmpty) {
                     playSoundLocal(
                         player,
-                        SoundEvents.ARMOR_EQUIP_LEATHER.value(),
+                        SoundEvents.ARMOR_EQUIP_NAUTILUS.value(),
                         mount.soundSource,
                         1.0f,
-                        1.0f
+                        1.5f
                     )
                 }
 
@@ -62,6 +56,7 @@ abstract class NautilusMenuMixin {
 
         (this as AbstractContainerMenuAccessor).invokeAddSlot(object : Slot(extraSlotContainer, 0, 8, 54) {
             override fun mayPlace(stack: ItemStack): Boolean = ModUtilities.isNautilusExtraEquipment(stack)
+            override fun getMaxStackSize(): Int = 1
         })
     }
 }

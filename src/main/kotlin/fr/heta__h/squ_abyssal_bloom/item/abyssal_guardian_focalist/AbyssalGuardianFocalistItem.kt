@@ -85,12 +85,11 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                 1f
             )
 
-            level.playSound(
+            playSoundLocal(
                 target,
-                target.x, target.y, target.z,
                 SoundEvents.GUARDIAN_ATTACK,
                 SoundSource.PLAYERS,
-                0.8f,
+                1f,
                 1f
             )
 
