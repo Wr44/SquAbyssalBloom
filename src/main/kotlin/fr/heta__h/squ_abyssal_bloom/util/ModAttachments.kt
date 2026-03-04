@@ -21,7 +21,7 @@ object ModAttachments {
     val NAUTILUS_EXTRA_SLOT = ATTACHMENTS.register("nautilus_extra_slot") { ->
         AttachmentType.builder { -> ItemStack.EMPTY }
             .serialize(ItemStack.OPTIONAL_CODEC.fieldOf("item"))
-            .copyOnDeath()
+            .sync(ItemStack.OPTIONAL_STREAM_CODEC)
             .build()
 
     }

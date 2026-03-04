@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.item.ItemStack
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent 
@@ -26,6 +27,8 @@ object NautilusDropInventory {
                 itemEntity.setDefaultPickUpDelay()
 
                 event.drops.add(itemEntity)
+
+                entity.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, ItemStack.EMPTY)
             }
         }
     }
