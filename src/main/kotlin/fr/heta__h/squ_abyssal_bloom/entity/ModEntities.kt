@@ -5,10 +5,12 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
-import fr.heta__h.squ_abyssal_bloom.entity.client.guardian_spike.GuardianSpikeModel
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.GuardianSpikesLayer
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikesLayer
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.player.AbstractClientPlayer
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
@@ -69,6 +71,7 @@ object ModEntities {
     }
 
     fun registerLayerDefinitions(event: EntityRenderersEvent.RegisterLayerDefinitions) {
+        
         event.registerLayerDefinition(
             BarnacleModel.LAYER_LOCATION,
             BarnacleModel::createBodyLayer
@@ -79,9 +82,15 @@ object ModEntities {
             GhostChimaeraModel::createBodyLayer
         )
 
+        
         event.registerLayerDefinition(
             GuardianSpikeModel.LAYER_LOCATION,
             GuardianSpikeModel::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            NautilusLampModel.LAYER_LOCATION,
+            NautilusLampModel::createBodyLayer
         )
     }
 
@@ -93,7 +102,10 @@ object ModEntities {
 
     fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
         val spikeModel = GuardianSpikeModel(event.entityModels.bakeLayer(GuardianSpikeModel.LAYER_LOCATION))
+        val lampModel = NautilusLampModel(event.entityModels.bakeLayer(NautilusLampModel.LAYER_LOCATION))
 
+
+        
         for (entityType in BuiltInRegistries.ENTITY_TYPE) {
             val renderer = event.getRenderer(entityType)
 
@@ -110,7 +122,7 @@ object ModEntities {
 
             if (playerRenderer != null) {
                 @Suppress("UNCHECKED_CAST")
-                val castedRenderer = playerRenderer as LivingEntityRenderer<net.minecraft.world.entity.LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+                val castedRenderer = playerRenderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
 
                 castedRenderer.addLayer(GuardianSpikesLayer(castedRenderer, spikeModel))
             }
@@ -130,6 +142,21 @@ object ModEntities {
             if (renderer is LivingEntityRenderer<*,*,*>) {
                 @Suppress("UNCHECKED_CAST")
                 val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
+            }
+        }
+
+
+        
+        val nautilusRenderer = listOf(event.getRenderer(EntityType.NAUTILUS), event.getRenderer(EntityType.ZOMBIE_NAUTILUS))
+        for (renderer in nautilusRenderer) {
+            if (renderer is LivingEntityRenderer<*, *, *>) {
+                @Suppress("UNCHECKED_CAST")
+                val livingRenderer =
+                    renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+
+                livingRenderer.addLayer(NautilusLayer(livingRenderer, lampModel))
+
                 livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
             }
         }

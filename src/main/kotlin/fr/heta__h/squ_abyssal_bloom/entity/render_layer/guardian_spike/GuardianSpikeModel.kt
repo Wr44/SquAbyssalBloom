@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.entity.client.guardian_spike
+package fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import net.minecraft.client.model.EntityModel

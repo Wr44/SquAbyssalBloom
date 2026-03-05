@@ -1,8 +1,7 @@
-package fr.heta__h.squ_abyssal_bloom.entity.render_layer
+package fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike
 
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.entity.client.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.mixin.`interface`.AddPropertiesToRenderState
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.SubmitNodeCollector
@@ -23,7 +22,8 @@ class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
 {
     companion object {
-        private val TEXTURE = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID,
+        private val TEXTURE = Identifier.fromNamespaceAndPath(
+            Squ_abyssal_bloom.ID,
             "textures/entity/guardian_spike/guardian_spike.png")
         const val NUMBER_OF_SPIKES = 10
     }
