@@ -26,7 +26,6 @@ object AbyssDepthCache {
         } else {
             cachedRawDepthFactor = 0.0
         }
-        
         smoothedDepthFactor += (cachedRawDepthFactor - smoothedDepthFactor) * 0.05
     }
 }
