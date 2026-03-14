@@ -1,10 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.render
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.AbyssDepthCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getDepthFactor
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.isLargeBodyWater
 import net.minecraft.client.Minecraft
 import net.minecraft.client.OptionInstance
 import net.minecraft.client.renderer.LightTexture
@@ -42,13 +40,23 @@ open class LightTextureMixin {
 
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position())
-        if (!isLargeBodyWater(level, camPos, 5)) return originalValue
 
-        val smoothedDepth = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5)
-        val depthFactor = smoothedDepth.coerceAtLeast(0.0)
-        if (depthFactor <= 0.0) return originalValue
+        AbyssDepthCache.refreshIfNeeded(level, camPos)
+        if (!AbyssDepthCache.isLargeBody) return originalValue
 
-        val factor = exp(-depthFactor * 2.2)
+        val rawFactor = AbyssDepthCache.displayedDepthFactor
+        if (rawFactor <= 0.0) return originalValue
+
+        val lampInfluence = maxOf(
+            ModUtilities.getRiderLampInfluence(entity),
+            ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
+        )
+        val effectiveFactor = rawFactor * (1.0 - lampInfluence * ModConfig.nautilusLampInfluence)
+
+        
+        
+        
+        val factor = exp(-effectiveFactor * (0.9 * ModConfig.lightDimmingStrength))
 
         return originalValue * factor
     }

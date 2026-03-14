@@ -32,27 +32,21 @@ abstract class NautilusMenuMixin {
         val savedItem: ItemStack = mount.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
         val player = playerInventory.player
 
+        var initialized = false
         val extraSlotContainer: SimpleContainer = object : SimpleContainer(1) {
             override fun setChanged() {
                 super.setChanged()
+                if (!initialized || mount.level().isClientSide || !mount.isAlive) return
 
-                val currentSaved = mount.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
                 val newItem = this.getItem(0)
-
-                if (currentSaved.isEmpty && !newItem.isEmpty) {
-                    playSoundLocal(
-                        player,
-                        SoundEvents.ARMOR_EQUIP_NAUTILUS.value(),
-                        mount.soundSource,
-                        1.0f,
-                        1.5f
-                    )
+                if (mount.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).isEmpty && !newItem.isEmpty) {
+                    playSoundLocal(player, SoundEvents.ARMOR_EQUIP_NAUTILUS.value(), mount.soundSource, 1.0f, 1.5f)
                 }
-
                 mount.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, newItem)
             }
         }
         extraSlotContainer.setItem(0, savedItem)
+        initialized = true
 
         (this as AbstractContainerMenuAccessor).invokeAddSlot(object : Slot(extraSlotContainer, 0, 8, 54) {
             override fun mayPlace(stack: ItemStack): Boolean = ModUtilities.isNautilusExtraEquipment(stack)

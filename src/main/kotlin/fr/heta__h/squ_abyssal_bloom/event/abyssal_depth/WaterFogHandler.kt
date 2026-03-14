@@ -1,9 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.compat.OculusCompatDetector
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.isLargeBodyWater
 import net.minecraft.core.BlockPos
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.LivingEntity
@@ -19,9 +19,9 @@ object WaterFogHandler {
 
     private const val FOG_START_SHALLOW = 5.0
     private const val FOG_END_SHALLOW = 40.0
-    private const val FOG_START_DEEP = 0.1
-    private const val FOG_END_DEEP = 8.0
 
+    private const val FOG_START_DEEP = 0.0
+    private const val FOG_END_DEEP = 12.0
 
     @SubscribeEvent
     fun onComputeFogColor(event: ViewportEvent.ComputeFogColor) {
@@ -36,16 +36,23 @@ object WaterFogHandler {
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position())
 
-        if (!isLargeBodyWater(level, camPos, 5)) return
+        AbyssDepthCache.refreshIfNeeded(level, camPos)
+        if (!AbyssDepthCache.isLargeBody) return
 
-        var depthFactor = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5)
-        depthFactor = depthFactor.coerceAtLeast(0.0)
+        val rawFactor = AbyssDepthCache.displayedDepthFactor
+        val lampInfluence = maxOf(
+            ModUtilities.getRiderLampInfluence(entity),
+            ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
+        )
+        val effectiveFactor = rawFactor * (1.0 - lampInfluence * ModConfig.nautilusLampInfluence)
 
-        val eased = depthFactor.pow(0.5)
+        val eased = effectiveFactor.pow(0.3)
 
-        event.red = lerp(event.red, 0.0f, eased.toFloat())
-        event.green = lerp(event.green, 0.0f, eased.toFloat())
-        event.blue = lerp(event.blue, 0.0f, eased.toFloat())
+        
+        
+        event.red = lerp(event.red, event.red * 0.20f, eased.toFloat())
+        event.green = lerp(event.green, event.green * 0.20f, eased.toFloat())
+        event.blue = lerp(event.blue, event.blue * 0.20f, eased.toFloat())
     }
 
     @SubscribeEvent
@@ -61,15 +68,26 @@ object WaterFogHandler {
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position())
 
-        if (!isLargeBodyWater(level, camPos, 5)) return
+        AbyssDepthCache.refreshIfNeeded(level, camPos)
+        if (!AbyssDepthCache.isLargeBody) return
 
-        val depthFactor = ModUtilities.smoothDepthGaussian(level, camPos, sigma = 1.5).coerceAtLeast(0.0)
-        if (depthFactor < 0.05) return
+        val rawFactor = AbyssDepthCache.displayedDepthFactor
+        if (rawFactor < 0.05) return
 
-        val eased = depthFactor.pow(0.5)
+        val lampInfluence = maxOf(
+            ModUtilities.getRiderLampInfluence(entity),
+            ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
+        )
+        val effectiveFactor = rawFactor * (1.0 - lampInfluence * ModConfig.nautilusLampInfluence)
 
-        val fogStartDistance = FOG_START_SHALLOW - (FOG_START_SHALLOW - FOG_START_DEEP) * eased
-        val fogEndDistance = FOG_END_SHALLOW - (FOG_END_SHALLOW - FOG_END_DEEP) * eased
+        val eased = effectiveFactor.pow(0.3)
+
+        val shaderMode = OculusCompatDetector.isShadersActive()
+        val intensityScale = ModConfig.fogDarknessIntensity * if (shaderMode) 0.6 else 1.0
+
+        val fogStartDistance = FOG_START_SHALLOW - (FOG_START_SHALLOW - FOG_START_DEEP) * eased * intensityScale
+        val fogEndDistanceRaw = FOG_END_SHALLOW - (FOG_END_SHALLOW - FOG_END_DEEP) * eased * intensityScale
+        val fogEndDistance = fogEndDistanceRaw.coerceAtLeast(fogStartDistance + 1.0)
 
         event.nearPlaneDistance = fogStartDistance.toFloat()
         event.farPlaneDistance = fogEndDistance.toFloat()
@@ -78,5 +96,4 @@ object WaterFogHandler {
     private fun lerp(start: Float, end: Float, delta: Float): Float {
         return start + delta * (end - start)
     }
-
 }

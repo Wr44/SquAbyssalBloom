@@ -24,9 +24,9 @@ abstract class NautilusMountMenuShiftClickMixin {
                 val stackInSlot = slot.item
                 val copyStack = stackInSlot.copy()
 
-                val EXTRA_SLOT = 38
+                val EXTRA_SLOT = menu.slots.size - 1
                 val PLAYER_START = 2
-                val PLAYER_END = 38
+                val PLAYER_END = EXTRA_SLOT
 
                 if (index == EXTRA_SLOT) {
                     if (!(menu as AbstractContainerMenuAccessor).invokeMoveItemStackTo(stackInSlot, PLAYER_START, PLAYER_END, true)) {
@@ -35,6 +35,7 @@ abstract class NautilusMountMenuShiftClickMixin {
                         if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
                         cir.returnValue = copyStack
                     }
+                    cir.cancel()
                     return
                 }
 

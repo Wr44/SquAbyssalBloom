@@ -7,6 +7,8 @@ import fr.heta__h.squ_abyssal_bloom.effect.ModPotions
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import fr.heta__h.squ_abyssal_bloom.particle.MarineSnowParticleProvider
+import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
 import net.neoforged.bus.api.SubscribeEvent
@@ -16,6 +18,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.client.event.EntityRenderersEvent
+import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
@@ -42,10 +45,16 @@ object Squ_abyssal_bloom {
         ModAttachments.ATTACHMENTS.register(MOD_BUS)
         ModSounds.register(MOD_BUS)
         ModCreativeModeTabs.register(MOD_BUS)
+        ModParticles.register(MOD_BUS)
 
         runForDist(
             clientTarget = {
                 MOD_BUS.addListener(::onClientSetup)
+                MOD_BUS.addListener { event: RegisterParticleProvidersEvent ->
+                    event.registerSpriteSet(ModParticles.MARINE_SNOW.get()) { sprites ->
+                        MarineSnowParticleProvider(sprites)
+                    }
+                }
             },
             serverTarget = {
                 MOD_BUS.addListener(::onServerSetup)
