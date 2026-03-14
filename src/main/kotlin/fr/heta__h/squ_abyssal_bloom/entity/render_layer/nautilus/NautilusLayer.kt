@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.resources.Identifier
+import net.minecraft.world.item.Item
 import net.minecraft.world.item.Items
 
 class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
@@ -24,6 +25,8 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
             Squ_abyssal_bloom.ID,
             "textures/entity/nautilus_lamp/nautilus_lamp.png"
         )
+
+        val NAUTILUS_LAMP: Item = Items.CONDUIT
     }
 
     override fun submit(
@@ -36,7 +39,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
     ) {
         val extraItem = (state as? AddPropertiesToRenderState)?.getNautilusExtraItem() ?: net.minecraft.world.item.ItemStack.EMPTY
 
-        if (extraItem.isEmpty || !extraItem.`is`(Items.CONDUIT)) return
+        if (extraItem.isEmpty || !extraItem.`is`(NAUTILUS_LAMP)) return
         val renderType = RenderTypes.entityCutout(TEXTURE_NAUTILUS_LAMP)
 
         poseStack.pushPose()

@@ -32,7 +32,7 @@ object ModItems {
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
     ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
-        .durability(115)
+        .durability(155)
         .enchantable(15)
     )
     }

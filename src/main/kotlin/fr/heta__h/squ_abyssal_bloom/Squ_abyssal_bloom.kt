@@ -16,6 +16,7 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.neoforge.client.event.EntityRenderersEvent
+import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
 import org.apache.logging.log4j.LogManager
@@ -98,7 +99,7 @@ object Squ_abyssal_bloom {
     }
 
     @SubscribeEvent
-    fun registerBrewingRecipes(event: net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent) {
+    fun registerBrewingRecipes(event: RegisterBrewingRecipesEvent) {
         ModPotions.registerBrewingRecipes(event)
     }
 }
