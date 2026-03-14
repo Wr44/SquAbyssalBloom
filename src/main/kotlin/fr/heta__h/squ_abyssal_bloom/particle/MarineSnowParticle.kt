@@ -51,20 +51,4 @@ class MarineSnowParticle(
     override fun getLayer(): Layer {
         return Layer.TRANSLUCENT
     }
-
-    override fun getLightColor(partialTick: Float): Int {
-        val fadeTicks = 30.0f
-        val currentAge = this.age + partialTick
-
-        val factor = (currentAge / fadeTicks).coerceIn(0.0f, 1.0f)
-
-        val worldLight = super.getLightColor(partialTick)
-        val worldBlockLight = (worldLight shr 4) and 0xF
-
-        val targetBlockLight = 10
-
-        val currentBlockLight = (worldBlockLight + (targetBlockLight - worldBlockLight) * factor).toInt()
-
-        return (0 shl 20) or (currentBlockLight shl 4)
-    }
 }

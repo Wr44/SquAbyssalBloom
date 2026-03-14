@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.compat.ShaderCompatDetector
+import fr.heta__h.squ_abyssal_bloom.compat.OculusCompatDetector
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
@@ -40,9 +40,6 @@ object WaterFogHandler {
         if (!AbyssDepthCache.isLargeBody) return
 
         val rawFactor = AbyssDepthCache.displayedDepthFactor
-
-        if (rawFactor < 0.005) return
-
         val lampInfluence = maxOf(
             ModUtilities.getRiderLampInfluence(entity),
             ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
@@ -51,13 +48,12 @@ object WaterFogHandler {
 
         val eased = effectiveFactor.pow(0.3)
 
-        val targetLight = 0.20f
-
-        event.red = lerp(event.red, event.red * targetLight, eased.toFloat())
-        event.green = lerp(event.green, event.green * targetLight, eased.toFloat())
-        event.blue = lerp(event.blue, event.blue * targetLight, eased.toFloat())
+        
+        
+        event.red = lerp(event.red, event.red * 0.20f, eased.toFloat())
+        event.green = lerp(event.green, event.green * 0.20f, eased.toFloat())
+        event.blue = lerp(event.blue, event.blue * 0.20f, eased.toFloat())
     }
-
 
     @SubscribeEvent
     fun onRenderFog(event: ViewportEvent.RenderFog) {
@@ -86,7 +82,7 @@ object WaterFogHandler {
 
         val eased = effectiveFactor.pow(0.3)
 
-        val shaderMode = ShaderCompatDetector.isShadersActive()
+        val shaderMode = OculusCompatDetector.isShadersActive()
         val intensityScale = ModConfig.fogDarknessIntensity * if (shaderMode) 0.6 else 1.0
 
         val fogStartDistance = FOG_START_SHALLOW - (FOG_START_SHALLOW - FOG_START_DEEP) * eased * intensityScale
