@@ -14,15 +14,6 @@ class MarineSnowParticle(
     private val swayPhase: Float
 ) : SingleQuadParticle(level, x, y, z, 0.0, -0.002, 0.0, sprite) {
 
-    companion object {
-        val TINTS = arrayOf(
-            Triple(1f, 1f, 1f),
-            Triple(0.85f, 0.92f, 1f),
-            Triple(0.96f, 0.94f, 0.88f),
-            Triple(0.78f, 0.80f, 0.82f)
-        )
-    }
-
     init {
         gravity = 0.0f
         hasPhysics = false
@@ -32,6 +23,14 @@ class MarineSnowParticle(
     }
 
     override fun tick() {
+
+        val fadeInDuration = 20.0f
+        if (this.age <= fadeInDuration) {
+            this.alpha = this.age / fadeInDuration
+        } else {
+            this.alpha = 1.0f
+        }
+
         yd = -0.008
         val amp = (0.0015 * ModConfig.marineSnowSwayAmplitude).toFloat()
         xd = (sin(age * 0.04f + swayPhase) * amp).toDouble()
@@ -50,5 +49,21 @@ class MarineSnowParticle(
 
     override fun getLayer(): Layer {
         return Layer.TRANSLUCENT
+    }
+
+    override fun getLightColor(partialTick: Float): Int {
+        val fadeTicks = 30.0f
+        val currentAge = this.age + partialTick
+
+        val factor = (currentAge / fadeTicks).coerceIn(0.0f, 1.0f)
+
+        val worldLight = super.getLightColor(partialTick)
+        val worldBlockLight = (worldLight shr 4) and 0xF
+
+        val targetBlockLight = 10
+
+        val currentBlockLight = (worldBlockLight + (targetBlockLight - worldBlockLight) * factor).toInt()
+
+        return (0 shl 20) or (currentBlockLight shl 4)
     }
 }

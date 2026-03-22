@@ -33,7 +33,6 @@ object AbyssVignetteOverlay {
         val camPos = BlockPos.containing(camera.position())
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
-        if (!AbyssDepthCache.isLargeBody) return
 
         val rawFactor = AbyssDepthCache.displayedDepthFactor
         val lampInfluence = maxOf(

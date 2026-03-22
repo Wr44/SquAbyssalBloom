@@ -22,22 +22,28 @@ object MarineSnowHandler {
     @SubscribeEvent
     fun onClientTick(event: ClientTickEvent.Post) {
         if (!ModConfig.enableAbyssFog) return
+
         val mc = Minecraft.getInstance()
         if (mc.isPaused) return
+
         val camera = mc.gameRenderer.mainCamera
         if (camera.fluidInCamera != FogType.WATER) return
+
         val level = mc.level ?: return
         val camPos = BlockPos.containing(camera.position())
+
         AbyssDepthCache.refreshIfNeeded(level, camPos)
-        if (!AbyssDepthCache.isLargeBody) return
+
         val depthFactor = AbyssDepthCache.displayedDepthFactor
         if (depthFactor < 0.05) return
 
         val count = kotlin.math.ceil(
             ModConfig.maxMarinSnowParticles * depthFactor * ModConfig.marineSnowDensity / 20.0
         ).toInt()
+
         val range = ModConfig.marineSnowVisibilityRange.toDouble()
         val camVec = camera.position()
+
         repeat(count) {
             val r = sqrt(level.random.nextDouble()) * range
             val theta = level.random.nextDouble() * 2.0 * PI

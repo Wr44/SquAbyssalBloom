@@ -20,6 +20,7 @@ import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 
 object ModUtilities {
+
     fun findWaterSurface(
         level: Level,
         start: BlockPos,
@@ -48,24 +49,24 @@ object ModUtilities {
     }
 
 
-    fun getDepthFactor(depth: Double): Double {
-        return ((depth - abyssDepthStart) / (abyssMaxDepth - abyssDepthStart)).coerceIn(0.0, 1.0)
-    }
+    fun calculatePhysicalDepth(level: Level, start: BlockPos): Double {
+        var surfaceY = start.y
 
-    fun isLargeBodyWater(level: Level, pos: BlockPos, radius: Int): Boolean {
-        var count = 0
-        for (x in -radius..radius) {
-            for (z in -radius..radius) {
-                val checkPos = pos.offset(x, 0, z)
-                if (level.getFluidState(checkPos).`is`(Fluids.WATER)) {
-                    count ++
-                }
+        for (y in level.maxY downTo start.y) {
+            val pos = BlockPos(start.x, y, start.z)
+
+            if (level.getFluidState(pos).`is`(Fluids.WATER)) {
+                surfaceY = y
+                break
             }
         }
-        if (count < (radius * 2 + 1) * (radius * 2 + 1) * 0.4) {
-            return false
-        }
-        return true
+
+        val depth = surfaceY - start.y
+        return maxOf(0, depth).toDouble()
+    }
+
+    fun getDepthFactor(depth: Double): Double {
+        return ((depth - abyssDepthStart) / (abyssMaxDepth - abyssDepthStart)).coerceIn(0.0, 1.0)
     }
 
     fun hasClearPath(level: Level, from: LivingEntity, to: LivingEntity): Boolean {
@@ -83,29 +84,6 @@ object ModUtilities {
         )
 
         return hit.type == HitResult.Type.MISS
-    }
-
-    fun gaussianWeight(dx: Int, dy: Int, dz: Int, sigma: Double): Double {
-        val r2 = (dx*dx + dy*dy + dz*dz).toDouble()
-        return kotlin.math.exp(-r2 / (2.0 * sigma*sigma))
-    }
-
-    fun smoothDepthGaussian(level: Level, pos: BlockPos, sigma: Double = 1.0): Double {
-        var sum = 0.0
-        var weightSum = 0.0
-
-        for (dx in -2..2) {
-            for (dy in -2..2) {
-                for (dz in -2..2) {
-                    val neighborPos = pos.offset(dx, dy, dz)
-                    val w = gaussianWeight(dx, dy, dz, sigma)
-                    sum += w * getDepthFactor(findWaterSurface(level, neighborPos).toDouble())
-                    weightSum += w
-                }
-            }
-        }
-
-        return sum / weightSum
     }
 
 

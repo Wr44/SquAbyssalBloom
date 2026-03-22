@@ -1,11 +1,15 @@
 package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights
 
 import dev.lambdaurora.lambdynlights.api.behavior.LineLightBehavior
+import net.neoforged.fml.ModList
 
 abstract class AbstractDynamicLightCompat {
 
 
     companion object {
+        val hasDynLights: Boolean by lazy {
+            ModList.get().mods.any { it.modId.contains("lambdynlights", ignoreCase = true) }
+        }
         private var managerInstance: Any? = null
         private var addMethod: java.lang.reflect.Method? = null
         private var removeMethod: java.lang.reflect.Method? = null

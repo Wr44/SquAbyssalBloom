@@ -37,13 +37,6 @@ object ModConfig {
     var enableDepthVignette: Boolean = true
     var vignetteIntensity: Double = 1.0
     var lightDimmingStrength: Double = 0.7
-    var enableNautilusLampFog: Boolean = true
-    var nautilusLampFogStart: Double = 3.0
-    var nautilusLampFogEnd: Double = 22.0
-    var nautilusLampGivesWaterBreathing: Boolean = true
-    var enableExteriorMurkiness: Boolean = true
-    var exteriorMurkinessIntensity: Double = 1.0
-    var exteriorMurkinessMaxHeight: Double = 24.0
 
     private fun getEntityToRender(entityName: String): LivingEntity? {
         val mc = Minecraft.getInstance()
@@ -89,13 +82,7 @@ object ModConfig {
                 enableDepthVignette = json.get("enableDepthVignette")?.asBoolean ?: true
                 vignetteIntensity = json.get("vignetteIntensity")?.asDouble ?: 1.0
                 lightDimmingStrength = json.get("lightDimmingStrength")?.asDouble ?: 0.7
-                enableNautilusLampFog = json.get("enableNautilusLampFog")?.asBoolean ?: true
-                nautilusLampFogStart = json.get("nautilusLampFogStart")?.asDouble ?: 3.0
-                nautilusLampFogEnd = json.get("nautilusLampFogEnd")?.asDouble ?: 22.0
-                nautilusLampGivesWaterBreathing = json.get("nautilusLampGivesWaterBreathing")?.asBoolean ?: true
-                enableExteriorMurkiness = json.get("enableExteriorMurkiness")?.asBoolean ?: true
-                exteriorMurkinessIntensity = json.get("exteriorMurkinessIntensity")?.asDouble ?: 1.0
-                exteriorMurkinessMaxHeight = json.get("exteriorMurkinessMaxHeight")?.asDouble ?: 24.0
+
             }
         } catch (e: Exception) {
             println("Erreur config : ${e.message}")
@@ -120,13 +107,6 @@ object ModConfig {
                 addProperty("enableDepthVignette", enableDepthVignette)
                 addProperty("vignetteIntensity", vignetteIntensity)
                 addProperty("lightDimmingStrength", lightDimmingStrength)
-                addProperty("enableNautilusLampFog", enableNautilusLampFog)
-                addProperty("nautilusLampFogStart", nautilusLampFogStart)
-                addProperty("nautilusLampFogEnd", nautilusLampFogEnd)
-                addProperty("nautilusLampGivesWaterBreathing", nautilusLampGivesWaterBreathing)
-                addProperty("enableExteriorMurkiness", enableExteriorMurkiness)
-                addProperty("exteriorMurkinessIntensity", exteriorMurkinessIntensity)
-                addProperty("exteriorMurkinessMaxHeight", exteriorMurkinessMaxHeight)
             }
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))
@@ -220,55 +200,6 @@ object ModConfig {
                         .build())
                     .build())
 
-                .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("config.squ_abyssal_bloom.group.nautilusLamp").withStyle(ChatFormatting.YELLOW))
-
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.enableNautilusLampFog"))
-                        .binding(Binding.generic(true, { enableNautilusLampFog }, { enableNautilusLampFog = it }))
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
-
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.nautilusLampFogStart"))
-                        .binding(Binding.generic(3.0, { nautilusLampFogStart }, { nautilusLampFogStart = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 20.0).step(0.5) }
-                        .build())
-
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.nautilusLampFogEnd"))
-                        .binding(Binding.generic(22.0, { nautilusLampFogEnd }, { nautilusLampFogEnd = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(5.0, 50.0).step(1.0) }
-                        .build())
-
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.nautilusLampGivesWaterBreathing"))
-                        .binding(Binding.generic(true, { nautilusLampGivesWaterBreathing }, { nautilusLampGivesWaterBreathing = it }))
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
-                    .build())
-
-                .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("config.squ_abyssal_bloom.group.exteriorWater").withStyle(ChatFormatting.BLUE))
-
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.enableExteriorMurkiness"))
-                        .binding(Binding.generic(true, { enableExteriorMurkiness }, { enableExteriorMurkiness = it }))
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
-
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.exteriorMurkinessIntensity"))
-                        .binding(Binding.generic(1.0, { exteriorMurkinessIntensity }, { exteriorMurkinessIntensity = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
-                        .build())
-
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.exteriorMurkinessMaxHeight"))
-                        .binding(Binding.generic(24.0, { exteriorMurkinessMaxHeight }, { exteriorMurkinessMaxHeight = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 64.0).step(1.0) }
-                        .build())
-                    .build())
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("config.squ_abyssal_bloom.group.particles").withStyle(ChatFormatting.GOLD))

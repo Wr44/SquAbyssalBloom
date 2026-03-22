@@ -16,8 +16,7 @@ class MarineSnowParticleProvider(private val sprites: SpriteSet) : ParticleProvi
         xd: Double, yd: Double, zd: Double,
         random: RandomSource
     ): Particle? {
-        val tint = MarineSnowParticle.TINTS[random.nextInt(4)]
         val phase = random.nextFloat() * (PI * 2).toFloat()
-        return MarineSnowParticle(level, x, y, z, sprites.get(random), tint.first, tint.second, tint.third, phase)
+        return MarineSnowParticle(level, x, y, z, sprites.get(random), 1f, 1f, 1f, phase)
     }
 }
