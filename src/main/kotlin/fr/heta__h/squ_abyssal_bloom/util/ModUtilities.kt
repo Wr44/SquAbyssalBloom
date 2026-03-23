@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.util
 
+import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
 import net.minecraft.core.BlockPos
@@ -91,7 +92,7 @@ object ModUtilities {
         val registry = level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
         val key = net.minecraft.resources.ResourceKey.create(
             net.minecraft.core.registries.Registries.ENCHANTMENT,
-            net.minecraft.resources.Identifier.fromNamespaceAndPath("squ_abyssal_bloom", enchantName)
+            net.minecraft.resources.Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, enchantName)
         )
         val holder = registry.get(key)
         return if (holder.isPresent) {

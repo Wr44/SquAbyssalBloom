@@ -1,0 +1,40 @@
+package fr.heta__h.squ_abyssal_bloom.event.sprouting_sea_grass
+
+import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.block.sprouting_sea_grass.SproutingSeagrassBlock
+import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import net.minecraft.sounds.SoundEvents
+import net.minecraft.sounds.SoundSource
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.level.block.Block
+import net.neoforged.bus.api.SubscribeEvent
+import net.neoforged.fml.common.EventBusSubscriber
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
+
+@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+object HarvestPrismarineBulb {
+
+    @SubscribeEvent
+    fun onHarvestPrismarineBulb(event: PlayerInteractEvent.RightClickBlock) {
+        val level = event.level
+        val pos = event.pos
+        val state = level.getBlockState(pos)
+        val player = event.entity
+
+        if (state.`is`(ModBlocks.SPROUTING_SEAGRASS.get()) && state.getValue(SproutingSeagrassBlock.HAS_BULB)) {
+
+            if (!level.isClientSide) {
+                Block.popResource(level, pos, ItemStack(ModItems.PRISMARINE_BULB.get()))
+
+                level.setBlock(pos, state.setValue(SproutingSeagrassBlock.HAS_BULB, false), 3)
+
+                level.playSound(null, pos, SoundEvents.SWEET_BERRY_BUSH_PICK_BERRIES, SoundSource.BLOCKS, 1.0f, 0.8f + level.random.nextFloat() * 0.4f)
+            }
+
+            player.swing(event.hand)
+
+            event.isCanceled = true
+        }
+    }
+}

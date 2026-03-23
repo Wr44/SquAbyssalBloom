@@ -190,8 +190,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
 
             val chargeProgress = clamp(
-                (ticksUsed - actualMinCharge).toFloat() /
-                        (actualMaxCharge - actualMinCharge).toFloat(),
+                (ticksUsed - actualMinCharge).toFloat() / (actualMaxCharge - actualMinCharge).toFloat(),
                 0.0f,
                 1.0f
             )
