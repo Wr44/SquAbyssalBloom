@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.util
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
+import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
@@ -122,20 +123,15 @@ object ModUtilities {
         return 0.0
     }
 
-    fun findWaterSurfaceBelow(level: Level, camPos: Vec3, maxScan: Int = 64): Int? {
-        val startY = camPos.y.toInt()
-        for (dy in 0..maxScan) {
-            val pos = BlockPos(camPos.x.toInt(), startY - dy, camPos.z.toInt())
-            if (level.getFluidState(pos).`is`(Fluids.WATER)) return pos.y
-        }
-        return null
-    }
 
     fun isNautilusExtraEquipment(stack: ItemStack): Boolean {
         if (stack.isEmpty) return false
 
         val item = stack.item
-        return item == Items.CONDUIT
+        return item in listOf(
+            ModItems.NAUTILUS_LAMP.get(),
+            Items.CONDUIT
+        )
     }
 
     fun getNautilusLampInfluence(level: Level, pos: BlockPos, maxRange: Double, maxInfluence: Double): Double {

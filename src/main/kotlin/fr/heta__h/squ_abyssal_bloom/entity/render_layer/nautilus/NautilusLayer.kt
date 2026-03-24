@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus
 
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.mixin.`interface`.AddPropertiesToRenderState
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.SubmitNodeCollector
@@ -26,7 +27,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
             "textures/entity/nautilus_lamp/nautilus_lamp.png"
         )
 
-        val NAUTILUS_LAMP: Item = Items.CONDUIT
+        val NAUTILUS_LAMP: Item = ModItems.NAUTILUS_LAMP.get()
     }
 
     override fun submit(

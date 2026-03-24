@@ -37,6 +37,10 @@ object ModItems {
         "prismarine_spike"
     ) { properties -> Item(properties) }
 
+    val NAUTILUS_LAMP : DeferredItem<Item> = ITEMS.registerItem(
+        "nautilus_lamp"
+    ) { properties -> Item(properties) }
+
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
     ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
