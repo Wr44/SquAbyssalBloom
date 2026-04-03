@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.playSoundLocal
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
@@ -200,7 +201,8 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
             val damage = actualBaseDamage + (chargeProgress * actualAddDamage)
 
-            target.hurt(
+            target.hurtServer(
+                level as ServerLevel,
                 level.damageSources().indirectMagic(entity, entity),
                 damage
             )
@@ -264,14 +266,6 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                     0.5f)
             }
 
-            level.playSound(
-                null,
-                target.x, target.y, target.z,
-                SoundEvents.GUARDIAN_FLOP,
-                SoundSource.PLAYERS,
-                1.0f,
-                1.5f
-            )
 
             val durabilityLoss = 1 + (chargeProgress * 4).toInt()
             stack.hurtAndBreak(durabilityLoss, entity, entity.usedItemHand)

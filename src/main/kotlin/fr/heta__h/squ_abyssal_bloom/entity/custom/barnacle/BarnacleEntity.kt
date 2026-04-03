@@ -407,7 +407,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         } else {
             timeExposedInAir++
             if (timeExposedInAir >= MAX_AIR_TICKS) {
-                hurt(damageSources().drown(), DROWN_DAMAGE)
+                hurtServer(
+                    level() as ServerLevel,
+                    damageSources().drown(),
+                    DROWN_DAMAGE)
             }
 
             if (onGround() && tickCount > FLOP_DELAY_TICKS) {
@@ -887,7 +890,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 maintenirCible(target, holdDist)
 
                 if (t % ceil(swallowDuration / 2.0).toInt() == 0) {
-                    target.hurt(swallowDamageSource(), SWALLOW_DAMAGE)
+                    target.hurtServer(
+                        level() as ServerLevel,
+                        swallowDamageSource(),
+                        SWALLOW_DAMAGE)
                 }
             }
         }

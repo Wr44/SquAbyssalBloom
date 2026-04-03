@@ -16,7 +16,6 @@ import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.LivingEntity
 import java.io.File
 
-
 object ModConfig {
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
@@ -25,18 +24,21 @@ object ModConfig {
     var enableAbyssFog: Boolean = true
     var abyssDepthStart: Double = 15.0
     var abyssMaxDepth: Double = 80.0
-    var maxMarinSnowParticles: Int = 100
+    var maxMarinSnowParticles: Int = 75
     var strictBarnacleSpawning: Boolean = true
     var fogDarknessIntensity: Double = 1.0
     var shaderCompatModeOverride: Boolean = false
     var nautilusLampInfluence: Double = 0.5
-    var marineSnowDensity: Double = 1.0
+    var marineSnowDensity: Double = 0.5
     var marineSnowVisibilityRange: Int = 20
     var marineSnowSwayAmplitude: Double = 1.0
     var marineSnowSpawnHeightAbove: Double = 2.0
     var enableDepthVignette: Boolean = true
     var vignetteIntensity: Double = 1.0
     var lightDimmingStrength: Double = 0.7
+    var abyssColorRetention: Double = 0.15
+    var lampNearPlaneMultiplier: Double = 12.0
+    var lampFarPlaneMultiplier: Double = 60.0
 
     private fun getEntityToRender(entityName: String): LivingEntity? {
         val mc = Minecraft.getInstance()
@@ -44,15 +46,11 @@ object ModConfig {
 
         return when (entityName) {
             "barnacle" -> {
-                ModEntities.BARNACLE.get().create(level,
-                    EntitySpawnReason.TRIGGERED)
+                ModEntities.BARNACLE.get().create(level, EntitySpawnReason.TRIGGERED)
             }
-
             "ghost_chimaera" -> {
-                ModEntities.GHOST_CHIMAERA.get().create(level,
-                    EntitySpawnReason.TRIGGERED)
+                ModEntities.GHOST_CHIMAERA.get().create(level, EntitySpawnReason.TRIGGERED)
             }
-
             else -> {
                 null
             }
@@ -70,19 +68,21 @@ object ModConfig {
                 enableAbyssFog = json.get("enableAbyssFog")?.asBoolean ?: true
                 abyssDepthStart = json.get("abyssDepthStart")?.asDouble ?: 15.0
                 abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
-                maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 100
+                maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
                 strictBarnacleSpawning = json.get("strictBarnacleSpawning")?.asBoolean ?: true
                 fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
                 shaderCompatModeOverride = json.get("shaderCompatModeOverride")?.asBoolean ?: false
                 nautilusLampInfluence = json.get("nautilusLampInfluence")?.asDouble ?: 0.5
-                marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 1.0
+                marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 0.5
                 marineSnowVisibilityRange = json.get("marineSnowVisibilityRange")?.asInt ?: 20
                 marineSnowSwayAmplitude = json.get("marineSnowSwayAmplitude")?.asDouble ?: 1.0
                 marineSnowSpawnHeightAbove = json.get("marineSnowSpawnHeightAbove")?.asDouble ?: 2.0
                 enableDepthVignette = json.get("enableDepthVignette")?.asBoolean ?: true
                 vignetteIntensity = json.get("vignetteIntensity")?.asDouble ?: 1.0
                 lightDimmingStrength = json.get("lightDimmingStrength")?.asDouble ?: 0.7
-
+                abyssColorRetention = json.get("abyssColorRetention")?.asDouble ?: 0.15
+                lampNearPlaneMultiplier = json.get("lampNearPlaneMultiplier")?.asDouble ?: 12.0
+                lampFarPlaneMultiplier = json.get("lampFarPlaneMultiplier")?.asDouble ?: 60.0
             }
         } catch (e: Exception) {
             println("Erreur config : ${e.message}")
@@ -107,6 +107,9 @@ object ModConfig {
                 addProperty("enableDepthVignette", enableDepthVignette)
                 addProperty("vignetteIntensity", vignetteIntensity)
                 addProperty("lightDimmingStrength", lightDimmingStrength)
+                addProperty("abyssColorRetention", abyssColorRetention)
+                addProperty("lampNearPlaneMultiplier", lampNearPlaneMultiplier)
+                addProperty("lampFarPlaneMultiplier", lampFarPlaneMultiplier)
             }
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))
@@ -120,7 +123,6 @@ object ModConfig {
         return YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
             .save(this::saveConfig)
-
 
             .category(ConfigCategory.createBuilder()
                 .name(Component.translatable("config.squ_abyssal_bloom.visual"))
@@ -167,6 +169,13 @@ object ModConfig {
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
                         .build())
 
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention.tooltip")))
+                        .binding(Binding.generic(0.15, { abyssColorRetention }, { abyssColorRetention = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
+                        .build())
+
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.shaderCompatModeOverride"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shaderCompatModeOverride.tooltip")))
@@ -179,6 +188,20 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.nautilusLampInfluence.tooltip")))
                         .binding(Binding.generic(0.5, { nautilusLampInfluence }, { nautilusLampInfluence = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
+                        .build())
+
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier.tooltip")))
+                        .binding(Binding.generic(12.0, { lampNearPlaneMultiplier }, { lampNearPlaneMultiplier = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 50.0).step(1.0) }
+                        .build())
+
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier.tooltip")))
+                        .binding(Binding.generic(60.0, { lampFarPlaneMultiplier }, { lampFarPlaneMultiplier = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0) }
                         .build())
 
                     .option(Option.createBuilder<Boolean>()
@@ -199,7 +222,6 @@ object ModConfig {
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
                         .build())
                     .build())
-
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("config.squ_abyssal_bloom.group.particles").withStyle(ChatFormatting.GOLD))
@@ -241,7 +263,6 @@ object ModConfig {
                         .build())
                     .build())
                 .build())
-
 
             .category(ConfigCategory.createBuilder()
                 .name(Component.translatable("config.squ_abyssal_bloom.entity"))

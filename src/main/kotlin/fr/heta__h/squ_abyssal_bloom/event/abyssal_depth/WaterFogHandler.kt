@@ -45,9 +45,18 @@ object WaterFogHandler {
 
         val depthEased = rawFactor.pow(0.3).toFloat()
 
-        event.red = Mth.lerp(depthEased, event.red, 0.0f)
-        event.green = Mth.lerp(depthEased, event.green, 0.0f)
-        event.blue = Mth.lerp(depthEased, event.blue, 0.0f)
+        val retainedColorPercentage = ModConfig.abyssColorRetention.toFloat()
+
+        val targetRed = event.red * retainedColorPercentage
+        val targetGreen = event.green * retainedColorPercentage
+        val targetBlue = event.blue * retainedColorPercentage
+
+        val intensityScale = ModConfig.fogDarknessIntensity.toFloat()
+        val finalLerpFactor = (depthEased * intensityScale).coerceIn(0.0f, 1.0f)
+
+        event.red = Mth.lerp(finalLerpFactor, event.red, targetRed)
+        event.green = Mth.lerp(finalLerpFactor, event.green, targetGreen)
+        event.blue = Mth.lerp(finalLerpFactor, event.blue, targetBlue)
     }
 
     @SubscribeEvent
@@ -86,10 +95,12 @@ object WaterFogHandler {
             ModUtilities.getNautilusLampInfluence(level, camPos, 32.0, 1.5)
         )
 
-        val lampDistanceBonus = (lampInfluence * ModConfig.nautilusLampInfluence * 15.0).toFloat() * depthEased
+        val lampPower = (lampInfluence * ModConfig.nautilusLampInfluence).toFloat() * depthEased
 
-        event.nearPlaneDistance = baseFogStart + lampDistanceBonus
-        event.farPlaneDistance = baseFogEnd + (lampDistanceBonus * 1.5f)
+        val nearPlaneBonus = lampPower * ModConfig.lampNearPlaneMultiplier.toFloat()
+        val farPlaneBonus = lampPower * ModConfig.lampFarPlaneMultiplier.toFloat()
 
+        event.nearPlaneDistance = baseFogStart + nearPlaneBonus
+        event.farPlaneDistance = baseFogEnd + farPlaneBonus
     }
 }

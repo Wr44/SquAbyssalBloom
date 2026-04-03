@@ -28,6 +28,7 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.PRISMARINE_BULB.get())
                 output.accept(ModItems.PRISMARINE_SPIKE.get())
                 output.accept(ModItems.NAUTILUS_LAMP.get())
+                output.accept(ModItems.BARBED_NAUTILUS_SCALE.get())
                 output.accept(ModItems.ABYSSAL_GUARDIAN_FOCALIST.get())
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
             }

@@ -3,10 +3,14 @@ package fr.heta__h.squ_abyssal_bloom.util
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
+import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
@@ -14,12 +18,14 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
+import net.minecraft.world.item.enchantment.EnchantmentHelper
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
+import kotlin.jvm.optionals.getOrNull
 
 object ModUtilities {
 
@@ -89,16 +95,26 @@ object ModUtilities {
     }
 
 
-    fun getEnchantLevel(stack: ItemStack, level: Level, enchantName: String): Int {
-        val registry = level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
-        val key = net.minecraft.resources.ResourceKey.create(
-            net.minecraft.core.registries.Registries.ENCHANTMENT,
-            net.minecraft.resources.Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, enchantName)
+    fun getEnchantLevel(
+        stack: ItemStack,
+        level: Level,
+        enchantName: String,
+        namespace: String = Squ_abyssal_bloom.ID
+    ): Int {
+        val registry = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+
+        val key = ResourceKey.create(
+            Registries.ENCHANTMENT,
+            Identifier.fromNamespaceAndPath(namespace, enchantName)
         )
-        val holder = registry.get(key)
-        return if (holder.isPresent) {
-            net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(holder.get(), stack)
-        } else 0
+
+        val holder = registry.get(key).getOrNull()
+
+        return if (holder != null) {
+            EnchantmentHelper.getItemEnchantmentLevel(holder, stack)
+        } else {
+            0
+        }
     }
 
     fun playSoundLocal(entity: LivingEntity, sound: SoundEvent, source: SoundSource, volume: Float, pitch: Float) {
@@ -118,7 +134,7 @@ object ModUtilities {
         val vehicle = entity.vehicle
         if (vehicle is AbstractNautilus) {
             val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (!extra.isEmpty && isNautilusExtraEquipment(extra)) return 1.0
+            if (!extra.isEmpty && extra.item == NautilusLayer.NAUTILUS_LAMP) return 1.0
         }
         return 0.0
     }
@@ -129,8 +145,8 @@ object ModUtilities {
 
         val item = stack.item
         return item in listOf(
-            ModItems.NAUTILUS_LAMP.get(),
-            Items.CONDUIT
+            NautilusLayer.NAUTILUS_LAMP,
+            NautilusLayer.SHIELD
         )
     }
 
@@ -143,7 +159,7 @@ object ModUtilities {
         var maxFound = 0.0
         for (entity in nautili) {
             val extra = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (!extra.isEmpty) {
+            if (extra.item == NautilusLayer.NAUTILUS_LAMP) {
                 val dist = entity.position().distanceTo(Vec3(pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble()))
                 val influence = (1.0 - dist / maxRange).coerceIn(0.0, 1.0) * maxInfluence
                 if (influence > maxFound) maxFound = influence

@@ -41,6 +41,14 @@ object ModItems {
         "nautilus_lamp"
     ) { properties -> Item(properties) }
 
+    val BARBED_NAUTILUS_SCALE: DeferredItem<Item> = ITEMS.registerItem(
+        "barbed_nautilus_scale"
+    ) { properties -> Item(properties
+        .enchantable(5)
+        .durability(200)
+    )
+    }
+
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
     ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
@@ -48,6 +56,12 @@ object ModItems {
         .enchantable(15)
     )
     }
+
+
+    
+    val BARBED_NAUTILUS_SCALE_DISPLAY: DeferredItem<Item> = ITEMS.registerItem(
+        "barbed_nautilus_scale_display"
+    ) { properties -> Item(properties) }
 
     fun register(eventBus: IEventBus) {
         ITEMS.register(eventBus)
