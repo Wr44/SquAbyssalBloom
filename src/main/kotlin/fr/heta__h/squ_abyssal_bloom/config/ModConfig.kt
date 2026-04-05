@@ -14,12 +14,13 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.LivingEntity
+import net.neoforged.fml.loading.FMLPaths
 import java.io.File
 
 object ModConfig {
 
     private val gson = GsonBuilder().setPrettyPrinting().create()
-    private val configFile = File(Minecraft.getInstance().gameDirectory, "config/squ_abyssal_bloom.json")
+    private val configFile: File = FMLPaths.CONFIGDIR.get().resolve("squ_abyssal_bloom.json").toFile()
 
     var enableAbyssFog: Boolean = true
     var abyssDepthStart: Double = 15.0

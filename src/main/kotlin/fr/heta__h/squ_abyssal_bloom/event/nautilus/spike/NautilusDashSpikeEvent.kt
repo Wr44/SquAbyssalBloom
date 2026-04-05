@@ -3,11 +3,13 @@ package fr.heta__h.squ_abyssal_bloom.event.nautilus
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
+import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.tick.EntityTickEvent
@@ -26,6 +28,7 @@ object NautilusDashSpikeEvent {
     private const val DURABILITY_LOSS_PER_HIT = 4
     private const val SOUND_VOLUME = 1.0f
     private const val DASH_IFRAMES = 10L
+    private const val RECOIL_Y = 0.3
 
     private val hitTracker = WeakHashMap<LivingEntity, Long>()
 
@@ -52,6 +55,13 @@ object NautilusDashSpikeEvent {
         val calculatedDamage = BASE_DAMAGE + (dashSpeed * SPEED_DAMAGE_MULTIPLIER).toFloat()
         val calculatedKnockback = (BASE_KNOCKBACK + (dashSpeed * SPEED_KNOCKBACK_MULTIPLIER)).coerceAtMost(MAX_KNOCKBACK)
 
+        val lungeLevel = ModUtilities.getEnchantLevel(
+            extraItemStack,
+            level,
+            "lunge",
+            "minecraft"
+        )
+
         for (target in targets) {
             if (target is LivingEntity && !entity.hasPassenger(target) && target.isAlive) {
 
@@ -69,6 +79,27 @@ object NautilusDashSpikeEvent {
                     val deltaZ = entity.z - target.z
 
                     target.knockback(calculatedKnockback, deltaX, deltaZ)
+
+                    if (lungeLevel > 0) {
+                        val reboundStrength = calculatedKnockback * (lungeLevel + 1f) * (1f/3f)
+
+                        entity.isDashing = false
+
+                        val lookVec = entity.lookAngle
+
+                        val recoilX = -lookVec.x * reboundStrength
+                        val recoilZ = -lookVec.z * reboundStrength
+                        val recoilY = RECOIL_Y
+
+                        entity.deltaMovement = net.minecraft.world.phys.Vec3(recoilX, recoilY, recoilZ)
+
+                        entity.hurtMarked = true
+
+                        val rider = entity.controllingPassenger
+                        if (rider is net.minecraft.server.level.ServerPlayer) {
+                            rider.connection.send(net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket(entity))
+                        }
+                    }
 
                     val dynamicPitch = 0.8f + (dashSpeed * 0.2f).toFloat()
                     entity.playSound(SoundEvents.SPEAR_HIT.value(), SOUND_VOLUME, dynamicPitch)

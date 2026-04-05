@@ -44,7 +44,7 @@ object ModItems {
     val BARBED_NAUTILUS_SCALE: DeferredItem<Item> = ITEMS.registerItem(
         "barbed_nautilus_scale"
     ) { properties -> Item(properties
-        .enchantable(5)
+        .enchantable(10)
         .durability(200)
     )
     }
