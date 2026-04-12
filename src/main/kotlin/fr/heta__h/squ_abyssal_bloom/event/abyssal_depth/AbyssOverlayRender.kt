@@ -31,14 +31,16 @@ object AbyssOverlayRender {
 
         val mc = Minecraft.getInstance()
         val camera = mc.gameRenderer.mainCamera
+        val level = mc.level ?: return
+        val camPos = BlockPos.containing(camera.position())
 
-        if (camera.fluidInCamera != FogType.WATER) return
+        val inWater = camera.fluidInCamera == FogType.WATER
+        val isAirPocket = !inWater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
+
+        if (!inWater && !isAirPocket) return
 
         val entity = camera.entity() as? LivingEntity ?: return
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
-
-        val level = mc.level ?: return
-        val camPos = BlockPos.containing(camera.position())
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
@@ -94,7 +96,7 @@ object AbyssOverlayRender {
         val camPos = BlockPos.containing(camera.position())
 
         val inWater = camera.fluidInCamera == FogType.WATER
-        val isAirPocket = !inWater && ModUtilities.isWaterAbove(level, camPos, 64)
+        val isAirPocket = !inWater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
 
         if (!inWater && !isAirPocket) return
 

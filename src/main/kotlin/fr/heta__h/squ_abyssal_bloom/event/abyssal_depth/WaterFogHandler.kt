@@ -3,7 +3,6 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.compat.ShaderCompatDetector
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.fog.AbyssalFogOverride
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.util.Mth
@@ -25,6 +24,8 @@ object WaterFogHandler {
     private const val TARGET_FOG_START_DEEP = -8.0f
     private const val TARGET_FOG_END_DEEP = 12.0f
 
+    private var lastLogTime = 0L
+
     @SubscribeEvent
     fun onComputeFogColor(event: ViewportEvent.ComputeFogColor) {
         if (!ModConfig.enableAbyssFog) return
@@ -38,13 +39,30 @@ object WaterFogHandler {
         val isAirPocket = !isUnderwater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
 
         if (!isUnderwater && !isAirPocket) return
-
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
+        var rawFactor = AbyssDepthCache.displayedDepthFactor
 
-        val rawFactor = AbyssDepthCache.displayedDepthFactor
-        if (rawFactor <= 0.0 && !isAirPocket) return
+        
+        
+        if (rawFactor <= 0.0) {
+            val realDepth = ModUtilities.getDepth(level, camPos)
+            rawFactor = ModUtilities.getDepthFactor(realDepth)
+        }
+
+        val currentTime = System.currentTimeMillis()
+        val shouldLog = currentTime - lastLogTime > 1000L
+
+        if (shouldLog) {
+            println("=== [WaterFogColor DEBUG] ===")
+            println("isAirPocket: $isAirPocket | rawFactor (Corrigé): $rawFactor")
+        }
+
+        if (rawFactor <= 0.0 && !isAirPocket) {
+            if (shouldLog) lastLogTime = currentTime
+            return
+        }
 
         val safeFactor = maxOf(0.0, rawFactor)
         val depthEased = safeFactor.pow(0.3).toFloat()
@@ -52,11 +70,10 @@ object WaterFogHandler {
         val finalLerpFactor = (depthEased * intensityScale).coerceIn(0.0f, 1.0f)
 
         if (isAirPocket) {
-            if (!AbyssalFogOverride.active) return
-            val lerpFactor = (AbyssalFogOverride.depthEased * ModConfig.fogDarknessIntensity.toFloat()).coerceIn(0f, 1f)
-            event.red = Mth.lerp(lerpFactor, event.red, 0.0f)
-            event.green = Mth.lerp(lerpFactor, event.green, 0.0f)
-            event.blue = Mth.lerp(lerpFactor, event.blue, 0.0f)
+            event.red = Mth.lerp(finalLerpFactor, event.red, 0.0f)
+            event.green = Mth.lerp(finalLerpFactor, event.green, 0.0f)
+            event.blue = Mth.lerp(finalLerpFactor, event.blue, 0.0f)
+            if (shouldLog) lastLogTime = currentTime
             return
         }
 
@@ -68,6 +85,8 @@ object WaterFogHandler {
         event.red = Mth.lerp(finalLerpFactor, event.red, targetRed)
         event.green = Mth.lerp(finalLerpFactor, event.green, targetGreen)
         event.blue = Mth.lerp(finalLerpFactor, event.blue, targetBlue)
+
+        if (shouldLog) lastLogTime = currentTime
     }
 
     @SubscribeEvent
@@ -83,16 +102,20 @@ object WaterFogHandler {
         val isAirPocket = !isUnderwater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
 
         if (!isUnderwater && !isAirPocket) return
-
         if (isAirPocket) return
-
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
+        var rawFactor = AbyssDepthCache.displayedDepthFactor
 
-        val rawFactor = maxOf(0.0, AbyssDepthCache.displayedDepthFactor)
+        
+        if (rawFactor <= 0.0) {
+            val realDepth = ModUtilities.getDepth(level, camPos)
+            rawFactor = ModUtilities.getDepthFactor(realDepth)
+        }
 
-        val depthEased = rawFactor.pow(0.3).toFloat()
+        val safeFactor = maxOf(0.0, rawFactor)
+        val depthEased = safeFactor.pow(0.3).toFloat()
 
         val shaderMode = ModConfig.shaderCompatModeOverride || ShaderCompatDetector.isShadersActive()
         val intensityScale = (ModConfig.fogDarknessIntensity * if (shaderMode) 0.6 else 1.0).toFloat()

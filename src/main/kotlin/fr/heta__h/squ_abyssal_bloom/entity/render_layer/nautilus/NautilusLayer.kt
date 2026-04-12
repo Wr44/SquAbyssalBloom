@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.client.renderer.item.ItemStackRenderState
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
+import net.minecraft.core.component.DataComponents
 import net.minecraft.resources.Identifier
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemDisplayContext
@@ -73,7 +74,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
                 val dummyRenderStack = ItemStack(ModItems.BARBED_NAUTILUS_SCALE_DISPLAY.get())
                 if (extraItem.hasFoil()) {
-                    dummyRenderStack.set(net.minecraft.core.component.DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
+                    dummyRenderStack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
                 }
                 val itemRenderState = ItemStackRenderState()
                 val localPlayer = Minecraft.getInstance().player ?: return

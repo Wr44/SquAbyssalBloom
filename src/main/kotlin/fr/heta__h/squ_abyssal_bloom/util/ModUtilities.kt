@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
+import net.minecraft.tags.FluidTags
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
@@ -178,8 +179,34 @@ object ModUtilities {
 
 
     fun isDeepUnderwaterAirPocket(level: Level, pos: BlockPos): Boolean {
-        val waterSurface = findRegionalWaterSurface(level, pos)
-        return waterSurface != -999 && pos.y < waterSurface
+        if (getDepth(level, pos) < 5.0) return false
+
+        var currentY = pos.y
+        var solidThickness = 0
+
+        while (currentY <= level.seaLevel + 10) {
+            val checkPos = BlockPos(pos.x, currentY, pos.z)
+            val state = level.getBlockState(checkPos)
+            val fluid = level.getFluidState(checkPos)
+
+            if (fluid.`is`(FluidTags.WATER)) {
+                return solidThickness <= 4
+            }
+
+            if (!state.isAir && !state.canBeReplaced()) {
+                solidThickness++
+            } else {
+                solidThickness = 0
+            }
+
+            if (solidThickness > 4) {
+                return false
+            }
+
+            currentY++
+        }
+
+        return false
     }
 
 
