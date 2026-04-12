@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.compat.ShaderCompatDetector
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.fog.AbyssalFogOverride
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.util.Mth
@@ -29,30 +30,40 @@ object WaterFogHandler {
         if (!ModConfig.enableAbyssFog) return
 
         val camera = event.camera
-        if (camera.fluidInCamera != FogType.WATER) {
-            AbyssDepthCache.reset()
-            return
-        }
-
         val entity = camera.entity() as? LivingEntity ?: return
-        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
-
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position())
 
-        AbyssDepthCache.refreshIfNeeded(level, camPos)
-        val rawFactor = AbyssDepthCache.displayedDepthFactor
+        val isUnderwater = camera.fluidInCamera == FogType.WATER
+        val isAirPocket = !isUnderwater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
 
-        val depthEased = rawFactor.pow(0.3).toFloat()
+        if (!isUnderwater && !isAirPocket) return
+
+        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
+
+        AbyssDepthCache.refreshIfNeeded(level, camPos)
+
+        val rawFactor = AbyssDepthCache.displayedDepthFactor
+        if (rawFactor <= 0.0 && !isAirPocket) return
+
+        val safeFactor = maxOf(0.0, rawFactor)
+        val depthEased = safeFactor.pow(0.3).toFloat()
+        val intensityScale = ModConfig.fogDarknessIntensity.toFloat()
+        val finalLerpFactor = (depthEased * intensityScale).coerceIn(0.0f, 1.0f)
+
+        if (isAirPocket) {
+            if (!AbyssalFogOverride.active) return
+            val lerpFactor = (AbyssalFogOverride.depthEased * ModConfig.fogDarknessIntensity.toFloat()).coerceIn(0f, 1f)
+            event.red = Mth.lerp(lerpFactor, event.red, 0.0f)
+            event.green = Mth.lerp(lerpFactor, event.green, 0.0f)
+            event.blue = Mth.lerp(lerpFactor, event.blue, 0.0f)
+            return
+        }
 
         val retainedColorPercentage = ModConfig.abyssColorRetention.toFloat()
-
         val targetRed = event.red * retainedColorPercentage
         val targetGreen = event.green * retainedColorPercentage
         val targetBlue = event.blue * retainedColorPercentage
-
-        val intensityScale = ModConfig.fogDarknessIntensity.toFloat()
-        val finalLerpFactor = (depthEased * intensityScale).coerceIn(0.0f, 1.0f)
 
         event.red = Mth.lerp(finalLerpFactor, event.red, targetRed)
         event.green = Mth.lerp(finalLerpFactor, event.green, targetGreen)
@@ -64,19 +75,22 @@ object WaterFogHandler {
         if (!ModConfig.enableAbyssFog) return
 
         val camera = event.camera
-        if (camera.fluidInCamera != FogType.WATER) {
-            AbyssDepthCache.reset()
-            return
-        }
-
         val entity = camera.entity() as? LivingEntity ?: return
-        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
-
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position())
 
+        val isUnderwater = camera.fluidInCamera == FogType.WATER
+        val isAirPocket = !isUnderwater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
+
+        if (!isUnderwater && !isAirPocket) return
+
+        if (isAirPocket) return
+
+        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
+
         AbyssDepthCache.refreshIfNeeded(level, camPos)
-        val rawFactor = AbyssDepthCache.displayedDepthFactor
+
+        val rawFactor = maxOf(0.0, AbyssDepthCache.displayedDepthFactor)
 
         val depthEased = rawFactor.pow(0.3).toFloat()
 
@@ -94,13 +108,16 @@ object WaterFogHandler {
             ModUtilities.getRiderLampInfluence(entity),
             ModUtilities.getNautilusLampInfluence(level, camPos, 32.0, 1.5)
         )
-
         val lampPower = (lampInfluence * ModConfig.nautilusLampInfluence).toFloat() * depthEased
+        val nearPlane = baseFogStart + lampPower * ModConfig.lampNearPlaneMultiplier.toFloat()
+        val farPlane = baseFogEnd + lampPower * ModConfig.lampFarPlaneMultiplier.toFloat()
 
-        val nearPlaneBonus = lampPower * ModConfig.lampNearPlaneMultiplier.toFloat()
-        val farPlaneBonus = lampPower * ModConfig.lampFarPlaneMultiplier.toFloat()
-
-        event.nearPlaneDistance = baseFogStart + nearPlaneBonus
-        event.farPlaneDistance = baseFogEnd + farPlaneBonus
+        val fogData = event.fogData
+        fogData.environmentalStart = nearPlane
+        fogData.environmentalEnd = farPlane
+        fogData.renderDistanceStart = nearPlane
+        fogData.renderDistanceEnd = farPlane
+        fogData.skyEnd = farPlane
+        fogData.cloudEnd = farPlane
     }
 }

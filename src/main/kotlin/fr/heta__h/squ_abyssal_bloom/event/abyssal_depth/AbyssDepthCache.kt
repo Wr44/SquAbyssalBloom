@@ -5,46 +5,68 @@ import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.level.Level
-import kotlin.math.pow
 
 object AbyssDepthCache {
     private var lastFrameTime: Long = 0L
-
     private var cachedRawDepthFactor: Double = 0.0
     private var smoothedDepthFactor: Double = 0.0
-
     private var cachedPhysicalDepth: Double = 0.0
     private var smoothedPhysicalDepth: Double = 0.0
-
     private var cachedLampInfluence: Double = 0.0
     private var smoothedLampInfluence: Double = 0.0
+    private var isInitialized: Boolean = false
 
     val displayedDepthFactor: Double
-        get() = (3 * smoothedDepthFactor.pow(2) - 2 * smoothedDepthFactor.pow(3)).pow(2)
+        get() {
+            val s = smoothedDepthFactor
+            val s2 = s * s
+            val s3 = s2 * s
+            val inner = 3.0 * s2 - 2.0 * s3
+            return inner * inner
+        }
 
-    val rawPhysicalDepth: Double
-        get() = cachedPhysicalDepth
-
-    val displayedLampInfluence: Double
-        get() = smoothedLampInfluence
+    val rawPhysicalDepth: Double get() = cachedPhysicalDepth
+    val displayedLampInfluence: Double get() = smoothedLampInfluence
 
     fun refreshIfNeeded(level: Level, camPos: BlockPos) {
-        val now = System.currentTimeMillis()
-        val dt = if (lastFrameTime == 0L) 0.016 else (now - lastFrameTime) / 1000.0
+        val now = System.nanoTime()
+        val elapsedNanos = now - lastFrameTime
+        if (elapsedNanos < 1_000_000L && lastFrameTime != 0L) return
+        val dt = if (lastFrameTime == 0L) 0.016 else elapsedNanos / 1_000_000_000.0
         lastFrameTime = now
+
+        val mc = Minecraft.getInstance()
+
+        if (!isInitialized) {
+            val physicalDepth = ModUtilities.getDepth(level, camPos)
+            cachedPhysicalDepth = physicalDepth
+            smoothedPhysicalDepth = physicalDepth
+
+            cachedRawDepthFactor = ModUtilities.getDepthFactor(physicalDepth)
+            smoothedDepthFactor = cachedRawDepthFactor
+
+            val entity = mc.cameraEntity as? LivingEntity
+            if (entity != null) {
+                cachedLampInfluence = maxOf(
+                    ModUtilities.getRiderLampInfluence(entity),
+                    ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
+                )
+                smoothedLampInfluence = cachedLampInfluence
+            }
+            isInitialized = true
+            return
+        }
 
         val targetFactor = smoothedDepthFactor + ((cachedRawDepthFactor - smoothedDepthFactor) * (2.0 * dt))
         smoothedDepthFactor = targetFactor.coerceIn(0.0, 1.0)
 
         smoothedPhysicalDepth += (cachedPhysicalDepth - smoothedPhysicalDepth) * (2.0 * dt)
-
         smoothedLampInfluence += (cachedLampInfluence - smoothedLampInfluence) * (2.0 * dt)
 
-        val mc = Minecraft.getInstance()
-        val currentTick = mc.level?.gameTime?.toInt() ?: return
-        if (currentTick % 4 != 0) return
+        val currentTick = mc.level?.gameTime ?: return
+        if (currentTick % 4L != 0L) return
 
-        val physicalDepth = ModUtilities.findWaterSurface(level, camPos).toDouble()
+        val physicalDepth = ModUtilities.getDepth(level, camPos)
         cachedPhysicalDepth = physicalDepth
         cachedRawDepthFactor = ModUtilities.getDepthFactor(physicalDepth)
 
@@ -60,17 +82,21 @@ object AbyssDepthCache {
     }
 
     fun refreshSurfaceIfNeeded(level: Level, camPos: BlockPos, entity: LivingEntity?) {
-        val now = System.currentTimeMillis()
-        val dt = if (lastFrameTime == 0L) 0.016 else (now - lastFrameTime) / 1000.0
+        val now = System.nanoTime()
+        val elapsedNanos = now - lastFrameTime
+        if (elapsedNanos < 1_000_000L && lastFrameTime != 0L) return
+        val dt = if (lastFrameTime == 0L) 0.016 else elapsedNanos / 1_000_000_000.0
         lastFrameTime = now
+
+        if (!isInitialized) isInitialized = true
 
         smoothedDepthFactor += (0.0 - smoothedDepthFactor) * (2.0 * dt)
         smoothedDepthFactor = smoothedDepthFactor.coerceIn(0.0, 1.0)
 
         smoothedLampInfluence += (cachedLampInfluence - smoothedLampInfluence) * (2.0 * dt)
 
-        val currentTick = Minecraft.getInstance().level?.gameTime?.toInt() ?: return
-        if (currentTick % 4 != 0) return
+        val currentTick = Minecraft.getInstance().level?.gameTime ?: return
+        if (currentTick % 4L != 0L) return
 
         if (entity != null) {
             cachedLampInfluence = maxOf(
@@ -80,15 +106,5 @@ object AbyssDepthCache {
         } else {
             cachedLampInfluence = 0.0
         }
-    }
-
-    fun reset() {
-        cachedRawDepthFactor = 0.0
-        smoothedDepthFactor = 0.0
-        cachedPhysicalDepth = 0.0
-        smoothedPhysicalDepth = 0.0
-        cachedLampInfluence = 0.0
-        smoothedLampInfluence = 0.0
-        lastFrameTime = 0L
     }
 }

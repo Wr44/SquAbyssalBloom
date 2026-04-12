@@ -6,16 +6,16 @@ import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.effect.ModPotions
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import fr.heta__h.squ_abyssal_bloom.fog.AbyssalAirFogEnvironment
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import fr.heta__h.squ_abyssal_bloom.mixin.render.FogRendererAccessor
 import fr.heta__h.squ_abyssal_bloom.particle.MarineSnowParticleProvider
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
 import net.minecraft.client.renderer.ItemBlockRenderTypes
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer
-import net.minecraft.client.renderer.rendertype.RenderType
-import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
@@ -79,6 +79,7 @@ object Squ_abyssal_bloom {
         )
         event.enqueueWork {
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.SPROUTING_SEAGRASS.get(), ChunkSectionLayer.CUTOUT)
+            FogRendererAccessor.getFogEnvironments().add(0, AbyssalAirFogEnvironment())
         }
     }
 

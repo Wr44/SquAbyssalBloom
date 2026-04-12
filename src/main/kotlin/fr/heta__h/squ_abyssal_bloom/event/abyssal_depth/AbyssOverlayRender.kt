@@ -1,7 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.compat.ShaderCompatDetector
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
@@ -32,10 +31,8 @@ object AbyssOverlayRender {
 
         val mc = Minecraft.getInstance()
         val camera = mc.gameRenderer.mainCamera
-        if (camera.fluidInCamera != FogType.WATER) {
-            AbyssDepthCache.reset()
-            return
-        }
+
+        if (camera.fluidInCamera != FogType.WATER) return
 
         val entity = camera.entity() as? LivingEntity ?: return
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
@@ -46,21 +43,18 @@ object AbyssOverlayRender {
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
         val physicalDepth = AbyssDepthCache.rawPhysicalDepth
-
         val alpha = AbyssDepthCache.displayedDepthFactor.toFloat()
 
         if (alpha < 0.005f) return
 
         val safeSize = minOf(50.0f, physicalDepth.toFloat() - 1.5f).coerceAtLeast(1.0f)
         val boxFade = ((safeSize - 3.0f) / 4.0f).coerceIn(0.0f, 1.0f)
-
         val finalBoxAlpha = alpha * boxFade
 
         if (finalBoxAlpha < 0.005f) return
 
         val poseStack = event.poseStack
         poseStack.pushPose()
-
         val matrix4f = poseStack.last().pose()
         val renderType = RenderTypes.entityTranslucent(WHITE_TEXTURE)
         val bufferSource = mc.renderBuffers().bufferSource()
@@ -82,18 +76,12 @@ object AbyssOverlayRender {
                 .setNormal(0f, 1f, 0f)
         }
 
-        v(-size, size, -size); v(-size, size, size)
-        v(size, size, size); v(size, size, -size)
-        v(-size, -size, -size); v(size, -size, -size)
-        v(size, -size, size); v(-size, -size, size)
-        v(-size, size, -size); v(size, size, -size)
-        v(size, -size, -size); v(-size, -size, -size)
-        v(-size, -size, size); v(size, -size, size)
-        v(size, size, size); v(-size, size, size)
-        v(-size, size, size); v(-size, size, -size)
-        v(-size, -size, -size); v(-size, -size, size)
-        v(size, -size, size); v(size, -size, -size)
-        v(size, size, -size); v(size, size, size)
+        v(-size, size, -size); v(-size, size, size); v(size, size, size); v(size, size, -size)
+        v(-size, -size, -size); v(size, -size, -size); v(size, -size, size); v(-size, -size, size)
+        v(-size, size, -size); v(size, size, -size); v(size, -size, -size); v(-size, -size, -size)
+        v(-size, -size, size); v(size, -size, size); v(size, size, size); v(-size, size, size)
+        v(-size, size, size); v(-size, size, -size); v(-size, -size, -size); v(-size, -size, size)
+        v(size, -size, size); v(size, -size, -size); v(size, size, -size); v(size, size, size)
     }
 
     @SubscribeEvent(priority = EventPriority.HIGH)
@@ -102,22 +90,21 @@ object AbyssOverlayRender {
 
         val mc = Minecraft.getInstance()
         val camera = mc.gameRenderer.mainCamera
-        if (camera.fluidInCamera != FogType.WATER) {
-            AbyssDepthCache.reset()
-            return
-        }
-
-        val entity = camera.entity() as? LivingEntity ?: return
-
-        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
-
-        val level = entity.level()
+        val level = mc.level ?: return
         val camPos = BlockPos.containing(camera.position())
 
+        val inWater = camera.fluidInCamera == FogType.WATER
+        val isAirPocket = !inWater && ModUtilities.isWaterAbove(level, camPos, 64)
+
+        if (!inWater && !isAirPocket) return
+
+        val entity = camera.entity() as? LivingEntity ?: return
+        if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
+
+        
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
         val alpha = AbyssDepthCache.displayedDepthFactor.toFloat()
-
         if (alpha < 0.005f) return
 
         val lampInfluence = maxOf(
@@ -135,7 +122,6 @@ object AbyssOverlayRender {
         val screenH = mc.window.guiScaledHeight
 
         val ambientAlphaBase = alpha * 0.08f
-
         val lampReduction = (lampInfluence * ModConfig.nautilusLampInfluence * 0.06).toFloat()
         val finalAmbientAlpha = (ambientAlphaBase - lampReduction).coerceIn(0f, 0.08f)
 
@@ -148,7 +134,6 @@ object AbyssOverlayRender {
         val horizonY = (horizonFraction * screenH).toInt()
         if (horizonY > 0) {
             val finalSkyAlpha = (alpha - lampReduction * 2f).coerceIn(0f, 0.95f)
-
             if (finalSkyAlpha >= 0.005f) {
                 val sInt = (finalSkyAlpha * 255).toInt()
                 val skyColorFull = (sInt shl 24) or (r shl 16) or (g shl 8) or b

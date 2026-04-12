@@ -4,13 +4,13 @@ import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.FocalistBeamSyncPayload
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.playSoundLocal
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.hasClearPath
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
-import net.minecraft.util.Mth
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.effect.MobEffectInstance
@@ -27,6 +27,7 @@ import java.lang.Math.clamp
 import java.lang.Math.toRadians
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.max
 
@@ -40,7 +41,12 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
         const val BASE_DAMAGE = 7.5f
         const val ADD_DAMAGE = 8.5f
+
         const val MAX_LOCK_ANGLE = 45.0
+
+        const val TARGETING_SEARCH_INFLATION = 5.0
+        const val TARGETING_FORGIVENESS_ANGLE = 15.0
+        const val TARGETING_ANGLE_WEIGHT = 5.0
 
         const val VISION_MIN = 2
         const val VISION_MAX = 8
@@ -286,31 +292,33 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
     fun getTarget(player: Player, range: Double): Entity? {
         val startPos = player.eyePosition
         val lookVec = player.lookAngle
-        val endPos = startPos.add(lookVec.scale(range))
 
-        val boundingBox =
-            player.boundingBox.expandTowards(lookVec.scale(range)).inflate(1.0)
+        val searchBox = player.boundingBox.expandTowards(lookVec.scale(range)).inflate(TARGETING_SEARCH_INFLATION)
 
-        var targetEntity: Entity? = null
-        var minDistance = range
+        var bestTarget: Entity? = null
+        var bestScore = Double.MAX_VALUE
 
-        for (entity in player.level().getEntities(player, boundingBox) {
-            it is LivingEntity && it != player
-        }) {
-            val aabb = entity.boundingBox.inflate(entity.pickRadius.toDouble())
-            val hit = aabb.clip(startPos, endPos)
+        for (entity in player.level().getEntities(player, searchBox) { it is LivingEntity && it != player }) {
+            val dist = startPos.distanceTo(entity.eyePosition)
+            if (dist > range) continue
 
-            if (aabb.contains(startPos)) return entity
+            val toEntity = entity.eyePosition.subtract(startPos).normalize()
+            val dotProduct = lookVec.dot(toEntity).coerceIn(-1.0, 1.0)
+            val angle = Math.toDegrees(acos(dotProduct))
 
-            if (hit.isPresent) {
-                val dist = startPos.distanceTo(hit.get())
-                if (dist < minDistance) {
-                    targetEntity = entity
-                    minDistance = dist
+            if (angle <= TARGETING_FORGIVENESS_ANGLE) {
+                if (hasClearPath(player.level(), player, entity as LivingEntity)) {
+
+                    val score = (angle * TARGETING_ANGLE_WEIGHT) + dist
+
+                    if (score < bestScore) {
+                        bestTarget = entity
+                        bestScore = score
+                    }
                 }
             }
         }
 
-        return targetEntity
+        return bestTarget
     }
 }

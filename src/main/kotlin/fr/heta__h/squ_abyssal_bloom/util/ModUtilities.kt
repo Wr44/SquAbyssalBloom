@@ -4,7 +4,6 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
-import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
@@ -17,7 +16,6 @@ import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
-import net.minecraft.world.item.Items
 import net.minecraft.world.item.enchantment.EnchantmentHelper
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
@@ -166,6 +164,65 @@ object ModUtilities {
             }
         }
         return maxFound
+    }
+
+    fun isWaterAbove(level: Level, pos: BlockPos, number: Int): Boolean {
+        for (i in 1..number) {
+            val checkPos = pos.above(i)
+            if (level.getFluidState(checkPos).`is`(Fluids.WATER)) {
+                return true
+            }
+        }
+        return false
+    }
+
+
+    fun isDeepUnderwaterAirPocket(level: Level, pos: BlockPos): Boolean {
+        val waterSurface = findRegionalWaterSurface(level, pos)
+        return waterSurface != -999 && pos.y < waterSurface
+    }
+
+
+    fun getDepth(level: Level, pos: BlockPos): Double {
+        val surfaceY = findRegionalWaterSurface(level, pos)
+        return if (surfaceY != -999 && pos.y < surfaceY) {
+            (surfaceY - pos.y).toDouble()
+        } else {
+            0.0
+        }
+    }
+
+
+    fun findRegionalWaterSurface(level: Level, pos: BlockPos): Int {
+        var surface = checkHeightmapForWater(level, pos.x, pos.z)
+        if (surface != -999) return surface
+
+        val offset = 12
+
+        surface = checkHeightmapForWater(level, pos.x + offset, pos.z)
+        if (surface != -999) return surface
+
+        surface = checkHeightmapForWater(level, pos.x - offset, pos.z)
+        if (surface != -999) return surface
+
+        surface = checkHeightmapForWater(level, pos.x, pos.z + offset)
+        if (surface != -999) return surface
+
+        surface = checkHeightmapForWater(level, pos.x, pos.z - offset)
+        if (surface != -999) return surface
+
+        return -999
+    }
+
+
+    private fun checkHeightmapForWater(level: Level, x: Int, z: Int): Int {
+        val topY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z)
+
+        val state = level.getBlockState(BlockPos(x, topY - 1, z))
+        if (state.fluidState.`is`(net.minecraft.tags.FluidTags.WATER)) {
+            return topY - 1
+        }
+        return -999
     }
 
 }
