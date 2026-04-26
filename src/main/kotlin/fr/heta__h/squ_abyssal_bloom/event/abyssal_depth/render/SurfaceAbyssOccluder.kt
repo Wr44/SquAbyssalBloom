@@ -30,8 +30,11 @@ object SurfaceAbyssOccluder {
 
     private const val NUM_LAYERS = 5
 
-    private const val BAND_WIDTH = 32
+    
+    private const val BAND_WIDTH = 64
     private const val BASE_STEP = 4
+
+    
 
     private data class LodBand(
         val minDist: Int,
@@ -57,14 +60,20 @@ object SurfaceAbyssOccluder {
     private var cachedBands: List<LodBand> = emptyList()
     private var cachedRenderDist = -1
 
+    
+    private val chunkFadeProgress = HashMap<Long, Float>()
+    private var lastFrameNanos = 0L
+    private const val FADE_SPEED = 2.5f
+
     private fun buildBands(maxRadius: Int): List<LodBand> {
         val bands = mutableListOf<LodBand>()
         var offset = 0
         var step = BASE_STEP
 
         while (offset < maxRadius) {
-            val isLast = (offset + BAND_WIDTH) >= maxRadius
-            val bandEnd = if (isLast) maxRadius + BAND_WIDTH else offset + BAND_WIDTH
+            val width = maxOf(BAND_WIDTH, step)
+            val isLast = (offset + width) >= maxRadius
+            val bandEnd = if (isLast) maxRadius + width else offset + width
 
             bands.add(
                 LodBand(
@@ -117,6 +126,10 @@ object SurfaceAbyssOccluder {
     fun onRenderStage(event: RenderLevelStageEvent.AfterEntities) {
         if (!ModConfig.enableAbyssFog) return
 
+        val now = System.nanoTime()
+        val dt = if (lastFrameNanos == 0L) 0f else ((now - lastFrameNanos) / 1_000_000_000.0f).coerceAtMost(0.1f)
+        lastFrameNanos = now
+
         val mc = Minecraft.getInstance()
         val camera = mc.gameRenderer.mainCamera
 
@@ -141,8 +154,13 @@ object SurfaceAbyssOccluder {
         val gameTick = level.gameTime
         val maxRadius = mc.options.renderDistance().get() * 16
 
-        val px = snapToGrid(camPos.x.toInt(), BASE_STEP)
-        val pz = snapToGrid(camPos.z.toInt(), BASE_STEP)
+        
+        val bands = getBands(maxRadius)
+        val maxStep = bands.lastOrNull()?.step ?: BASE_STEP
+
+        
+        val px = snapToGrid(camPos.x.toInt(), maxStep)
+        val pz = snapToGrid(camPos.z.toInt(), maxStep)
 
         SurfaceHeightCache.tick(gameTick, px, pz)
 
@@ -156,16 +174,17 @@ object SurfaceAbyssOccluder {
         val depthStep = targetDarknessDepth / NUM_LAYERS.toFloat()
 
         val frustum = Minecraft.getInstance().levelRenderer.capturedFrustum
-        val bands = getBands(maxRadius)
+        val camXi = camPos.x.toInt()
+        val camZi = camPos.z.toInt()
 
         for (band in bands) {
             val step = band.step
             val scanR = band.scanRadius
 
-            val gridMinX = px - scanR
-            val gridMinZ = pz - scanR
-            val gridMaxX = px + scanR - step
-            val gridMaxZ = pz + scanR - step
+            val gridMinX = snapToGrid(px - scanR, step)
+            val gridMinZ = snapToGrid(pz - scanR, step)
+            val gridMaxX = snapToGrid(px + scanR, step)
+            val gridMaxZ = snapToGrid(pz + scanR, step)
 
             for (x in gridMinX..gridMaxX step step) {
                 for (z in gridMinZ..gridMaxZ step step) {
@@ -176,14 +195,12 @@ object SurfaceAbyssOccluder {
                     val dx = cx - px
                     val dz = cz - pz
 
-                    
                     val boxDist = max(abs(dx), abs(dz))
                     if (boxDist < band.minDist || boxDist >= band.maxDist) continue
 
                     val cell = SurfaceHeightCache.getOrCompute(level, cx, cz, step, gameTick, px, pz)
                     if (!cell.isValidWater) continue
 
-                    
                     if (!(frustum?.isVisible(
                             AABB(
                                 x.toDouble(), cell.floorY.toDouble(), z.toDouble(),
@@ -191,6 +208,13 @@ object SurfaceAbyssOccluder {
                             )
                         ) ?: true)
                     ) continue
+
+                    
+                    val key = chunkKey(cx, cz)
+                    val rawFade = chunkFadeProgress.getOrDefault(key, 0.0f)
+                    val newFade = (rawFade + dt * FADE_SPEED).coerceAtMost(1.0f)
+                    chunkFadeProgress[key] = newFade
+                    val fadeFactor = newFade * newFade * (3f - 2f * newFade)
 
                     val waterSurfaceY = cell.waterSurfaceY
                     val floorY = cell.floorY.toFloat()
@@ -209,7 +233,7 @@ object SurfaceAbyssOccluder {
                         val curvedRatio = (3f * xRatio * xRatio) - (2f * xRatio * xRatio * xRatio)
 
                         val baseAlpha = BASE_ALPHA_MIN + (BASE_ALPHA_RANGE * curvedRatio)
-                        val finalAlpha = (baseAlpha - lampReduction).coerceIn(0f, 1f)
+                        val finalAlpha = (baseAlpha - lampReduction).coerceIn(0f, 1f) * fadeFactor
 
                         if (finalAlpha <= ALPHA_RENDER_THRESHOLD) continue
 
@@ -228,6 +252,13 @@ object SurfaceAbyssOccluder {
 
         bufferSource.endBatch(RenderTypes.entityTranslucent(WHITE_TEXTURE))
         poseStack.popPose()
+    }
+
+    
+    private fun chunkKey(cx: Int, cz: Int): Long {
+        val chunkX = cx shr 4
+        val chunkZ = cz shr 4
+        return (chunkX.toLong() shl 32) or (chunkZ.toLong() and 0xFFFFFFFFL)
     }
 
     private fun snapToGrid(value: Int, snap: Int): Int {
