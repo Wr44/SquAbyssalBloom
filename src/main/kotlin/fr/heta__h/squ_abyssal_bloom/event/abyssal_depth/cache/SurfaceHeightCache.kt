@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
+package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache
 
 import net.minecraft.core.BlockPos
 import net.minecraft.tags.FluidTags

@@ -1,7 +1,8 @@
-package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
+package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
@@ -35,9 +36,7 @@ object AbyssOverlayRender {
         val camPos = BlockPos.containing(camera.position())
 
         val inWater = camera.fluidInCamera == FogType.WATER
-        val isAirPocket = !inWater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
-
-        if (!inWater && !isAirPocket) return
+        if (!inWater) return
 
         val entity = camera.entity() as? LivingEntity ?: return
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
@@ -96,14 +95,12 @@ object AbyssOverlayRender {
         val camPos = BlockPos.containing(camera.position())
 
         val inWater = camera.fluidInCamera == FogType.WATER
-        val isAirPocket = !inWater && ModUtilities.isDeepUnderwaterAirPocket(level, camPos)
 
-        if (!inWater && !isAirPocket) return
+        if (!inWater) return
 
         val entity = camera.entity() as? LivingEntity ?: return
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
-        
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
         val alpha = AbyssDepthCache.displayedDepthFactor.toFloat()

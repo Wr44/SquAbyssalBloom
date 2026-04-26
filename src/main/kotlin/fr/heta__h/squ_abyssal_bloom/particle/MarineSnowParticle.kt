@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.particle
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.particle.SingleQuadParticle
 import net.minecraft.client.renderer.texture.TextureAtlasSprite

@@ -1,7 +1,9 @@
-package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
+package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.SurfaceHeightCache
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.core.BlockPos
@@ -10,16 +12,16 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.level.material.FogType
+import net.minecraft.world.phys.AABB
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import org.joml.Matrix4f
 import com.mojang.blaze3d.vertex.VertexConsumer
-import net.minecraft.world.phys.Vec3
+import net.minecraft.world.effect.MobEffects
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.sqrt
 
 @EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
 object SurfaceAbyssOccluder {
@@ -32,8 +34,8 @@ object SurfaceAbyssOccluder {
     private const val BASE_STEP = 4
 
     private data class LodBand(
-        val minDist: Int,   
-        val maxDist: Int,   
+        val minDist: Int,
+        val maxDist: Int,
         val step: Int,
         val scanRadius: Int
     )
@@ -51,8 +53,6 @@ object SurfaceAbyssOccluder {
     private const val FULL_BRIGHT_LIGHTMAP = 15728880
     private const val DEFAULT_OVERLAY = 655360
     private const val UV_CENTER = 0.5f
-
-    private var lastLogTime = 0L
 
     private var cachedBands: List<LodBand> = emptyList()
     private var cachedRenderDist = -1
@@ -90,7 +90,7 @@ object SurfaceAbyssOccluder {
         return cachedBands
     }
 
-    private fun isUnderMassiveCeiling(level: Level, camPos: Vec3): Boolean {
+    private fun isUnderMassiveCeiling(level: Level, camPos: net.minecraft.world.phys.Vec3): Boolean {
         val cx = camPos.x.toInt()
         val cy = camPos.y.toInt()
         val cz = camPos.z.toInt()
@@ -125,22 +125,22 @@ object SurfaceAbyssOccluder {
         val level = mc.level ?: return
         val camPos = camera.position()
 
-        val isCave = isUnderMassiveCeiling(level, camPos)
-
-        val currentTime = System.currentTimeMillis()
-        val shouldLog = currentTime - lastLogTime > 1000L
-
-        if (isCave) {
-            return
-        }
+        if (isUnderMassiveCeiling(level, camPos)) return
 
         val entity = camera.entity() as? LivingEntity
-        AbyssDepthCache.refreshSurfaceIfNeeded(level, BlockPos.containing(camPos), entity)
+        if (entity != null && entity.hasEffect(MobEffects.NIGHT_VISION)) return
+
+        val lampInfluence = if (entity != null) {
+            maxOf(
+                ModUtilities.getRiderLampInfluence(entity),
+                ModUtilities.getNautilusLampInfluence(level, BlockPos.containing(camPos), 16.0, 1.0)
+            ).toFloat()
+        } else 0f
+        val lampReduction = lampInfluence * ModConfig.nautilusLampInfluence.toFloat() * LAMP_REDUCTION_MULTIPLIER
 
         val gameTick = level.gameTime
         val maxRadius = mc.options.renderDistance().get() * 16
 
-        
         val px = snapToGrid(camPos.x.toInt(), BASE_STEP)
         val pz = snapToGrid(camPos.z.toInt(), BASE_STEP)
 
@@ -152,38 +152,16 @@ object SurfaceAbyssOccluder {
         val bufferSource = mc.renderBuffers().bufferSource()
         val buffer = bufferSource.getBuffer(RenderTypes.entityTranslucent(WHITE_TEXTURE))
 
-        val lookVec = camera.forwardVector()
-        val lookX = lookVec.x()
-        val lookY = lookVec.y()
-        val lookZ = lookVec.z()
-
-        val fovV = mc.options.fov().get().toFloat()
-        val aspect = mc.window.screenWidth.toFloat() / mc.window.screenHeight.coerceAtLeast(1).toFloat()
-        val halfFovV = Math.toRadians(fovV.toDouble() * 0.5)
-        val halfFovH = kotlin.math.atan(kotlin.math.tan(halfFovV) * aspect)
-        val thresholdAngle = (halfFovH + Math.toRadians(45.0)).coerceAtMost(Math.PI)
-        val cullDotThreshold = kotlin.math.cos(thresholdAngle).toFloat()
-
-        val look2DLen = sqrt(lookX * lookX + lookZ * lookZ)
-        val normLookX = if (look2DLen > 0.001f) lookX / look2DLen else 0f
-        val normLookZ = if (look2DLen > 0.001f) lookZ / look2DLen else 0f
-
-        val isLookingSteep = abs(lookY) > 0.8f
-
         val targetDarknessDepth = maxOf(1.0f, (ModConfig.abyssDepthStart + ModConfig.abyssMaxDepth).toFloat() / 2)
         val depthStep = targetDarknessDepth / NUM_LAYERS.toFloat()
 
-        val lampReduction = AbyssDepthCache.displayedLampInfluence.toFloat() *
-                ModConfig.nautilusLampInfluence.toFloat() *
-                LAMP_REDUCTION_MULTIPLIER
-
+        val frustum = Minecraft.getInstance().levelRenderer.capturedFrustum
         val bands = getBands(maxRadius)
 
         for (band in bands) {
             val step = band.step
             val scanR = band.scanRadius
 
-            
             val gridMinX = px - scanR
             val gridMinZ = pz - scanR
             val gridMaxX = px + scanR - step
@@ -200,36 +178,24 @@ object SurfaceAbyssOccluder {
 
                     
                     val boxDist = max(abs(dx), abs(dz))
+                    if (boxDist < band.minDist || boxDist >= band.maxDist) continue
 
-                    if (boxDist < band.minDist || boxDist >= band.maxDist) {
-                        continue
-                    }
+                    val cell = SurfaceHeightCache.getOrCompute(level, cx, cz, step, gameTick, px, pz)
+                    if (!cell.isValidWater) continue
 
-                    val dxFloat = dx.toFloat()
-                    val dzFloat = dz.toFloat()
-                    val distSq2D = (dxFloat * dxFloat) + (dzFloat * dzFloat)
-
-                    if (!isLookingSteep && distSq2D > 1024f) {
-                        val dist2D = sqrt(distSq2D)
-                        val dot2D = (dxFloat * normLookX + dzFloat * normLookZ) / dist2D
-                        if (dot2D < cullDotThreshold) {
-                            continue
-                        }
-                    }
-
-                    val cell = SurfaceHeightCache.getOrCompute(
-                        level, cx, cz, step, gameTick, px, pz
-                    )
-
-                    if (!cell.isValidWater) {
-                        continue
-                    }
+                    
+                    if (!(frustum?.isVisible(
+                            AABB(
+                                x.toDouble(), cell.floorY.toDouble(), z.toDouble(),
+                                (x + step).toDouble(), cell.waterSurfaceY.toDouble(), (z + step).toDouble()
+                            )
+                        ) ?: true)
+                    ) continue
 
                     val waterSurfaceY = cell.waterSurfaceY
                     val floorY = cell.floorY.toFloat()
                     val size = step.toFloat()
 
-                    
                     val rx = x.toFloat() - camPos.x.toFloat()
                     val rz = z.toFloat() - camPos.z.toFloat()
 
@@ -253,7 +219,7 @@ object SurfaceAbyssOccluder {
                             buffer, matrix4f,
                             rx, ry, rz, size,
                             COLOR_R, COLOR_G, COLOR_B,
-                            finalAlpha 
+                            finalAlpha
                         )
                     }
                 }

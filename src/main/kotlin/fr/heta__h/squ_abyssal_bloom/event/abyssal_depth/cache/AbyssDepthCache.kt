@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
+package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache
 
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
@@ -75,33 +75,6 @@ object AbyssDepthCache {
             cachedLampInfluence = maxOf(
                 ModUtilities.getRiderLampInfluence(entity),
                 ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
-            )
-        } else {
-            cachedLampInfluence = 0.0
-        }
-    }
-
-    fun refreshSurfaceIfNeeded(level: Level, camPos: BlockPos, entity: LivingEntity?) {
-        val now = System.nanoTime()
-        val elapsedNanos = now - lastFrameTime
-        if (elapsedNanos < 1_000_000L && lastFrameTime != 0L) return
-        val dt = if (lastFrameTime == 0L) 0.016 else elapsedNanos / 1_000_000_000.0
-        lastFrameTime = now
-
-        if (!isInitialized) isInitialized = true
-
-        smoothedDepthFactor += (0.0 - smoothedDepthFactor) * (2.0 * dt)
-        smoothedDepthFactor = smoothedDepthFactor.coerceIn(0.0, 1.0)
-
-        smoothedLampInfluence += (cachedLampInfluence - smoothedLampInfluence) * (2.0 * dt)
-
-        val currentTick = Minecraft.getInstance().level?.gameTime ?: return
-        if (currentTick % 4L != 0L) return
-
-        if (entity != null) {
-            cachedLampInfluence = maxOf(
-                ModUtilities.getRiderLampInfluence(entity),
-                ModUtilities.getNautilusLampInfluence(level, camPos, 32.0, 1.0)
             )
         } else {
             cachedLampInfluence = 0.0

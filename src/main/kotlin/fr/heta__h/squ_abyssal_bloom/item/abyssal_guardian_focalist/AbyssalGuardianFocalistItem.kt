@@ -256,7 +256,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                             it.rootVehicle != target.rootVehicle
                 }
                 for (pulled in nearbyEntities) {
-                    val pullVector = target.position().subtract(pulled.position()).normalize().scale(SINGULARITY_PULL_FACTOR)
+                    val pullVector = target.position().subtract(pulled.position()).scale(SINGULARITY_PULL_FACTOR)
                     pulled.deltaMovement = pullVector
                     pulled.hurtMarked = true
                 }

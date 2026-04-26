@@ -1,7 +1,8 @@
-package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth
+package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.fx
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
