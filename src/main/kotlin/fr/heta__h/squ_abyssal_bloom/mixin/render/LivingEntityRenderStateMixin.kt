@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.render
 
-import fr.heta__h.squ_abyssal_bloom.mixin.`interface`.AddPropertiesToRenderState
+import fr.heta__h.squ_abyssal_bloom.accesor.AddPropertiesToRenderState
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.world.item.ItemStack
 import org.spongepowered.asm.mixin.Mixin

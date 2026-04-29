@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.mixin.`interface`.AbstractContainerScreenAccessor
+import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerScreenAccessor
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.inventory.AbstractMountInventoryScreen
 import net.minecraft.client.gui.screens.inventory.NautilusInventoryScreen

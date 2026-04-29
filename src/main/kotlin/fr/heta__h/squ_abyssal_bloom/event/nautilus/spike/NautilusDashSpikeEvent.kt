@@ -4,7 +4,10 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import net.minecraft.core.particles.ParticleTypes
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LivingEntity
@@ -29,6 +32,7 @@ object NautilusDashSpikeEvent {
     private const val SOUND_VOLUME = 1.0f
     private const val DASH_IFRAMES = 10L
     private const val RECOIL_Y = 0.3
+    private const val VAMPIRISM_RATIO = 0.30f
 
     private val hitTracker = WeakHashMap<LivingEntity, Long>()
 
@@ -75,6 +79,25 @@ object NautilusDashSpikeEvent {
                 if (didHurt) {
                     hitTracker[target] = currentTick
 
+                    val healAmount = calculatedDamage * VAMPIRISM_RATIO
+                    if (entity.health < entity.maxHealth) {
+                        entity.heal(healAmount)
+
+                        level.sendParticles(
+                            ParticleTypes.HEART,
+                            entity.x, entity.y + (entity.bbHeight / 1.5), entity.z,
+                            3,
+                            0.3, 0.2, 0.3,
+                            0.0
+                        )
+
+                        level.sendParticles(
+                            ParticleTypes.DAMAGE_INDICATOR,
+                            target.x, target.y + (target.bbHeight / 2.0), target.z,
+                            5, 0.2, 0.2, 0.2, 0.1
+                        )
+                    }
+
                     val deltaX = entity.x - target.x
                     val deltaZ = entity.z - target.z
 
@@ -96,8 +119,8 @@ object NautilusDashSpikeEvent {
                         entity.hurtMarked = true
 
                         val rider = entity.controllingPassenger
-                        if (rider is net.minecraft.server.level.ServerPlayer) {
-                            rider.connection.send(net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket(entity))
+                        if (rider is ServerPlayer) {
+                            rider.connection.send(ClientboundSetEntityMotionPacket(entity))
                         }
                     }
 

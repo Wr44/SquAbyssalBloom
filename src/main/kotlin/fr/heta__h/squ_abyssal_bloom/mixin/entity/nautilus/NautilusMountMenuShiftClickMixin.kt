@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.mixin.`interface`.AbstractContainerMenuAccessor
+import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerMenuAccessor
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractMountInventoryMenu
 import net.minecraft.world.inventory.NautilusInventoryMenu

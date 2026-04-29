@@ -3,11 +3,16 @@ package fr.heta__h.squ_abyssal_bloom.entity
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage1Model
+import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage2Model
+import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage3Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikesLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
@@ -44,6 +49,9 @@ object ModEntities {
     val BARNACLE_KEY: ResourceKey<EntityType<*>> =
         ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "barnacle"))
 
+
+    
+
     val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> =
         ENTITY_TYPES.register("barnacle") { _: Identifier ->
             EntityType.Builder.of({ type, level -> BarnacleEntity(type, level) }, MobCategory.MONSTER)
@@ -65,9 +73,25 @@ object ModEntities {
                 .build(GHOAST_CHIMAERA_KEY)
         }
 
+
+    val BUBBLE_KEY = ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_projectile"))
+
+    val BUBBLE = ENTITY_TYPES.register("bubble_projectile") { name: Identifier ->
+        EntityType.Builder.of({ type, level -> BubbleProjectile(type, level) }, MobCategory.MISC)
+            .sized(0.5f, 0.5f)
+            .clientTrackingRange(4)
+            .updateInterval(1)
+            .build(BUBBLE_KEY)
+    }
+
+
     fun registerEntityRenderers(event: EntityRenderersEvent.RegisterRenderers) {
+        
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
         event.registerEntityRenderer(GHOST_CHIMAERA.get() as EntityType<out GhostChimaeraEntity>, ::GhostChimaeraRenderer)
+
+        
+        event.registerEntityRenderer(BUBBLE.get() as EntityType<out BubbleProjectile>, ::BubbleRenderer)
     }
 
     fun registerLayerDefinitions(event: EntityRenderersEvent.RegisterLayerDefinitions) {
@@ -80,6 +104,21 @@ object ModEntities {
         event.registerLayerDefinition(
             GhostChimaeraModel.LAYER_LOCATION,
             GhostChimaeraModel::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            BubbleStage1Model.LAYER_LOCATION,
+            BubbleStage1Model::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            BubbleStage2Model.LAYER_LOCATION,
+            BubbleStage2Model::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            BubbleStage3Model.LAYER_LOCATION,
+            BubbleStage3Model::createBodyLayer
         )
 
         

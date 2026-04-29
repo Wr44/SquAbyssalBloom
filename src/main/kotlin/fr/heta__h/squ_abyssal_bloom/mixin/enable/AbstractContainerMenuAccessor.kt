@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.mixin.`interface`
+package fr.heta__h.squ_abyssal_bloom.mixin.enable
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot

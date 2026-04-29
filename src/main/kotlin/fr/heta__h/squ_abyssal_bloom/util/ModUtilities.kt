@@ -20,6 +20,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.enchantment.EnchantmentHelper
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
@@ -55,22 +56,6 @@ object ModUtilities {
         return (level.maxY - 1) - startY
     }
 
-
-    fun calculatePhysicalDepth(level: Level, start: BlockPos): Double {
-        var surfaceY = start.y
-
-        for (y in level.maxY downTo start.y) {
-            val pos = BlockPos(start.x, y, start.z)
-
-            if (level.getFluidState(pos).`is`(Fluids.WATER)) {
-                surfaceY = y
-                break
-            }
-        }
-
-        val depth = surfaceY - start.y
-        return maxOf(0, depth).toDouble()
-    }
 
     fun getDepthFactor(depth: Double): Double {
         return ((depth - abyssDepthStart) / (abyssMaxDepth - abyssDepthStart)).coerceIn(0.0, 1.0)
@@ -167,89 +152,53 @@ object ModUtilities {
         return maxFound
     }
 
-    fun isWaterAbove(level: Level, pos: BlockPos, number: Int): Boolean {
-        for (i in 1..number) {
-            val checkPos = pos.above(i)
-            if (level.getFluidState(checkPos).`is`(Fluids.WATER)) {
-                return true
-            }
-        }
-        return false
-    }
-
-
-    fun isDeepUnderwaterAirPocket(level: Level, pos: BlockPos): Boolean {
-        if (getDepth(level, pos) < 5.0) return false
-
-        var currentY = pos.y
-        var solidThickness = 0
-
-        while (currentY <= level.seaLevel + 10) {
-            val checkPos = BlockPos(pos.x, currentY, pos.z)
-            val state = level.getBlockState(checkPos)
-            val fluid = level.getFluidState(checkPos)
-
-            if (fluid.`is`(FluidTags.WATER)) {
-                return solidThickness <= 4
-            }
-
-            if (!state.isAir && !state.canBeReplaced()) {
-                solidThickness++
-            } else {
-                solidThickness = 0
-            }
-
-            if (solidThickness > 4) {
-                return false
-            }
-
-            currentY++
-        }
-
-        return false
-    }
-
-
     fun getDepth(level: Level, pos: BlockPos): Double {
-        val surfaceY = findRegionalWaterSurface(level, pos)
-        return if (surfaceY != -999 && pos.y < surfaceY) {
-            (surfaceY - pos.y).toDouble()
-        } else {
-            0.0
+        if (!level.getFluidState(pos).`is`(FluidTags.WATER)) return 0.0
+
+        val mutPos = BlockPos.MutableBlockPos()
+
+        val offsets = intArrayOf(
+            0, 0,
+            8, 0, -8, 0, 0, 8, 0, -8,
+            16, 0, -16, 0, 0, 16, 0, -16,
+            24, 0, -24, 0, 0, 24, 0, -24
+        )
+
+        for (i in offsets.indices step 2) {
+            val cx = pos.x + offsets[i]
+            val cz = pos.z + offsets[i + 1]
+
+            val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, cx, cz) - 1
+            mutPos.set(cx, topY, cz)
+
+            if (level.getFluidState(mutPos).`is`(FluidTags.WATER)) {
+
+                var isFloatingStructure = false
+                for (y in topY downTo pos.y) {
+                    mutPos.set(cx, y, cz)
+                    if (level.getBlockState(mutPos).isAir) {
+                        isFloatingStructure = true
+                        break
+                    }
+                }
+
+                if (!isFloatingStructure) {
+                    return (topY - pos.y).toDouble()
+                }
+            }
         }
-    }
 
-
-    fun findRegionalWaterSurface(level: Level, pos: BlockPos): Int {
-        var surface = checkHeightmapForWater(level, pos.x, pos.z)
-        if (surface != -999) return surface
-
-        val offset = 12
-
-        surface = checkHeightmapForWater(level, pos.x + offset, pos.z)
-        if (surface != -999) return surface
-
-        surface = checkHeightmapForWater(level, pos.x - offset, pos.z)
-        if (surface != -999) return surface
-
-        surface = checkHeightmapForWater(level, pos.x, pos.z + offset)
-        if (surface != -999) return surface
-
-        surface = checkHeightmapForWater(level, pos.x, pos.z - offset)
-        if (surface != -999) return surface
-
-        return -999
-    }
-
-
-    private fun checkHeightmapForWater(level: Level, x: Int, z: Int): Int {
-        val topY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z)
-
-        val state = level.getBlockState(BlockPos(x, topY - 1, z))
-        if (state.fluidState.`is`(net.minecraft.tags.FluidTags.WATER)) {
-            return topY - 1
+        mutPos.set(pos)
+        var surfaceY = pos.y
+        while (surfaceY < level.maxY) {
+            mutPos.setY(surfaceY + 1)
+            if (!level.getFluidState(mutPos).`is`(FluidTags.WATER)) {
+                break
+            }
+            surfaceY++
         }
-        return -999
+
+        return (surfaceY - pos.y).toDouble()
     }
 
 }

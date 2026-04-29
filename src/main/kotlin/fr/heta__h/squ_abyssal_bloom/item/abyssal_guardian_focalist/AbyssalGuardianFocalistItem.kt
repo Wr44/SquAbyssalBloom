@@ -5,10 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.FocalistBe
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.playSoundLocal
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.hasClearPath
-import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.InteractionHand
@@ -55,7 +52,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         const val SYPHON_HEAL_FACTOR = 0.33f
         const val SYPHON_ABSORB_CAP = 4.0f
         const val SINGULARITY_PULL = 10.0
-        const val SINGULARITY_PULL_FACTOR = 1.8
+        const val SINGULARITY_PULL_FACTOR = 0.25
         const val SINGULARITY_STUN_DURATION = 100
 
         private val LOCK_DOT_THRESHOLD = cos(toRadians(MAX_LOCK_ANGLE))
@@ -115,7 +112,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
             return
         }
 
-        if (target == null || !target.isAlive || entity.distanceTo(target) > MAX_RANGE + 2.0 || !isLookingAtTarget(entity, target)) {
+        if (!target.isAlive || entity.distanceTo(target) > MAX_RANGE + 2.0 || !isLookingAtTarget(entity, target)) {
             if (!level.isClientSide) entity.releaseUsingItem()
             return
         }

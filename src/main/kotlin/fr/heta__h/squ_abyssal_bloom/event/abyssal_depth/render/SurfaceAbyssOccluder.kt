@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.SurfaceHeightCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.core.BlockPos
@@ -19,7 +20,9 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import org.joml.Matrix4f
 import com.mojang.blaze3d.vertex.VertexConsumer
+import net.minecraft.tags.FluidTags
 import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -30,11 +33,8 @@ object SurfaceAbyssOccluder {
 
     private const val NUM_LAYERS = 5
 
-    
     private const val BAND_WIDTH = 64
     private const val BASE_STEP = 4
-
-    
 
     private data class LodBand(
         val minDist: Int,
@@ -61,9 +61,20 @@ object SurfaceAbyssOccluder {
     private var cachedRenderDist = -1
 
     
-    private val chunkFadeProgress = HashMap<Long, Float>()
+    private val chunkFadeProgress = Long2FloatOpenHashMap(4096).apply {
+        defaultReturnValue(0f)
+    }
+    
+    private val activeKeysThisFrame = it.unimi.dsi.fastutil.longs.LongOpenHashSet(4096)
     private var lastFrameNanos = 0L
     private const val FADE_SPEED = 2.5f
+
+    private var lastCeilingCheckTick = -1L
+    private var cachedUnderCeiling = false
+    private const val CEILING_CHECK_INTERVAL = 5L
+
+    val offsetsX = intArrayOf(0, 3, -3, 0, 0)
+    val offsetsZ = intArrayOf(0, 0, 0, 3, -3)
 
     private fun buildBands(maxRadius: Int): List<LodBand> {
         val bands = mutableListOf<LodBand>()
@@ -99,46 +110,72 @@ object SurfaceAbyssOccluder {
         return cachedBands
     }
 
-    private fun isUnderMassiveCeiling(level: Level, camPos: net.minecraft.world.phys.Vec3): Boolean {
+    private fun findMinWaterSurface(level: Level, camPos: Vec3): Int {
         val cx = camPos.x.toInt()
-        val cy = camPos.y.toInt()
         val cz = camPos.z.toInt()
+        val mutPos = BlockPos.MutableBlockPos()
 
-        val offsetsX = intArrayOf(0, 3, -3, 0, 0)
-        val offsetsZ = intArrayOf(0, 0, 0, 3, -3)
+        val beams = mutableListOf<Pair<Int, Int>>()
+        val spread = intArrayOf(-16, -8, 0, 8, 16)
 
-        var solidCeilingCount = 0
+        for (s in spread) {
+            beams.add(Pair(cx + s, cz - 32))
+            beams.add(Pair(cx + s, cz + 32))
+            beams.add(Pair(cx - 32, cz + s))
+            beams.add(Pair(cx + 32, cz + s))
+        }
 
-        for (i in 0 until 5) {
-            val x = cx + offsetsX[i]
-            val z = cz + offsetsZ[i]
-            val floorY = level.getHeight(Heightmap.Types.OCEAN_FLOOR, x, z)
+        var minSurface = Int.MAX_VALUE
 
-            if (floorY > cy + 2) {
-                solidCeilingCount++
+        for ((bx, bz) in beams) {
+            val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz)
+            var solidStreak = 0
+
+            for (y in topY downTo level.minY) {
+                mutPos.set(bx, y, bz)
+                val fluidState = level.getFluidState(mutPos)
+
+                if (fluidState.`is`(FluidTags.WATER)) {
+                    minSurface = minOf(minSurface, y)
+                    solidStreak = 0
+                    break
+                }
+
+                val blockState = level.getBlockState(mutPos)
+                if (blockState.blocksMotion()) {
+                    solidStreak++
+                    if (solidStreak > 10) break
+                } else {
+                    solidStreak = 0
+                }
             }
         }
 
-        return solidCeilingCount == 5
+        return minSurface
     }
 
     @SubscribeEvent
     fun onRenderStage(event: RenderLevelStageEvent.AfterEntities) {
         if (!ModConfig.enableAbyssFog) return
 
-        val now = System.nanoTime()
-        val dt = if (lastFrameNanos == 0L) 0f else ((now - lastFrameNanos) / 1_000_000_000.0f).coerceAtMost(0.1f)
-        lastFrameNanos = now
-
         val mc = Minecraft.getInstance()
+        val level = mc.level ?: return
+        val gameTick = level.gameTime
         val camera = mc.gameRenderer.mainCamera
+        val camPos = camera.position()
+
+        if (gameTick - lastCeilingCheckTick >= CEILING_CHECK_INTERVAL) {
+            val minSurface = findMinWaterSurface(level, camPos)
+            cachedUnderCeiling = camPos.y > minSurface
+            lastCeilingCheckTick = gameTick
+        }
+        if (!cachedUnderCeiling) return
 
         if (camera.fluidInCamera == FogType.WATER) return
 
-        val level = mc.level ?: return
-        val camPos = camera.position()
-
-        if (isUnderMassiveCeiling(level, camPos)) return
+        val now = System.nanoTime()
+        val dt = if (lastFrameNanos == 0L) 0f else ((now - lastFrameNanos) / 1_000_000_000.0f).coerceAtMost(0.1f)
+        lastFrameNanos = now
 
         val entity = camera.entity() as? LivingEntity
         if (entity != null && entity.hasEffect(MobEffects.NIGHT_VISION)) return
@@ -151,14 +188,11 @@ object SurfaceAbyssOccluder {
         } else 0f
         val lampReduction = lampInfluence * ModConfig.nautilusLampInfluence.toFloat() * LAMP_REDUCTION_MULTIPLIER
 
-        val gameTick = level.gameTime
         val maxRadius = mc.options.renderDistance().get() * 16
 
-        
         val bands = getBands(maxRadius)
         val maxStep = bands.lastOrNull()?.step ?: BASE_STEP
 
-        
         val px = snapToGrid(camPos.x.toInt(), maxStep)
         val pz = snapToGrid(camPos.z.toInt(), maxStep)
 
@@ -168,14 +202,16 @@ object SurfaceAbyssOccluder {
         poseStack.pushPose()
         val matrix4f = poseStack.last().pose()
         val bufferSource = mc.renderBuffers().bufferSource()
-        val buffer = bufferSource.getBuffer(RenderTypes.entityTranslucent(WHITE_TEXTURE))
+
+        val renderType = RenderTypes.entityTranslucent(WHITE_TEXTURE)
+        val buffer = bufferSource.getBuffer(renderType)
 
         val targetDarknessDepth = maxOf(1.0f, (ModConfig.abyssDepthStart + ModConfig.abyssMaxDepth).toFloat() / 2)
         val depthStep = targetDarknessDepth / NUM_LAYERS.toFloat()
 
         val frustum = Minecraft.getInstance().levelRenderer.capturedFrustum
-        val camXi = camPos.x.toInt()
-        val camZi = camPos.z.toInt()
+
+        activeKeysThisFrame.clear()
 
         for (band in bands) {
             val step = band.step
@@ -198,28 +234,29 @@ object SurfaceAbyssOccluder {
                     val boxDist = max(abs(dx), abs(dz))
                     if (boxDist < band.minDist || boxDist >= band.maxDist) continue
 
-                    val cell = SurfaceHeightCache.getOrCompute(level, cx, cz, step, gameTick, px, pz)
-                    if (!cell.isValidWater) continue
+                    val cellData = SurfaceHeightCache.getOrCompute(level, cx, cz, step, gameTick, px, pz)
+                    if (!SurfaceHeightCache.unpackIsValidWater(cellData)) continue
+
+                    val waterSurfaceY = SurfaceHeightCache.unpackSurfaceY(cellData)
+                    val floorY = SurfaceHeightCache.unpackFloorY(cellData).toFloat()
 
                     if (!(frustum?.isVisible(
                             AABB(
-                                x.toDouble(), cell.floorY.toDouble(), z.toDouble(),
-                                (x + step).toDouble(), cell.waterSurfaceY.toDouble(), (z + step).toDouble()
+                                x.toDouble(), floorY.toDouble(), z.toDouble(),
+                                (x + step).toDouble(), waterSurfaceY.toDouble(), (z + step).toDouble()
                             )
                         ) ?: true)
                     ) continue
 
-                    
                     val key = chunkKey(cx, cz)
-                    val rawFade = chunkFadeProgress.getOrDefault(key, 0.0f)
+                    val rawFade = chunkFadeProgress.get(key)
                     val newFade = (rawFade + dt * FADE_SPEED).coerceAtMost(1.0f)
-                    chunkFadeProgress[key] = newFade
+                    chunkFadeProgress.put(key, newFade)
+                    activeKeysThisFrame.add(key)
+
                     val fadeFactor = newFade * newFade * (3f - 2f * newFade)
 
-                    val waterSurfaceY = cell.waterSurfaceY
-                    val floorY = cell.floorY.toFloat()
                     val size = step.toFloat()
-
                     val rx = x.toFloat() - camPos.x.toFloat()
                     val rz = z.toFloat() - camPos.z.toFloat()
 
@@ -250,11 +287,18 @@ object SurfaceAbyssOccluder {
             }
         }
 
-        bufferSource.endBatch(RenderTypes.entityTranslucent(WHITE_TEXTURE))
+        bufferSource.endBatch(renderType)
         poseStack.popPose()
+
+        val iter = chunkFadeProgress.long2FloatEntrySet().iterator()
+        while (iter.hasNext()) {
+            val entry = iter.next()
+            if (!activeKeysThisFrame.contains(entry.longKey)) {
+                iter.remove()
+            }
+        }
     }
 
-    
     private fun chunkKey(cx: Int, cz: Int): Long {
         val chunkX = cx shr 4
         val chunkZ = cz shr 4

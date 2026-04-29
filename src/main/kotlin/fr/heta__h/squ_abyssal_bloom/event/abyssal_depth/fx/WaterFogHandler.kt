@@ -40,12 +40,8 @@ object WaterFogHandler {
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
-        var rawFactor = AbyssDepthCache.displayedDepthFactor
 
-        if (rawFactor <= 0.0) {
-            val realDepth = ModUtilities.getDepth(level, camPos)
-            rawFactor = ModUtilities.getDepthFactor(realDepth)
-        }
+        var rawFactor = AbyssDepthCache.displayedDepthFactor
 
         if (rawFactor <= 0.0) return
 
@@ -73,20 +69,14 @@ object WaterFogHandler {
         val level = entity.level()
         val camPos = BlockPos.containing(camera.position())
 
-        val isUnderwater = camera.fluidInCamera == FogType.WATER
-
-        if (!isUnderwater) return
+        if (camera.fluidInCamera != FogType.WATER) return
         if (entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
-        var rawFactor = AbyssDepthCache.displayedDepthFactor
 
-        if (rawFactor <= 0.0) {
-            val realDepth = ModUtilities.getDepth(level, camPos)
-            rawFactor = ModUtilities.getDepthFactor(realDepth)
-        }
+        val rawFactor = AbyssDepthCache.displayedDepthFactor
 
-        val safeFactor = maxOf(0.0, rawFactor)
+        val safeFactor = rawFactor.coerceIn(0.0, 1.0)
         val depthEased = safeFactor.pow(0.3).toFloat()
 
         val shaderMode = ModConfig.shaderCompatModeOverride || ShaderCompatDetector.isShadersActive()

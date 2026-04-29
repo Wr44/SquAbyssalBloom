@@ -13,6 +13,8 @@ object ModSounds {
     val SOUNDS: DeferredRegister<SoundEvent> =
         DeferredRegister.create(Registries.SOUND_EVENT, Squ_abyssal_bloom.ID)
 
+
+    
     val BARNACLE_AMBIENT = SOUNDS.register("barnacle_ambient") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
@@ -30,6 +32,16 @@ object ModSounds {
     }
 
     val BARNACLE_CLOSE_MOUTH = SOUNDS.register("barnacle_close_mouth") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    
+
+    val BUBBLE_PROJECTILE_BURST = SOUNDS.register("bubble_projectile_burst") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BUBBLE_PROJECTILE_BOUNCING = SOUNDS.register("bubble_projectile_bouncing") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 
