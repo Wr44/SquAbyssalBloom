@@ -6,6 +6,7 @@ import net.minecraft.network.codec.ByteBufCodecs
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 import net.minecraft.resources.Identifier
+import net.neoforged.neoforge.network.handling.IPayloadContext
 
 data class FocalistBeamSyncPayload(val shooterId: Int, val targetId: Int, val isShooting: Boolean) : CustomPacketPayload {
 
@@ -18,6 +19,12 @@ data class FocalistBeamSyncPayload(val shooterId: Int, val targetId: Int, val is
             ByteBufCodecs.BOOL, FocalistBeamSyncPayload::isShooting,
             ::FocalistBeamSyncPayload
         )
+
+        fun handle(payload: FocalistBeamSyncPayload, context: IPayloadContext) {
+            context.enqueueWork {
+                ClientBeamHandler.handleBeamSync(payload)
+            }
+        }
     }
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = ID

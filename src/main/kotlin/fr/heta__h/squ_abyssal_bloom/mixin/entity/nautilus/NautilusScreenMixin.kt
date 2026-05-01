@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
+import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerScreenAccessor
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.inventory.AbstractMountInventoryScreen
@@ -39,14 +40,14 @@ abstract class NautilusScreenMixin {
                 guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, vanillaSlotSprite, renderX, renderY, 18, 18)
 
             } else if (isHovering) {
-                val customHoverTexture = Identifier.fromNamespaceAndPath("squ_abyssal_bloom", "textures/gui/nautilus_extra_slot_empty_hover.png")
+                val customHoverTexture = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "textures/gui/nautilus_extra_slot_empty_hover.png")
                 guiGraphics.blit(
                     RenderPipelines.GUI_TEXTURED, customHoverTexture,
                     renderX, renderY, 0f, 0f, 18, 18, 18, 18
                 )
 
             } else {
-                val customEmptyTexture = Identifier.fromNamespaceAndPath("squ_abyssal_bloom", "textures/gui/nautilus_extra_slot_empty.png")
+                val customEmptyTexture = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "textures/gui/nautilus_extra_slot_empty.png")
                 guiGraphics.blit(
                     RenderPipelines.GUI_TEXTURED, customEmptyTexture,
                     renderX, renderY, 0f, 0f, 18, 18, 18, 18

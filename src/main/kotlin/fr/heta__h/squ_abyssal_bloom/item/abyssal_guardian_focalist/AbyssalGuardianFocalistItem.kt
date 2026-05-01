@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist
 
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.FocalistBeamSyncPayload
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.playSoundLocal
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.hasClearPath
@@ -21,6 +22,7 @@ import net.minecraft.world.item.ItemUseAnimation
 import net.minecraft.world.level.Level
 import net.neoforged.neoforge.network.PacketDistributor
 import java.lang.Math.clamp
+import java.lang.Math.random
 import java.lang.Math.toRadians
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -133,10 +135,10 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         if (duration == actualMinCharge) {
             playSoundLocal(
                 entity,
-                SoundEvents.TRIDENT_RETURN,
+                ModSounds.ABYSSAL_GUARDIAN_FOCALIST_READY.value(),
                 SoundSource.PLAYERS,
                 0.75f,
-                2f
+                1.5f + 0.5f*random().toFloat()
             )
         }
 
@@ -144,7 +146,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
             if (!level.isClientSide) entity.releaseUsingItem()
         }
 
-        if (duration % 20 == 0) {
+        if (duration % 30 == 0) {
             level.playSound(
                 null,
                 entity.x, entity.y, entity.z,

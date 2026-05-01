@@ -19,10 +19,12 @@ import net.minecraft.resources.Identifier
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemDisplayContext
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
 
 class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
     renderer: RenderLayerParent<S, M>,
-    private val lampModel: NautilusLampModel
+    private val lampModel: NautilusLampModel,
+    private val bubbleModel: NautilusBubbleSpitterModel
 ) : RenderLayer<S, M>(renderer) {
 
     companion object {
@@ -31,8 +33,14 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
             "textures/entity/nautilus_lamp/nautilus_lamp.png"
         )
 
-        val NAUTILUS_LAMP: Item = ModItems.NAUTILUS_LAMP.get()
+        private val TEXTURE_BUBBLE = Identifier.fromNamespaceAndPath(
+            Squ_abyssal_bloom.ID,
+            "textures/entity/nautilus_bubble_spitter/nautilus_bubble_spitter.png"
+        )
+
+        val LAMP: Item = ModItems.NAUTILUS_LAMP.get()
         val SHIELD: Item = ModItems.BARBED_NAUTILUS_SCALE.get()
+        val BUBBLE: Item = Items.SHIELD
     }
 
     override fun submit(
@@ -49,9 +57,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
         when (extraItem.item) {
 
-            NAUTILUS_LAMP -> {
-                val renderType = RenderTypes.entityCutout(TEXTURE_NAUTILUS_LAMP)
-
+            LAMP -> {
                 poseStack.pushPose()
                 this.parentModel.setupAnim(state)
 
@@ -59,7 +65,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                     lampModel,
                     state,
                     poseStack,
-                    renderType,
+                    RenderTypes.entityCutout(TEXTURE_NAUTILUS_LAMP),
                     packedLight,
                     OverlayTexture.NO_OVERLAY,
                     0,
@@ -68,7 +74,8 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                 poseStack.popPose()
             }
 
-            SHIELD -> { poseStack.pushPose()
+            SHIELD -> {
+                poseStack.pushPose()
                 this.parentModel.setupAnim(state)
 
                 val dummyRenderStack = ItemStack(ModItems.BARBED_NAUTILUS_SCALE_DISPLAY.get())
@@ -92,6 +99,36 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                     OverlayTexture.NO_OVERLAY,
                     0
                 )
+                poseStack.popPose()
+            }
+
+            BUBBLE -> {
+                poseStack.pushPose()
+                this.parentModel.setupAnim(state)
+
+                collector.submitModel(
+                    bubbleModel,
+                    state,
+                    poseStack,
+                    RenderTypes.entityTranslucent(TEXTURE_BUBBLE),
+                    packedLight,
+                    OverlayTexture.NO_OVERLAY,
+                    0,
+                    null
+                )
+
+                if (extraItem.hasFoil()) {
+                    collector.submitModel(
+                        bubbleModel,
+                        state,
+                        poseStack,
+                        RenderTypes.entityGlint(),
+                        packedLight,
+                        OverlayTexture.NO_OVERLAY,
+                        0,
+                        null
+                    )
+                }
 
                 poseStack.popPose()
             }

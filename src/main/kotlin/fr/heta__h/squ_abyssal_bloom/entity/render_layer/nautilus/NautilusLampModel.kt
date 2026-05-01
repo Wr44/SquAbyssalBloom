@@ -65,7 +65,6 @@ class NautilusLampModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(m
 
         val LAMP_ANIMATION: net.minecraft.client.animation.AnimationDefinition =
             net.minecraft.client.animation.AnimationDefinition.Builder.withLength(2.0f).looping()
-                
                 .build()
 
         fun createBodyLayer(): LayerDefinition {

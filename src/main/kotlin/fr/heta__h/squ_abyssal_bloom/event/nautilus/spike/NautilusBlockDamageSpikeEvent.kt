@@ -34,7 +34,7 @@ object NautilusBlockDamageSpikeEvent {
             .subtract(entity.position())
             .normalize()
 
-        val lookVec = entity.lookAngle
+        val lookVec = entity.deltaMovement.normalize()
 
         val dot = lookVec.dot(toAttacker)
 

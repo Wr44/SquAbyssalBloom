@@ -118,7 +118,7 @@ object ModUtilities {
         val vehicle = entity.vehicle
         if (vehicle is AbstractNautilus) {
             val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (!extra.isEmpty && extra.item == NautilusLayer.NAUTILUS_LAMP) return 1.0
+            if (!extra.isEmpty && extra.item == NautilusLayer.LAMP) return 1.0
         }
         return 0.0
     }
@@ -129,8 +129,9 @@ object ModUtilities {
 
         val item = stack.item
         return item in listOf(
-            NautilusLayer.NAUTILUS_LAMP,
-            NautilusLayer.SHIELD
+            NautilusLayer.LAMP,
+            NautilusLayer.SHIELD,
+            NautilusLayer.BUBBLE
         )
     }
 
@@ -143,7 +144,7 @@ object ModUtilities {
         var maxFound = 0.0
         for (entity in nautili) {
             val extra = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (extra.item == NautilusLayer.NAUTILUS_LAMP) {
+            if (extra.item == NautilusLayer.LAMP) {
                 val dist = entity.position().distanceTo(Vec3(pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble()))
                 val influence = (1.0 - dist / maxRange).coerceIn(0.0, 1.0) * maxInfluence
                 if (influence > maxFound) maxFound = influence

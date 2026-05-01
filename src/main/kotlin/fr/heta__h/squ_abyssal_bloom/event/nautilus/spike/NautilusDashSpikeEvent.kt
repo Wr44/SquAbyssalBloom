@@ -74,29 +74,10 @@ object NautilusDashSpikeEvent {
                     continue
                 }
 
-                val didHurt = target.hurtServer(level, entity.damageSources().mobAttack(entity), calculatedDamage)
+                val didHurt = target.hurtServer(level, entity.damageSources().mobAttack(entity.controllingPassenger ?: entity), calculatedDamage)
 
                 if (didHurt) {
                     hitTracker[target] = currentTick
-
-                    val healAmount = calculatedDamage * VAMPIRISM_RATIO
-                    if (entity.health < entity.maxHealth) {
-                        entity.heal(healAmount)
-
-                        level.sendParticles(
-                            ParticleTypes.HEART,
-                            entity.x, entity.y + (entity.bbHeight / 1.5), entity.z,
-                            3,
-                            0.3, 0.2, 0.3,
-                            0.0
-                        )
-
-                        level.sendParticles(
-                            ParticleTypes.DAMAGE_INDICATOR,
-                            target.x, target.y + (target.bbHeight / 2.0), target.z,
-                            5, 0.2, 0.2, 0.2, 0.1
-                        )
-                    }
 
                     val deltaX = entity.x - target.x
                     val deltaZ = entity.z - target.z
@@ -128,6 +109,8 @@ object NautilusDashSpikeEvent {
                     entity.playSound(SoundEvents.SPEAR_HIT.value(), SOUND_VOLUME, dynamicPitch)
 
                     extraItemStack.hurtAndBreak(DURABILITY_LOSS_PER_HIT, entity, EquipmentSlot.BODY)
+
+                    entity.setData(ModAttachments.NAUTILUS_EXTRA_SLOT.get(), extraItemStack)
                 }
             }
         }

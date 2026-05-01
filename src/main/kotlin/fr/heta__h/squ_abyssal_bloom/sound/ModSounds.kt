@@ -45,6 +45,25 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val BUBBLE_PROJECTILE_STAGE_UP = SOUNDS.register("bubble_projectile_stage_up") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BUBBLE_PROJECTILE_LAUNCH = SOUNDS.register("bubble_projectile_launch") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+
+    
+
+    
+
+    val ABYSSAL_GUARDIAN_FOCALIST_READY = SOUNDS.register("abyssal_guardian_focalist_ready") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+
+
     fun register(eventBus: IEventBus) {
         SOUNDS.register(eventBus)
     }

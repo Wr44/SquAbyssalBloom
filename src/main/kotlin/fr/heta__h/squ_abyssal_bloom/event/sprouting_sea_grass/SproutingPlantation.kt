@@ -6,10 +6,12 @@ import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 import net.minecraft.sounds.SoundSource
+import net.minecraft.world.InteractionResult
 import net.minecraft.world.item.Items
 import net.minecraft.world.level.block.Blocks
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
 
 @EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
@@ -24,18 +26,28 @@ object SproutingPlantation {
         val face = event.face ?: return
 
         if (!stack.`is`(Items.SEAGRASS)) return
-        if (stack.get(ModDataComponents.IS_SPROUTING.get()) != true) return
 
         val placePos = clickedPos.relative(face)
+        val placeState = level.getBlockState(placePos)
 
-        if (level.getBlockState(placePos).block == ModBlocks.SPROUTING_SEAGRASS.get()) return
+        if (placeState.block == ModBlocks.SPROUTING_SEAGRASS.get()) {
+            event.isCanceled = true
+            event.cancellationResult = InteractionResult.CONSUME
+            return
+        }
+
+        if (stack.get(ModDataComponents.IS_SPROUTING.get()) != true) return
+
+        event.isCanceled = true
+        event.cancellationResult = InteractionResult.CONSUME
+
+        if (placeState.`is`(Blocks.SEAGRASS) || placeState.`is`(Blocks.TALL_SEAGRASS)) return
 
         val fluidState = level.getFluidState(placePos)
         if (!fluidState.isSource) return
         if (!fluidState.`is`(net.minecraft.tags.FluidTags.WATER)) return
 
-        val targetState = level.getBlockState(placePos)
-        if (!targetState.canBeReplaced()) return
+        if (!placeState.canBeReplaced()) return
 
         val groundPos = placePos.below()
         val groundState = level.getBlockState(groundPos)
@@ -45,26 +57,16 @@ object SproutingPlantation {
         if (!customState.canSurvive(level, placePos)) return
 
         if (!level.isClientSide) {
-            level.setBlock(
-                placePos,
-                ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState(),
-                3
-            )
-
-            if (!player.abilities.instabuild) {
-                stack.shrink(1)
-            }
-            val sound = ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState().soundType
+            level.setBlock(placePos, customState, 3)
+            if (!player.abilities.instabuild) stack.shrink(1)
+            val sound = customState.soundType
             level.playSound(null, placePos, sound.placeSound, SoundSource.BLOCKS, (sound.volume + 1.0f) / 2.0f, sound.pitch * 0.8f)
+            player.swing(event.hand)
         }
-
-        player.swing(event.hand)
-        event.isCanceled = true
     }
 
-
     @SubscribeEvent
-    fun onItemTooltip(event: net.neoforged.neoforge.event.entity.player.ItemTooltipEvent) {
+    fun onItemTooltip(event: ItemTooltipEvent) {
         val stack = event.itemStack
 
         if (stack.`is`(Items.SEAGRASS) && stack.get(ModDataComponents.IS_SPROUTING.get()) == true) {

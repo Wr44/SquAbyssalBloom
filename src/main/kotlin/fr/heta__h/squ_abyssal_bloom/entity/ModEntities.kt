@@ -14,6 +14,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikesLayer
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusBubbleSpitterModel
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
 import net.minecraft.client.model.EntityModel
@@ -131,6 +132,11 @@ object ModEntities {
             NautilusLampModel.LAYER_LOCATION,
             NautilusLampModel::createBodyLayer
         )
+
+        event.registerLayerDefinition(
+            NautilusBubbleSpitterModel.LAYER_LOCATION,
+            NautilusBubbleSpitterModel::createBodyLayer
+        )
     }
 
 
@@ -142,13 +148,13 @@ object ModEntities {
     fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
         val spikeModel = GuardianSpikeModel(event.entityModels.bakeLayer(GuardianSpikeModel.LAYER_LOCATION))
         val lampModel = NautilusLampModel(event.entityModels.bakeLayer(NautilusLampModel.LAYER_LOCATION))
-
+        val bubbleModel = NautilusBubbleSpitterModel(event.entityModels.bakeLayer(NautilusBubbleSpitterModel.LAYER_LOCATION))
 
         
         for (entityType in BuiltInRegistries.ENTITY_TYPE) {
             val renderer = event.getRenderer(entityType)
 
-            if (renderer is LivingEntityRenderer<*,*,*>) {
+            if (renderer is LivingEntityRenderer<*, *, *>) {
                 @Suppress("UNCHECKED_CAST")
                 val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
                 livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
@@ -156,20 +162,18 @@ object ModEntities {
         }
 
         for (entityType in event.skins) {
-
             val playerRenderer = event.getPlayerRenderer<AvatarRenderer<AbstractClientPlayer>>(entityType)
 
             if (playerRenderer != null) {
                 @Suppress("UNCHECKED_CAST")
                 val castedRenderer = playerRenderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
-
                 castedRenderer.addLayer(GuardianSpikesLayer(castedRenderer, spikeModel))
             }
         }
 
         BARNACLE.get().let { entityType ->
             val renderer = event.getRenderer(entityType)
-            if (renderer is LivingEntityRenderer<*,*,*>) {
+            if (renderer is LivingEntityRenderer<*, *, *>) {
                 @Suppress("UNCHECKED_CAST")
                 val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
                 livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
@@ -178,28 +182,26 @@ object ModEntities {
 
         GHOST_CHIMAERA.get().let { entityType ->
             val renderer = event.getRenderer(entityType)
-            if (renderer is LivingEntityRenderer<*,*,*>) {
+            if (renderer is LivingEntityRenderer<*, *, *>) {
                 @Suppress("UNCHECKED_CAST")
                 val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
                 livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
             }
         }
 
-
         
         val nautilusRenderer = listOf(event.getRenderer(EntityType.NAUTILUS), event.getRenderer(EntityType.ZOMBIE_NAUTILUS))
         for (renderer in nautilusRenderer) {
             if (renderer is LivingEntityRenderer<*, *, *>) {
                 @Suppress("UNCHECKED_CAST")
-                val livingRenderer =
-                    renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
+                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
 
-                livingRenderer.addLayer(NautilusLayer(livingRenderer, lampModel))
-
+                livingRenderer.addLayer(NautilusLayer(livingRenderer, lampModel, bubbleModel))
                 livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
             }
         }
     }
+
 
     fun register(eventBus: IEventBus) {
         ENTITY_TYPES.register(eventBus)
