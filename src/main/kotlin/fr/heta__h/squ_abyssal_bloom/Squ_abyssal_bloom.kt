@@ -8,10 +8,10 @@ import fr.heta__h.squ_abyssal_bloom.effect.ModPotions
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
-import fr.heta__h.squ_abyssal_bloom.particle.MarineSnowParticleProvider
+import fr.heta__h.squ_abyssal_bloom.particle.marine_snow.MarineSnowParticleProvider
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import net.minecraft.client.renderer.ItemBlockRenderTypes
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer
 import net.neoforged.bus.api.SubscribeEvent

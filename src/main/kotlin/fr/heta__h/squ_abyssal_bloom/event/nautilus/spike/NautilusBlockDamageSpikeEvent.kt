@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.event.nautilus.spike
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel

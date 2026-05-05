@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.render
 
-import fr.heta__h.squ_abyssal_bloom.accesor.AddPropertiesToRenderState
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.accessor.AddPropertiesToRenderState
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.world.entity.LivingEntity

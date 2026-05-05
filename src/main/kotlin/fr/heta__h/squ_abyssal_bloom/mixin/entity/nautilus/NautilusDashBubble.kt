@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer

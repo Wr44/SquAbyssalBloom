@@ -7,7 +7,6 @@ import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
-import fr.heta__h.squ_abyssal_bloom.util.EntityConfigRenderer
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen

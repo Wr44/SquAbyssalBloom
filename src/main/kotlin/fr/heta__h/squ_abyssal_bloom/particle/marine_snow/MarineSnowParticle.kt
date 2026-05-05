@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.particle
+package fr.heta__h.squ_abyssal_bloom.particle.marine_snow
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache

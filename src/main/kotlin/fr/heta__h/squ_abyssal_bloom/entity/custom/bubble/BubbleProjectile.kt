@@ -270,6 +270,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         burst()
     }
 
+    fun burstNoSplit() = burst()
+
     private fun spawnChildBubbles() {
         val level = level() as? ServerLevel ?: return
         val childStage = bubbleStage - 1

@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity
 import dev.lambdaurora.lambdynlights.api.entity.luminance.EntityLuminance
 import dev.lambdaurora.lambdynlights.api.item.ItemLightSourceManager
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer.Companion.LAMP
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import net.minecraft.resources.Identifier
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus

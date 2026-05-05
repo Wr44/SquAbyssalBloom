@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.particle
+package fr.heta__h.squ_abyssal_bloom.particle.marine_snow
 
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.particle.Particle

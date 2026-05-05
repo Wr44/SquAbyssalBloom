@@ -1,6 +1,5 @@
-package fr.heta__h.squ_abyssal_bloom.util
+package fr.heta__h.squ_abyssal_bloom.attachment
 
-import com.mojang.serialization.Codec
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import net.minecraft.network.codec.ByteBufCodecs
 import net.minecraft.world.item.ItemStack
@@ -8,7 +7,6 @@ import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.attachment.AttachmentType
 import net.neoforged.neoforge.registries.DeferredRegister
 import net.neoforged.neoforge.registries.NeoForgeRegistries
-import java.util.function.Supplier
 
 object ModAttachments {
     val ATTACHMENTS = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, Squ_abyssal_bloom.ID)

@@ -4,7 +4,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
-import fr.heta__h.squ_abyssal_bloom.accesor.AddPropertiesToRenderState
+import fr.heta__h.squ_abyssal_bloom.accessor.AddPropertiesToRenderState
 import net.minecraft.client.Minecraft
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.SubmitNodeCollector

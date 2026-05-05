@@ -4,7 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.network.bubble.C2SBubbleChargeStartPacket
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus

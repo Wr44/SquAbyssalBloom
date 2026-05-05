@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.util
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer

@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource

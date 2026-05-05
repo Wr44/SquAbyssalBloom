@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.accesor
+package fr.heta__h.squ_abyssal_bloom.accessor
 
 import net.minecraft.world.item.ItemStack
 

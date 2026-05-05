@@ -4,7 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile.Companion.stageFor
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
@@ -27,10 +27,10 @@ object NautilusBubbleHud {
         0xFF0033CC.toInt(),
     )
     private const val OVERCHARGE_TINT  = 0xFFFF4444.toInt()
-    private const val COOLDOWN_TINT    = 0xFF888888.toInt()
-    private const val BAR_WIDTH        = 182
-    private const val BAR_HEIGHT       = 5
-    private const val COOLDOWN_TICKS   = 40
+    private const val COOLDOWN_TINT = 0xFF888888.toInt()
+    private const val BAR_WIDTH = 182
+    private const val BAR_HEIGHT = 5
+    private const val COOLDOWN_TICKS = 40
 
     private var cooldownEndGameTime = 0L
     private var prevDashing = false

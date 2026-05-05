@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerMenuAccessor
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.playSoundLocal
