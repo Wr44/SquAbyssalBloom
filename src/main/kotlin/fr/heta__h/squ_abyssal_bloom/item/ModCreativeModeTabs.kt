@@ -31,6 +31,7 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.BARBED_NAUTILUS_SCALE.get())
                 output.accept(ModItems.ABYSSAL_GUARDIAN_FOCALIST.get())
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
+                output.accept(ModItems.BRINE_SPAWN_EGG.get())
             }
             .build()
     }

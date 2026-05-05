@@ -34,13 +34,12 @@ object NautilusBubbleSlowHandler {
                 speedAttribute.addTransientModifier(
                     AttributeModifier(
                         modifierId,
-                        -0.3, 
+                        -0.8,
                         AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
                     )
                 )
             }
         } else {
-            
             if (speedAttribute.getModifier(modifierId) != null) {
                 speedAttribute.removeModifier(modifierId)
             }

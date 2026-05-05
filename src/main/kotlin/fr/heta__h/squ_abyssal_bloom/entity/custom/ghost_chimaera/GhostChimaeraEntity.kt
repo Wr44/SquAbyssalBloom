@@ -76,7 +76,7 @@ class GhostChimaeraEntity(type: EntityType<out AgeableWaterCreature>, level: Lev
         } else {
             timeExposedInAir++
             if (timeExposedInAir >= 200) {
-                hurt(damageSources().drown(), 2.0f)
+                hurtServer(level() as ServerLevel, damageSources().drown(), 2.0f)
             }
         }
     }

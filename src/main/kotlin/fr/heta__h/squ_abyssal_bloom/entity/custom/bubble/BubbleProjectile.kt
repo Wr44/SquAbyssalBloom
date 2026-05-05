@@ -11,7 +11,6 @@ import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.sounds.SoundSource
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityDimensions
@@ -32,10 +31,41 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     Projectile(entityType, level) {
 
     companion object {
+        
         const val TICKS_TO_STAGE_1 = 12
         const val TICKS_TO_STAGE_2 = 26
-        const val TICKS_TO_STAGE_3 = 42
         const val TICKS_TO_OVERCHARGE = 55
+
+        
+        const val HELD_DIST_BASE = 1.3
+        const val HELD_DIST_PER_STAGE = 0.65
+        const val HELD_HEIGHT_DIVISOR = 3.0
+
+        
+        const val CHILD_OFFSET_DIST_RATIO = 0.25
+        const val CHILD_BURST_SPEED_MIN = 0.5
+        const val CHILD_BURST_SPEED_RANGE = 0.5
+        const val CHILD_PARENT_MOMENTUM_RETAIN = 0.3
+        const val NUM_CHILDREN = 2
+
+        
+        const val BOUNCE_NUDGE_SCALE = 0.1
+        const val BOUNCE_SPEED_RETENTION = 0.6
+        const val MAX_BOUNCES = 2
+
+        
+        const val BURST_MIN_DIST = 0.01
+
+        
+        const val TRAIL_PARTICLE_CHANCE = 0.6f
+        const val TRAIL_PARTICLE_VELOCITY_DAMPEN = 0.3
+
+        
+        const val SPAWN_COOLDOWN_TICKS = 10
+        const val INTER_BUBBLE_COOLDOWN_TICKS = 10
+        const val ENTITY_SCAN_INFLATE = 0.1
+        const val KNOCKBACK_MIN_NY = 0.1
+        const val BURST_EVENT_ID: Byte = 77
 
         val STAGES = arrayOf(
             BubbleStageData(
@@ -58,21 +88,18 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             ),
         )
 
+        fun stageFor(ticks: Int) = when {
+            ticks < TICKS_TO_STAGE_1 -> 0
+            ticks < TICKS_TO_STAGE_2 -> 1
+            else -> 2
+        }
+
         private val BUBBLE_STAGE: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
         private val IS_HELD: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.BOOLEAN)
         private val HOLD_TICKS_SYNC: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
-
-        const val ENTITY_SCAN_INFLATE = 0.1
-        const val KNOCKBACK_MIN_NY = 0.1
-        const val BOUNCE_SPEED_RETENTION = 0.6
-        const val MAX_BOUNCES = 2
-        const val TRAIL_PARTICLE_CHANCE = 0.6f
-        const val SPAWN_COOLDOWN_TICKS = 10
-        const val INTER_BUBBLE_COOLDOWN_TICKS = 10
-        const val BURST_EVENT_ID: Byte = 77
     }
 
     var releaseYaw: Float = 0f
@@ -183,11 +210,11 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         val yawRad = Math.toRadians(controller.yRot.toDouble())
         val dirX = -sin(yawRad)
         val dirZ =  cos(yawRad)
-        val dist = 1.3 + bubbleStage * 0.65
+        val dist = HELD_DIST_BASE + bubbleStage * HELD_DIST_PER_STAGE
 
         setPos(
             nautilus.x + dirX * dist,
-            nautilus.y + nautilus.bbHeight / 3.0,
+            nautilus.y + nautilus.bbHeight / HELD_HEIGHT_DIVISOR,
             nautilus.z + dirZ * dist
         )
 
@@ -230,7 +257,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             if (axis.z) -vel.z else vel.z,
         ).scale(BOUNCE_SPEED_RETENTION)
 
-        val nudge = deltaMovement.normalize().scale(0.1)
+        val nudge = deltaMovement.normalize().scale(BOUNCE_NUDGE_SCALE)
         setPos(x + nudge.x, y + nudge.y, z + nudge.z)
         bounceCount++
     }
@@ -246,9 +273,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     private fun spawnChildBubbles() {
         val level = level() as? ServerLevel ?: return
         val childStage = bubbleStage - 1
-        val numChildren = 2
 
-        for (i in 0 until numChildren) {
+        for (i in 0 until NUM_CHILDREN) {
             val child = BubbleProjectile(entityType, level)
             child.bubbleStage = childStage
 
@@ -257,17 +283,18 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             val dirZ = random.nextDouble() - 0.5
             val randomDir = Vec3(dirX, dirY, dirZ).normalize()
 
-            val offsetDist = stageData.size * 0.25
+            val offsetDist = stageData.size * CHILD_OFFSET_DIST_RATIO
             child.setPos(
                 x + randomDir.x * offsetDist,
                 y + randomDir.y * offsetDist,
                 z + randomDir.z * offsetDist
             )
 
-            val burstSpeed = 0.5 + random.nextDouble() * 0.5
-            child.deltaMovement = randomDir.scale(burstSpeed).add(deltaMovement.scale(0.3))
+            val burstSpeed = CHILD_BURST_SPEED_MIN + random.nextDouble() * CHILD_BURST_SPEED_RANGE
+            child.deltaMovement = randomDir.scale(burstSpeed).add(deltaMovement.scale(CHILD_PARENT_MOMENTUM_RETAIN))
 
             child.owner = owner
+            child.player = player
             child.interBubbleCooldown = SPAWN_COOLDOWN_TICKS
             child.holdTicks = holdTicks
             level.addFreshEntity(child)
@@ -303,7 +330,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 val dx = target.x - x
                 val dy = (target.y + target.eyeHeight) - y
                 val dz = target.z - z
-                val dist = sqrt(dx * dx + dy * dy + dz * dz).coerceAtLeast(0.01)
+                val dist = sqrt(dx * dx + dy * dy + dz * dz).coerceAtLeast(BURST_MIN_DIST)
 
                 target.hurtServer(lvl, bubbleBurstSource(), baseDamage)
                 target.deltaMovement = target.deltaMovement.add(
@@ -352,9 +379,9 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             x + sx * radius,
             y + bbHeight / 2.0 + sy * radius,
             z + sz * radius,
-            -vel.x * 0.3,
-            -vel.y * 0.3,
-            -vel.z * 0.3,
+            -vel.x * TRAIL_PARTICLE_VELOCITY_DAMPEN,
+            -vel.y * TRAIL_PARTICLE_VELOCITY_DAMPEN,
+            -vel.z * TRAIL_PARTICLE_VELOCITY_DAMPEN,
         )
     }
 
@@ -430,7 +457,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         super.readAdditionalSaveData(p_422548_)
         bubbleStage = p_422548_.getIntOr("BubbleStage", 0)
         bounceCount = p_422548_.getIntOr("BounceCount", 0)
-        if (isHeld) discard() 
+        if (isHeld) discard()
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
@@ -440,15 +467,15 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
     override fun isInvulnerable() = false
     override fun isPickable() = true
+    override fun shouldBeSaved() = !isHeld
 
     fun bubbleBurstSource(): DamageSource {
-
         return DamageSource(
             level().registryAccess()
                 .lookupOrThrow(Registries.DAMAGE_TYPE)
                 .getOrThrow(ModDamagesTypes.BUBBLE_BURST),
             this,
-            player ?: this
+            player ?: owner?.getEntity(level(), Entity::class.java)
         )
     }
 }

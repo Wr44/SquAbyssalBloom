@@ -35,7 +35,7 @@ object C2SBubbleChargeStartPacket : CustomPacketPayload {
             val nautilus = player.vehicle as? AbstractNautilus ?: return@enqueueWork
 
             if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) return@enqueueWork
-            if (nautilus.getJumpCooldown() > 0) return@enqueueWork
+            if (nautilus.jumpCooldown > 0) return@enqueueWork
 
             val level = nautilus.level() as? ServerLevel ?: return@enqueueWork
 

@@ -60,11 +60,9 @@ object SurfaceAbyssOccluder {
     private var cachedBands: List<LodBand> = emptyList()
     private var cachedRenderDist = -1
 
-    
     private val chunkFadeProgress = Long2FloatOpenHashMap(4096).apply {
         defaultReturnValue(0f)
     }
-    
     private val activeKeysThisFrame = it.unimi.dsi.fastutil.longs.LongOpenHashSet(4096)
     private var lastFrameNanos = 0L
     private const val FADE_SPEED = 2.5f
@@ -128,6 +126,9 @@ object SurfaceAbyssOccluder {
         var minSurface = Int.MAX_VALUE
 
         for ((bx, bz) in beams) {
+
+            if (!level.hasChunk(bx shr 4, bz shr 4)) continue
+
             val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz)
             var solidStreak = 0
 

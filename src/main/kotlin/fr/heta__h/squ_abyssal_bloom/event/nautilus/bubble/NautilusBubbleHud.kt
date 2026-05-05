@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
+import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile.Companion.stageFor
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.util.ModAttachments
 import net.minecraft.client.Minecraft
@@ -34,6 +35,9 @@ object NautilusBubbleHud {
     private var cooldownEndGameTime = 0L
     private var prevDashing = false
 
+    private var cachedHeldBubble: BubbleProjectile? = null
+    private var lastCacheTick = -1L
+
     @SubscribeEvent
     fun onRenderBar(event: RenderGuiLayerEvent.Pre) {
         if (event.name != VanillaGuiLayers.CONTEXTUAL_INFO_BAR) return
@@ -61,10 +65,14 @@ object NautilusBubbleHud {
 
         val barY = screenH - 29
 
-        val heldBubble = mc.level?.getEntitiesOfClass(
-            BubbleProjectile::class.java, nautilus.boundingBox.inflate(3.0)
-        ) { it.isHeld }?.firstOrNull()
+        if (gameTime != lastCacheTick) {
+            cachedHeldBubble = mc.level?.getEntitiesOfClass(
+                BubbleProjectile::class.java, nautilus.boundingBox.inflate(3.0)
+            ) { it.isHeld && !it.isRemoved }?.firstOrNull()
+            lastCacheTick = gameTime
+        }
 
+        val heldBubble = cachedHeldBubble
         val cooldownProgress = if (gameTime < cooldownEndGameTime)
             ((cooldownEndGameTime - gameTime).toFloat() / COOLDOWN_TICKS).coerceIn(0f, 1f)
         else 0f
@@ -85,7 +93,6 @@ object NautilusBubbleHud {
                 for (threshold in intArrayOf(
                     BubbleProjectile.TICKS_TO_STAGE_1,
                     BubbleProjectile.TICKS_TO_STAGE_2,
-                    BubbleProjectile.TICKS_TO_STAGE_3,
                 )) {
                     val sepX = barX + ((threshold.toFloat() / BubbleProjectile.TICKS_TO_OVERCHARGE) * BAR_WIDTH).toInt()
                     gui.fill(RenderPipelines.GUI, sepX, barY, sepX + 1, barY + BAR_HEIGHT, 0xCC000000.toInt())
@@ -109,9 +116,5 @@ object NautilusBubbleHud {
         event.isCanceled = true
     }
 
-    private fun stageFor(ticks: Int) = when {
-        ticks < BubbleProjectile.TICKS_TO_STAGE_1 -> 0
-        ticks < BubbleProjectile.TICKS_TO_STAGE_2 -> 1
-        else -> 2
-    }
+
 }

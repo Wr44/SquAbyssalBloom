@@ -38,7 +38,7 @@ abstract class NautilusDashBubble {
             BubbleProjectile::class.java, self.boundingBox.inflate(3.0)
         ) { it.isHeld && it.owner == self }.firstOrNull() ?: return
 
-        val ratio = (bubble.holdTicks.toDouble() / 55.0).coerceIn(0.0, 1.0)
+        val ratio = (bubble.holdTicks.toDouble() / BubbleProjectile.TICKS_TO_OVERCHARGE).coerceIn(0.0, 1.0)
         val controller = self.controllingPassenger ?: self
         val look = controller.lookAngle
 

@@ -110,7 +110,7 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             else -> textureStage1
         }
 
-        val renderType = RenderTypes.entityTranslucent(activeTexture)
+        val renderType = RenderTypes.entityCutoutNoCull(activeTexture)
 
         nodeCollector.submitCustomGeometry(poseStack, renderType) { pose, vertexConsumer ->
             val tempStack = PoseStack()

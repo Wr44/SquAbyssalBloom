@@ -1,7 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.fx
 
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.compat.ShaderCompatDetector
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -79,8 +78,7 @@ object WaterFogHandler {
         val safeFactor = rawFactor.coerceIn(0.0, 1.0)
         val depthEased = safeFactor.pow(0.3).toFloat()
 
-        val shaderMode = ModConfig.shaderCompatModeOverride || ShaderCompatDetector.isShadersActive()
-        val intensityScale = (ModConfig.fogDarknessIntensity * if (shaderMode) 0.6 else 1.0).toFloat()
+        val intensityScale = ModConfig.fogDarknessIntensity.toFloat()
 
         val finalTargetStart = TARGET_FOG_START_DEEP * intensityScale
         val finalTargetEnd = TARGET_FOG_END_DEEP * intensityScale

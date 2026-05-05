@@ -3,6 +3,8 @@ package fr.heta__h.squ_abyssal_bloom.entity
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineModel
+import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage1Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage2Model
@@ -11,6 +13,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraMo
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikesLayer
@@ -18,9 +21,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusBubbleS
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
 import net.minecraft.client.model.EntityModel
-import net.minecraft.client.player.AbstractClientPlayer
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
-import net.minecraft.client.renderer.entity.player.AvatarRenderer
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
@@ -74,6 +75,18 @@ object ModEntities {
                 .build(GHOAST_CHIMAERA_KEY)
         }
 
+    val BRINE_KEY: ResourceKey<EntityType<*>> =
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "brine"))
+
+    val BRINE: DeferredHolder<EntityType<*>, EntityType<BrineEntity>> =
+        ENTITY_TYPES.register("brine") { _: Identifier ->
+            EntityType.Builder.of({ type, level -> BrineEntity(type, level) }, MobCategory.MONSTER)
+                .sized(1f, 1.8f)
+                .clientTrackingRange(8)
+                .updateInterval(3)
+                .build(BRINE_KEY)
+        }
+
 
     val BUBBLE_KEY = ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_projectile"))
 
@@ -90,6 +103,7 @@ object ModEntities {
         
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
         event.registerEntityRenderer(GHOST_CHIMAERA.get() as EntityType<out GhostChimaeraEntity>, ::GhostChimaeraRenderer)
+        event.registerEntityRenderer(BRINE.get() as EntityType<out BrineEntity>, ::BrineRenderer)
 
         
         event.registerEntityRenderer(BUBBLE.get() as EntityType<out BubbleProjectile>, ::BubbleRenderer)
@@ -105,6 +119,11 @@ object ModEntities {
         event.registerLayerDefinition(
             GhostChimaeraModel.LAYER_LOCATION,
             GhostChimaeraModel::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            BrineModel.LAYER_LOCATION,
+            BrineModel::createBodyLayer
         )
 
         event.registerLayerDefinition(
@@ -143,65 +162,36 @@ object ModEntities {
     fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
         event.put(BARNACLE.get(), BarnacleEntity.createAttributes().build())
         event.put(GHOST_CHIMAERA.get(), GhostChimaeraEntity.createAttributes().build())
+        event.put(BRINE.get(), BrineEntity.createAttributes().build())
     }
 
     fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
         val spikeModel = GuardianSpikeModel(event.entityModels.bakeLayer(GuardianSpikeModel.LAYER_LOCATION))
         val lampModel = NautilusLampModel(event.entityModels.bakeLayer(NautilusLampModel.LAYER_LOCATION))
-        val bubbleModel = NautilusBubbleSpitterModel(event.entityModels.bakeLayer(NautilusBubbleSpitterModel.LAYER_LOCATION))
+        val bubbleModel =
+            NautilusBubbleSpitterModel(event.entityModels.bakeLayer(NautilusBubbleSpitterModel.LAYER_LOCATION))
 
-        
-        for (entityType in BuiltInRegistries.ENTITY_TYPE) {
-            val renderer = event.getRenderer(entityType)
+        @Suppress("UNCHECKED_CAST")
+        fun LivingEntityRenderer<*, *, *>.cast() =
+            this as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
 
-            if (renderer is LivingEntityRenderer<*, *, *>) {
-                @Suppress("UNCHECKED_CAST")
-                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
-                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
-            }
+        fun LivingEntityRenderer<*, *, *>.addSpikes() = cast().addLayer(GuardianSpikesLayer(cast(), spikeModel))
+        fun LivingEntityRenderer<*, *, *>.addNautilus() = cast().addLayer(NautilusLayer(cast(), lampModel, bubbleModel))
+
+        BuiltInRegistries.ENTITY_TYPE.forEach { entityType ->
+            (event.getRenderer(entityType) as? LivingEntityRenderer<*, *, *>)?.addSpikes()
+        }
+        event.skins.forEach { skin ->
+            (event.getPlayerRenderer(skin) as? LivingEntityRenderer<*, *, *>)?.addSpikes()
         }
 
-        for (entityType in event.skins) {
-            val playerRenderer = event.getPlayerRenderer<AvatarRenderer<AbstractClientPlayer>>(entityType)
+        listOf(EntityType.NAUTILUS, EntityType.ZOMBIE_NAUTILUS).forEach { entityType ->
+            (event.getRenderer(entityType) as? LivingEntityRenderer<*, *, *>)?.let {
+                it.addNautilus()
 
-            if (playerRenderer != null) {
-                @Suppress("UNCHECKED_CAST")
-                val castedRenderer = playerRenderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
-                castedRenderer.addLayer(GuardianSpikesLayer(castedRenderer, spikeModel))
-            }
-        }
-
-        BARNACLE.get().let { entityType ->
-            val renderer = event.getRenderer(entityType)
-            if (renderer is LivingEntityRenderer<*, *, *>) {
-                @Suppress("UNCHECKED_CAST")
-                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
-                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
-            }
-        }
-
-        GHOST_CHIMAERA.get().let { entityType ->
-            val renderer = event.getRenderer(entityType)
-            if (renderer is LivingEntityRenderer<*, *, *>) {
-                @Suppress("UNCHECKED_CAST")
-                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
-                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
-            }
-        }
-
-        
-        val nautilusRenderer = listOf(event.getRenderer(EntityType.NAUTILUS), event.getRenderer(EntityType.ZOMBIE_NAUTILUS))
-        for (renderer in nautilusRenderer) {
-            if (renderer is LivingEntityRenderer<*, *, *>) {
-                @Suppress("UNCHECKED_CAST")
-                val livingRenderer = renderer as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
-
-                livingRenderer.addLayer(NautilusLayer(livingRenderer, lampModel, bubbleModel))
-                livingRenderer.addLayer(GuardianSpikesLayer(livingRenderer, spikeModel))
             }
         }
     }
-
 
     fun register(eventBus: IEventBus) {
         ENTITY_TYPES.register(eventBus)

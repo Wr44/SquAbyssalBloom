@@ -17,24 +17,16 @@ object SurfaceHeightCache {
     private const val TTL_FAR = 80L
     private const val NEAR_THRESHOLD_SQ = 64f * 64f
 
-    
     private val cache = Long2LongOpenHashMap(8192).apply {
-        defaultReturnValue(-1L) 
+        defaultReturnValue(-1L)
     }
 
-    
     private var cleanupIterator: ObjectIterator<Long2LongMap.Entry>? = null
 
     private val mutPos = BlockPos.MutableBlockPos()
 
     private fun key(x: Int, z: Int): Long =
         (x.toLong() shl 32) or (z.toLong() and 0xFFFFFFFFL)
-
-    
-    
-    
-    
-    
 
     private fun pack(surfaceY: Int, floorY: Int, isValid: Boolean, tick: Long): Long {
         val sy = (surfaceY + 128).toLong() and 0xFFFL
@@ -49,7 +41,7 @@ object SurfaceHeightCache {
     fun unpackIsValidWater(data: Long): Boolean = ((data shr 24) and 1L) == 1L
     private fun unpackTick(data: Long): Long = (data ushr 25)
 
-    
+
     fun tick(gameTick: Long, camX: Int, camZ: Int) {
         if (cache.isEmpty()) return
 
@@ -83,7 +75,6 @@ object SurfaceHeightCache {
     fun getOrCompute(level: Level, cx: Int, cz: Int, step: Int, gameTick: Long, camX: Int, camZ: Int): Long {
         val k = key(cx, cz)
 
-        
         val existing = cache.get(k)
         if (existing != -1L) {
             val age = gameTick - unpackTick(existing)
@@ -92,6 +83,10 @@ object SurfaceHeightCache {
             val distSq = dx * dx + dz * dz
             val ttl = if (distSq < NEAR_THRESHOLD_SQ) TTL_NEAR else TTL_FAR
             if (age <= ttl) return existing
+        }
+
+        if (!level.hasChunk(cx shr 4, cz shr 4)) {
+            return pack(-1, 0, false, gameTick - TTL_FAR - 1)
         }
 
         var finalSurfaceY = -1
