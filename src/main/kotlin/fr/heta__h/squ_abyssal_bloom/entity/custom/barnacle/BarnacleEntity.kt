@@ -1234,8 +1234,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 deltaMovement = Vec3.ZERO
 
                 when (random.nextDouble()) {
-                    in 0.0..IDLE_DIR_CHANCE_1 ->
-                        setDirectionInData(getRandomDirection().normalize())
+                    in 0.0..IDLE_DIR_CHANCE_1 -> setDirectionInData(getRandomDirection().normalize())
 
                     in IDLE_DIR_CHANCE_1..IDLE_DIR_CHANCE_2 -> {
                         entityData.set(IS_IDLE, true)

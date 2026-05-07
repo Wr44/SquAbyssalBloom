@@ -49,7 +49,7 @@ object GuardianRedistributionDamage {
         val damageToApply = (damage * ratio).toFloat()
 
         if (damageToApply > 0.1f) {
-            attacker.hurtServer(level as ServerLevel,
+            attacker.hurtServer(attacker.level() as ServerLevel,
                 victim.damageSources().thorns(victim),
                 damageToApply
             )

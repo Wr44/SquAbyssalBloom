@@ -78,6 +78,5 @@ abstract class NautilusDashBubble {
         ci.cancel()
     }
 
-    private fun isBubbleMode(entity: AbstractNautilus) =
-        entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item == NautilusLayer.BUBBLE
+    private fun isBubbleMode(entity: AbstractNautilus) = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item == NautilusLayer.BUBBLE
 }

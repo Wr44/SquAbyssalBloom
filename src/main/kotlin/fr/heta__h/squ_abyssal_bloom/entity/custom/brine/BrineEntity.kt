@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.goal.Goal
@@ -28,6 +29,7 @@ import net.minecraft.world.phys.Vec3
 import java.util.EnumSet
 import kotlin.math.atan2
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -45,24 +47,18 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     
     var directExitTimer = 0
     var directYTimer = 0
+    var knockbackTicks = 0
+    var climbingTicks = 0
 
     
     private var clientAnimPhase = CANIM_IDLE
     private var clientAnimTicks = 0
 
-    private var knockbackTicks = 0
 
     companion object {
-        
-        const val PHASE_IDLE = 0
-        const val PHASE_RUSH = 1
-        const val PHASE_START_ATTACK = 2
-        const val PHASE_LOOP_ATTACK = 3
-        const val PHASE_STOP_ATTACK = 4
-        const val PHASE_DIRECT_ATTACK = 5
-        const val ANIMATION_FPS = 20
 
         
+        const val ANIMATION_FPS = 20
         const val CANIM_IDLE = 0
         const val CANIM_STARTING = 1
         const val CANIM_LOOPING = 2
@@ -113,6 +109,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val DIRECT_EXIT_GRACE_TICKS = 15
         const val DIRECT_Y_GRACE_TICKS = 15
 
+        
         const val COLUMN_VS_DIRECT_Y_THRESHOLD = 2.0
 
         val CROSS_OFFSETS = listOf(0 to 0, 1 to 0, -1 to 0, 0 to 1, 0 to -1)
@@ -128,6 +125,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val PARTICLE_BUBBLE_SPREAD = 0.5
         const val PARTICLE_BUBBLE_SPEED_Y = 0.08
 
+        
         private val IS_MOVING: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BrineEntity::class.java, EntityDataSerializers.BOOLEAN)
         val COLUMN_ACTIVE: EntityDataAccessor<Boolean> =
@@ -197,16 +195,47 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         )
     }
 
-    fun moveToPlayerBlock(player: Player, xzDist: Double, speed: Double) {
+    fun moveToPlayerBlock(player: LivingEntity, xzDist: Double, speed: Double) {
         if (knockbackTicks > 0) return
-        if (xzDist <= SHADOW_STOP_DIST) { brakeHorizontal(); return }
+        if (xzDist <= SHADOW_STOP_DIST) {
+            brakeHorizontal()
+            return
+        }
         val targetX = floor(player.x) + 0.5
         val targetZ = floor(player.z) + 0.5
         val dx = targetX - x
         val dz = targetZ - z
-        deltaMovement = Vec3((dx / xzDist) * speed, deltaMovement.y, (dz / xzDist) * speed)
+        val dirX = dx / xzDist
+        val dirZ = dz / xzDist
+
+        val footY = floor(y).toInt()
+
+        fun blockedAt(dist: Double): Boolean {
+            val ax = floor(x + dirX * dist).toInt()
+            val az = floor(z + dirZ * dist).toInt()
+            val lv = level()
+
+            fun hasCollision(pos: BlockPos) = !lv.getBlockState(pos).getCollisionShape(lv, pos).isEmpty
+
+            val posF = BlockPos(ax, footY, az)
+            val posH = BlockPos(ax, footY + 1, az)
+            val posO = BlockPos(ax, footY + 2, az)
+
+            return (hasCollision(posF) || hasCollision(posH)) && !hasCollision(posO)
+        }
+
+        if (blockedAt(0.7) || blockedAt(1.2) || blockedAt(1.6)) {
+            climbingTicks = 6
+        } else if (climbingTicks > 0) {
+            climbingTicks--
+        }
+
+        val yVel = if (climbingTicks > 0) 0.15 else deltaMovement.y
+
+        deltaMovement = Vec3(dirX * speed, yVel, dirZ * speed)
         yRot = (atan2(dz, dx) * (180.0 / Math.PI)).toFloat() - 90f
-        yBodyRot = yRot; yHeadRot = yRot
+        yBodyRot = yRot
+        yHeadRot = yRot
     }
 
 
@@ -225,13 +254,13 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         playSound(ModSounds.BUBBLE_PROJECTILE_LAUNCH.get(), info.burstVolume, info.burstPitch)
     }
 
-    private fun fireDirectBubble(player: Player) {
+    private fun fireDirectBubble(player: LivingEntity) {
         val serverLevel = level() as? ServerLevel ?: return
         val stage = if (random.nextBoolean()) 0 else 1
         val yawRad = Math.toRadians(yRot.toDouble())
         val frontX = x - sin(yawRad) * DIRECT_SHOT_FRONT_OFFSET
         val frontY = y + bbHeight * 0.5
-        val frontZ = z + Math.cos(yawRad) * DIRECT_SHOT_FRONT_OFFSET
+        val frontZ = z + cos(yawRad) * DIRECT_SHOT_FRONT_OFFSET
         val dx = player.x - frontX
         val dy = (player.y + player.bbHeight * 0.5) - frontY
         val dz = player.z - frontZ
@@ -377,9 +406,11 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
     fun distanceToSolidFloor(): Double {
         val origin = blockPosition()
+        val lv = level()
         for (i in 0..HOVER_FLOOR_SCAN_DEPTH) {
             val pos = BlockPos(origin.x, origin.y - i, origin.z)
-            if (level().getBlockState(pos).isSolid) return y - (pos.y + 1.0)
+            if (!lv.getBlockState(pos).getCollisionShape(lv, pos).isEmpty)
+                return y - (pos.y + 1.0)
         }
         return (HOVER_FLOOR_SCAN_DEPTH + 1).toDouble()
     }
@@ -390,9 +421,9 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
             .coerceIn(-HOVER_FORCE_CLAMP, HOVER_FORCE_CLAMP)
     }
 
-    fun xzDistTo(player: Player): Double {
-        val dx = player.x - x
-        val dz = player.z - z
+    fun xzDistTo(entity: LivingEntity): Double {
+        val dx = entity.x - x
+        val dz = entity.z - z
         return sqrt(dx * dx + dz * dz)
     }
 
@@ -475,19 +506,19 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         init { flags = EnumSet.of(Flag.MOVE) }
 
         override fun canUse(): Boolean {
-            val p = target as? Player ?: return false
+            val p = target ?: return false
             return isInWater && xzDistTo(p) > ATTACK_ENTER_RADIUS
         }
 
         override fun canContinueToUse(): Boolean {
-            val p = target as? Player ?: return false
+            val p = target ?: return false
             return isInWater && xzDistTo(p) > ATTACK_ENTER_RADIUS
         }
 
         override fun requiresUpdateEveryTick() = true
 
         override fun tick() {
-            val p = target as? Player ?: return
+            val p = target ?: return
             moveToPlayerBlock(p, xzDistTo(p), SHADOW_SPEED)
         }
     }
@@ -499,13 +530,13 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         init { flags = EnumSet.of(Flag.MOVE) }
 
         override fun canUse(): Boolean {
-            val p = target as? Player ?: return false
+            val p = target ?: return false
             if (!isInWater) return false
             return xzDistTo(p) <= ATTACK_ENTER_RADIUS && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
         }
 
         override fun canContinueToUse(): Boolean {
-            val p = target as? Player ?: return false
+            val p = target ?: return false
             if (!isInWater) return false
             return xzDistTo(p) <= ATTACK_EXIT_RADIUS && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
         }
@@ -518,7 +549,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
         override fun tick() {
             if (bubbleCooldown > 0) bubbleCooldown--
-            val p = target as? Player ?: return
+            val p = target ?: return
             moveToPlayerBlock(p, xzDistTo(p), ATTACK_MOVE_SPEED)
             placeOrUpdateBubbleColumn()
             if (bubbleCooldown <= 0) {
@@ -539,13 +570,13 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         init { flags = EnumSet.of(Flag.MOVE) }
 
         override fun canUse(): Boolean {
-            val p = target as? Player ?: return false
+            val p = target ?: return false
             if (!isInWater) return false
             return xzDistTo(p) <= ATTACK_ENTER_RADIUS && (p.y - y) <= COLUMN_VS_DIRECT_Y_THRESHOLD
         }
 
         override fun canContinueToUse(): Boolean {
-            val p = target as? Player ?: return false
+            val p = target ?: return false
             if (!isInWater) return false
             if (xzDistTo(p) > ATTACK_EXIT_RADIUS && directExitTimer >= DIRECT_EXIT_GRACE_TICKS) return false
             if ((p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD && directYTimer >= DIRECT_Y_GRACE_TICKS) return false
@@ -562,7 +593,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
         override fun tick() {
             if (bubbleCooldown > 0) bubbleCooldown--
-            val p = target as? Player ?: return
+            val p = target ?: return
             val xzDist = xzDistTo(p)
             val aboveY = p.y - y
 

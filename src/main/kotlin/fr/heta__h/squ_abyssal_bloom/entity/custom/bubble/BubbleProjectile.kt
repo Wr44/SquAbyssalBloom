@@ -30,6 +30,23 @@ import kotlin.math.*
 class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: Level) :
     Projectile(entityType, level) {
 
+    data class BounceAxis(val x: Boolean, val y: Boolean, val z: Boolean)
+
+    data class BubbleStageData(
+        val size: Float,
+        val burstRadius: Double,
+        val burstDamage: Float,
+        val burstKnockback: Double,
+        val burstPitch: Float,
+        val burstVolume: Float,
+        val particleRings: Int,
+        val particlePerRing: Int,
+        val particleSplashCount: Int,
+        val dragLateral: Double,
+        val dragVertical: Double,
+        val buoyancy: Double,
+    )
+
     companion object {
         
         const val TICKS_TO_STAGE_1 = 12

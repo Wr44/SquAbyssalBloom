@@ -73,6 +73,7 @@ object SproutingPlantation {
             event.toolTip.add(
                 Component.translatable("tooltip.squ_abyssal_bloom.sprouting_gene")
                     .withStyle(ChatFormatting.AQUA, ChatFormatting.ITALIC)
-            )        }
+            )
+        }
     }
 }

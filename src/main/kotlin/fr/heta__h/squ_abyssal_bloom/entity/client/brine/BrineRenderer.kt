@@ -14,7 +14,7 @@ class BrineRenderer(context: EntityRendererProvider.Context) :
     MobRenderer<BrineEntity, BrineRenderState, BrineModel>(
         context,
         BrineModel(context.bakeLayer(BrineModel.LAYER_LOCATION)),
-        0.5f 
+        0.5f
     ) {
 
     companion object {

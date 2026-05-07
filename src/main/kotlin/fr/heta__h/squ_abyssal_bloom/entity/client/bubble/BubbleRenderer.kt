@@ -35,6 +35,7 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.extractRenderState(entity, state, partialTicks)
+        state.packedLight = getPackedLightCoords(entity, partialTicks)
         state.bubbleStage = entity.bubbleStage
         state.ageInTicks = entity.tickCount + partialTicks
         if (entity.isHeld) {
@@ -121,7 +122,7 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             activeModel.renderToBuffer(
                 tempStack,
                 vertexConsumer,
-                15728880,
+                renderState.packedLight,
                 OverlayTexture.NO_OVERLAY,
                 -1
             )

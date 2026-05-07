@@ -41,6 +41,10 @@ object ModItems {
         "prismarine_spike"
     ) { properties -> Item(properties) }
 
+    val BRINE_BUBBLES : DeferredItem<Item> = ITEMS.registerItem(
+        "brine_bubbles"
+    ) { properties -> Item(properties) }
+
     val NAUTILUS_LAMP : DeferredItem<Item> = ITEMS.registerItem(
         "nautilus_lamp"
     ) { properties -> Item(properties) }

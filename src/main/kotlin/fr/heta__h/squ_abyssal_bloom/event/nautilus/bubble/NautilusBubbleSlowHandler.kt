@@ -19,15 +19,20 @@ object NautilusBubbleSlowHandler {
     fun onEntityTickPost(event: EntityTickEvent.Post) {
         val nautilus = event.entity as? AbstractNautilus ?: return
 
-        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) return
+        val speedAttribute = nautilus.getAttribute(Attributes.MOVEMENT_SPEED) ?: return
+        val modifierId = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_slowdown")
+
+        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) {
+            if (speedAttribute.getModifier(modifierId) != null) {
+                speedAttribute.removeModifier(modifierId)
+            }
+            return
+        }
 
         val hasHeldBubble = nautilus.level().getEntitiesOfClass(
             BubbleProjectile::class.java,
             nautilus.boundingBox.inflate(4.0)
         ) { it.isHeld && it.owner == nautilus }.isNotEmpty()
-
-        val speedAttribute = nautilus.getAttribute(Attributes.MOVEMENT_SPEED) ?: return
-        val modifierId = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_slowdown")
 
         if (hasHeldBubble) {
             if (speedAttribute.getModifier(modifierId) == null) {

@@ -21,7 +21,6 @@ object NautilusBubbleKeyHandler {
     @SubscribeEvent
     fun onClientLevelTick(event: LevelTickEvent.Pre) {
         val mc = Minecraft.getInstance()
-        
         if (mc.isPaused) return
         val player = mc.player ?: run { chargePacketSent = false; return }
         val nautilus = player.vehicle as? AbstractNautilus ?: run { chargePacketSent = false; return }
@@ -44,7 +43,6 @@ object NautilusBubbleKeyHandler {
                 chargePacketSent = true
             }
         } else if (!jumpKeyDown) {
-            
             chargePacketSent = false
         }
     }

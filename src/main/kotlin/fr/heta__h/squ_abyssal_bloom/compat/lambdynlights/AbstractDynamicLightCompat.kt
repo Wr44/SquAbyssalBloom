@@ -7,9 +7,6 @@ abstract class AbstractDynamicLightCompat {
 
 
     companion object {
-        val hasDynLights: Boolean by lazy {
-            ModList.get().mods.any { it.modId.contains("lambdynlights", ignoreCase = true) }
-        }
         private var managerInstance: Any? = null
         private var addMethod: java.lang.reflect.Method? = null
         private var removeMethod: java.lang.reflect.Method? = null

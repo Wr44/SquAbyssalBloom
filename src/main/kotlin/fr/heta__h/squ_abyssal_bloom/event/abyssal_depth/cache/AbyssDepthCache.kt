@@ -26,7 +26,6 @@ object AbyssDepthCache {
         }
 
     val rawPhysicalDepth: Double get() = cachedPhysicalDepth
-    val displayedLampInfluence: Double get() = smoothedLampInfluence
 
     fun refreshIfNeeded(level: Level, camPos: BlockPos) {
         val now = System.nanoTime()
