@@ -36,7 +36,19 @@ object ModSounds {
     }
 
     
+    val BRINE_AMBIENT = SOUNDS.register("brine_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
 
+    val BRINE_DEATH = SOUNDS.register("brine_death") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BRINE_HURT = SOUNDS.register("brine_hurt") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    
     val BUBBLE_PROJECTILE_BURST = SOUNDS.register("bubble_projectile_burst") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }

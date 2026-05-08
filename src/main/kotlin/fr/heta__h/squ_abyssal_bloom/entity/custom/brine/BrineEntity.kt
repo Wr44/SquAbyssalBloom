@@ -10,6 +10,7 @@ import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.sounds.SoundEvent
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityType
@@ -165,11 +166,6 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     override fun knockback(strength: Double, x: Double, z: Double) {
         super.knockback(strength, x, z)
         knockbackTicks = 10
-    }
-
-    override fun playHurtSound(source: DamageSource) {
-        if (!isInWater) return
-        super.playHurtSound(source)
     }
 
     override fun die(damageSource: DamageSource) {
@@ -337,6 +333,25 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         loopAttackAnimationState.stop()
         stopAttackAnimationState.stop()
     }
+
+
+    override fun playHurtSound(source: DamageSource) {
+        if (!isInWater) return
+        super.playHurtSound(source)
+    }
+
+    override fun getAmbientSound(): SoundEvent? {
+        return ModSounds.BRINE_AMBIENT.get()
+    }
+
+    override fun getDeathSound(): SoundEvent {
+        return  ModSounds.BRINE_DEATH.get()
+    }
+
+    override fun getHurtSound(source: DamageSource): SoundEvent {
+        return ModSounds.BRINE_HURT.get()
+    }
+
 
     override fun tick() {
         super.tick()
