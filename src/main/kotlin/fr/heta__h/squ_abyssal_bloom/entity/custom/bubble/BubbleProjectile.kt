@@ -11,15 +11,21 @@ import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.sounds.SoundEvents
+import net.minecraft.sounds.SoundSource
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityDimensions
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.Leashable
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Pose
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
+import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.Projectile
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
@@ -48,41 +54,42 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     )
 
     companion object {
-        
         const val TICKS_TO_STAGE_1 = 12
         const val TICKS_TO_STAGE_2 = 26
         const val TICKS_TO_OVERCHARGE = 55
 
-        
         const val HELD_DIST_BASE = 1.3
         const val HELD_DIST_PER_STAGE = 0.65
         const val HELD_HEIGHT_DIVISOR = 3.0
 
-        
         const val CHILD_OFFSET_DIST_RATIO = 0.25
         const val CHILD_BURST_SPEED_MIN = 0.5
         const val CHILD_BURST_SPEED_RANGE = 0.5
         const val CHILD_PARENT_MOMENTUM_RETAIN = 0.3
         const val NUM_CHILDREN = 2
 
-        
         const val BOUNCE_NUDGE_SCALE = 0.1
         const val BOUNCE_SPEED_RETENTION = 0.6
         const val MAX_BOUNCES = 2
 
-        
         const val BURST_MIN_DIST = 0.01
 
-        
         const val TRAIL_PARTICLE_CHANCE = 0.6f
         const val TRAIL_PARTICLE_VELOCITY_DAMPEN = 0.3
 
-        
         const val SPAWN_COOLDOWN_TICKS = 10
         const val INTER_BUBBLE_COOLDOWN_TICKS = 10
         const val ENTITY_SCAN_INFLATE = 0.1
         const val KNOCKBACK_MIN_NY = 0.1
         const val BURST_EVENT_ID: Byte = 77
+
+        
+        const val LEASH_MAX_LENGTH = 5.0
+        const val LEASH_ROPE_STRENGTH = 0.4
+        const val LEASH_ROPE_MAX_FORCE = 0.6
+        const val LEASH_ROPE_MAX_VEL_Y = 0.4
+        const val LEASH_IDLE_PULL = 0.03
+        const val LEASH_IDLE_MAX_VEL_Y = 0.12
 
         val STAGES = arrayOf(
             BubbleStageData(
@@ -117,6 +124,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.BOOLEAN)
         private val HOLD_TICKS_SYNC: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
+        private val ATTACHED_PLAYER_ID: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
     }
 
     var releaseYaw: Float = 0f
@@ -127,6 +136,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         builder.define(BUBBLE_STAGE, 0)
         builder.define(IS_HELD, false)
         builder.define(HOLD_TICKS_SYNC, 0)
+        builder.define(ATTACHED_PLAYER_ID, -1)
     }
 
     var bubbleStage: Int
@@ -143,6 +153,10 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     var holdTicks: Int
         get() = entityData.get(HOLD_TICKS_SYNC)
         set(value) { entityData.set(HOLD_TICKS_SYNC, value) }
+
+    var attachedPlayerId: Int
+        get() = entityData.get(ATTACHED_PLAYER_ID)
+        set(value) { entityData.set(ATTACHED_PLAYER_ID, value) }
 
     private val stageData get() = STAGES[bubbleStage]
 
@@ -163,11 +177,54 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         if (interBubbleCooldown > 0) interBubbleCooldown--
 
         if (!isBoxFullySubmerged()) {
-            if (!level().isClientSide) burst()
+            if (!level().isClientSide) {
+                burst()
+                return
+            }
         } else {
             deltaMovement = deltaMovement.multiply(
                 stageData.dragLateral, stageData.dragVertical, stageData.dragLateral
             ).add(0.0, stageData.buoyancy, 0.0)
+        }
+
+        if (!level().isClientSide && attachedPlayerId != -1) {
+            val p = level().getEntity(attachedPlayerId) as? LivingEntity
+
+            if (p == null || !p.isAlive) {
+                detachWithLeash()
+            } else if (p.isShiftKeyDown) {
+                detachWithLeash()
+            } else {
+                val dx = x - p.x
+                val dy = y - p.y
+                val dz = z - p.z
+                val dist = sqrt(dx * dx + dy * dy + dz * dz)
+
+                if (dist > LEASH_MAX_LENGTH) {
+                    val excess = dist - LEASH_MAX_LENGTH
+                    val nx = dx / dist
+                    val ny = dy / dist
+                    val nz = dz / dist
+                    val speed = (excess * 0.5).coerceAtMost(2.0)
+                    p.deltaMovement = Vec3(
+                        p.deltaMovement.x * 0.2 + nx * speed,
+                        p.deltaMovement.y * 0.2 + ny * speed,
+                        p.deltaMovement.z * 0.2 + nz * speed
+                    )
+                    if (p is ServerPlayer) p.connection.send(ClientboundSetEntityMotionPacket(p))
+                } else {
+                    p.deltaMovement = Vec3(
+                        p.deltaMovement.x,
+                        (p.deltaMovement.y + LEASH_IDLE_PULL).coerceAtMost(LEASH_IDLE_MAX_VEL_Y),
+                        p.deltaMovement.z
+                    )
+                }
+
+                p.airSupply = p.maxAirSupply
+                if (p is ServerPlayer) {
+                    p.connection.send(ClientboundSetEntityMotionPacket(p))
+                }
+            }
         }
 
         val nextBB = boundingBox.move(deltaMovement)
@@ -198,7 +255,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
     private fun handleHeldTick() {
         val o = owner ?: run { if (!level().isClientSide) discard(); return }
-        val nautilus = o.getEntity(level(), Entity::class.java) as? AbstractNautilus ?: run { if (!level().isClientSide) discard(); return }
+        val nautilus = o.getEntity(level(), Entity::class.java) as? AbstractNautilus
+            ?: run { if (!level().isClientSide) discard(); return }
 
         if (!level().isClientSide) {
             val newTicks = holdTicks + 1
@@ -211,10 +269,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             }
             if (newStage != bubbleStage) {
                 bubbleStage = newStage
-                playSound(
-                    ModSounds.BUBBLE_PROJECTILE_STAGE_UP.get(),
-                    stageData.burstVolume, stageData.burstPitch
-                )
+                playSound(ModSounds.BUBBLE_PROJECTILE_STAGE_UP.get(), stageData.burstVolume, stageData.burstPitch)
             }
 
             if (newTicks >= TICKS_TO_OVERCHARGE) {
@@ -226,7 +281,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         val controller = nautilus.controllingPassenger ?: nautilus
         val yawRad = Math.toRadians(controller.yRot.toDouble())
         val dirX = -sin(yawRad)
-        val dirZ =  cos(yawRad)
+        val dirZ = cos(yawRad)
         val dist = HELD_DIST_BASE + bubbleStage * HELD_DIST_PER_STAGE
 
         setPos(
@@ -236,7 +291,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         )
 
         deltaMovement = Vec3.ZERO
-
         val yaw = controller.yRot
         val pitch = controller.xRot
         this.setRot(yaw, pitch)
@@ -297,10 +351,11 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             val child = BubbleProjectile(entityType, level)
             child.bubbleStage = childStage
 
-            val dirX = random.nextDouble() - 0.5
-            val dirY = random.nextDouble() - 0.5
-            val dirZ = random.nextDouble() - 0.5
-            val randomDir = Vec3(dirX, dirY, dirZ).normalize()
+            val randomDir = Vec3(
+                random.nextDouble() - 0.5,
+                random.nextDouble() - 0.5,
+                random.nextDouble() - 0.5
+            ).normalize()
 
             val offsetDist = stageData.size * CHILD_OFFSET_DIST_RATIO
             child.setPos(
@@ -311,10 +366,9 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
             val burstSpeed = CHILD_BURST_SPEED_MIN + random.nextDouble() * CHILD_BURST_SPEED_RANGE
             child.deltaMovement = randomDir.scale(burstSpeed).add(deltaMovement.scale(CHILD_PARENT_MOMENTUM_RETAIN))
-
             child.owner = owner
             child.player = player
-            child.interBubbleCooldown = SPAWN_COOLDOWN_TICKS
+            child.interBubbleCooldown = INTER_BUBBLE_COOLDOWN_TICKS
             child.holdTicks = holdTicks
             level.addFreshEntity(child)
         }
@@ -323,6 +377,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     private fun burst() {
         if (isBursting) return
         isBursting = true
+        detachWithLeash()
 
         val lvl = level()
         playSound(ModSounds.BUBBLE_PROJECTILE_BURST.get(), stageData.burstVolume, stageData.burstPitch)
@@ -333,12 +388,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         } else emptyList()
 
         if (lvl is ServerLevel) {
-            val knockbackStrength = stageData.burstKnockback
-            val radius = stageData.burstRadius
-            val baseDamage = stageData.burstDamage
-
             val targets = lvl.getEntitiesOfClass(
-                LivingEntity::class.java, boundingBox.inflate(radius)
+                LivingEntity::class.java, boundingBox.inflate(stageData.burstRadius)
             ).toMutableSet()
 
             targets.toList().forEach { e ->
@@ -351,25 +402,20 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 val dz = target.z - z
                 val dist = sqrt(dx * dx + dy * dy + dz * dz).coerceAtLeast(BURST_MIN_DIST)
 
-                target.hurtServer(lvl, bubbleBurstSource(), baseDamage)
+                target.hurtServer(lvl, bubbleBurstSource(), stageData.burstDamage)
                 target.deltaMovement = target.deltaMovement.add(
-                    (dx / dist) * knockbackStrength,
-                    (dy / dist).coerceAtLeast(KNOCKBACK_MIN_NY) * knockbackStrength,
-                    (dz / dist) * knockbackStrength,
+                    (dx / dist) * stageData.burstKnockback,
+                    (dy / dist).coerceAtLeast(KNOCKBACK_MIN_NY) * stageData.burstKnockback,
+                    (dz / dist) * stageData.burstKnockback,
                 )
 
-                if (target.isUnderWater) {
-                    target.airSupply = target.maxAirSupply
-                }
+                if (target.isUnderWater) target.airSupply = target.maxAirSupply
                 target.hurtMarked = true
 
-                val rider = target.controllingPassenger
-                if (rider is ServerPlayer) {
-                    rider.connection.send(ClientboundSetEntityMotionPacket(target))
-                }
-                if (target is ServerPlayer) {
+                if (target.controllingPassenger is ServerPlayer)
+                    (target.controllingPassenger as ServerPlayer).connection.send(ClientboundSetEntityMotionPacket(target))
+                if (target is ServerPlayer)
                     target.connection.send(ClientboundSetEntityMotionPacket(target))
-                }
             }
         }
 
@@ -386,18 +432,14 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     private fun spawnTrailParticle() {
         val vel = deltaMovement
         val radius = bbWidth / 2.0
-
         val theta = random.nextDouble() * 2 * Math.PI
         val phi = acos(2 * random.nextDouble() - 1)
-        val sx = sin(phi) * cos(theta)
-        val sy = sin(phi) * sin(theta)
-        val sz = cos(phi)
 
         level().addParticle(
             ParticleTypes.BUBBLE_POP,
-            x + sx * radius,
-            y + bbHeight / 2.0 + sy * radius,
-            z + sz * radius,
+            x + sin(phi) * cos(theta) * radius,
+            y + bbHeight / 2.0 + sin(phi) * sin(theta) * radius,
+            z + cos(phi) * radius,
             -vel.x * TRAIL_PARTICLE_VELOCITY_DAMPEN,
             -vel.y * TRAIL_PARTICLE_VELOCITY_DAMPEN,
             -vel.z * TRAIL_PARTICLE_VELOCITY_DAMPEN,
@@ -405,10 +447,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     }
 
     override fun handleEntityEvent(id: Byte) {
-        if (id != BURST_EVENT_ID) {
-            super.handleEntityEvent(id)
-            return
-        }
+        if (id != BURST_EVENT_ID) { super.handleEntityEvent(id); return }
 
         val lvl = level()
         val cx = x
@@ -423,32 +462,19 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             val speed = 0.15 + progress * 0.25
             repeat(data.particlePerRing) { i ->
                 val angle = (i.toDouble() / data.particlePerRing) * 2 * Math.PI
-                val cosA = cos(angle)
-                val sinA = sin(angle)
-                lvl.addParticle(
-                    ParticleTypes.BUBBLE_POP,
-                    cx + cosA * halfW,
-                    cy + (random.nextDouble() - 0.5) * halfH,
-                    cz + sinA * halfW,
-                    cosA * speed,
-                    (random.nextDouble() - 0.3) * 0.1,
-                    sinA * speed,
-                )
+                val cosA = cos(angle); val sinA = sin(angle)
+                lvl.addParticle(ParticleTypes.BUBBLE_POP,
+                    cx + cosA * halfW, cy + (random.nextDouble() - 0.5) * halfH, cz + sinA * halfW,
+                    cosA * speed, (random.nextDouble() - 0.3) * 0.1, sinA * speed)
             }
         }
 
         repeat(data.particleSplashCount) {
             val angle = random.nextDouble() * 2 * Math.PI
             val r = random.nextDouble() * halfW
-            lvl.addParticle(
-                ParticleTypes.SPLASH,
-                cx + cos(angle) * r,
-                cy + halfH,
-                cz + sin(angle) * r,
-                (random.nextDouble() - 0.5) * 0.3,
-                0.3 + random.nextDouble() * 0.4,
-                (random.nextDouble() - 0.5) * 0.3,
-            )
+            lvl.addParticle(ParticleTypes.SPLASH,
+                cx + cos(angle) * r, cy + halfH, cz + sin(angle) * r,
+                (random.nextDouble() - 0.5) * 0.3, 0.3 + random.nextDouble() * 0.4, (random.nextDouble() - 0.5) * 0.3)
         }
 
         lvl.addParticle(ParticleTypes.BUBBLE_POP, cx, cy, cz, 0.0, 0.0, 0.0)
@@ -456,14 +482,12 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
     private fun isBoxFullySubmerged(): Boolean {
         val bb = boundingBox
-        return listOf(
-            Triple(bb.minX, bb.minY, bb.minZ), Triple(bb.maxX, bb.minY, bb.minZ),
-            Triple(bb.minX, bb.maxY, bb.minZ), Triple(bb.maxX, bb.maxY, bb.minZ),
-            Triple(bb.minX, bb.minY, bb.maxZ), Triple(bb.maxX, bb.minY, bb.maxZ),
-            Triple(bb.minX, bb.maxY, bb.maxZ), Triple(bb.maxX, bb.maxY, bb.maxZ),
-        ).all { (x, y, z) ->
-            !level().getFluidState(BlockPos.containing(x, y, z)).isEmpty
-        }
+        val lv = level()
+        for (cx in listOf(bb.minX, bb.maxX))
+            for (cy in listOf(bb.minY, bb.maxY))
+                for (cz in listOf(bb.minZ, bb.maxZ))
+                    if (lv.getFluidState(BlockPos.containing(cx, cy, cz)).isEmpty) return false
+        return true
     }
 
     override fun addAdditionalSaveData(p_422546_: ValueOutput) {
@@ -488,13 +512,19 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     override fun isPickable() = true
     override fun shouldBeSaved() = !isHeld
 
-    fun bubbleBurstSource(): DamageSource {
-        return DamageSource(
-            level().registryAccess()
-                .lookupOrThrow(Registries.DAMAGE_TYPE)
-                .getOrThrow(ModDamagesTypes.BUBBLE_BURST),
-            this,
-            player ?: owner?.getEntity(level(), Entity::class.java)
-        )
+    fun bubbleBurstSource(): DamageSource = DamageSource(
+        level().registryAccess()
+            .lookupOrThrow(Registries.DAMAGE_TYPE)
+            .getOrThrow(ModDamagesTypes.BUBBLE_BURST),
+        this,
+        player ?: owner?.getEntity(level(), Entity::class.java)
+    )
+
+    private fun detachWithLeash() {
+        val serverLevel = level() as? ServerLevel ?: return
+        serverLevel.addFreshEntity(ItemEntity(serverLevel, x, y, z, ItemStack(Items.LEAD)))
+        serverLevel.playSound(null, x, y, z, SoundEvents.LEAD_BREAK, SoundSource.NEUTRAL, 1.0f, 1.0f)
+        attachedPlayerId = -1
     }
+
 }

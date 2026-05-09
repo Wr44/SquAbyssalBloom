@@ -40,7 +40,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
         val LAMP: Item = ModItems.NAUTILUS_LAMP.get()
         val SHIELD: Item = ModItems.BARBED_NAUTILUS_SCALE.get()
-        val BUBBLE: Item = Items.SHIELD
+        val BUBBLE: Item = ModItems.BUBBLE_SPITTER.get()
     }
 
     override fun submit(

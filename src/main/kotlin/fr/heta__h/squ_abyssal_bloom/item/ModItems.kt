@@ -3,10 +3,12 @@ package fr.heta__h.squ_abyssal_bloom.item
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
+import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
 import net.minecraft.client.data.models.BlockModelGenerators
 import net.minecraft.client.data.models.ItemModelGenerators
 import net.minecraft.client.data.models.model.ModelTemplates
 import net.minecraft.world.item.Item
+import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.SpawnEggItem
 import net.neoforged.bus.api.IEventBus
@@ -45,6 +47,10 @@ object ModItems {
         "brine_bubbles"
     ) { properties -> Item(properties) }
 
+    val LIFELINE_BUBBLE : DeferredItem<Item> = ITEMS.registerItem(
+        "lifeline_bubble"
+    ) { properties -> LifelineBubbleItem(properties) }
+
     val NAUTILUS_LAMP : DeferredItem<Item> = ITEMS.registerItem(
         "nautilus_lamp"
     ) { properties -> Item(properties) }
@@ -52,18 +58,26 @@ object ModItems {
     val BARBED_NAUTILUS_SCALE: DeferredItem<Item> = ITEMS.registerItem(
         "barbed_nautilus_scale"
     ) { properties -> Item(properties
-        .enchantable(10)
         .durability(200)
-    )
-    }
+        .enchantable(10)
+        .repairable(PRISMARINE_SPIKE.get())
+    ) }
+
+    val BUBBLE_SPITTER = ITEMS.registerItem(
+        "bubble_spitter"
+    ) { properties -> Item(properties
+        .durability(250)
+        .enchantable(10)
+        .repairable(BRINE_BUBBLES.get())
+    ) }
 
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
     ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
         .durability(155)
         .enchantable(15)
-    )
-    }
+        .repairable(PRISMARINE_SPIKE.get())
+    ) }
 
 
     

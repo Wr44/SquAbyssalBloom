@@ -159,7 +159,8 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     }
 
     override fun hurtServer(level: ServerLevel, source: DamageSource, amount: Float): Boolean {
-        if (source.directEntity is BubbleProjectile) return false
+        val projectile = source.directEntity
+        if (projectile is BubbleProjectile && projectile.owner == this) return false
         return super.hurtServer(level, source, amount)
     }
 
@@ -612,10 +613,17 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
             val xzDist = xzDistTo(p)
             val aboveY = p.y - y
 
-            if (xzDist > ATTACK_EXIT_RADIUS) { directExitTimer++; return }
+            if (xzDist > ATTACK_EXIT_RADIUS) { directExitTimer++
+                directYTimer = 0
+                return
+            }
             directExitTimer = 0
 
-            if (aboveY > COLUMN_VS_DIRECT_Y_THRESHOLD) { directYTimer++; return }
+            if (aboveY > COLUMN_VS_DIRECT_Y_THRESHOLD) {
+                directYTimer++
+                return
+            }
+
             directYTimer = 0
 
             moveToPlayerBlock(p, xzDist, ATTACK_MOVE_SPEED)

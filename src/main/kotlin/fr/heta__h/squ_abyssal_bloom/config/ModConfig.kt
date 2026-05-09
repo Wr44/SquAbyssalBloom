@@ -7,12 +7,11 @@ import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import net.minecraft.ChatFormatting
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
-import net.minecraft.world.entity.EntitySpawnReason
-import net.minecraft.world.entity.LivingEntity
 import net.neoforged.fml.loading.FMLPaths
 import java.io.File
 
@@ -39,23 +38,6 @@ object ModConfig {
     var abyssColorRetention: Double = 0.15
     var lampNearPlaneMultiplier: Double = 12.0
     var lampFarPlaneMultiplier: Double = 60.0
-
-    private fun getEntityToRender(entityName: String): LivingEntity? {
-        val mc = Minecraft.getInstance()
-        val level = mc.level ?: return null
-
-        return when (entityName) {
-            "barnacle" -> {
-                ModEntities.BARNACLE.get().create(level, EntitySpawnReason.TRIGGERED)
-            }
-            "ghost_chimaera" -> {
-                ModEntities.GHOST_CHIMAERA.get().create(level, EntitySpawnReason.TRIGGERED)
-            }
-            else -> {
-                null
-            }
-        }
-    }
 
     fun loadConfig() {
         if (!configFile.exists()) {
@@ -271,7 +253,17 @@ object ModConfig {
                     .name(Component.translatable("entity.squ_abyssal_bloom.barnacle").withStyle(ChatFormatting.LIGHT_PURPLE))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.barnacle.desc"))
-                        .customImage(EntityConfigRenderer { getEntityToRender("barnacle") })
+                        .customImage(EntityConfigRenderer(
+                        entityType = ModEntities.BARNACLE.get()
+                    ) { entity, tick ->
+                        if (entity is BarnacleEntity) {
+                            val durationTicks = (BarnacleAnimation.still_mouth_open.lengthInSeconds * 20).toInt()
+                            val loopTick = tick % durationTicks
+                            if (loopTick == 0 || !entity.stillMouthOpenAnimationState.isStarted) {
+                                entity.stillMouthOpenAnimationState.start(tick)
+                            }
+                        }
+                        })
                         .build())
 
                     .option(Option.createBuilder<Boolean>()
@@ -280,22 +272,23 @@ object ModConfig {
                         .binding(Binding.generic(true, { strictBarnacleSpawning }, { strictBarnacleSpawning = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
-
                     .build())
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("entity.squ_abyssal_bloom.ghost_chimaera").withStyle(ChatFormatting.LIGHT_PURPLE))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.ghost_chimaera.desc"))
-                        .customImage(EntityConfigRenderer { getEntityToRender("ghost_chimaera") })
+                        .customImage(EntityConfigRenderer(
+                            entityType = ModEntities.GHOST_CHIMAERA.get()
+                        ))
                         .build())
+
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.template"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.template")))
-                        .binding(Binding.generic(false, { false }, {  }))
+                        .binding(Binding.generic(false, { false }, {}))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
-
                     .build())
 
                 .build())

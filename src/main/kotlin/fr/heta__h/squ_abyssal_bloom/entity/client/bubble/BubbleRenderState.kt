@@ -9,4 +9,6 @@ class BubbleRenderState : EntityRenderState() {
     var isHeld: Boolean = false
     var ticksSinceRelease = 0f
     var releaseYaw = 0f
+    var hasAttachedPlayer = false
+    var attachedLeash: LeashState? = null
 }
