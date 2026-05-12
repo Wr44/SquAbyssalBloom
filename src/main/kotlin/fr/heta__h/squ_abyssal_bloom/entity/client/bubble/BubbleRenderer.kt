@@ -19,6 +19,7 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
+import kotlin.math.abs
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -71,7 +72,8 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             val camPos = mc.gameRenderer.mainCamera.position()
 
             val horizontalDist = sqrt((px - bx) * (px - bx) + (pz - bz) * (pz - bz))
-            val epsilonX = if (horizontalDist < 0.05) 0.02 else 0.0
+            val verticalDist = abs(py - by)
+            val epsilonX = if (horizontalDist < 0.05) (verticalDist * 0.03).coerceAtLeast(0.02) else 0.0
 
             val ls = EntityRenderState.LeashState().apply {
                 offset = Vec3(0.0, entity.bbHeight * 0.5, 0.0)

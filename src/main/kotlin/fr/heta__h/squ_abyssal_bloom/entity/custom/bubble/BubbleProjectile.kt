@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.bubble
 
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.damageFromDifficulty
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.core.registries.Registries
@@ -17,11 +18,11 @@ import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityDimensions
 import net.minecraft.world.entity.EntityType
-import net.minecraft.world.entity.Leashable
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Pose
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.Projectile
 import net.minecraft.world.item.ItemStack
@@ -77,7 +78,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         const val TRAIL_PARTICLE_CHANCE = 0.6f
         const val TRAIL_PARTICLE_VELOCITY_DAMPEN = 0.3
 
-        const val SPAWN_COOLDOWN_TICKS = 10
         const val INTER_BUBBLE_COOLDOWN_TICKS = 10
         const val ENTITY_SCAN_INFLATE = 0.1
         const val KNOCKBACK_MIN_NY = 0.1
@@ -85,9 +85,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
         
         const val LEASH_MAX_LENGTH = 5.0
-        const val LEASH_ROPE_STRENGTH = 0.4
-        const val LEASH_ROPE_MAX_FORCE = 0.6
-        const val LEASH_ROPE_MAX_VEL_Y = 0.4
         const val LEASH_IDLE_PULL = 0.03
         const val LEASH_IDLE_MAX_VEL_Y = 0.12
 
@@ -200,29 +197,37 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 val dz = z - p.z
                 val dist = sqrt(dx * dx + dy * dy + dz * dz)
 
+                val moveTarget: Entity = if (p.isPassenger) p.rootVehicle else p
+
                 if (dist > LEASH_MAX_LENGTH) {
                     val excess = dist - LEASH_MAX_LENGTH
                     val nx = dx / dist
                     val ny = dy / dist
                     val nz = dz / dist
                     val speed = (excess * 0.5).coerceAtMost(2.0)
-                    p.deltaMovement = Vec3(
-                        p.deltaMovement.x * 0.2 + nx * speed,
-                        p.deltaMovement.y * 0.2 + ny * speed,
-                        p.deltaMovement.z * 0.2 + nz * speed
+                    moveTarget.deltaMovement = Vec3(
+                        moveTarget.deltaMovement.x * 0.2 + nx * speed,
+                        moveTarget.deltaMovement.y * 0.2 + ny * speed,
+                        moveTarget.deltaMovement.z * 0.2 + nz * speed
                     )
-                    if (p is ServerPlayer) p.connection.send(ClientboundSetEntityMotionPacket(p))
                 } else {
-                    p.deltaMovement = Vec3(
-                        p.deltaMovement.x,
-                        (p.deltaMovement.y + LEASH_IDLE_PULL).coerceAtMost(LEASH_IDLE_MAX_VEL_Y),
-                        p.deltaMovement.z
+                    moveTarget.deltaMovement = Vec3(
+                        moveTarget.deltaMovement.x,
+                        (moveTarget.deltaMovement.y + LEASH_IDLE_PULL).coerceAtMost(LEASH_IDLE_MAX_VEL_Y),
+                        moveTarget.deltaMovement.z
                     )
                 }
 
-                p.airSupply = p.maxAirSupply
-                if (p is ServerPlayer) {
+                if (moveTarget is ServerPlayer) {
+                    moveTarget.connection.send(ClientboundSetEntityMotionPacket(moveTarget))
+                }
+
+                if (p is ServerPlayer && p !== moveTarget) {
                     p.connection.send(ClientboundSetEntityMotionPacket(p))
+                }
+
+                if (p.boundingBox.intersects(this.boundingBox)) {
+                    p.airSupply = p.maxAirSupply
                 }
             }
         }
@@ -377,7 +382,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     private fun burst() {
         if (isBursting) return
         isBursting = true
-        detachWithLeash()
+        if (attachedPlayerId != -1) detachWithLeash()
 
         val lvl = level()
         playSound(ModSounds.BUBBLE_PROJECTILE_BURST.get(), stageData.burstVolume, stageData.burstPitch)
@@ -402,7 +407,12 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 val dz = target.z - z
                 val dist = sqrt(dx * dx + dy * dy + dz * dz).coerceAtLeast(BURST_MIN_DIST)
 
-                target.hurtServer(lvl, bubbleBurstSource(), stageData.burstDamage)
+                var damage = stageData.burstDamage
+                if (getOwner() is Monster) {
+                    damage = damageFromDifficulty(damage, level())
+                }
+
+                target.hurtServer(lvl, bubbleBurstSource(), damage)
                 target.deltaMovement = target.deltaMovement.add(
                     (dx / dist) * stageData.burstKnockback,
                     (dy / dist).coerceAtLeast(KNOCKBACK_MIN_NY) * stageData.burstKnockback,

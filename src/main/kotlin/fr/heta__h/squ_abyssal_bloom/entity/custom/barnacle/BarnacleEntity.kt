@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.damageFromDifficulty
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.Registries
@@ -884,10 +885,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 maintenirCible(target, holdDist)
 
                 if (t % ceil(swallowDuration / 2.0).toInt() == 0) {
+                    val scaled = damageFromDifficulty(SWALLOW_DAMAGE, level())
                     target.hurtServer(
                         level() as ServerLevel,
                         swallowDamageSource(),
-                        SWALLOW_DAMAGE)
+                        scaled)
                 }
             }
         }

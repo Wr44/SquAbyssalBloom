@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.nautilus
 import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import net.minecraft.world.entity.EquipmentSlot
 import net.neoforged.fml.common.EventBusSubscriber
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.ExperienceOrb
@@ -23,34 +24,36 @@ object NautilusMendingEvent {
 
         if (vehicle !is AbstractNautilus) return
 
-        val nautilusItem = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+        val candidates = mutableListOf<ItemStack>()
 
-        if (nautilusItem == ItemStack.EMPTY || !nautilusItem.isDamaged) return
+        val extraSlot = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+        if (!extraSlot.isEmpty && extraSlot.isDamaged &&
+            ModUtilities.getEnchantLevel(extraSlot, player.level(), "mending", "minecraft") > 0) {
+            candidates.add(extraSlot)
+        }
 
-        val mendingLevel = ModUtilities.getEnchantLevel(
-            nautilusItem,
-            player.level(),
-            "mending",
-            "minecraft"
-        )
+        val bodyArmor = vehicle.getItemBySlot(EquipmentSlot.BODY)
+        if (!bodyArmor.isEmpty && bodyArmor.isDamaged &&
+            ModUtilities.getEnchantLevel(bodyArmor, player.level(), "mending", "minecraft") > 0) {
+            candidates.add(bodyArmor)
+        }
 
-        if (mendingLevel > 0) {
-            val orbXp = orb.value
-            val repairAmount = min(orbXp * 2, nautilusItem.damageValue)
+        if (candidates.isEmpty()) return
 
-            val consumedXp = ceil(repairAmount / 2.0).toInt()
-            val remainingXp = orbXp - consumedXp
+        val target = candidates.random()
+        val orbXp = orb.value
+        val repairAmount = min(orbXp * 2, target.damageValue)
+        val consumedXp = ceil(repairAmount / 2.0).toInt()
+        val remainingXp = orbXp - consumedXp
 
-            if (consumedXp > 0) {
-                nautilusItem.damageValue -= repairAmount
+        if (consumedXp > 0) {
+            target.damageValue -= repairAmount
+            event.isCanceled = true
+            orb.discard()
 
-                event.isCanceled = true
-                orb.discard()
-
-                if (remainingXp > 0 && !player.level().isClientSide) {
-                    val newOrb = ExperienceOrb(player.level(), player.x, player.y, player.z, remainingXp)
-                    player.level().addFreshEntity(newOrb)
-                }
+            if (remainingXp > 0 && !player.level().isClientSide) {
+                val newOrb = ExperienceOrb(player.level(), player.x, player.y, player.z, remainingXp)
+                player.level().addFreshEntity(newOrb)
             }
         }
     }
