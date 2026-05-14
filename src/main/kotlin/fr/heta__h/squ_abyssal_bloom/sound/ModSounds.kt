@@ -79,4 +79,12 @@ object ModSounds {
     fun register(eventBus: IEventBus) {
         SOUNDS.register(eventBus)
     }
+
+
+    
+
+    
+        val PRESSURE_DAMAGE = SOUNDS.register("pressure_damage") { id ->
+            SoundEvent.createVariableRangeEvent(id)
+        }
 }

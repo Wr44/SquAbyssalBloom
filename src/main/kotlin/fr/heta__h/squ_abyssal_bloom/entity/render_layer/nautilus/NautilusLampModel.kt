@@ -103,7 +103,7 @@ class NautilusLampModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(m
 
             val front: PartDefinition? = border.addOrReplaceChild(
                 "front",
-                CubeListBuilder.create().texOffs(40, 0)
+                CubeListBuilder.create().texOffs(38, 0)
                     .addBox(1.0f, -2.0f, 14.0f, 12.0f, 2.0f, 1.0f, CubeDeformation(0.0f)),
                 PartPose.offset(-7.0f, -8.0f, -23.0f)
             )

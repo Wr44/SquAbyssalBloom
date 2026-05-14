@@ -18,4 +18,9 @@ object ModDamagesTypes {
             Registries.DAMAGE_TYPE,
             Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_burst")
         )
+
+    val PRESSURE = ResourceKey.create(
+        Registries.DAMAGE_TYPE,
+        Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "pressure")
+    )
 }

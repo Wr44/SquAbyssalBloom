@@ -2,7 +2,6 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.bubble
 
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.damageFromDifficulty
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.core.registries.Registries
@@ -22,7 +21,6 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Pose
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.item.ItemEntity
-import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.projectile.Projectile
 import net.minecraft.world.item.ItemStack
@@ -408,9 +406,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 val dist = sqrt(dx * dx + dy * dy + dz * dz).coerceAtLeast(BURST_MIN_DIST)
 
                 var damage = stageData.burstDamage
-                if (getOwner() is Monster) {
-                    damage = damageFromDifficulty(damage, level())
-                }
 
                 target.hurtServer(lvl, bubbleBurstSource(), damage)
                 target.deltaMovement = target.deltaMovement.add(

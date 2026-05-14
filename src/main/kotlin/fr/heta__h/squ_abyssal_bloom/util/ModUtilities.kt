@@ -204,14 +204,4 @@ object ModUtilities {
         return (surfaceY - pos.y).toDouble()
     }
 
-
-    fun damageFromDifficulty(damage: Float, level: Level) : Float {
-        return when (level.difficulty) {
-            Difficulty.PEACEFUL -> 0f
-            Difficulty.EASY -> damage * 0.5f
-            Difficulty.NORMAL -> damage * 1f
-            Difficulty.HARD -> damage * 1.5f
-        }
-    }
-
 }
