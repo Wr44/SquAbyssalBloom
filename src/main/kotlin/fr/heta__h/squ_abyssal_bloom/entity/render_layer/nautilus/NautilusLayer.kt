@@ -24,7 +24,8 @@ import net.minecraft.world.item.Items
 class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
     renderer: RenderLayerParent<S, M>,
     private val lampModel: NautilusLampModel,
-    private val bubbleModel: NautilusBubbleSpitterModel
+    private val bubbleModel: NautilusBubbleSpitterModel,
+    private val chestModel: NautilusChestModel
 ) : RenderLayer<S, M>(renderer) {
 
     companion object {
@@ -36,6 +37,11 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         private val TEXTURE_BUBBLE = Identifier.fromNamespaceAndPath(
             Squ_abyssal_bloom.ID,
             "textures/entity/nautilus_bubble_spitter/nautilus_bubble_spitter.png"
+        )
+
+        private val TEXTURE_CHEST = Identifier.fromNamespaceAndPath(
+            Squ_abyssal_bloom.ID,
+            "textures/entity/nautilus_chest/nautilus_chest.png"
         )
 
         val LAMP: Item = ModItems.NAUTILUS_LAMP.get()
@@ -131,6 +137,23 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                     )
                 }
 
+                poseStack.popPose()
+            }
+
+            CHEST -> {
+                poseStack.pushPose()
+                this.parentModel.setupAnim(state)
+
+                collector.submitModel(
+                    chestModel,
+                    state,
+                    poseStack,
+                    RenderTypes.entityCutout(TEXTURE_CHEST),
+                    packedLight,
+                    OverlayTexture.NO_OVERLAY,
+                    0,
+                    null
+                )
                 poseStack.popPose()
             }
         }

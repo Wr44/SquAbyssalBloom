@@ -18,6 +18,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEn
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikesLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusBubbleSpitterModel
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusChestModel
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
 import net.minecraft.client.model.EntityModel
@@ -156,6 +157,11 @@ object ModEntities {
             NautilusBubbleSpitterModel.LAYER_LOCATION,
             NautilusBubbleSpitterModel::createBodyLayer
         )
+
+        event.registerLayerDefinition(
+            NautilusChestModel.LAYER_LOCATION,
+            NautilusChestModel::createBodyLayer
+        )
     }
 
 
@@ -168,15 +174,13 @@ object ModEntities {
     fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
         val spikeModel = GuardianSpikeModel(event.entityModels.bakeLayer(GuardianSpikeModel.LAYER_LOCATION))
         val lampModel = NautilusLampModel(event.entityModels.bakeLayer(NautilusLampModel.LAYER_LOCATION))
-        val bubbleModel =
-            NautilusBubbleSpitterModel(event.entityModels.bakeLayer(NautilusBubbleSpitterModel.LAYER_LOCATION))
+        val bubbleModel = NautilusBubbleSpitterModel(event.entityModels.bakeLayer(NautilusBubbleSpitterModel.LAYER_LOCATION))
+        val chestModel = NautilusChestModel(event.entityModels.bakeLayer(NautilusChestModel.LAYER_LOCATION))
 
         @Suppress("UNCHECKED_CAST")
-        fun LivingEntityRenderer<*, *, *>.cast() =
-            this as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
-
+        fun LivingEntityRenderer<*, *, *>.cast() = this as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
         fun LivingEntityRenderer<*, *, *>.addSpikes() = cast().addLayer(GuardianSpikesLayer(cast(), spikeModel))
-        fun LivingEntityRenderer<*, *, *>.addNautilus() = cast().addLayer(NautilusLayer(cast(), lampModel, bubbleModel))
+        fun LivingEntityRenderer<*, *, *>.addNautilus() = cast().addLayer(NautilusLayer(cast(), lampModel, bubbleModel, chestModel))
 
         BuiltInRegistries.ENTITY_TYPE.forEach { entityType ->
             (event.getRenderer(entityType) as? LivingEntityRenderer<*, *, *>)?.addSpikes()

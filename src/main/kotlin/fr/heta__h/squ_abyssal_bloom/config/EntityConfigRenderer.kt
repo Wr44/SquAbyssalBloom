@@ -27,7 +27,6 @@ class EntityConfigRenderer(
 
     private var cachedEntity: LivingEntity? = null
 
-    
     private val virtualTick: Int
         get() = ((System.currentTimeMillis() - EPOCH_MS) / 50L).toInt()
 
@@ -66,18 +65,18 @@ class EntityConfigRenderer(
 
         val prevYBody = entity.yBodyRot
         val prevYHead = entity.yHeadRot
-        val prevYRot  = entity.yRot
-        val prevXRot  = entity.xRot
+        val prevYRot = entity.yRot
+        val prevXRot = entity.xRot
 
         try {
-            entity.yBodyRot  = angle
+            entity.yBodyRot = angle
             entity.yBodyRotO = angle
-            entity.yHeadRot  = angle
+            entity.yHeadRot = angle
             entity.yHeadRotO = angle
-            entity.yRot      = angle
-            entity.yRotO     = angle
-            entity.xRot      = 0f
-            entity.xRotO     = 0f
+            entity.yRot = angle
+            entity.yRotO = angle
+            entity.xRot = 0f
+            entity.xRotO = 0f
 
             val dispatcher  = mc.entityRenderDispatcher
             val renderState = dispatcher.extractEntity(entity, tickDelta)
@@ -97,8 +96,8 @@ class EntityConfigRenderer(
         } finally {
             entity.yBodyRot = prevYBody
             entity.yHeadRot = prevYHead
-            entity.yRot     = prevYRot
-            entity.xRot     = prevXRot
+            entity.yRot = prevYRot
+            entity.xRot = prevXRot
         }
 
         return HEIGHT

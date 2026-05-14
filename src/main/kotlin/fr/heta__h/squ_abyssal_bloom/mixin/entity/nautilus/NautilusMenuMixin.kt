@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusEquipmentSlot
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerMenuAccessor
-import fr.heta__h.squ_abyssal_bloom.mixin.enable.NautilusAccessor
+import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractNautilusAccessor
 import fr.heta__h.squ_abyssal_bloom.network.nautilus_chest.SyncNautilusExtraSlotPayload
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusReopenQueue
 import net.minecraft.server.level.ServerPlayer
@@ -66,7 +66,7 @@ abstract class NautilusMenuMixin {
 
                                 try {
                                     player.containerMenu.carried = ItemStack.EMPTY
-                                    (mount as NautilusAccessor).invokeCreateInventory()
+                                    (mount as AbstractNautilusAccessor).invokeCreateInventory()
                                     mount.openCustomInventoryScreen(player)
                                     player.containerMenu.carried = carried
                                     player.containerMenu.broadcastFullState()
