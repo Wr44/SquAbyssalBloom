@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.network.nautilus_chest
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusMouseHelper
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerScreenAccessor
@@ -19,7 +19,7 @@ data class SyncNautilusExtraSlotPayload(val entityId: Int, val stack: ItemStack)
 
     companion object {
         val ID = CustomPacketPayload.Type<SyncNautilusExtraSlotPayload>(
-            Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "sync_nautilus_extra_slot")
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "sync_nautilus_extra_slot")
         )
 
         val CODEC: StreamCodec<RegistryFriendlyByteBuf, SyncNautilusExtraSlotPayload> = StreamCodec.composite(

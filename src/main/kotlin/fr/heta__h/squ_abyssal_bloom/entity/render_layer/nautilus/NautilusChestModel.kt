@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
@@ -17,7 +17,7 @@ class NautilusChestModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(
     companion object {
         val LAYER_LOCATION: ModelLayerLocation =
             ModelLayerLocation(
-                Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "nautilus_chest"),
+                Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "nautilus_chest"),
                 "main"
             )
 

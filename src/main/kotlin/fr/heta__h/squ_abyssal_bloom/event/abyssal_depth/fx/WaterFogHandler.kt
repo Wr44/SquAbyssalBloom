@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.fx
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -15,7 +15,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.ViewportEvent
 import kotlin.math.pow
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object WaterFogHandler {
 
     private const val FOG_START_SHALLOW = 5.0f

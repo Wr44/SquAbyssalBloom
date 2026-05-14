@@ -1,17 +1,14 @@
 package fr.heta__h.squ_abyssal_bloom.sound
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.core.registries.Registries
-import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvent
 import net.neoforged.bus.api.IEventBus
-import net.neoforged.neoforge.registries.DeferredHolder
 import net.neoforged.neoforge.registries.DeferredRegister
-import java.util.function.Supplier
 
 object ModSounds {
     val SOUNDS: DeferredRegister<SoundEvent> =
-        DeferredRegister.create(Registries.SOUND_EVENT, Squ_abyssal_bloom.ID)
+        DeferredRegister.create(Registries.SOUND_EVENT, SquAbyssalBloom.ID)
 
 
     

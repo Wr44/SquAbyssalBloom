@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -16,10 +16,10 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderGuiEvent
 import kotlin.math.pow
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object AbyssVignetteOverlay {
 
-    private val VIGNETTE_LOCATION = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "textures/gui/abyss_vignette.png")
+    private val VIGNETTE_LOCATION = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/gui/abyss_vignette.png")
 
     @SubscribeEvent
     fun onRenderGuiPre(event: RenderGuiEvent.Pre) {

@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.data_component
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.core.component.DataComponentType
 import net.minecraft.core.registries.Registries
 import net.neoforged.bus.api.IEventBus
@@ -8,7 +8,7 @@ import net.neoforged.neoforge.registries.DeferredRegister
 import java.util.function.Supplier
 
 object ModDataComponents {
-    val REGISTRY = DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, Squ_abyssal_bloom.ID)
+    val REGISTRY = DeferredRegister.create(Registries.DATA_COMPONENT_TYPE, SquAbyssalBloom.ID)
 
     val IS_SPROUTING: Supplier<DataComponentType<Boolean>> = REGISTRY.register("is_sprouting", Supplier {
         DataComponentType.builder<Boolean>()

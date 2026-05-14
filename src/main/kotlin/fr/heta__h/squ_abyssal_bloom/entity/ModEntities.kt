@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineModel
@@ -47,10 +47,10 @@ import net.neoforged.neoforge.registries.DeferredRegister
 
 object ModEntities {
     val ENTITY_TYPES: DeferredRegister<EntityType<*>> =
-        DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, Squ_abyssal_bloom.ID)
+        DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, SquAbyssalBloom.ID)
 
     val BARNACLE_KEY: ResourceKey<EntityType<*>> =
-        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "barnacle"))
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "barnacle"))
 
 
     
@@ -65,7 +65,7 @@ object ModEntities {
         }
 
     val GHOAST_CHIMAERA_KEY: ResourceKey<EntityType<*>> =
-        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "ghost_chimera"))
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "ghost_chimera"))
 
     val GHOST_CHIMAERA: DeferredHolder<EntityType<*>, EntityType<GhostChimaeraEntity>> =
         ENTITY_TYPES.register("ghost_chimera") { _: Identifier ->
@@ -77,7 +77,7 @@ object ModEntities {
         }
 
     val BRINE_KEY: ResourceKey<EntityType<*>> =
-        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "brine"))
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "brine"))
 
     val BRINE: DeferredHolder<EntityType<*>, EntityType<BrineEntity>> =
         ENTITY_TYPES.register("brine") { _: Identifier ->
@@ -89,7 +89,7 @@ object ModEntities {
         }
 
 
-    val BUBBLE_KEY = ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_projectile"))
+    val BUBBLE_KEY = ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_projectile"))
 
     val BUBBLE = ENTITY_TYPES.register("bubble_projectile") { name: Identifier ->
         EntityType.Builder.of({ type, level -> BubbleProjectile(type, level) }, MobCategory.MISC)

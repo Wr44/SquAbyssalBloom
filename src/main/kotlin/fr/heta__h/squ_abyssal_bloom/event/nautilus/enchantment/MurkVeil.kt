@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.EquipmentSlot
@@ -14,7 +14,7 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object MurkVeil {
 
     private val lastAttackTick = ConcurrentHashMap<UUID, Long>()

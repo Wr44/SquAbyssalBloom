@@ -1,14 +1,10 @@
 package fr.heta__h.squ_abyssal_bloom.item
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
-import net.minecraft.client.data.models.BlockModelGenerators
-import net.minecraft.client.data.models.ItemModelGenerators
-import net.minecraft.client.data.models.model.ModelTemplates
 import net.minecraft.world.item.Item
-import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.SpawnEggItem
 import net.neoforged.bus.api.IEventBus
@@ -17,7 +13,7 @@ import net.neoforged.neoforge.registries.DeferredRegister
 
 
 object ModItems {
-    val ITEMS: DeferredRegister.Items = DeferredRegister.createItems(Squ_abyssal_bloom.ID)
+    val ITEMS: DeferredRegister.Items = DeferredRegister.createItems(SquAbyssalBloom.ID)
 
     val BARNACLE_SPAWN_EGG: DeferredItem<Item> = ITEMS.registerItem(
         "barnacle_spawn_egg"

@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus
 
 
 import com.mojang.blaze3d.vertex.PoseStack
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.accessor.AddPropertiesToRenderState
 import net.minecraft.client.Minecraft
@@ -30,17 +30,17 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
     companion object {
         private val TEXTURE_NAUTILUS_LAMP = Identifier.fromNamespaceAndPath(
-            Squ_abyssal_bloom.ID,
+            SquAbyssalBloom.ID,
             "textures/entity/nautilus_lamp/nautilus_lamp.png"
         )
 
         private val TEXTURE_BUBBLE = Identifier.fromNamespaceAndPath(
-            Squ_abyssal_bloom.ID,
+            SquAbyssalBloom.ID,
             "textures/entity/nautilus_bubble_spitter/nautilus_bubble_spitter.png"
         )
 
         private val TEXTURE_CHEST = Identifier.fromNamespaceAndPath(
-            Squ_abyssal_bloom.ID,
+            SquAbyssalBloom.ID,
             "textures/entity/nautilus_chest/nautilus_chest.png"
         )
 

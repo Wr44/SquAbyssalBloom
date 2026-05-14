@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
@@ -12,7 +12,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.tick.EntityTickEvent
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object NautilusBubbleSlowHandler {
 
     @SubscribeEvent
@@ -20,7 +20,7 @@ object NautilusBubbleSlowHandler {
         val nautilus = event.entity as? AbstractNautilus ?: return
 
         val speedAttribute = nautilus.getAttribute(Attributes.MOVEMENT_SPEED) ?: return
-        val modifierId = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_slowdown")
+        val modifierId = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_slowdown")
 
         if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) {
             if (speedAttribute.getModifier(modifierId) != null) {

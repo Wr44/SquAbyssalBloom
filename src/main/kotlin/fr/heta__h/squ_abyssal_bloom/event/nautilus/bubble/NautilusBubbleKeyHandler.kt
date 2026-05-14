@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.network.bubble.C2SBubbleChargeStartPacket
@@ -13,7 +13,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.tick.LevelTickEvent
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object NautilusBubbleKeyHandler {
 
     private var chargePacketSent = false

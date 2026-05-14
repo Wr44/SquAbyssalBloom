@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.spike
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -13,7 +13,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object NautilusBlockDamageSpikeEvent {
 
     private const val FRONT_SHIELD_DOT_THRESHOLD = 0.5

@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.client.bubble
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
@@ -18,7 +18,7 @@ class BubbleStage2Model(rootPart: ModelPart) : EntityModel<EntityRenderState>(ro
 
     companion object {
         val LAYER_LOCATION = ModelLayerLocation(
-            Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_stage2"),
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_stage2"),
             "main"
         )
 

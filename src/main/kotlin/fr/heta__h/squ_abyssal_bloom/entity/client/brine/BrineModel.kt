@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.client.brine
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.client.animation.KeyframeAnimation
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
@@ -21,7 +21,7 @@ class BrineModel(modelPart: ModelPart) : EntityModel<BrineRenderState>(modelPart
 
     companion object {
         val LAYER_LOCATION: ModelLayerLocation = ModelLayerLocation(
-            Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "brine"), "main"
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "brine"), "main"
         )
 
         fun createBodyLayer(): LayerDefinition {

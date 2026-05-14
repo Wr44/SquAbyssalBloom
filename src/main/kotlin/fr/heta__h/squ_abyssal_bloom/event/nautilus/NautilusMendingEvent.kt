@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.entity.EquipmentSlot
@@ -13,7 +13,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerXpEvent
 import kotlin.math.ceil
 import kotlin.math.min
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object NautilusMendingEvent {
 
     @SubscribeEvent

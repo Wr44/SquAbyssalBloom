@@ -1,10 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
-import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
@@ -12,13 +11,12 @@ import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
-import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.tick.EntityTickEvent
 import java.util.WeakHashMap
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object NautilusDashSpikeEvent {
 
     private const val HITBOX_EXPANSION = 0.5

@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.util
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
@@ -15,7 +15,6 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
 import net.minecraft.tags.FluidTags
-import net.minecraft.world.Difficulty
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
@@ -85,7 +84,7 @@ object ModUtilities {
         stack: ItemStack,
         level: Level,
         enchantName: String,
-        namespace: String = Squ_abyssal_bloom.ID
+        namespace: String = SquAbyssalBloom.ID
     ): Int {
         val registry = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
 

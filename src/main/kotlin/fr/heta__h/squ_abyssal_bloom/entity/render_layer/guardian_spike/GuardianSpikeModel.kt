@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
@@ -19,7 +19,7 @@ class GuardianSpikeModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(
 
     companion object {
         val LAYER_LOCATION: ModelLayerLocation =
-            ModelLayerLocation(Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "guardian_spike"), "main")
+            ModelLayerLocation(Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "guardian_spike"), "main")
 
         fun createBodyLayer(): LayerDefinition {
             val meshdefinition = MeshDefinition()

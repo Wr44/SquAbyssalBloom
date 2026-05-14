@@ -1,10 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusMouseHelper
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusReopenQueue
-import net.minecraft.client.gui.screens.inventory.NautilusInventoryScreen
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.item.ItemEntity
@@ -13,11 +11,10 @@ import net.minecraft.world.item.Items
 import net.neoforged.bus.api.EventPriority
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
-import net.neoforged.neoforge.client.event.ScreenEvent
 import net.neoforged.neoforge.event.entity.living.LivingDropsEvent
 import net.neoforged.neoforge.event.tick.ServerTickEvent
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object NautilusDropInventory {
 
     @SubscribeEvent(priority = EventPriority.HIGH)

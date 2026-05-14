@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.network.bubble
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
@@ -21,7 +21,7 @@ import kotlin.math.sin
 object C2SBubbleChargeStartPacket : CustomPacketPayload {
 
     val ID = CustomPacketPayload.Type<C2SBubbleChargeStartPacket>(
-        Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "bubble_charge_start")
+        Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_charge_start")
     )
 
     val STREAM_CODEC: StreamCodec<RegistryFriendlyByteBuf, C2SBubbleChargeStartPacket> =

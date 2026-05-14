@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile.Companion.stageFor
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
@@ -15,7 +15,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object NautilusBubbleHud {
 
     private val SPRITE_BG = Identifier.withDefaultNamespace("hud/jump_bar_background")

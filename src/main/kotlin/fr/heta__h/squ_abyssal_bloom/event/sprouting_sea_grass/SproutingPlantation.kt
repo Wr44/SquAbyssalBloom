@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.sprouting_sea_grass
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import net.minecraft.ChatFormatting
@@ -14,7 +14,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object SproutingPlantation {
 
     @SubscribeEvent

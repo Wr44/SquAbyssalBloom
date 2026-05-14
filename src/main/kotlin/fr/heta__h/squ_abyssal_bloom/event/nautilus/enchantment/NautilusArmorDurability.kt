@@ -1,13 +1,13 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object NautilusArmorDurability {
 
     @SubscribeEvent

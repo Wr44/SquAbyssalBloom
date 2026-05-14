@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.client.bubble
 
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.SubmitNodeCollector
@@ -17,7 +17,6 @@ import net.minecraft.util.Mth.lerp
 import net.minecraft.util.Mth.rotLerp
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
-import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
 import kotlin.math.sin
@@ -30,9 +29,9 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
     private val modelStage2 = BubbleStage2Model(context.bakeLayer(BubbleStage2Model.LAYER_LOCATION))
     private val modelStage3 = BubbleStage3Model(context.bakeLayer(BubbleStage3Model.LAYER_LOCATION))
 
-    private val textureStage1 = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "textures/entity/projectiles/bubble_stage1.png")
-    private val textureStage2 = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "textures/entity/projectiles/bubble_stage2.png")
-    private val textureStage3 = Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "textures/entity/projectiles/bubble_stage3.png")
+    private val textureStage1 = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage1.png")
+    private val textureStage2 = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage2.png")
+    private val textureStage3 = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage3.png")
 
     override fun createRenderState(): BubbleRenderState = BubbleRenderState()
 

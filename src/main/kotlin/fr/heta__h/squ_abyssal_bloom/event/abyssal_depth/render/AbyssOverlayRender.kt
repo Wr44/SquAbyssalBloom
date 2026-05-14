@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.AbyssDepthCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -20,7 +20,7 @@ import net.minecraft.resources.Identifier
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import org.joml.Matrix4f
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object AbyssOverlayRender {
 
     private val WHITE_TEXTURE = Identifier.withDefaultNamespace("textures/misc/white.png")

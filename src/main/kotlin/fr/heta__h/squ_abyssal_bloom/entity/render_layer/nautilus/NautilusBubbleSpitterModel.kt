@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
@@ -8,7 +8,6 @@ import net.minecraft.client.model.geom.PartPose
 import net.minecraft.client.model.geom.builders.*
 import net.minecraft.client.renderer.entity.state.EntityRenderState
 import net.minecraft.resources.Identifier
-import net.minecraft.world.entity.AnimationState
 
 class NautilusBubbleSpitterModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(modelPart) {
 
@@ -20,7 +19,7 @@ class NautilusBubbleSpitterModel(modelPart: ModelPart) : EntityModel<EntityRende
     companion object {
         val LAYER_LOCATION: ModelLayerLocation =
             ModelLayerLocation(
-                Identifier.fromNamespaceAndPath(Squ_abyssal_bloom.ID, "nautilus_bubble_spitter"),
+                Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "nautilus_bubble_spitter"),
                 "main"
             )
 

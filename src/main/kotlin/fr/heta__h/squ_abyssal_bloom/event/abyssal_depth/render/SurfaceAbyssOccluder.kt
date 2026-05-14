@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache.SurfaceHeightCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -26,7 +26,7 @@ import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
 import kotlin.math.max
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID, value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object SurfaceAbyssOccluder {
 
     private val WHITE_TEXTURE = Identifier.withDefaultNamespace("textures/misc/white.png")

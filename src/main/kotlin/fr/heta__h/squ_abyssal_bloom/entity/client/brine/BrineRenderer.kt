@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.client.brine
 
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRendererProvider
@@ -19,7 +19,7 @@ class BrineRenderer(context: EntityRendererProvider.Context) :
 
     companion object {
         private val TEXTURE = Identifier.fromNamespaceAndPath(
-            Squ_abyssal_bloom.ID,
+            SquAbyssalBloom.ID,
             "textures/entity/brine/brine.png"
         )
     }

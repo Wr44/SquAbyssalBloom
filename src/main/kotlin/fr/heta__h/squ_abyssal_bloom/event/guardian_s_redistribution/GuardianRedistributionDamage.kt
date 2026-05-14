@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.guardian_s_redistribution
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import net.minecraft.server.level.ServerLevel
@@ -14,7 +14,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent
 import kotlin.math.pow
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object GuardianRedistributionDamage {
 
     @SubscribeEvent

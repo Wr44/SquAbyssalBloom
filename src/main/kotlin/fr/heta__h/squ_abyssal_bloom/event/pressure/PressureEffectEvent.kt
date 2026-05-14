@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.pressure
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
@@ -20,7 +20,7 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-@EventBusSubscriber(modid = Squ_abyssal_bloom.ID)
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object PressureEffectEvent {
 
     private const val PRESSURE_BASE_THRESHOLD = 35
