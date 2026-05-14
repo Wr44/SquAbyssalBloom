@@ -60,13 +60,20 @@ abstract class NautilusMenuMixin {
                     if (hadChest != hasChestNow) {
                         if (player is ServerPlayer) {
                             NautilusReopenQueue.schedule {
-                                if (mount.isAlive && player.isAlive) {
-                                    val carried: ItemStack = player.containerMenu.carried ?: ItemStack.EMPTY
+                                if (!mount.isAlive || !player.isAlive || player.hasDisconnected()) return@schedule
+
+                                val carried: ItemStack = player.containerMenu.carried ?: ItemStack.EMPTY
+
+                                try {
                                     player.containerMenu.carried = ItemStack.EMPTY
                                     (mount as NautilusAccessor).invokeCreateInventory()
                                     mount.openCustomInventoryScreen(player)
                                     player.containerMenu.carried = carried
                                     player.containerMenu.broadcastFullState()
+                                } catch (e: Exception) {
+                                    if (!carried.isEmpty) {
+                                        player.inventory.placeItemBackInInventory(carried)
+                                    }
                                 }
                             }
                         }

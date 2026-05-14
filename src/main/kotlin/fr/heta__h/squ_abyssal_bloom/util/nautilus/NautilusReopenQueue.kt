@@ -8,7 +8,9 @@ object NautilusReopenQueue {
     }
 
     fun flush() {
-        pending.forEach { it() }
+        if (pending.isEmpty()) return
+        val snapshot = pending.toList()
         pending.clear()
+        snapshot.forEach { it() }
     }
 }
