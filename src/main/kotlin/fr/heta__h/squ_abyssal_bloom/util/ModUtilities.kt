@@ -133,7 +133,8 @@ object ModUtilities {
         return item in listOf(
             NautilusLayer.LAMP,
             NautilusLayer.SHIELD,
-            NautilusLayer.BUBBLE
+            NautilusLayer.BUBBLE,
+            NautilusLayer.CHEST
         )
     }
 

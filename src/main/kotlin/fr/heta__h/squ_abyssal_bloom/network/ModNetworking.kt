@@ -8,6 +8,7 @@ import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.FocalistBe
 import fr.heta__h.squ_abyssal_bloom.network.bubble.C2SBubbleChargeStartPacket
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.network.nautilus_chest.SyncNautilusExtraSlotPayload
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundSource
@@ -30,6 +31,12 @@ object ModNetworking {
             FocalistBeamSyncPayload.ID,
             FocalistBeamSyncPayload.CODEC,
             FocalistBeamSyncPayload::handle
+        )
+
+        registrar.playToClient(
+            SyncNautilusExtraSlotPayload.ID,
+            SyncNautilusExtraSlotPayload.CODEC,
+            SyncNautilusExtraSlotPayload::handle
         )
 
         

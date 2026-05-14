@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerMenuAccessor
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusEquipmentSlot
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.inventory.AbstractMountInventoryMenu
 import net.minecraft.world.inventory.NautilusInventoryMenu
@@ -16,36 +17,59 @@ abstract class NautilusMountMenuShiftClickMixin {
     @Inject(method = ["quickMoveStack"], at = [At("HEAD")], cancellable = true)
     fun handleNautilusShiftClick(player: Player, index: Int, cir: CallbackInfoReturnable<ItemStack>) {
         val menu = this as AbstractMountInventoryMenu
+        if (menu !is NautilusInventoryMenu) return
 
-        if (menu is NautilusInventoryMenu) {
-            val slot = menu.slots[index]
+        val slot = menu.slots.getOrNull(index) ?: return
+        if (!slot.hasItem()) return
 
-            if (slot != null && slot.hasItem()) {
-                val stackInSlot = slot.item
-                val copyStack = stackInSlot.copy()
+        val stackInSlot = slot.item
+        val copyStack = stackInSlot.copy()
+        val accessor = menu as AbstractContainerMenuAccessor
 
-                val EXTRA_SLOT = menu.slots.size - 1
-                val PLAYER_START = 2
-                val PLAYER_END = EXTRA_SLOT
+        val extraSlotIndex = menu.slots.indexOfFirst { it is NautilusEquipmentSlot }
+        if (extraSlotIndex == -1) return
 
-                if (index == EXTRA_SLOT) {
-                    if (!(menu as AbstractContainerMenuAccessor).invokeMoveItemStackTo(stackInSlot, PLAYER_START, PLAYER_END, true)) {
-                        cir.returnValue = ItemStack.EMPTY
-                    } else {
-                        if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
-                        cir.returnValue = copyStack
-                    }
-                    cir.cancel()
-                    return
+        val PLAYER_START = 2
+        val PLAYER_END = extraSlotIndex
+        val CHEST_START = extraSlotIndex + 1
+        val CHEST_END = menu.slots.size
+        val hasChest = CHEST_START < CHEST_END
+
+        when {
+            index == extraSlotIndex -> {
+                val moved = accessor.invokeMoveItemStackTo(stackInSlot, PLAYER_START, PLAYER_END, true)
+                if (moved) {
+                    if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
+                    cir.returnValue = copyStack
+                } else {
+                    cir.returnValue = ItemStack.EMPTY
                 }
+                cir.cancel()
+            }
 
-                if (index in PLAYER_START until PLAYER_END) {
-                    if ((menu as AbstractContainerMenuAccessor).invokeMoveItemStackTo(stackInSlot, EXTRA_SLOT, EXTRA_SLOT + 1, false)) {
-                        if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
-                        cir.returnValue = copyStack
-                        return
-                    }
+            hasChest && index in CHEST_START until CHEST_END -> {
+                val moved = accessor.invokeMoveItemStackTo(stackInSlot, PLAYER_START, PLAYER_END, true)
+                if (moved) {
+                    if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
+                    cir.returnValue = copyStack
+                } else {
+                    cir.returnValue = ItemStack.EMPTY
                 }
+                cir.cancel()
+            }
+
+            index in PLAYER_START until PLAYER_END -> {
+                var moved = accessor.invokeMoveItemStackTo(stackInSlot, extraSlotIndex, extraSlotIndex + 1, false)
+                if (!moved && hasChest) {
+                    moved = accessor.invokeMoveItemStackTo(stackInSlot, CHEST_START, CHEST_END, false)
+                }
+                if (moved) {
+                    if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
+                    cir.returnValue = copyStack
+                } else {
+                    cir.returnValue = ItemStack.EMPTY
+                }
+                cir.cancel()
             }
         }
     }

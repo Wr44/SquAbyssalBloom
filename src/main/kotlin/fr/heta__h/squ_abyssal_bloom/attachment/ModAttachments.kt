@@ -27,6 +27,14 @@ object ModAttachments {
 
     }
 
+    
+    val NAUTILUS_CHEST_ITEMS = ATTACHMENTS.register("nautilus_chest_items") { ->
+        AttachmentType.builder { -> emptyList<ItemStack>() }
+            .serialize(ItemStack.OPTIONAL_CODEC.listOf().fieldOf("items"))
+            .sync(ItemStack.OPTIONAL_STREAM_CODEC.apply(ByteBufCodecs.list()))
+            .build()
+    }
+
     fun register(bus: IEventBus) {
         ATTACHMENTS.register(bus)
     }
