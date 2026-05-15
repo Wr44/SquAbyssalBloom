@@ -24,6 +24,7 @@ import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -203,11 +204,14 @@ object ConduitDomainHandler {
         val serverLevel = player.level() as? ServerLevel ?: return
 
         val rx: Double; val ry: Double; val rz: Double
-        if (kotlin.math.abs(ny) > 0.99) {
+
+        if (abs(ny) > 0.99) {
             rx = 1.0; ry = 0.0; rz = 0.0
         } else {
             val rLen = sqrt(nx * nx + nz * nz).coerceAtLeast(1e-6)
-            rx = nz / rLen; ry = 0.0; rz = -nx / rLen
+            rx = nz / rLen
+            ry = 0.0
+            rz = -nx / rLen
         }
         val ux = ny * rz - nz * ry
         val uy = nz * rx - nx * rz
@@ -225,6 +229,8 @@ object ConduitDomainHandler {
             )
         }
     }
+
+
     private fun grantFlight(player: Player) {
         if (player.isCreative || player.isSpectator) return
         val abilities = player.abilities
