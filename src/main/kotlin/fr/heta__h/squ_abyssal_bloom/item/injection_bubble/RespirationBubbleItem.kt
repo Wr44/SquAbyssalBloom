@@ -9,6 +9,8 @@ import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.Item
 import net.minecraft.world.level.Level
+import kotlin.math.cos
+import kotlin.math.sin
 
 class RespirationBubbleItem(properties: Properties) : Item(properties) {
 
@@ -27,19 +29,41 @@ class RespirationBubbleItem(properties: Properties) : Item(properties) {
             ModSounds.RESPIRATION_BUBBLE, SoundSource.PLAYERS, 0.2f, 1f
         )
 
-        repeat(25) {
-            val offsetX = (level.random.nextDouble() - 0.5) * 0.6
-            val offsetY = level.random.nextDouble() * 1.5
-            val offsetZ = (level.random.nextDouble() - 0.5) * 0.6
+        val headY = player.y + player.eyeHeight.toDouble()
 
+        repeat(24) {
+            val theta = level.random.nextDouble() * 2 * Math.PI
+            val phi = level.random.nextDouble() * Math.PI
+            val r = 0.35 + level.random.nextDouble() * 0.25
+            val sx = sin(phi) * cos(theta) * r
+            val sy = cos(phi) * r
+            val sz = sin(phi) * sin(theta) * r
             serverLevel.sendParticles(
-                ParticleTypes.BUBBLE,
-                player.x + offsetX,
-                player.y + offsetY,
-                player.z + offsetZ,
-                1,
-                0.0, 0.15, 0.0,
-                0.0
+                ParticleTypes.BUBBLE_POP,
+                player.x + sx, headY + sy, player.z + sz,
+                1, 0.0, 0.0, 0.0, 0.0
+            )
+        }
+
+        repeat(20) {
+            val ox = (level.random.nextDouble() - 0.5) * 0.35
+            val oz = (level.random.nextDouble() - 0.5) * 0.35
+            val oy = level.random.nextDouble() * player.bbHeight.toDouble()
+            serverLevel.sendParticles(
+                ParticleTypes.BUBBLE_COLUMN_UP,
+                player.x + ox, player.y + oy, player.z + oz,
+                1, 0.0, 0.05, 0.0, 0.08
+            )
+        }
+
+        repeat(12) {
+            val ox = (level.random.nextDouble() - 0.5) * 1.8
+            val oy = level.random.nextDouble() * 2.2
+            val oz = (level.random.nextDouble() - 0.5) * 1.8
+            serverLevel.sendParticles(
+                ParticleTypes.UNDERWATER,
+                player.x + ox, player.y + oy, player.z + oz,
+                1, 0.0, 0.0, 0.0, 0.0
             )
         }
 

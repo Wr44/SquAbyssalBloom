@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
+import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -601,7 +602,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             )
 
             level.sendParticles(
-                net.minecraft.core.particles.ParticleTypes.SQUID_INK,
+                ParticleTypes.SQUID_INK,
                 this.x, this.eyeY, this.z,
                 INK_PARTICLE_COUNT,
                 2.0, 2.0, 4.0,
