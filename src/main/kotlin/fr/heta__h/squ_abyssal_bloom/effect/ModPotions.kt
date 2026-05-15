@@ -53,7 +53,6 @@ object ModPotions {
             MobEffectInstance(ModEffects.GUARDIAN_S_REDISTRIBUTION, 1200, 2))
         }
 
-
     fun register(eventBus: IEventBus) {
         POTIONS.register(eventBus)
     }

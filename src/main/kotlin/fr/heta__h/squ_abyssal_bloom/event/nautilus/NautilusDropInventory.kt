@@ -53,5 +53,4 @@ object NautilusDropInventory {
         NautilusReopenQueue.flush()
     }
 
-
 }

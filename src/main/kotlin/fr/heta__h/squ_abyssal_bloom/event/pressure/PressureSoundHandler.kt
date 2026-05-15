@@ -24,6 +24,7 @@ object PressureSoundHandler {
         if (sound.identifier !in DROWNING_HURT_SOUNDS) return
 
         val level = Minecraft.getInstance().level ?: return
+
         val x = sound.x
         val y = sound.y
         val z = sound.z

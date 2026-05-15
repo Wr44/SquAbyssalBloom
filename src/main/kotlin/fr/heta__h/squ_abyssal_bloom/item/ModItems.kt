@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.item
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
+import fr.heta__h.squ_abyssal_bloom.item.injection_bubble.RespirationBubbleItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.Rarity
@@ -46,6 +47,10 @@ object ModItems {
     val LIFELINE_BUBBLE : DeferredItem<Item> = ITEMS.registerItem(
         "lifeline_bubble"
     ) { properties -> LifelineBubbleItem(properties) }
+
+    val RESPIRATION_BUBBLE : DeferredItem<Item> = ITEMS.registerItem(
+        "respiration_bubble"
+    ) { properties -> RespirationBubbleItem(properties) }
 
     val NAUTILUS_LAMP : DeferredItem<Item> = ITEMS.registerItem(
         "nautilus_lamp"

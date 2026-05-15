@@ -71,6 +71,12 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    
+
+    val RESPIRATION_BUBBLE = SOUNDS.register("respiration_bubble") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
 
 
     fun register(eventBus: IEventBus) {

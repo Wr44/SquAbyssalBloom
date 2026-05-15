@@ -21,11 +21,13 @@ class LifelineBubbleItem(properties: Properties) : Item(properties) {
 
     override fun use(level: Level, player: Player, hand: InteractionHand): InteractionResult {
         if (player.isShiftKeyDown) return InteractionResult.PASS
-        if (level.isClientSide) return InteractionResult.SUCCESS
         if (!player.isUnderWater) return InteractionResult.FAIL
-        if (hasAttachedBubble(level as ServerLevel, player.id)) return InteractionResult.FAIL
+
+        if (level.isClientSide) return InteractionResult.SUCCESS
 
         val serverLevel = level as ServerLevel
+
+        if (hasAttachedBubble(level, player.id)) return InteractionResult.FAIL
         val bubble = BubbleProjectile(ModEntities.BUBBLE.get(), serverLevel)
         bubble.apply {
             bubbleStage = 0

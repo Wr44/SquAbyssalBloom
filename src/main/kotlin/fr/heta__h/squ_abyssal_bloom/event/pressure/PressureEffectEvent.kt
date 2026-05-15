@@ -13,6 +13,7 @@ import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
+import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
@@ -45,7 +46,7 @@ object PressureEffectEvent {
         if (entity.level().isClientSide) return
         val serverLevel = entity.level() as? ServerLevel ?: return
 
-        if (!entity.isInWater) {
+        if (!entity.isInWater || entity.isSpectator || (entity as? Player)?.isCreative == true || entity.isInvulnerable) {
             entity.removeEffect(ModEffects.PRESSURE)
             return
         }
