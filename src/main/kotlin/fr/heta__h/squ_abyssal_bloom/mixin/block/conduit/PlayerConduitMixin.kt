@@ -42,4 +42,16 @@ abstract class PlayerConduitMixin {
         if (!isPlayerInConduitDomain()) return instance.fluidJumpThreshold
         return Double.MAX_VALUE
     }
+
+    @Redirect(
+        method = ["aiStep"],
+        at = At(
+            value = "INVOKE",
+            target = "Lnet/minecraft/world/entity/LivingEntity;isInWater()Z"
+        )
+    )
+    private fun redirectWaterFlagForJump(instance: LivingEntity): Boolean {
+        if (!isPlayerInConduitDomain()) return instance.isInWater
+        return false
+    }
 }

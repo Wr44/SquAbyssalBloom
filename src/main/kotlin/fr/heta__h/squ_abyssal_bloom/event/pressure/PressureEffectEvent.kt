@@ -10,6 +10,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.EntityTypeTags
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -46,7 +47,12 @@ object PressureEffectEvent {
         if (entity.level().isClientSide) return
         val serverLevel = entity.level() as? ServerLevel ?: return
 
-        if (!entity.isInWater || entity.isSpectator || (entity as? Player)?.isCreative == true || entity.isInvulnerable) {
+        if (!entity.isInWater
+            || entity.isSpectator
+            || (entity as? Player)?.isCreative == true
+            || entity.isInvulnerable
+            || (entity as? Player)?.hasEffect(MobEffects.CONDUIT_POWER) == true)
+        {
             entity.removeEffect(ModEffects.PRESSURE)
             return
         }

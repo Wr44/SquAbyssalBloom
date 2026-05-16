@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.conduit
 
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
 import net.minecraft.client.player.LocalPlayer
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.effect.MobEffects
@@ -9,6 +10,7 @@ import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.MobEffectEvent
+import net.neoforged.neoforge.event.tick.ServerTickEvent
 
 @EventBusSubscriber(value = [Dist.CLIENT])
 object ClientConduitHandler {
@@ -31,6 +33,11 @@ object ClientConduitHandler {
         playPressureTransition(event.entity)
     }
 
+    @SubscribeEvent
+    fun onServerTick(event: ServerTickEvent.Post) {
+        ConduitHuntingTracker.clearHits()
+    }
+
     private fun isLocalPlayer(entity: Entity): Boolean {
         if (!entity.level().isClientSide) return false
         return entity is LocalPlayer
@@ -43,4 +50,5 @@ object ClientConduitHandler {
             1.0f, 1.0f, false
         )
     }
+
 }

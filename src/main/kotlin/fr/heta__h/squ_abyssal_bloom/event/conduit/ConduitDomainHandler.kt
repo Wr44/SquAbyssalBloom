@@ -32,21 +32,25 @@ import kotlin.math.sqrt
 @EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object ConduitDomainHandler {
 
-    private const val RADIUS_MIN = 10.0
-    private const val RADIUS_MAX = 20.0
+    private const val RADIUS_MIN = 16.0
+    private const val RADIUS_MAX = 32.0
 
     private const val STEP_MIN = 2
     private const val STEP_MAX = 6
 
-    private const val EFFECT_DURATION = 80
+    private const val EFFECT_DURATION = 300
+    private const val EFFECT_REFRESH_THRESHOLD = 240
+
+    private const val FLYING_SPEED_NORMAL = 0.025f
+    private const val FLYING_SPEED_HUNTING = 0.05f
+    private const val JUMP_VELOCITY_MAX = 0.42
 
     private const val BOUNDARY_TRIGGER_DISTANCE = 5.0
     private const val BOUNDARY_RING_RADIUS = 2.5
     private const val BOUNDARY_RING_POINTS = 24
     private const val BOUNDARY_PARTICLE_INTERVAL = 3
 
-
-    private data class DomainInfo(val conduitPos: BlockPos, val radius: Double)
+    private data class DomainInfo(val conduitPos: BlockPos, val radius: Double, val isHunting: Boolean)
 
     private val conduitRegistry = ConcurrentHashMap<Level, MutableSet<BlockPos>>()
     private val playerAttachment = ConcurrentHashMap<UUID, BlockPos>()
@@ -58,7 +62,6 @@ object ConduitDomainHandler {
         val t = ((steps - STEP_MIN).toDouble() / (STEP_MAX - STEP_MIN)).coerceIn(0.0, 1.0)
         return RADIUS_MIN + t * (RADIUS_MAX - RADIUS_MIN)
     }
-
 
     @SubscribeEvent
     fun onBlockPlace(event: BlockEvent.EntityPlaceEvent) {
@@ -89,11 +92,8 @@ object ConduitDomainHandler {
         conduitRegistry.remove(level)
     }
 
-
     @SubscribeEvent
-    fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
-        detach(event.entity)
-    }
+    fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) { detach(event.entity) }
 
     @SubscribeEvent
     fun onPlayerDeath(event: LivingDeathEvent) {
@@ -102,14 +102,10 @@ object ConduitDomainHandler {
     }
 
     @SubscribeEvent
-    fun onPlayerChangeDimension(event: PlayerEvent.PlayerChangedDimensionEvent) {
-        detach(event.entity)
-    }
+    fun onPlayerChangeDimension(event: PlayerEvent.PlayerChangedDimensionEvent) { detach(event.entity) }
 
     @SubscribeEvent
-    fun onPlayerRespawn(event: PlayerEvent.PlayerRespawnEvent) {
-        detach(event.entity)
-    }
+    fun onPlayerRespawn(event: PlayerEvent.PlayerRespawnEvent) { detach(event.entity) }
 
     private fun detach(player: Player) {
         playerAttachment.remove(player.uuid)
@@ -131,11 +127,17 @@ object ConduitDomainHandler {
 
         player.airSupply = player.maxAirSupply
 
-        if (!player.hasEffect(MobEffects.CONDUIT_POWER)) {
-            player.addEffect(MobEffectInstance(MobEffects.CONDUIT_POWER, EFFECT_DURATION, 0, true, false))
+        val targetAmplifier = if (domain.isHunting) 1 else 0
+        val currentEffect = player.getEffect(MobEffects.CONDUIT_POWER)
+        if (currentEffect == null || currentEffect.amplifier != targetAmplifier || currentEffect.duration <= EFFECT_REFRESH_THRESHOLD) {
+            player.addEffect(MobEffectInstance(MobEffects.CONDUIT_POWER, EFFECT_DURATION, targetAmplifier, true, false))
         }
 
-        grantFlight(player)
+        if (!player.abilities.flying && player.deltaMovement.y > JUMP_VELOCITY_MAX) {
+            player.setDeltaMovement(player.deltaMovement.x, JUMP_VELOCITY_MAX, player.deltaMovement.z)
+        }
+
+        grantFlight(player, domain.isHunting)
 
         if (player.tickCount % BOUNDARY_PARTICLE_INTERVAL == 0) {
             spawnBoundaryWarning(player, domain.conduitPos, domain.radius)
@@ -151,9 +153,8 @@ object ConduitDomainHandler {
             if (be != null && be.isActive) {
                 val size = (be as ConduitBlockEntityAccessor).getEffectBlocks().size
                 val radius = conduitRadius(size)
-                if (attachedPos.closerThan(player.blockPosition(), radius)) {
-                    return DomainInfo(attachedPos, radius)
-                }
+                if (attachedPos.closerThan(player.blockPosition(), radius))
+                    return DomainInfo(attachedPos, radius, be.isHunting)
             }
             playerAttachment.remove(player.uuid)
         }
@@ -168,7 +169,7 @@ object ConduitDomainHandler {
             val radius = conduitRadius(size)
             if (pos.closerThan(player.blockPosition(), radius)) {
                 playerAttachment[player.uuid] = pos
-                return DomainInfo(pos, radius)
+                return DomainInfo(pos, radius, be.isHunting)
             }
         }
         return null
@@ -180,38 +181,24 @@ object ConduitDomainHandler {
         val cz = conduitPos.z + 0.5
 
         val eyePos = player.eyePosition
-        val px = eyePos.x
-        val py = eyePos.y
-        val pz = eyePos.z
-
-        val vx = px - cx
-        val vy = py - cy
-        val vz = pz - cz
+        val vx = eyePos.x - cx
+        val vy = eyePos.y - cy
+        val vz = eyePos.z - cz
 
         val dist = sqrt(vx * vx + vy * vy + vz * vz)
-        if (dist <= 0.001) return
+        if (dist <= 0.001 || radius - dist > BOUNDARY_TRIGGER_DISTANCE) return
 
-        if (radius - dist > BOUNDARY_TRIGGER_DISTANCE) return
-
-        val nx = vx / dist
-        val ny = vy / dist
-        val nz = vz / dist
-
-        val bx = cx + nx * radius
-        val by = cy + ny * radius
-        val bz = cz + nz * radius
+        val nx = vx / dist; val ny = vy / dist; val nz = vz / dist
+        val bx = cx + nx * radius; val by = cy + ny * radius; val bz = cz + nz * radius
 
         val serverLevel = player.level() as? ServerLevel ?: return
 
         val rx: Double; val ry: Double; val rz: Double
-
         if (abs(ny) > 0.99) {
             rx = 1.0; ry = 0.0; rz = 0.0
         } else {
             val rLen = sqrt(nx * nx + nz * nz).coerceAtLeast(1e-6)
-            rx = nz / rLen
-            ry = 0.0
-            rz = -nx / rLen
+            rx = nz / rLen; ry = 0.0; rz = -nx / rLen
         }
         val ux = ny * rz - nz * ry
         val uy = nz * rx - nx * rz
@@ -221,7 +208,7 @@ object ConduitDomainHandler {
             val phi = 2.0 * Math.PI * i / BOUNDARY_RING_POINTS
             val cosPhi = cos(phi); val sinPhi = sin(phi)
             serverLevel.sendParticles(
-                ParticleTypes.GLOW,
+                ParticleTypes.NAUTILUS,
                 bx + (cosPhi * rx + sinPhi * ux) * BOUNDARY_RING_RADIUS,
                 by + (cosPhi * ry + sinPhi * uy) * BOUNDARY_RING_RADIUS,
                 bz + (cosPhi * rz + sinPhi * uz) * BOUNDARY_RING_RADIUS,
@@ -230,14 +217,19 @@ object ConduitDomainHandler {
         }
     }
 
-
-    private fun grantFlight(player: Player) {
+    private fun grantFlight(player: Player, isHunting: Boolean) {
         if (player.isCreative || player.isSpectator) return
         val abilities = player.abilities
-        if (abilities.mayfly) return
-        abilities.mayfly = true
-        abilities.flying = true
-        player.onUpdateAbilities()
+        val targetSpeed = if (isHunting) FLYING_SPEED_HUNTING else FLYING_SPEED_NORMAL
+        if (!abilities.mayfly) {
+            abilities.mayfly = true
+            abilities.flying = true
+            abilities.flyingSpeed = targetSpeed
+            player.onUpdateAbilities()
+        } else if (abilities.flyingSpeed != targetSpeed) {
+            abilities.flyingSpeed = targetSpeed
+            player.onUpdateAbilities()
+        }
     }
 
     private fun revokeFlight(player: Player) {
