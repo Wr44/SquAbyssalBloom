@@ -3,13 +3,14 @@
 package fr.heta__h.squ_abyssal_bloom.event.conduit
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.ConduitBlockEntityAccessor
+import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
-import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Blocks
@@ -22,6 +23,7 @@ import net.neoforged.neoforge.event.level.BlockEvent
 import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
+import net.neoforged.neoforge.event.tick.ServerTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -34,21 +36,13 @@ object ConduitDomainHandler {
 
     private const val RADIUS_MIN = 16.0
     private const val RADIUS_MAX = 32.0
-
     private const val STEP_MIN = 2
     private const val STEP_MAX = 6
-
     private const val EFFECT_DURATION = 300
     private const val EFFECT_REFRESH_THRESHOLD = 240
-
     private const val FLYING_SPEED_NORMAL = 0.025f
     private const val FLYING_SPEED_HUNTING = 0.05f
     private const val JUMP_VELOCITY_MAX = 0.42
-
-    private const val BOUNDARY_TRIGGER_DISTANCE = 5.0
-    private const val BOUNDARY_RING_RADIUS = 2.5
-    private const val BOUNDARY_RING_POINTS = 24
-    private const val BOUNDARY_PARTICLE_INTERVAL = 3
 
     private data class DomainInfo(val conduitPos: BlockPos, val radius: Double, val isHunting: Boolean)
 
@@ -61,6 +55,11 @@ object ConduitDomainHandler {
         val steps = size / 7
         val t = ((steps - STEP_MIN).toDouble() / (STEP_MAX - STEP_MIN)).coerceIn(0.0, 1.0)
         return RADIUS_MIN + t * (RADIUS_MAX - RADIUS_MIN)
+    }
+
+    @SubscribeEvent
+    fun onServerTick(event: ServerTickEvent.Post) {
+        ConduitHuntingTracker.clearHits()
     }
 
     @SubscribeEvent
@@ -139,7 +138,7 @@ object ConduitDomainHandler {
 
         grantFlight(player, domain.isHunting)
 
-        if (player.tickCount % BOUNDARY_PARTICLE_INTERVAL == 0) {
+        if (ModConfig.conduitBoundaryParticlesEnabled && player.tickCount % ModConfig.conduitBoundaryParticleInterval == 0) {
             spawnBoundaryWarning(player, domain.conduitPos, domain.radius)
         }
     }
@@ -186,7 +185,7 @@ object ConduitDomainHandler {
         val vz = eyePos.z - cz
 
         val dist = sqrt(vx * vx + vy * vy + vz * vz)
-        if (dist <= 0.001 || radius - dist > BOUNDARY_TRIGGER_DISTANCE) return
+        if (dist <= 0.001 || radius - dist > ModConfig.conduitBoundaryTriggerDistance) return
 
         val nx = vx / dist; val ny = vy / dist; val nz = vz / dist
         val bx = cx + nx * radius; val by = cy + ny * radius; val bz = cz + nz * radius
@@ -204,14 +203,17 @@ object ConduitDomainHandler {
         val uy = nz * rx - nx * rz
         val uz = nx * ry - ny * rx
 
-        repeat(BOUNDARY_RING_POINTS) { i ->
-            val phi = 2.0 * Math.PI * i / BOUNDARY_RING_POINTS
+        val ringPoints = ModConfig.conduitBoundaryRingPoints
+        val ringRadius = ModConfig.conduitBoundaryRingRadius
+
+        repeat(ringPoints) { i ->
+            val phi = 2.0 * Math.PI * i / ringPoints
             val cosPhi = cos(phi); val sinPhi = sin(phi)
             serverLevel.sendParticles(
                 ParticleTypes.NAUTILUS,
-                bx + (cosPhi * rx + sinPhi * ux) * BOUNDARY_RING_RADIUS,
-                by + (cosPhi * ry + sinPhi * uy) * BOUNDARY_RING_RADIUS,
-                bz + (cosPhi * rz + sinPhi * uz) * BOUNDARY_RING_RADIUS,
+                bx + (cosPhi * rx + sinPhi * ux) * ringRadius,
+                by + (cosPhi * ry + sinPhi * uy) * ringRadius,
+                bz + (cosPhi * rz + sinPhi * uz) * ringRadius,
                 1, 0.0, 0.0, 0.0, 0.0
             )
         }
