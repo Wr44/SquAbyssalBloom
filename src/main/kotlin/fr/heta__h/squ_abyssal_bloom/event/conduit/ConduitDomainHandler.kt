@@ -39,13 +39,18 @@ object ConduitDomainHandler {
 
     private const val RADIUS_MIN = 16.0
     private const val RADIUS_MAX = 32.0
+
     private const val STEP_MIN = 2
     private const val STEP_MAX = 6
-    private const val EFFECT_DURATION = 300
-    private const val EFFECT_REFRESH_THRESHOLD = 240
+
+    private const val EFFECT_DURATION = 400
+    private const val EFFECT_REFRESH_THRESHOLD = 300
+
     private const val FLYING_SPEED_NORMAL = 0.025f
     private const val FLYING_SPEED_HUNTING = 0.05f
+
     private const val JUMP_VELOCITY_MAX = 0.42
+
     private const val CONDUIT_ACTIVE_THRESHOLD = 40
 
     private data class DomainInfo(val conduitPos: BlockPos, val radius: Double, val isHunting: Boolean)
@@ -145,6 +150,7 @@ object ConduitDomainHandler {
         }
 
         player.airSupply = player.maxAirSupply
+        if (player.isSwimming) player.isSwimming = false
 
         val currentEffect = player.getEffect(MobEffects.CONDUIT_POWER)
         val justEntered = currentEffect == null

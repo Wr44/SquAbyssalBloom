@@ -81,6 +81,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         const val KNOCKBACK_MIN_NY = 0.1
         const val BURST_EVENT_ID: Byte = 77
 
+        const val LERP_FACTOR = 0.7
+
         
         const val LEASH_MAX_LENGTH = 5.0
         const val LEASH_IDLE_PULL = 0.03
@@ -287,13 +289,19 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         val dirZ = cos(yawRad)
         val dist = HELD_DIST_BASE + bubbleStage * HELD_DIST_PER_STAGE
 
-        setPos(
-            nautilus.x + dirX * dist,
-            nautilus.y + nautilus.bbHeight / HELD_HEIGHT_DIVISOR,
-            nautilus.z + dirZ * dist
-        )
+        val targetX = nautilus.x + dirX * dist
+        val targetY = nautilus.y + nautilus.bbHeight / HELD_HEIGHT_DIVISOR
+        val targetZ = nautilus.z + dirZ * dist
 
-        deltaMovement = Vec3.ZERO
+        val nautilusVel = nautilus.deltaMovement
+
+        deltaMovement = Vec3(
+            nautilusVel.x + (targetX - x - nautilusVel.x) * LERP_FACTOR,
+            nautilusVel.y + (targetY - y - nautilusVel.y) * LERP_FACTOR,
+            nautilusVel.z + (targetZ - z - nautilusVel.z) * LERP_FACTOR
+        )
+        setPos(x + deltaMovement.x, y + deltaMovement.y, z + deltaMovement.z)
+
         val yaw = controller.yRot
         val pitch = controller.xRot
         this.setRot(yaw, pitch)
