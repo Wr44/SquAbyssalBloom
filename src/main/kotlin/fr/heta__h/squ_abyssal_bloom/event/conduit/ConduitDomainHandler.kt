@@ -5,10 +5,13 @@ package fr.heta__h.squ_abyssal_bloom.event.conduit
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.ConduitBlockEntityAccessor
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.sounds.SoundEvents
+import net.minecraft.sounds.SoundSource
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.player.Player
@@ -43,6 +46,7 @@ object ConduitDomainHandler {
     private const val FLYING_SPEED_NORMAL = 0.025f
     private const val FLYING_SPEED_HUNTING = 0.05f
     private const val JUMP_VELOCITY_MAX = 0.42
+    private const val CONDUIT_ACTIVE_THRESHOLD = 40
 
     private data class DomainInfo(val conduitPos: BlockPos, val radius: Double, val isHunting: Boolean)
 
@@ -106,10 +110,25 @@ object ConduitDomainHandler {
     @SubscribeEvent
     fun onPlayerRespawn(event: PlayerEvent.PlayerRespawnEvent) { detach(event.entity) }
 
-    private fun detach(player: Player) {
+    private fun detach(player: Player, previousAttachment: BlockPos? = null) {
+        val wasInDomain = player.hasEffect(MobEffects.CONDUIT_POWER)
+        val attachedPos = previousAttachment ?: playerAttachment[player.uuid]
+
         playerAttachment.remove(player.uuid)
         revokeFlight(player)
         player.removeEffect(MobEffects.CONDUIT_POWER)
+
+        if (wasInDomain && attachedPos != null) {
+            val be = player.level().getBlockEntity(attachedPos) as? ConduitBlockEntity
+            if (be?.isActive == true) {
+                ModUtilities.playSoundLocal(
+                    player,
+                    SoundEvents.CONDUIT_DEACTIVATE,
+                    SoundSource.PLAYERS,
+                    0.5f, 1.5f
+                )
+            }
+        }
     }
 
     @SubscribeEvent
@@ -117,19 +136,34 @@ object ConduitDomainHandler {
         val player = event.entity
         if (player.level().isClientSide) return
 
+        val previousAttachment = playerAttachment[player.uuid]
         val domain = findActiveDomain(player)
 
         if (!player.isUnderWater || domain == null) {
-            detach(player)
+            detach(player, previousAttachment)
             return
         }
 
         player.airSupply = player.maxAirSupply
 
-        val targetAmplifier = if (domain.isHunting) 1 else 0
         val currentEffect = player.getEffect(MobEffects.CONDUIT_POWER)
+        val justEntered = currentEffect == null
+
+        val targetAmplifier = if (domain.isHunting) 1 else 0
         if (currentEffect == null || currentEffect.amplifier != targetAmplifier || currentEffect.duration <= EFFECT_REFRESH_THRESHOLD) {
             player.addEffect(MobEffectInstance(MobEffects.CONDUIT_POWER, EFFECT_DURATION, targetAmplifier, true, false))
+        }
+
+        if (justEntered) {
+            val be = player.level().getBlockEntity(domain.conduitPos) as? ConduitBlockEntity
+            if ((be?.tickCount ?: 0) > CONDUIT_ACTIVE_THRESHOLD) {
+                ModUtilities.playSoundLocal(
+                    player,
+                    SoundEvents.CONDUIT_ACTIVATE,
+                    SoundSource.PLAYERS,
+                    0.5f, 1.5f
+                )
+            }
         }
 
         if (!player.abilities.flying && player.deltaMovement.y > JUMP_VELOCITY_MAX) {
