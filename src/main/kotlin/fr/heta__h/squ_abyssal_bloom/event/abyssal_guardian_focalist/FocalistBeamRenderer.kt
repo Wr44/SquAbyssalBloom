@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_guardian_focalist
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import com.mojang.math.Axis
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.abyssal_guardian_focalist.GuardianBeamDynamicLightCompat
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.ClientBeamData
@@ -20,7 +21,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import kotlin.math.acos
 import kotlin.math.atan2
 
-@EventBusSubscriber(modid = "squ_abyssal_bloom", value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object FocalistBeamRenderer {
 
     private val BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/guardian_beam.png")

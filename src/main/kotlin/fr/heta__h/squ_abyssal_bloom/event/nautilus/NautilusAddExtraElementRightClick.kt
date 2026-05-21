@@ -47,7 +47,7 @@ object NautilusAddExtraElementRightClick {
                     1.5f
                 )
 
-                if (!player.isCreative) {
+                if (!player.abilities.instabuild) {
                     itemInHand.shrink(1)
                 }
             }

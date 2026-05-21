@@ -3,7 +3,9 @@
 package fr.heta__h.squ_abyssal_bloom.event.conduit
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.ConduitBlockEntityAccessor
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
@@ -14,6 +16,7 @@ import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Blocks
@@ -38,7 +41,10 @@ import kotlin.math.sqrt
 object ConduitDomainHandler {
 
     private const val RADIUS_MIN = 16.0
-    private const val RADIUS_MAX = 32.0
+    private const val RADIUS_MAX = 36.0
+
+    const val PORTABLE_RADIUS = 12.0
+    private const val PORTABLE_WARNING_DISTANCE = 3.5
 
     private const val STEP_MIN = 2
     private const val STEP_MAX = 6
@@ -46,17 +52,29 @@ object ConduitDomainHandler {
     private const val EFFECT_DURATION = 400
     private const val EFFECT_REFRESH_THRESHOLD = 300
 
-    private const val FLYING_SPEED_NORMAL = 0.025f
+    private const val FLYING_SPEED_NORMAL = 0.035f
     private const val FLYING_SPEED_HUNTING = 0.05f
 
     private const val JUMP_VELOCITY_MAX = 0.42
 
     private const val CONDUIT_ACTIVE_THRESHOLD = 40
 
-    private data class DomainInfo(val conduitPos: BlockPos, val radius: Double, val isHunting: Boolean)
+    private sealed class ConduitTarget {
+        data class Block(val pos: BlockPos) : ConduitTarget()
+        data class Entity(val uuid: UUID) : ConduitTarget()
+    }
+
+    private data class DomainInfo(
+        val target: ConduitTarget,
+        val centerX: Double,
+        val centerY: Double,
+        val centerZ: Double,
+        val radius: Double,
+        val isHunting: Boolean
+    )
 
     private val conduitRegistry = ConcurrentHashMap<Level, MutableSet<BlockPos>>()
-    private val playerAttachment = ConcurrentHashMap<UUID, BlockPos>()
+    private val playerAttachment = ConcurrentHashMap<UUID, ConduitTarget>()
 
     private fun getConduits(level: Level) = conduitRegistry.getOrPut(level) { ConcurrentHashMap.newKeySet() }
 
@@ -82,7 +100,7 @@ object ConduitDomainHandler {
         val level = event.level as? Level ?: return
         if (event.state.block == Blocks.CONDUIT) {
             getConduits(level).remove(event.pos)
-            playerAttachment.values.removeIf { it == event.pos }
+            playerAttachment.values.removeIf { it is ConduitTarget.Block && it.pos == event.pos }
         }
     }
 
@@ -115,17 +133,26 @@ object ConduitDomainHandler {
     @SubscribeEvent
     fun onPlayerRespawn(event: PlayerEvent.PlayerRespawnEvent) { detach(event.entity) }
 
-    private fun detach(player: Player, previousAttachment: BlockPos? = null) {
+    private fun detach(player: Player, previousAttachment: ConduitTarget? = null) {
         val wasInDomain = player.hasEffect(MobEffects.CONDUIT_POWER)
-        val attachedPos = previousAttachment ?: playerAttachment[player.uuid]
+        val attachedTarget = previousAttachment ?: playerAttachment[player.uuid]
 
         playerAttachment.remove(player.uuid)
         revokeFlight(player)
         player.removeEffect(MobEffects.CONDUIT_POWER)
 
-        if (wasInDomain && attachedPos != null) {
-            val be = player.level().getBlockEntity(attachedPos) as? ConduitBlockEntity
-            if (be?.isActive == true) {
+        if (wasInDomain && attachedTarget != null) {
+            var shouldPlaySound = false
+            when (attachedTarget) {
+                is ConduitTarget.Block -> {
+                    val be = player.level().getBlockEntity(attachedTarget.pos) as? ConduitBlockEntity
+                    if (be?.isActive == true) shouldPlaySound = true
+                }
+                is ConduitTarget.Entity -> {
+                    shouldPlaySound = true
+                }
+            }
+            if (shouldPlaySound) {
                 ModUtilities.playSoundLocal(
                     player,
                     SoundEvents.CONDUIT_DEACTIVATE,
@@ -161,8 +188,17 @@ object ConduitDomainHandler {
         }
 
         if (justEntered) {
-            val be = player.level().getBlockEntity(domain.conduitPos) as? ConduitBlockEntity
-            if ((be?.tickCount ?: 0) > CONDUIT_ACTIVE_THRESHOLD) {
+            var shouldPlaySound = false
+            when (val target = domain.target) {
+                is ConduitTarget.Block -> {
+                    val be = player.level().getBlockEntity(target.pos) as? ConduitBlockEntity
+                    if ((be?.tickCount ?: 0) > CONDUIT_ACTIVE_THRESHOLD) shouldPlaySound = true
+                }
+                is ConduitTarget.Entity -> {
+                    shouldPlaySound = true
+                }
+            }
+            if (shouldPlaySound) {
                 ModUtilities.playSoundLocal(
                     player,
                     SoundEvents.CONDUIT_ACTIVATE,
@@ -179,23 +215,37 @@ object ConduitDomainHandler {
         grantFlight(player, domain.isHunting)
 
         if (ModConfig.conduitBoundaryParticlesEnabled && player.tickCount % ModConfig.conduitBoundaryParticleInterval == 0) {
-            spawnBoundaryWarning(player, domain.conduitPos, domain.radius)
+            val isPortable = domain.target is ConduitTarget.Entity
+            spawnBoundaryWarning(player, domain.centerX, domain.centerY, domain.centerZ, domain.radius, isPortable)
         }
     }
 
     private fun findActiveDomain(player: Player): DomainInfo? {
         val level = player.level()
+        val attachedTarget = playerAttachment[player.uuid]
 
-        val attachedPos = playerAttachment[player.uuid]
-        if (attachedPos != null) {
-            val be = level.getBlockEntity(attachedPos) as? ConduitBlockEntity
-            if (be != null && be.isActive) {
-                val size = (be as ConduitBlockEntityAccessor).getEffectBlocks().size
-                val radius = conduitRadius(size)
-                if (attachedPos.closerThan(player.blockPosition(), radius))
-                    return DomainInfo(attachedPos, radius, be.isHunting)
+        if (attachedTarget != null) {
+            when (attachedTarget) {
+                is ConduitTarget.Block -> {
+                    val be = level.getBlockEntity(attachedTarget.pos) as? ConduitBlockEntity
+                    if (be != null && be.isActive) {
+                        val size = (be as ConduitBlockEntityAccessor).getEffectBlocks().size
+                        val radius = conduitRadius(size)
+                        if (attachedTarget.pos.closerThan(player.blockPosition(), radius)) {
+                            return DomainInfo(attachedTarget, attachedTarget.pos.x + 0.5, attachedTarget.pos.y + 0.5, attachedTarget.pos.z + 0.5, radius, be.isHunting)
+                        }
+                    }
+                    playerAttachment.remove(player.uuid)
+                }
+                is ConduitTarget.Entity -> {
+                    val nautilusList = level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(PORTABLE_RADIUS))
+                    val nautilus = nautilusList.firstOrNull { it.uuid == attachedTarget.uuid && it.isAlive && it.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item == NautilusLayer.CONDUIT }
+                    if (nautilus != null && nautilus.distanceTo(player) <= PORTABLE_RADIUS) {
+                        return DomainInfo(attachedTarget, nautilus.x, nautilus.y + nautilus.bbHeight / 2.0, nautilus.z, PORTABLE_RADIUS, false)
+                    }
+                    playerAttachment.remove(player.uuid)
+                }
             }
-            playerAttachment.remove(player.uuid)
         }
 
         for (pos in getConduits(level)) {
@@ -207,25 +257,33 @@ object ConduitDomainHandler {
             val size = (be as ConduitBlockEntityAccessor).getEffectBlocks().size
             val radius = conduitRadius(size)
             if (pos.closerThan(player.blockPosition(), radius)) {
-                playerAttachment[player.uuid] = pos
-                return DomainInfo(pos, radius, be.isHunting)
+                val target = ConduitTarget.Block(pos)
+                playerAttachment[player.uuid] = target
+                return DomainInfo(target, pos.x + 0.5, pos.y + 0.5, pos.z + 0.5, radius, be.isHunting)
             }
         }
+
+        val nautilusList = level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(PORTABLE_RADIUS))
+        val nautilus = nautilusList.firstOrNull { it.isAlive && it.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item == NautilusLayer.CONDUIT }
+        if (nautilus != null && nautilus.distanceTo(player) <= PORTABLE_RADIUS) {
+            val target = ConduitTarget.Entity(nautilus.uuid)
+            playerAttachment[player.uuid] = target
+            return DomainInfo(target, nautilus.x, nautilus.y + nautilus.bbHeight / 2.0, nautilus.z, PORTABLE_RADIUS, false)
+        }
+
         return null
     }
 
-    private fun spawnBoundaryWarning(player: Player, conduitPos: BlockPos, radius: Double) {
-        val cx = conduitPos.x + 0.5
-        val cy = conduitPos.y + 0.5
-        val cz = conduitPos.z + 0.5
-
+    private fun spawnBoundaryWarning(player: Player, cx: Double, cy: Double, cz: Double, radius: Double, isPortable: Boolean) {
         val eyePos = player.eyePosition
         val vx = eyePos.x - cx
         val vy = eyePos.y - cy
         val vz = eyePos.z - cz
 
         val dist = sqrt(vx * vx + vy * vy + vz * vz)
-        if (dist <= 0.001 || radius - dist > ModConfig.conduitBoundaryTriggerDistance) return
+
+        val triggerDist = if (isPortable) PORTABLE_WARNING_DISTANCE else ModConfig.conduitBoundaryTriggerDistance
+        if (dist <= 0.001 || radius - dist > triggerDist) return
 
         val nx = vx / dist; val ny = vy / dist; val nz = vz / dist
         val bx = cx + nx * radius; val by = cy + ny * radius; val bz = cz + nz * radius
@@ -244,7 +302,7 @@ object ConduitDomainHandler {
         val uz = nx * ry - ny * rx
 
         val ringPoints = ModConfig.conduitBoundaryRingPoints
-        val ringRadius = ModConfig.conduitBoundaryRingRadius
+        val ringRadius = if (isPortable) ModConfig.conduitBoundaryRingRadius / 2.0 else ModConfig.conduitBoundaryRingRadius
 
         repeat(ringPoints) { i ->
             val phi = 2.0 * Math.PI * i / ringPoints

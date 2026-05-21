@@ -7,6 +7,7 @@ import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractNautilusAccessor
 import fr.heta__h.squ_abyssal_bloom.network.nautilus_chest.SyncNautilusExtraSlotPayload
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusReopenQueue
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.sounds.SoundEvents 
 import net.minecraft.world.Container
 import net.minecraft.world.SimpleContainer
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -48,6 +49,10 @@ abstract class NautilusMenuMixin {
         extraSlotContainer.addListener { container ->
             if (mount.isAlive) {
                 val newItem: ItemStack = container.getItem(0) ?: ItemStack.EMPTY
+
+                
+                val oldItem = mount.getData(ModAttachments.NAUTILUS_EXTRA_SLOT) ?: ItemStack.EMPTY
+
                 val hasChestNow = newItem.`is`(Items.CHEST)
                 val hadChest = hadChestState
                 hadChestState = hasChestNow
@@ -55,6 +60,11 @@ abstract class NautilusMenuMixin {
                 mount.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, newItem)
 
                 if (!mount.level().isClientSide) {
+
+                    if (!newItem.isEmpty && !ItemStack.matches(oldItem, newItem)) {
+                        mount.playSound(SoundEvents.ARMOR_EQUIP_NAUTILUS.value(), 1.0f, 1.5f)
+                    }
+
                     PacketDistributor.sendToPlayersTrackingEntityAndSelf(mount, SyncNautilusExtraSlotPayload(mount.id, newItem))
 
                     if (hadChest != hasChestNow) {

@@ -35,19 +35,12 @@ abstract class NautilusMountMenuShiftClickMixin {
         val CHEST_END = menu.slots.size
         val hasChest = CHEST_START < CHEST_END
 
-        when {
-            index == extraSlotIndex -> {
-                val moved = accessor.invokeMoveItemStackTo(stackInSlot, PLAYER_START, PLAYER_END, true)
-                if (moved) {
-                    if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
-                    cir.returnValue = copyStack
-                } else {
-                    cir.returnValue = ItemStack.EMPTY
-                }
-                cir.cancel()
-            }
+        val isSaddleOrArmor = index == 0 || index == 1
+        val isExtraSlot = index == extraSlotIndex
+        val isChestSlot = hasChest && index in CHEST_START until CHEST_END
 
-            hasChest && index in CHEST_START until CHEST_END -> {
+        when {
+            isSaddleOrArmor || isExtraSlot || isChestSlot -> {
                 val moved = accessor.invokeMoveItemStackTo(stackInSlot, PLAYER_START, PLAYER_END, true)
                 if (moved) {
                     if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
@@ -59,10 +52,34 @@ abstract class NautilusMountMenuShiftClickMixin {
             }
 
             index in PLAYER_START until PLAYER_END -> {
-                var moved = accessor.invokeMoveItemStackTo(stackInSlot, extraSlotIndex, extraSlotIndex + 1, false)
-                if (!moved && hasChest) {
-                    moved = accessor.invokeMoveItemStackTo(stackInSlot, CHEST_START, CHEST_END, false)
+                var moved = false
+
+                val saddleSlot = menu.slots[0]
+                if (saddleSlot.mayPlace(stackInSlot) && !saddleSlot.hasItem()) {
+                    moved = accessor.invokeMoveItemStackTo(stackInSlot, 0, 1, false)
                 }
+
+                if (!stackInSlot.isEmpty) {
+                    val armorSlot = menu.slots[1]
+                    if (armorSlot.mayPlace(stackInSlot) && !armorSlot.hasItem()) {
+                        val movedArmor = accessor.invokeMoveItemStackTo(stackInSlot, 1, 2, false)
+                        moved = moved || movedArmor
+                    }
+                }
+
+                if (!stackInSlot.isEmpty) {
+                    val extraSlot = menu.slots[extraSlotIndex]
+                    if (extraSlot.mayPlace(stackInSlot) && !extraSlot.hasItem()) {
+                        val movedExtra = accessor.invokeMoveItemStackTo(stackInSlot, extraSlotIndex, extraSlotIndex + 1, false)
+                        moved = moved || movedExtra
+                    }
+                }
+
+                if (!stackInSlot.isEmpty && hasChest) {
+                    val movedChest = accessor.invokeMoveItemStackTo(stackInSlot, CHEST_START, CHEST_END, false)
+                    moved = moved || movedChest
+                }
+
                 if (moved) {
                     if (stackInSlot.isEmpty) slot.setByPlayer(ItemStack.EMPTY) else slot.setChanged()
                     cir.returnValue = copyStack

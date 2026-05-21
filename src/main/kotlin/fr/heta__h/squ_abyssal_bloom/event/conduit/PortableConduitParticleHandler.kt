@@ -17,7 +17,6 @@ object PortableConduitParticleHandler {
     @SubscribeEvent
     fun onClientTick(event: ClientTickEvent.Post) {
 
-
         val minecraft = Minecraft.getInstance()
         val player = minecraft.player ?: return
         val level = minecraft.level ?: return
@@ -26,7 +25,7 @@ object PortableConduitParticleHandler {
 
         if (level.gameTime % 3 != 0L) return
 
-        level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(32.0))
+        level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(ConduitDomainHandler.PORTABLE_RADIUS))
             .forEach { nautilus ->
                 if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item != NautilusLayer.CONDUIT) return@forEach
 

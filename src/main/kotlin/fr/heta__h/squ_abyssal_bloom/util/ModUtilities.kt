@@ -87,19 +87,11 @@ object ModUtilities {
         namespace: String = SquAbyssalBloom.ID
     ): Int {
         val registry = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+        val key = ResourceKey.create(Registries.ENCHANTMENT, Identifier.fromNamespaceAndPath(namespace, enchantName))
 
-        val key = ResourceKey.create(
-            Registries.ENCHANTMENT,
-            Identifier.fromNamespaceAndPath(namespace, enchantName)
-        )
-
-        val holder = registry.get(key).getOrNull()
-
-        return if (holder != null) {
-            EnchantmentHelper.getItemEnchantmentLevel(holder, stack)
-        } else {
-            0
-        }
+        return registry.get(key).getOrNull()?.let { holder ->
+            stack.getEnchantmentLevel(holder)
+        } ?: 0
     }
 
     fun playSoundLocal(entity: LivingEntity, sound: SoundEvent, source: SoundSource, volume: Float, pitch: Float) {
