@@ -93,9 +93,7 @@ class SproutingSeagrassBlock(properties: Properties) : SeagrassBlock(properties)
         return !state.getValue(HAS_BULB)
     }
 
-    override fun isBonemealSuccess(level: Level, random: RandomSource, pos: BlockPos, state: BlockState): Boolean {
-        return true
-    }
+    override fun isBonemealSuccess(level: Level, random: RandomSource, pos: BlockPos, state: BlockState): Boolean = true
 
     override fun performBonemeal(level: ServerLevel, random: RandomSource, pos: BlockPos, state: BlockState) {
         level.setBlock(pos, state.setValue(HAS_BULB, true), 3)

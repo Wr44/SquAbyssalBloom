@@ -21,7 +21,7 @@ object ModConfig {
     private val configFile: File = FMLPaths.CONFIGDIR.get().resolve("squ_abyssal_bloom.json").toFile()
 
     var enableAbyssFog: Boolean = true
-    var abyssDepthStart: Double = 15.0
+    var abyssDepthStart: Double = 30.0
     var abyssMaxDepth: Double = 80.0
     var maxMarinSnowParticles: Int = 75
     var strictBarnacleSpawning: Boolean = true
@@ -49,7 +49,7 @@ object ModConfig {
         try {
             val json = gson.fromJson(configFile.readText(), JsonObject::class.java) ?: return
             enableAbyssFog = json.get("enableAbyssFog")?.asBoolean ?: true
-            abyssDepthStart = json.get("abyssDepthStart")?.asDouble ?: 15.0
+            abyssDepthStart = json.get("abyssDepthStart")?.asDouble ?: 30.0
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
             maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
             strictBarnacleSpawning = json.get("strictBarnacleSpawning")?.asBoolean ?: true
@@ -131,7 +131,7 @@ object ModConfig {
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart"))
-                        .binding(Binding.generic(15.0, { abyssDepthStart }, { abyssDepthStart = it }))
+                        .binding(Binding.generic(30.0, { abyssDepthStart }, { abyssDepthStart = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()

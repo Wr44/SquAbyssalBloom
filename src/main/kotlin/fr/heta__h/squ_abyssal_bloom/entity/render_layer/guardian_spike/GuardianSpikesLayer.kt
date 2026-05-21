@@ -53,6 +53,9 @@ class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
         poseStack.pushPose()
 
+        val compensationRad = -state.bodyRot * (Math.PI.toFloat() / 180f)
+        poseStack.mulPose(Quaternionf().rotationY(compensationRad))
+
         poseStack.translate(0.0, (-centerY).toDouble(), 0.0)
 
         for (i in 0 until NUMBER_OF_SPIKES) {

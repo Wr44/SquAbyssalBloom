@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.attachment
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.network.codec.ByteBufCodecs
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.phys.Vec3
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.attachment.AttachmentType
 import net.neoforged.neoforge.registries.DeferredRegister

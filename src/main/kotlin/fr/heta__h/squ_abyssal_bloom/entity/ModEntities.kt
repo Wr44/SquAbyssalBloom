@@ -21,7 +21,9 @@ import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusBubbleS
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusChestModel
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
+import net.minecraft.client.Minecraft
 import net.minecraft.client.model.EntityModel
+import net.minecraft.client.model.geom.ModelLayers
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.core.BlockPos
@@ -177,11 +179,18 @@ object ModEntities {
         val bubbleModel = NautilusBubbleSpitterModel(event.entityModels.bakeLayer(NautilusBubbleSpitterModel.LAYER_LOCATION))
         val chestModel = NautilusChestModel(event.entityModels.bakeLayer(NautilusChestModel.LAYER_LOCATION))
 
+        val modelSet = event.context.modelSet
+
+        val conduitCage = modelSet.bakeLayer(ModelLayers.CONDUIT_CAGE)
+        val conduitWind = modelSet.bakeLayer(ModelLayers.CONDUIT_WIND)
+        val conduitEye = modelSet.bakeLayer(ModelLayers.CONDUIT_EYE)
+
         @Suppress("UNCHECKED_CAST")
         fun LivingEntityRenderer<*, *, *>.cast() = this as LivingEntityRenderer<LivingEntity, LivingEntityRenderState, EntityModel<LivingEntityRenderState>>
         fun LivingEntityRenderer<*, *, *>.addSpikes() = cast().addLayer(GuardianSpikesLayer(cast(), spikeModel))
-        fun LivingEntityRenderer<*, *, *>.addNautilus() = cast().addLayer(NautilusLayer(cast(), lampModel, bubbleModel, chestModel))
-
+        fun LivingEntityRenderer<*, *, *>.addNautilus() = cast().addLayer(
+            NautilusLayer(cast(), lampModel, bubbleModel, chestModel, conduitCage, conduitWind, conduitEye)
+        )
         BuiltInRegistries.ENTITY_TYPE.forEach { entityType ->
             (event.getRenderer(entityType) as? LivingEntityRenderer<*, *, *>)?.addSpikes()
         }

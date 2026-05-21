@@ -264,8 +264,10 @@ object ConduitDomainHandler {
         val abilities = player.abilities
         val targetSpeed = if (isHunting) FLYING_SPEED_HUNTING else FLYING_SPEED_NORMAL
         if (!abilities.mayfly) {
-            abilities.mayfly = true
-            abilities.flying = true
+            abilities.apply {
+                mayfly = true
+                flying = true
+            }
             abilities.flyingSpeed = targetSpeed
             player.onUpdateAbilities()
         } else if (abilities.flyingSpeed != targetSpeed) {
@@ -278,8 +280,10 @@ object ConduitDomainHandler {
         if (player.isCreative || player.isSpectator) return
         val abilities = player.abilities
         if (!abilities.mayfly) return
-        abilities.mayfly = false
-        abilities.flying = false
+        abilities.apply {
+            mayfly = false
+            flying = false
+        }
         player.onUpdateAbilities()
     }
 }

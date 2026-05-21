@@ -133,7 +133,8 @@ object ModUtilities {
             NautilusLayer.LAMP,
             NautilusLayer.SHIELD,
             NautilusLayer.BUBBLE,
-            NautilusLayer.CHEST
+            NautilusLayer.CHEST,
+            NautilusLayer.CONDUIT
         )
     }
 
