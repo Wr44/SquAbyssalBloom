@@ -67,9 +67,8 @@ class RespirationBubbleItem(properties: Properties) : Item(properties) {
             )
         }
 
-        if (!player.abilities.instabuild) {
-            player.getItemInHand(hand).shrink(1)
-        }
+        if (!player.isCreative) player.getItemInHand(hand).shrink(1)
+
 
         return InteractionResult.CONSUME
     }

@@ -4,10 +4,13 @@ package fr.heta__h.squ_abyssal_bloom.event.conduit
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBlock
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.ConduitBlockEntityAccessor
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.conduit.AstralPrismarineTracker
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
@@ -87,6 +90,13 @@ object ConduitDomainHandler {
     @SubscribeEvent
     fun onServerTick(event: ServerTickEvent.Post) {
         ConduitHuntingTracker.clearHits()
+
+
+        if (event.server.tickCount % 200 == 0) {
+            for (level in event.server.allLevels) {
+                AstralPrismarineTracker.checkOrphans(level as? ServerLevel ?: continue)
+            }
+        }
     }
 
     @SubscribeEvent
@@ -101,6 +111,10 @@ object ConduitDomainHandler {
         if (event.state.block == Blocks.CONDUIT) {
             getConduits(level).remove(event.pos)
             playerAttachment.values.removeIf { it is ConduitTarget.Block && it.pos == event.pos }
+
+            if (level is ServerLevel) {
+                deactivateAstralBlocks(level, event.pos)
+            }
         }
     }
 
@@ -110,6 +124,8 @@ object ConduitDomainHandler {
         event.chunk.blockEntities.keys
             .filter { level.getBlockState(it).block == Blocks.CONDUIT }
             .forEach { getConduits(level).add(it) }
+
+        AstralPrismarineTracker.onChunkLoad(event.chunk)
     }
 
     @SubscribeEvent
@@ -343,5 +359,31 @@ object ConduitDomainHandler {
             flying = false
         }
         player.onUpdateAbilities()
+    }
+
+    private fun deactivateAstralBlocks(level: ServerLevel, pos: BlockPos) {
+        val allPositions = listOf(
+            pos.offset(0, 2, 0), pos.offset(0, -2, 0),
+            pos.offset(0, 0, 2), pos.offset(0, 0, -2),
+            pos.offset(2, 0, 0), pos.offset(-2, 0, 0),
+
+            pos.offset(0, 2, 2), pos.offset(0, 2, -2),
+            pos.offset(0, -2, 2), pos.offset(0, -2, -2),
+
+            pos.offset(2, 0, 2), pos.offset(2, 0, -2),
+            pos.offset(-2, 0, 2), pos.offset(-2, 0, -2),
+
+            pos.offset(2, 2, 0), pos.offset(2, -2, 0),
+            pos.offset(-2, 2, 0), pos.offset(-2, -2, 0)
+        )
+
+        allPositions.forEach { checkPos ->
+            val state = level.getBlockState(checkPos)
+            if (state.`is`(ModBlocks.ASTRAL_PRISMARINE) &&
+                state.getValue(AstralPrismarineBlock.ACTIVE)) {
+                level.setBlock(checkPos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
+                AstralPrismarineTracker.markInactive(checkPos)
+            }
+        }
     }
 }

@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache
+package fr.heta__h.squ_abyssal_bloom.util.cache
 
 import it.unimi.dsi.fastutil.longs.Long2LongMap
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap

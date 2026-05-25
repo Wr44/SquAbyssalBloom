@@ -43,7 +43,7 @@ class LifelineBubbleItem(properties: Properties) : Item(properties) {
             SoundEvents.LEAD_TIED, SoundSource.NEUTRAL, 1.0f, 1.0f
         )
 
-        if (!player.abilities.instabuild) player.getItemInHand(hand).shrink(1)
+        if (!player.isCreative) player.getItemInHand(hand).shrink(1)
         return InteractionResult.CONSUME
     }
 

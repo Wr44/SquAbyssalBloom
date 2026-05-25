@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.cache
+package fr.heta__h.squ_abyssal_bloom.util.cache
 
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
