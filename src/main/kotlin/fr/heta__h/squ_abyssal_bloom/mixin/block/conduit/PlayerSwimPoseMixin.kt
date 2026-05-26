@@ -11,10 +11,24 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 @Mixin(Player::class)
 abstract class PlayerSwimPoseMixin {
 
-    @Inject(method = ["updatePlayerPose"], at = [At("TAIL")])
-    private fun preventSwimmingInConduitDomain(ci: CallbackInfo) {
+    @Inject(method = ["updateSwimming"], at = [At("HEAD")], cancellable = true)
+    private fun preventSwimmingPhysics(ci: CallbackInfo) {
         val player = this as Player
-        if (!player.hasEffect(MobEffects.CONDUIT_POWER)) return
-        if (player.pose == Pose.SWIMMING) player.pose = Pose.STANDING
+
+        if (player.hasEffect(MobEffects.CONDUIT_POWER)) {
+            player.isSwimming = false
+            ci.cancel()
+        }
+    }
+
+    @Inject(method = ["updatePlayerPose"], at = [At("TAIL")])
+    private fun preventSwimmingPose(ci: CallbackInfo) {
+        val player = this as Player
+
+        if (player.hasEffect(MobEffects.CONDUIT_POWER)) {
+            if (player.pose == Pose.SWIMMING) {
+                player.pose = Pose.STANDING
+            }
+        }
     }
 }

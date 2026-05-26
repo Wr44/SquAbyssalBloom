@@ -17,6 +17,7 @@ import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.tags.FluidTags
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -91,7 +92,6 @@ object ConduitDomainHandler {
     fun onServerTick(event: ServerTickEvent.Post) {
         ConduitHuntingTracker.clearHits()
 
-
         if (event.server.tickCount % 200 == 0) {
             for (level in event.server.allLevels) {
                 AstralPrismarineTracker.checkOrphans(level as? ServerLevel ?: continue)
@@ -155,26 +155,29 @@ object ConduitDomainHandler {
 
         playerAttachment.remove(player.uuid)
         revokeFlight(player)
-        player.removeEffect(MobEffects.CONDUIT_POWER)
 
-        if (wasInDomain && attachedTarget != null) {
-            var shouldPlaySound = false
-            when (attachedTarget) {
-                is ConduitTarget.Block -> {
-                    val be = player.level().getBlockEntity(attachedTarget.pos) as? ConduitBlockEntity
-                    if (be?.isActive == true) shouldPlaySound = true
+        if (!player.level().isClientSide) {
+            player.removeEffect(MobEffects.CONDUIT_POWER)
+
+            if (wasInDomain && attachedTarget != null) {
+                var shouldPlaySound = false
+                when (attachedTarget) {
+                    is ConduitTarget.Block -> {
+                        val be = player.level().getBlockEntity(attachedTarget.pos) as? ConduitBlockEntity
+                        if (be?.isActive == true) shouldPlaySound = true
+                    }
+                    is ConduitTarget.Entity -> {
+                        shouldPlaySound = true
+                    }
                 }
-                is ConduitTarget.Entity -> {
-                    shouldPlaySound = true
+                if (shouldPlaySound) {
+                    ModUtilities.playSoundLocal(
+                        player,
+                        SoundEvents.CONDUIT_DEACTIVATE,
+                        SoundSource.PLAYERS,
+                        0.5f, 1.5f
+                    )
                 }
-            }
-            if (shouldPlaySound) {
-                ModUtilities.playSoundLocal(
-                    player,
-                    SoundEvents.CONDUIT_DEACTIVATE,
-                    SoundSource.PLAYERS,
-                    0.5f, 1.5f
-                )
             }
         }
     }
@@ -182,21 +185,54 @@ object ConduitDomainHandler {
     @SubscribeEvent
     fun onPlayerTick(event: PlayerTickEvent.Post) {
         val player = event.entity
-        if (player.level().isClientSide) return
 
+        
+        if (player.level().isClientSide) {
+            val effect = player.getEffect(MobEffects.CONDUIT_POWER)
+            if (effect != null && player.isInWater) {
+                val abilities = player.abilities
+                var changed = false
+
+                
+                
+                if (!abilities.mayfly) {
+                    abilities.mayfly = true
+                    if (!player.onGround()) {
+                        abilities.flying = true
+                    }
+                    changed = true
+                }
+
+                val targetSpeed = if (effect.amplifier == 1) FLYING_SPEED_HUNTING else FLYING_SPEED_NORMAL
+                if (abilities.flyingSpeed != targetSpeed) {
+                    abilities.flyingSpeed = targetSpeed
+                    changed = true
+                }
+
+                if (changed) {
+                    player.onUpdateAbilities()
+                }
+            }
+            return
+        }
+
+        
         val previousAttachment = playerAttachment[player.uuid]
         val domain = findActiveDomain(player)
 
-        if (!player.isUnderWater || domain == null) {
+        if (!player.isInWater || domain == null) {
             detach(player, previousAttachment)
             return
         }
 
-        player.airSupply = player.maxAirSupply
-        if (player.isSwimming) player.isSwimming = false
-
         val currentEffect = player.getEffect(MobEffects.CONDUIT_POWER)
         val justEntered = currentEffect == null
+
+        
+        grantFlight(player, domain.isHunting, justEntered)
+
+        player.airSupply = player.maxAirSupply
+        if (player.isSwimming) player.isSwimming = false
 
         val targetAmplifier = if (domain.isHunting) 1 else 0
         if (currentEffect == null || currentEffect.amplifier != targetAmplifier || currentEffect.duration <= EFFECT_REFRESH_THRESHOLD) {
@@ -227,8 +263,6 @@ object ConduitDomainHandler {
         if (!player.abilities.flying && player.deltaMovement.y > JUMP_VELOCITY_MAX) {
             player.setDeltaMovement(player.deltaMovement.x, JUMP_VELOCITY_MAX, player.deltaMovement.z)
         }
-
-        grantFlight(player, domain.isHunting)
 
         if (ModConfig.conduitBoundaryParticlesEnabled && player.tickCount % ModConfig.conduitBoundaryParticleInterval == 0) {
             val isPortable = domain.target is ConduitTarget.Entity
@@ -323,36 +357,61 @@ object ConduitDomainHandler {
         repeat(ringPoints) { i ->
             val phi = 2.0 * Math.PI * i / ringPoints
             val cosPhi = cos(phi); val sinPhi = sin(phi)
-            serverLevel.sendParticles(
-                ParticleTypes.NAUTILUS,
-                bx + (cosPhi * rx + sinPhi * ux) * ringRadius,
-                by + (cosPhi * ry + sinPhi * uy) * ringRadius,
-                bz + (cosPhi * rz + sinPhi * uz) * ringRadius,
-                1, 0.0, 0.0, 0.0, 0.0
-            )
+
+            val px = bx + (cosPhi * rx + sinPhi * ux) * ringRadius
+            val py = by + (cosPhi * ry + sinPhi * uy) * ringRadius
+            val pz = bz + (cosPhi * rz + sinPhi * uz) * ringRadius
+
+            val particlePos = BlockPos.containing(px, py, pz)
+
+            if (serverLevel.getFluidState(particlePos).`is`(FluidTags.WATER)) {
+                serverLevel.sendParticles(
+                    ParticleTypes.NAUTILUS,
+                    px, py, pz,
+                    1, 0.0, 0.0, 0.0, 0.0
+                )
+            }
         }
     }
-
-    private fun grantFlight(player: Player, isHunting: Boolean) {
-        if (player.isCreative || player.isSpectator) return
+    private fun grantFlight(player: Player, isHunting: Boolean, justEntered: Boolean = false) {
         val abilities = player.abilities
         val targetSpeed = if (isHunting) FLYING_SPEED_HUNTING else FLYING_SPEED_NORMAL
+
+        var updateNeeded = false
+
+        
         if (!abilities.mayfly) {
-            abilities.apply {
-                mayfly = true
-                flying = true
-            }
+            abilities.mayfly = true
+            updateNeeded = true
+        }
+
+        
+        if (justEntered && !abilities.flying && !player.onGround()) {
+            abilities.flying = true
+            updateNeeded = true
+        }
+
+        if (abilities.flyingSpeed != targetSpeed) {
             abilities.flyingSpeed = targetSpeed
-            player.onUpdateAbilities()
-        } else if (abilities.flyingSpeed != targetSpeed) {
-            abilities.flyingSpeed = targetSpeed
+            updateNeeded = true
+        }
+
+        if (updateNeeded) {
             player.onUpdateAbilities()
         }
     }
 
     private fun revokeFlight(player: Player) {
-        if (player.isCreative || player.isSpectator) return
         val abilities = player.abilities
+
+        if (player.isCreative || player.isSpectator) {
+            if (abilities.flyingSpeed != 0.05f) {
+                abilities.flyingSpeed = 0.05f
+                player.onUpdateAbilities()
+            }
+            return
+        }
+
         if (!abilities.mayfly) return
         abilities.apply {
             mayfly = false
