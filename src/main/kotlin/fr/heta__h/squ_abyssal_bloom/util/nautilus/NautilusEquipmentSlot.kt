@@ -21,7 +21,6 @@ class NautilusEquipmentSlot(
     val mount: AbstractNautilus
 ) : Slot(container, index, x, y) {
 
-    
     internal var listenerPlayedDeactivate = false
 
     override fun mayPlace(stack: ItemStack): Boolean = ModUtilities.isNautilusExtraEquipment(stack)
