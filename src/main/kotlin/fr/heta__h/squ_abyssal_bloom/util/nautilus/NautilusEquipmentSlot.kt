@@ -45,7 +45,7 @@ class NautilusEquipmentSlot(
                 return
             }
             if (!mount.level().isClientSide
-                && player.isInWater
+                && player.isUnderWater
                 && mount.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS
             ) {
                 mount.playSound(SoundEvents.CONDUIT_DEACTIVATE, 1.0f, 1.0f)

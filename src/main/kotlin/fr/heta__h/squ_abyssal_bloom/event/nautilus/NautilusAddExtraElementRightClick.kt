@@ -42,7 +42,7 @@ object NautilusAddExtraElementRightClick {
                     1.0f, 1.5f
                 )
 
-                if (itemToEquip.item == NautilusLayer.CONDUIT && player.isInWater && target.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS) {
+                if (itemToEquip.item == NautilusLayer.CONDUIT && player.isUnderWater && target.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS) {
                     target.playSound(SoundEvents.CONDUIT_ACTIVATE, 1.0f, 1.0f)
                     ConduitDomainHandler.markConduitEquipmentChange(player.uuid)
                 }

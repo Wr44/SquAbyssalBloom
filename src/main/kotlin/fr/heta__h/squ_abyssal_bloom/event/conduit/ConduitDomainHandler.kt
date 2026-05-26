@@ -203,7 +203,7 @@ object ConduitDomainHandler {
 
         if (player.level().isClientSide) {
             val effect = player.getEffect(MobEffects.CONDUIT_POWER)
-            if (effect != null && player.isInWater) {
+            if (effect != null && player.isUnderWater) {
                 val abilities = player.abilities
                 var changed = false
 
@@ -231,10 +231,8 @@ object ConduitDomainHandler {
         val previousAttachment = playerAttachment[player.uuid]
         val domain = findActiveDomain(player)
 
-        if (!player.isInWater || domain == null) {
-            
+        if (!player.isUnderWater || domain == null) {
             if (previousAttachment is ConduitTarget.Entity && pendingConduitEquipmentChange.remove(player.uuid)) {
-                
                 playerAttachment.remove(player.uuid)
                 playerNextAmbientSound.remove(player.uuid)
                 revokeFlight(player)
