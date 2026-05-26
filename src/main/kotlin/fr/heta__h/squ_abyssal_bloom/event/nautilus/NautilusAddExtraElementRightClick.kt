@@ -37,10 +37,8 @@ object NautilusAddExtraElementRightClick {
                 val itemToEquip = itemInHand.copyWithCount(1)
                 target.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, itemToEquip)
 
-                ModUtilities.playSoundLocal(
-                    player,
+                target.playSound(
                     SoundEvents.ARMOR_EQUIP_NAUTILUS.value(),
-                    SoundSource.PLAYERS,
                     1.0f, 1.5f
                 )
 

@@ -35,20 +35,6 @@ class NautilusEquipmentSlot(
         return super.mayPickup(player)
     }
 
-    override fun set(stack: ItemStack) {
-        val wasEmpty = !this.hasItem()
-        super.set(stack)
-        if (wasEmpty && !stack.isEmpty) {
-            mount.level().playSound(
-                null,
-                mount.blockPosition(),
-                SoundEvents.ARMOR_EQUIP_NAUTILUS.value(),
-                mount.soundSource,
-                1.0f,
-                1.5f
-            )
-        }
-    }
 
     override fun onTake(player: Player, stack: ItemStack) {
         super.onTake(player, stack)
@@ -62,7 +48,7 @@ class NautilusEquipmentSlot(
                 && player.isInWater
                 && mount.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS
             ) {
-                ModUtilities.playSoundLocal(player, SoundEvents.CONDUIT_DEACTIVATE, SoundSource.PLAYERS, 1.0f, 1.0f)
+                mount.playSound(SoundEvents.CONDUIT_DEACTIVATE, 1.0f, 1.0f)
                 ConduitDomainHandler.markConduitEquipmentChange(player.uuid)
             }
         }

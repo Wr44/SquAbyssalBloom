@@ -72,7 +72,7 @@ abstract class NautilusMenuMixin {
                         && mount.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS
                     ) {
                         val sound = if (hasConduitNow) SoundEvents.CONDUIT_ACTIVATE else SoundEvents.CONDUIT_DEACTIVATE
-                        ModUtilities.playSoundLocal(player, sound, SoundSource.PLAYERS, 1.0f, 1.0f)
+                        mount.playSound(sound, 1.0f, 1.0f)
                         ConduitDomainHandler.markConduitEquipmentChange(player.uuid)
                         if (!hasConduitNow) extraSlot.listenerPlayedDeactivate = true
                     }
