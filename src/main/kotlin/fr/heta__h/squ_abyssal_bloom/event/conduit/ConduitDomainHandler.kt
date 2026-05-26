@@ -81,7 +81,7 @@ object ConduitDomainHandler {
     private val conduitRegistry = ConcurrentHashMap<Level, MutableSet<BlockPos>>()
     private val playerAttachment = ConcurrentHashMap<UUID, ConduitTarget>()
     private val playerNextAmbientSound = ConcurrentHashMap<UUID, Long>()
-    private val playerPreviousPortableState = ConcurrentHashMap<UUID, Boolean>()
+    private val pendingConduitEquipmentChange = ConcurrentHashMap.newKeySet<UUID>()
 
     private fun getConduits(level: Level) = conduitRegistry.getOrPut(level) { ConcurrentHashMap.newKeySet() }
 
@@ -89,6 +89,10 @@ object ConduitDomainHandler {
         val steps = size / 7
         val t = ((steps - STEP_MIN).toDouble() / (STEP_MAX - STEP_MIN)).coerceIn(0.0, 1.0)
         return RADIUS_MIN + t * (RADIUS_MAX - RADIUS_MIN)
+    }
+
+    fun markConduitEquipmentChange(playerUUID: UUID) {
+        pendingConduitEquipmentChange.add(playerUUID)
     }
 
     @SubscribeEvent
@@ -103,7 +107,7 @@ object ConduitDomainHandler {
             val onlinePlayers = event.server.playerList.players.map { it.uuid }.toSet()
             playerAttachment.keys.removeIf { it !in onlinePlayers }
             playerNextAmbientSound.keys.removeIf { it !in onlinePlayers }
-            playerPreviousPortableState.keys.removeIf { it !in onlinePlayers }
+            pendingConduitEquipmentChange.removeIf { it !in onlinePlayers }
         }
     }
 
@@ -169,7 +173,7 @@ object ConduitDomainHandler {
 
         playerAttachment.remove(player.uuid)
         playerNextAmbientSound.remove(player.uuid)
-        playerPreviousPortableState.remove(player.uuid)
+        pendingConduitEquipmentChange.remove(player.uuid)
         revokeFlight(player)
 
         if (!player.level().isClientSide) {
@@ -181,6 +185,8 @@ object ConduitDomainHandler {
                         val be = player.level().getBlockEntity(attachedTarget.pos) as? ConduitBlockEntity
                         if (be?.isActive == true) ModSounds.CONDUIT_LEAVING.get() else null
                     }
+                    
+                    
                     is ConduitTarget.Entity -> ModSounds.CONDUIT_LEAVING.get()
                 }
 
@@ -225,19 +231,16 @@ object ConduitDomainHandler {
         val previousAttachment = playerAttachment[player.uuid]
         val domain = findActiveDomain(player)
 
-        val wasInPortable = playerPreviousPortableState[player.uuid] ?: false
-        val isInPortable = domain != null && domain.target is ConduitTarget.Entity
-
         if (!player.isInWater || domain == null) {
-            if (wasInPortable && player.isInWater) {
-                ModUtilities.playSoundLocal(
-                    player,
-                    SoundEvents.CONDUIT_DEACTIVATE,
-                    SoundSource.PLAYERS,
-                    1.0f, 1.0f
-                )
+            
+            if (previousAttachment is ConduitTarget.Entity && pendingConduitEquipmentChange.remove(player.uuid)) {
+                
+                playerAttachment.remove(player.uuid)
+                playerNextAmbientSound.remove(player.uuid)
+                revokeFlight(player)
+                if (!player.level().isClientSide) player.removeEffect(MobEffects.CONDUIT_POWER)
+                return
             }
-            playerPreviousPortableState.remove(player.uuid)
             detach(player, previousAttachment)
             return
         }
@@ -255,44 +258,23 @@ object ConduitDomainHandler {
         }
 
         if (justEntered) {
-            val soundToPlay = when (val target = domain.target) {
-                is ConduitTarget.Block -> {
-                    val be = player.level().getBlockEntity(target.pos) as? ConduitBlockEntity
-                    if ((be?.tickCount ?: 0) > CONDUIT_ACTIVE_THRESHOLD) {
-                        ModSounds.CONDUIT_ENTERING.get()
-                    } else {
-                        null
-                    }
-                }
-                is ConduitTarget.Entity -> {
-                    if (!wasInPortable) {
-                        SoundEvents.CONDUIT_ACTIVATE
-                    } else {
-                        ModSounds.CONDUIT_ENTERING.get()
-                    }
-                }
-            }
+            
+            val isEquipmentChange = domain.target is ConduitTarget.Entity && pendingConduitEquipmentChange.remove(player.uuid)
 
-            soundToPlay?.let {
-                ModUtilities.playSoundLocal(player, it, SoundSource.PLAYERS, 1.0f, 1.0f)
+            if (!isEquipmentChange) {
+                val soundToPlay = when (val target = domain.target) {
+                    is ConduitTarget.Block -> {
+                        val be = player.level().getBlockEntity(target.pos) as? ConduitBlockEntity
+                        if ((be?.tickCount ?: 0) > CONDUIT_ACTIVE_THRESHOLD) ModSounds.CONDUIT_ENTERING.get() else null
+                    }
+                    is ConduitTarget.Entity -> ModSounds.CONDUIT_ENTERING.get()
+                }
+
+                soundToPlay?.let {
+                    ModUtilities.playSoundLocal(player, it, SoundSource.PLAYERS, 1.0f, 1.0f)
+                }
             }
-        } else if (isInPortable && !wasInPortable) {
-            ModUtilities.playSoundLocal(
-                player,
-                SoundEvents.CONDUIT_ACTIVATE,
-                SoundSource.PLAYERS,
-                1.0f, 1.0f
-            )
-        } else if (!isInPortable && wasInPortable) {
-            ModUtilities.playSoundLocal(
-                player,
-                SoundEvents.CONDUIT_DEACTIVATE,
-                SoundSource.PLAYERS,
-                1.0f, 1.0f
-            )
         }
-
-        playerPreviousPortableState[player.uuid] = isInPortable
 
         if (domain.target is ConduitTarget.Entity) {
             val gameTime = player.level().gameTime

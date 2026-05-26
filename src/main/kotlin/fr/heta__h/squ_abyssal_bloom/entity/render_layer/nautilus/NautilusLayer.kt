@@ -47,6 +47,9 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         private val TEXTURE_CHEST = Identifier.fromNamespaceAndPath(
             SquAbyssalBloom.ID, "textures/entity/nautilus_chest/nautilus_chest.png"
         )
+        private val MOBILE_CAGE = Identifier.fromNamespaceAndPath(
+            SquAbyssalBloom.ID, "textures/entity/mobile_conduit/mobile_cage.png"
+        )
 
         val LAMP: Item = ModItems.NAUTILUS_LAMP.get()
         val SHIELD: Item = ModItems.BARBED_NAUTILUS_SCALE.get()
@@ -205,14 +208,17 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         val axis = Vector3f(0.5f, 1.0f, 0.5f).normalize()
 
         poseStack.mulPose(Quaternionf().rotationAxis(animTime * SELF_ROTATION_SPEED, axis))
-        collector.submitModelPart(
-            conduitCage, poseStack,
-            ConduitRenderer.ACTIVE_SHELL_TEXTURE.renderType(RenderTypes::entityCutoutNoCull),
-            packedLight, OverlayTexture.NO_OVERLAY,
-            materials.get(ConduitRenderer.ACTIVE_SHELL_TEXTURE)
-        )
-        poseStack.popPose()
 
+        collector.submitModelPart(
+            conduitCage,
+            poseStack,
+            RenderTypes.entityCutoutNoCull(MOBILE_CAGE),
+            packedLight,
+            OverlayTexture.NO_OVERLAY,
+            null
+        )
+
+        poseStack.popPose()
         val windSprite = materials.get(ConduitRenderer.WIND_TEXTURE)
         val windType = ConduitRenderer.WIND_TEXTURE.renderType(RenderTypes::entityCutoutNoCull)
 

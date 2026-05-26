@@ -2,12 +2,16 @@ package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusEquipmentSlot
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
+import fr.heta__h.squ_abyssal_bloom.event.conduit.ConduitDomainHandler
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerMenuAccessor
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractNautilusAccessor
 import fr.heta__h.squ_abyssal_bloom.network.nautilus_chest.SyncNautilusExtraSlotPayload
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusReopenQueue
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.sounds.SoundEvents 
+import net.minecraft.sounds.SoundEvents
+import net.minecraft.sounds.SoundSource
 import net.minecraft.world.Container
 import net.minecraft.world.SimpleContainer
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -46,11 +50,11 @@ abstract class NautilusMenuMixin {
 
         var hadChestState = savedItem.`is`(Items.CHEST)
 
+        val extraSlot = NautilusEquipmentSlot(extraSlotContainer, 0, 8, 54, mount)
+
         extraSlotContainer.addListener { container ->
             if (mount.isAlive) {
                 val newItem: ItemStack = container.getItem(0) ?: ItemStack.EMPTY
-
-                
                 val oldItem = mount.getData(ModAttachments.NAUTILUS_EXTRA_SLOT) ?: ItemStack.EMPTY
 
                 val hasChestNow = newItem.`is`(Items.CHEST)
@@ -60,6 +64,18 @@ abstract class NautilusMenuMixin {
                 mount.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, newItem)
 
                 if (!mount.level().isClientSide) {
+                    val hasConduitNow = newItem.item == NautilusLayer.CONDUIT
+                    val hadConduit = oldItem.item == NautilusLayer.CONDUIT
+
+                    if (hasConduitNow != hadConduit
+                        && player.isInWater
+                        && mount.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS
+                    ) {
+                        val sound = if (hasConduitNow) SoundEvents.CONDUIT_ACTIVATE else SoundEvents.CONDUIT_DEACTIVATE
+                        ModUtilities.playSoundLocal(player, sound, SoundSource.PLAYERS, 1.0f, 1.0f)
+                        ConduitDomainHandler.markConduitEquipmentChange(player.uuid)
+                        if (!hasConduitNow) extraSlot.listenerPlayedDeactivate = true
+                    }
 
                     if (!newItem.isEmpty && !ItemStack.matches(oldItem, newItem)) {
                         mount.playSound(SoundEvents.ARMOR_EQUIP_NAUTILUS.value(), 1.0f, 1.5f)
@@ -71,9 +87,7 @@ abstract class NautilusMenuMixin {
                         if (player is ServerPlayer) {
                             NautilusReopenQueue.schedule {
                                 if (!mount.isAlive || !player.isAlive || player.hasDisconnected()) return@schedule
-
                                 val carried: ItemStack = player.containerMenu.carried ?: ItemStack.EMPTY
-
                                 try {
                                     player.containerMenu.carried = ItemStack.EMPTY
                                     (mount as AbstractNautilusAccessor).invokeCreateInventory()
@@ -81,9 +95,7 @@ abstract class NautilusMenuMixin {
                                     player.containerMenu.carried = carried
                                     player.containerMenu.broadcastFullState()
                                 } catch (e: Exception) {
-                                    if (!carried.isEmpty) {
-                                        player.inventory.placeItemBackInInventory(carried)
-                                    }
+                                    if (!carried.isEmpty) player.inventory.placeItemBackInInventory(carried)
                                 }
                             }
                         }
@@ -92,8 +104,8 @@ abstract class NautilusMenuMixin {
             }
         }
 
-        val accessor = this as AbstractContainerMenuAccessor
-        accessor.invokeAddSlot(NautilusEquipmentSlot(extraSlotContainer, 0, 8, 54, mount))
+        val menuAccessor = this as AbstractContainerMenuAccessor
+        menuAccessor.invokeAddSlot(extraSlot)
 
         if (inventoryColumns > 0) {
             val chest = SimpleContainer(15)
@@ -112,7 +124,7 @@ abstract class NautilusMenuMixin {
             for (row in 0 until 3) {
                 for (col in 0 until inventoryColumns) {
                     val localIndex = col + row * inventoryColumns
-                    accessor.invokeAddSlot(Slot(chest, localIndex, 80 + col * 18, 18 + row * 18))
+                    menuAccessor.invokeAddSlot(Slot(chest, localIndex, 80 + col * 18, 18 + row * 18))
                 }
             }
         }

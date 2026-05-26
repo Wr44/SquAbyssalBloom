@@ -2,6 +2,8 @@ package fr.heta__h.squ_abyssal_bloom.event.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
+import fr.heta__h.squ_abyssal_bloom.event.conduit.ConduitDomainHandler
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
@@ -30,31 +32,27 @@ object NautilusAddExtraElementRightClick {
         val currentEquipped = target.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
 
         if (currentEquipped.isEmpty) {
-
             val level = target.level()
-
             if (!level.isClientSide) {
-
                 val itemToEquip = itemInHand.copyWithCount(1)
-
                 target.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, itemToEquip)
 
                 ModUtilities.playSoundLocal(
                     player,
                     SoundEvents.ARMOR_EQUIP_NAUTILUS.value(),
                     SoundSource.PLAYERS,
-                    1.0f,
-                    1.5f
+                    1.0f, 1.5f
                 )
 
-                if (!player.abilities.instabuild) {
-                    itemInHand.shrink(1)
+                if (itemToEquip.item == NautilusLayer.CONDUIT && player.isInWater && target.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS) {
+                    target.playSound(SoundEvents.CONDUIT_ACTIVATE, 1.0f, 1.0f)
+                    ConduitDomainHandler.markConduitEquipmentChange(player.uuid)
                 }
-            }
 
+                if (!player.abilities.instabuild) itemInHand.shrink(1)
+            }
             event.isCanceled = true
             event.cancellationResult = InteractionResult.SUCCESS
-
         }
     }
 }
