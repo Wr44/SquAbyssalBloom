@@ -258,7 +258,6 @@ object ConduitDomainHandler {
         }
 
         if (justEntered) {
-            
             val isEquipmentChange = domain.target is ConduitTarget.Entity && pendingConduitEquipmentChange.remove(player.uuid)
 
             if (!isEquipmentChange) {
