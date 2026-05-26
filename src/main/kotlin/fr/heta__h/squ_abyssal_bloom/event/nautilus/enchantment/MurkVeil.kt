@@ -30,6 +30,13 @@ object MurkVeil {
     private const val STEALTH_MIN_DETECTION_RADIUS = 5.0
     private const val STEALTH_MIN_DETECTION_RADIUS_SQR = STEALTH_MIN_DETECTION_RADIUS * STEALTH_MIN_DETECTION_RADIUS
 
+    private val targetTypeField by lazy {
+        runCatching {
+            NearestAttackableTargetGoal::class.java
+                .getDeclaredField("targetType")
+                .also { it.isAccessible = true }
+        }.getOrNull()
+    }
 
     @SubscribeEvent
     fun onLivingChangeTarget(event: LivingChangeTargetEvent) {
@@ -65,15 +72,14 @@ object MurkVeil {
                 }.minByOrNull { mob.distanceToSqr(it) }
             }
             else -> {
+                val field = targetTypeField ?: return
                 val targetTypes = mob.targetSelector.availableGoals
                     .map { it.goal }
                     .filterIsInstance<NearestAttackableTargetGoal<*>>()
                     .mapNotNull { goal ->
                         runCatching {
-                            val f = NearestAttackableTargetGoal::class.java.getDeclaredField("targetType")
-                            f.isAccessible = true
                             @Suppress("UNCHECKED_CAST")
-                            f.get(goal) as? Class<out LivingEntity>
+                            field.get(goal) as? Class<out LivingEntity>
                         }.getOrNull()
                     }
                     .toSet()
@@ -98,5 +104,4 @@ object MurkVeil {
     fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
         lastAttackTick.remove(event.entity.uuid)
     }
-
 }
