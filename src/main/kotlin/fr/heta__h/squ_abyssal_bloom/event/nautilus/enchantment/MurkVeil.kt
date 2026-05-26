@@ -84,11 +84,15 @@ object MurkVeil {
                     }
                     .toSet()
 
-                targetTypes
-                    .flatMap { type ->
-                        mob.level().getEntitiesOfClass(type, aabb) { it != target && it.isAlive && mob.distanceToSqr(it) <= followRangeSqr }
-                    }
-                    .minByOrNull { mob.distanceToSqr(it) }
+                mob.level().getEntitiesOfClass(LivingEntity::class.java, aabb) { candidate ->
+                    candidate != target &&
+                            candidate.isAlive &&
+                            targetTypes.any { it.isInstance(candidate) }
+                }
+                    .map { it to mob.distanceToSqr(it) }
+                    .filter { (_, dist) -> dist <= followRangeSqr }
+                    .minByOrNull { (_, dist) -> dist }
+                    ?.first
             }
         }
 
