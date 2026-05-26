@@ -83,7 +83,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
         const val LERP_FACTOR = 0.7
 
-        
         const val LEASH_MAX_LENGTH = 5.0
         const val LEASH_IDLE_PULL = 0.03
         const val LEASH_IDLE_MAX_VEL_Y = 0.12

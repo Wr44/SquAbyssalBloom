@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
-import fr.heta__h.squ_abyssal_bloom.accessor.AddPropertiesToRenderState
+import fr.heta__h.squ_abyssal_bloom.util.accessor.AddPropertiesToRenderState
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitMaterialHolder
 import net.minecraft.client.Minecraft
 import net.minecraft.client.model.EntityModel

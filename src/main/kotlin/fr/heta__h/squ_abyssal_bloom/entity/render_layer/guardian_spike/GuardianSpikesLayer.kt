@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike
 
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.accessor.AddPropertiesToRenderState
+import fr.heta__h.squ_abyssal_bloom.util.accessor.AddPropertiesToRenderState
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.RenderLayerParent
