@@ -57,8 +57,6 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         val CHEST: Item = Items.CHEST
         val CONDUIT: Item = Items.CONDUIT
 
-        var lastDebugTimeLayer = 0L
-
         const val BASE_HEIGHT = 1f
         const val ORBIT_RADIUS = 1.8f
         const val ORBIT_SPEED = 0.04f
