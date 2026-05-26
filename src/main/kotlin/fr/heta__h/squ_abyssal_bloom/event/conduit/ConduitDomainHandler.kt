@@ -185,8 +185,6 @@ object ConduitDomainHandler {
                         val be = player.level().getBlockEntity(attachedTarget.pos) as? ConduitBlockEntity
                         if (be?.isActive == true) ModSounds.CONDUIT_LEAVING.get() else null
                     }
-                    
-                    
                     is ConduitTarget.Entity -> ModSounds.CONDUIT_LEAVING.get()
                 }
 

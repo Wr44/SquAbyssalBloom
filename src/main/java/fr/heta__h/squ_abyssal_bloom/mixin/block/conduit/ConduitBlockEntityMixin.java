@@ -30,13 +30,6 @@ import java.util.List;
 @Mixin(ConduitBlockEntity.class)
 public abstract class ConduitBlockEntityMixin {
 
-    @Unique
-    private static final Direction[] squ_abyssal_bloom$REQUIRED_DIRECTIONS = {
-            Direction.UP, Direction.DOWN,
-            Direction.NORTH, Direction.SOUTH,
-            Direction.EAST, Direction.WEST
-    };
-
     @Redirect(
             method = "applyEffects",
             at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;addEffect(Lnet/minecraft/world/effect/MobEffectInstance;)Z")
