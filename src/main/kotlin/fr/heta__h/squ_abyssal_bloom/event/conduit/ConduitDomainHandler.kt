@@ -9,6 +9,7 @@ import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBloc
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.ConduitBlockEntityAccessor
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.conduit.AstralPrismarineTracker
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
@@ -79,6 +80,8 @@ object ConduitDomainHandler {
 
     private val conduitRegistry = ConcurrentHashMap<Level, MutableSet<BlockPos>>()
     private val playerAttachment = ConcurrentHashMap<UUID, ConduitTarget>()
+    private val playerNextAmbientSound = ConcurrentHashMap<UUID, Long>()
+    private val playerPreviousPortableState = ConcurrentHashMap<UUID, Boolean>()
 
     private fun getConduits(level: Level) = conduitRegistry.getOrPut(level) { ConcurrentHashMap.newKeySet() }
 
@@ -96,6 +99,11 @@ object ConduitDomainHandler {
             for (level in event.server.allLevels) {
                 AstralPrismarineTracker.checkOrphans(level as? ServerLevel ?: continue)
             }
+
+            val onlinePlayers = event.server.playerList.players.map { it.uuid }.toSet()
+            playerAttachment.keys.removeIf { it !in onlinePlayers }
+            playerNextAmbientSound.keys.removeIf { it !in onlinePlayers }
+            playerPreviousPortableState.keys.removeIf { it !in onlinePlayers }
         }
     }
 
@@ -135,7 +143,9 @@ object ConduitDomainHandler {
     }
 
     @SubscribeEvent
-    fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) { detach(event.entity) }
+    fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
+        detach(event.entity)
+    }
 
     @SubscribeEvent
     fun onPlayerDeath(event: LivingDeathEvent) {
@@ -144,39 +154,38 @@ object ConduitDomainHandler {
     }
 
     @SubscribeEvent
-    fun onPlayerChangeDimension(event: PlayerEvent.PlayerChangedDimensionEvent) { detach(event.entity) }
+    fun onPlayerChangeDimension(event: PlayerEvent.PlayerChangedDimensionEvent) {
+        detach(event.entity)
+    }
 
     @SubscribeEvent
-    fun onPlayerRespawn(event: PlayerEvent.PlayerRespawnEvent) { detach(event.entity) }
+    fun onPlayerRespawn(event: PlayerEvent.PlayerRespawnEvent) {
+        detach(event.entity)
+    }
 
     private fun detach(player: Player, previousAttachment: ConduitTarget? = null) {
         val wasInDomain = player.hasEffect(MobEffects.CONDUIT_POWER)
         val attachedTarget = previousAttachment ?: playerAttachment[player.uuid]
 
         playerAttachment.remove(player.uuid)
+        playerNextAmbientSound.remove(player.uuid)
+        playerPreviousPortableState.remove(player.uuid)
         revokeFlight(player)
 
         if (!player.level().isClientSide) {
             player.removeEffect(MobEffects.CONDUIT_POWER)
 
             if (wasInDomain && attachedTarget != null) {
-                var shouldPlaySound = false
-                when (attachedTarget) {
+                val soundToPlay = when (attachedTarget) {
                     is ConduitTarget.Block -> {
                         val be = player.level().getBlockEntity(attachedTarget.pos) as? ConduitBlockEntity
-                        if (be?.isActive == true) shouldPlaySound = true
+                        if (be?.isActive == true) ModSounds.CONDUIT_LEAVING.get() else null
                     }
-                    is ConduitTarget.Entity -> {
-                        shouldPlaySound = true
-                    }
+                    is ConduitTarget.Entity -> ModSounds.CONDUIT_LEAVING.get()
                 }
-                if (shouldPlaySound) {
-                    ModUtilities.playSoundLocal(
-                        player,
-                        SoundEvents.CONDUIT_DEACTIVATE,
-                        SoundSource.PLAYERS,
-                        0.5f, 1.5f
-                    )
+
+                soundToPlay?.let {
+                    ModUtilities.playSoundLocal(player, it, SoundSource.PLAYERS, 1.5f, 1f)
                 }
             }
         }
@@ -186,15 +195,12 @@ object ConduitDomainHandler {
     fun onPlayerTick(event: PlayerTickEvent.Post) {
         val player = event.entity
 
-        
         if (player.level().isClientSide) {
             val effect = player.getEffect(MobEffects.CONDUIT_POWER)
             if (effect != null && player.isInWater) {
                 val abilities = player.abilities
                 var changed = false
 
-                
-                
                 if (!abilities.mayfly) {
                     abilities.mayfly = true
                     if (!player.onGround()) {
@@ -216,11 +222,22 @@ object ConduitDomainHandler {
             return
         }
 
-        
         val previousAttachment = playerAttachment[player.uuid]
         val domain = findActiveDomain(player)
 
+        val wasInPortable = playerPreviousPortableState[player.uuid] ?: false
+        val isInPortable = domain != null && domain.target is ConduitTarget.Entity
+
         if (!player.isInWater || domain == null) {
+            if (wasInPortable && player.isInWater) {
+                ModUtilities.playSoundLocal(
+                    player,
+                    SoundEvents.CONDUIT_DEACTIVATE,
+                    SoundSource.PLAYERS,
+                    1.0f, 1.0f
+                )
+            }
+            playerPreviousPortableState.remove(player.uuid)
             detach(player, previousAttachment)
             return
         }
@@ -228,11 +245,9 @@ object ConduitDomainHandler {
         val currentEffect = player.getEffect(MobEffects.CONDUIT_POWER)
         val justEntered = currentEffect == null
 
-        
         grantFlight(player, domain.isHunting, justEntered)
 
         player.airSupply = player.maxAirSupply
-        if (player.isSwimming) player.isSwimming = false
 
         val targetAmplifier = if (domain.isHunting) 1 else 0
         if (currentEffect == null || currentEffect.amplifier != targetAmplifier || currentEffect.duration <= EFFECT_REFRESH_THRESHOLD) {
@@ -240,22 +255,65 @@ object ConduitDomainHandler {
         }
 
         if (justEntered) {
-            var shouldPlaySound = false
-            when (val target = domain.target) {
+            val soundToPlay = when (val target = domain.target) {
                 is ConduitTarget.Block -> {
                     val be = player.level().getBlockEntity(target.pos) as? ConduitBlockEntity
-                    if ((be?.tickCount ?: 0) > CONDUIT_ACTIVE_THRESHOLD) shouldPlaySound = true
+                    if ((be?.tickCount ?: 0) > CONDUIT_ACTIVE_THRESHOLD) {
+                        ModSounds.CONDUIT_ENTERING.get()
+                    } else {
+                        null
+                    }
                 }
                 is ConduitTarget.Entity -> {
-                    shouldPlaySound = true
+                    if (!wasInPortable) {
+                        SoundEvents.CONDUIT_ACTIVATE
+                    } else {
+                        ModSounds.CONDUIT_ENTERING.get()
+                    }
                 }
             }
-            if (shouldPlaySound) {
+
+            soundToPlay?.let {
+                ModUtilities.playSoundLocal(player, it, SoundSource.PLAYERS, 1.0f, 1.0f)
+            }
+        } else if (isInPortable && !wasInPortable) {
+            ModUtilities.playSoundLocal(
+                player,
+                SoundEvents.CONDUIT_ACTIVATE,
+                SoundSource.PLAYERS,
+                1.0f, 1.0f
+            )
+        } else if (!isInPortable && wasInPortable) {
+            ModUtilities.playSoundLocal(
+                player,
+                SoundEvents.CONDUIT_DEACTIVATE,
+                SoundSource.PLAYERS,
+                1.0f, 1.0f
+            )
+        }
+
+        playerPreviousPortableState[player.uuid] = isInPortable
+
+        if (domain.target is ConduitTarget.Entity) {
+            val gameTime = player.level().gameTime
+
+            if (gameTime % 80L == 0L) {
                 ModUtilities.playSoundLocal(
                     player,
-                    SoundEvents.CONDUIT_ACTIVATE,
+                    SoundEvents.CONDUIT_AMBIENT,
                     SoundSource.PLAYERS,
-                    0.5f, 1.5f
+                    1.0f, 1.0f
+                )
+            }
+
+            val nextSound = playerNextAmbientSound[player.uuid] ?: 0L
+            if (gameTime > nextSound) {
+                playerNextAmbientSound[player.uuid] = gameTime + 60L + player.level().random.nextInt(40).toLong()
+                ModUtilities.playSoundLocal(
+                    player,
+                    SoundEvents.CONDUIT_AMBIENT_SHORT,
+                    SoundSource.PLAYERS,
+                    1.0f, 1.0f
                 )
             }
         }
@@ -335,17 +393,27 @@ object ConduitDomainHandler {
         val triggerDist = if (isPortable) PORTABLE_WARNING_DISTANCE else ModConfig.conduitBoundaryTriggerDistance
         if (dist <= 0.001 || radius - dist > triggerDist) return
 
-        val nx = vx / dist; val ny = vy / dist; val nz = vz / dist
-        val bx = cx + nx * radius; val by = cy + ny * radius; val bz = cz + nz * radius
+        val nx = vx / dist
+        val ny = vy / dist
+        val nz = vz / dist
+        val bx = cx + nx * radius
+        val by = cy + ny * radius
+        val bz = cz + nz * radius
 
         val serverLevel = player.level() as? ServerLevel ?: return
 
-        val rx: Double; val ry: Double; val rz: Double
+        val rx: Double
+        val ry: Double
+        val rz: Double
         if (abs(ny) > 0.99) {
-            rx = 1.0; ry = 0.0; rz = 0.0
+            rx = 1.0
+            ry = 0.0
+            rz = 0.0
         } else {
             val rLen = sqrt(nx * nx + nz * nz).coerceAtLeast(1e-6)
-            rx = nz / rLen; ry = 0.0; rz = -nx / rLen
+            rx = nz / rLen
+            ry = 0.0
+            rz = -nx / rLen
         }
         val ux = ny * rz - nz * ry
         val uy = nz * rx - nx * rz
@@ -356,7 +424,8 @@ object ConduitDomainHandler {
 
         repeat(ringPoints) { i ->
             val phi = 2.0 * Math.PI * i / ringPoints
-            val cosPhi = cos(phi); val sinPhi = sin(phi)
+            val cosPhi = cos(phi)
+            val sinPhi = sin(phi)
 
             val px = bx + (cosPhi * rx + sinPhi * ux) * ringRadius
             val py = by + (cosPhi * ry + sinPhi * uy) * ringRadius
@@ -373,19 +442,18 @@ object ConduitDomainHandler {
             }
         }
     }
+
     private fun grantFlight(player: Player, isHunting: Boolean, justEntered: Boolean = false) {
         val abilities = player.abilities
         val targetSpeed = if (isHunting) FLYING_SPEED_HUNTING else FLYING_SPEED_NORMAL
 
         var updateNeeded = false
 
-        
         if (!abilities.mayfly) {
             abilities.mayfly = true
             updateNeeded = true
         }
 
-        
         if (justEntered && !abilities.flying && !player.onGround()) {
             abilities.flying = true
             updateNeeded = true

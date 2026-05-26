@@ -77,17 +77,28 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    
+    
+    
+    
+    
+    val CONDUIT_ENTERING = SOUNDS.register("conduit_entering") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
 
-
-    fun register(eventBus: IEventBus) {
-        SOUNDS.register(eventBus)
+    val CONDUIT_LEAVING = SOUNDS.register("conduit_leaving") { id ->
+        SoundEvent.createVariableRangeEvent(id)
     }
 
 
     
 
     
-        val PRESSURE_DAMAGE = SOUNDS.register("pressure_damage") { id ->
-            SoundEvent.createVariableRangeEvent(id)
-        }
+    val PRESSURE_DAMAGE = SOUNDS.register("pressure_damage") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    fun register(eventBus: IEventBus) {
+        SOUNDS.register(eventBus)
+    }
 }
