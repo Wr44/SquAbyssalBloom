@@ -57,7 +57,7 @@ object FocalistBeamRenderer {
 
             var beamVector = endPos.subtract(startPos)
             val distance = beamVector.length().toFloat()
-            if (distance == 0f) return
+            if (distance == 0f) continue
 
             val attackTime = player.ticksUsingItem + partialTick
             val scale = attackTime / AbyssalGuardianFocalistItem.MAX_CHARGE_TICKS.toFloat()

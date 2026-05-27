@@ -17,6 +17,7 @@ import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.tick.EntityTickEvent
 import java.util.UUID
@@ -45,6 +46,8 @@ object PressureEffectEvent {
     fun onEntityTick(event: EntityTickEvent.Post) {
         val entity = event.entity as? LivingEntity ?: return
         if (entity.level().isClientSide) return
+        if (entity.tickCount % 40 != 0) return
+
         val serverLevel = entity.level() as? ServerLevel ?: return
 
         if (!entity.isInWater
@@ -56,8 +59,6 @@ object PressureEffectEvent {
             entity.removeEffect(ModEffects.PRESSURE)
             return
         }
-
-        if (entity.tickCount % 10 != 0) return
 
         if (entity.type.`is`(EntityTypeTags.CAN_BREATHE_UNDER_WATER)) return
 
@@ -129,6 +130,11 @@ object PressureEffectEvent {
 
     @SubscribeEvent
     fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
+        lastDamageTick.remove(event.entity.uuid)
+    }
+
+    @SubscribeEvent
+    fun onEntityDeath(event: LivingDeathEvent) {
         lastDamageTick.remove(event.entity.uuid)
     }
 }

@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.bubble
 
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
+import fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble.NautilusBubbleSlowHandler
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
@@ -144,7 +145,17 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
     var isHeld: Boolean
         get() = entityData.get(IS_HELD)
-        set(value) { entityData.set(IS_HELD, value) }
+        set(value) {
+            val previous = entityData.get(IS_HELD)
+            entityData.set(IS_HELD, value)
+            if (!level().isClientSide && previous != value) {
+                val ownerNautilus = owner?.getEntity(level(), Entity::class.java) as? AbstractNautilus
+                if (ownerNautilus != null) {
+                    if (value) NautilusBubbleSlowHandler.onBubbleHeld(ownerNautilus.uuid)
+                    else NautilusBubbleSlowHandler.onBubbleReleased(ownerNautilus.uuid)
+                }
+            }
+        }
 
     var holdTicks: Int
         get() = entityData.get(HOLD_TICKS_SYNC)
@@ -387,6 +398,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     private fun burst() {
         if (isBursting) return
         isBursting = true
+        if (isHeld) isHeld = false
         if (attachedPlayerId != -1) detachWithLeash()
 
         val lvl = level()
@@ -518,6 +530,15 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
         super.onSyncedDataUpdated(key)
         if (key == BUBBLE_STAGE) refreshDimensions()
+    }
+
+    override fun remove(reason: RemovalReason) {
+        if (!level().isClientSide && isHeld) {
+            (owner?.getEntity(level(), Entity::class.java) as? AbstractNautilus)?.let {
+                NautilusBubbleSlowHandler.onBubbleReleased(it.uuid)
+            }
+        }
+        super.remove(reason)
     }
 
     override fun isInvulnerable() = false
