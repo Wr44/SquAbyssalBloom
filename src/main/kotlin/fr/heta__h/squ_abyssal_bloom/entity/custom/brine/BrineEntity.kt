@@ -25,7 +25,6 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.BubbleColumnBlock
 import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.level.chunk.LevelChunk
 import net.minecraft.world.phys.Vec3
 import java.util.EnumSet
 import kotlin.math.atan2
@@ -44,6 +43,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
     private var ticksOutOfWater = 0
     private val activeColumnPositions = mutableSetOf<BlockPos>()
+    private val nextColumnPositions = mutableSetOf<BlockPos>() 
 
     
     var knockbackTicks = 0
@@ -104,7 +104,9 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
         
         const val ATTACK_ENTER_RADIUS = 2.0
+        const val ATTACK_ENTER_RADIUS_SQR = ATTACK_ENTER_RADIUS * ATTACK_ENTER_RADIUS 
         const val ATTACK_EXIT_RADIUS = 5.0
+        const val ATTACK_EXIT_RADIUS_SQR = ATTACK_EXIT_RADIUS * ATTACK_EXIT_RADIUS 
         const val DIRECT_EXIT_GRACE_TICKS = 15
         const val DIRECT_Y_GRACE_TICKS = 15
 
@@ -204,19 +206,19 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         val dirZ = dz / xzDist
 
         val footY = floor(y).toInt()
+        val mutablePos = BlockPos.MutableBlockPos()
 
         fun blockedAt(dist: Double): Boolean {
             val ax = floor(x + dirX * dist).toInt()
             val az = floor(z + dirZ * dist).toInt()
             val lv = level()
 
-            fun hasCollision(pos: BlockPos) = !lv.getBlockState(pos).getCollisionShape(lv, pos).isEmpty
+            fun hasCollision(yOff: Int): Boolean {
+                mutablePos.set(ax, footY + yOff, az)
+                return !lv.getBlockState(mutablePos).getCollisionShape(lv, mutablePos).isEmpty
+            }
 
-            val posF = BlockPos(ax, footY, az)
-            val posH = BlockPos(ax, footY + 1, az)
-            val posO = BlockPos(ax, footY + 2, az)
-
-            return (hasCollision(posF) || hasCollision(posH)) && !hasCollision(posO)
+            return (hasCollision(0) || hasCollision(1)) && !hasCollision(2)
         }
 
         if (blockedAt(0.7) || blockedAt(1.2) || blockedAt(1.6)) {
@@ -275,30 +277,40 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         val bx = blockPosition().x
         val bz = blockPosition().z
         val startY = ceil(boundingBox.maxY).toInt()
-        val colState = Blocks.BUBBLE_COLUMN.defaultBlockState()
-            .setValue(BubbleColumnBlock.DRAG_DOWN, false)
-        val newPositions = mutableSetOf<BlockPos>()
+        val colState = Blocks.BUBBLE_COLUMN.defaultBlockState().setValue(BubbleColumnBlock.DRAG_DOWN, false)
+
+        nextColumnPositions.clear()
+        val mutablePos = BlockPos.MutableBlockPos()
 
         for ((dx, dz) in CROSS_OFFSETS) {
             for (i in 0 until BUBBLE_COLUMN_HEIGHT) {
-                val pos = BlockPos(bx + dx, startY + i, bz + dz)
-                val current = serverLevel.getBlockState(pos)
+                mutablePos.set(bx + dx, startY + i, bz + dz)
+                val current = serverLevel.getBlockState(mutablePos)
                 when {
-                    current.`is`(Blocks.BUBBLE_COLUMN) -> newPositions.add(pos)
+                    current.`is`(Blocks.BUBBLE_COLUMN) -> {
+                        nextColumnPositions.add(mutablePos.immutable())
+                    }
                     current.`is`(Blocks.WATER) -> {
-                        val chunk = serverLevel.getChunk(pos.x shr 4, pos.z shr 4) as? LevelChunk ?: continue
-                        chunk.setBlockState(pos, colState, 0)
-                        serverLevel.sendBlockUpdated(pos, current, colState, 2)
-                        newPositions.add(pos)
+                        val immutable = mutablePos.immutable()
+                        
+                        serverLevel.setBlock(immutable, colState, 3)
+                        nextColumnPositions.add(immutable)
                     }
                     else -> break
                 }
             }
         }
 
-        for (pos in activeColumnPositions - newPositions) restoreToWater(pos, serverLevel)
-        activeColumnPositions.clear()
-        activeColumnPositions.addAll(newPositions)
+        val iterator = activeColumnPositions.iterator()
+        while (iterator.hasNext()) {
+            val pos = iterator.next()
+            if (!nextColumnPositions.contains(pos)) {
+                restoreToWater(pos, serverLevel)
+                iterator.remove()
+            }
+        }
+
+        activeColumnPositions.addAll(nextColumnPositions)
 
         if (!entityData.get(COLUMN_ACTIVE)) entityData.set(COLUMN_ACTIVE, true)
     }
@@ -314,9 +326,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         val current = serverLevel.getBlockState(pos)
         if (!current.`is`(Blocks.BUBBLE_COLUMN)) return
         val waterState = Blocks.WATER.defaultBlockState()
-        val chunk = serverLevel.getChunk(pos.x shr 4, pos.z shr 4) as? LevelChunk ?: return
-        chunk.setBlockState(pos, waterState, 0)
-        serverLevel.sendBlockUpdated(pos, current, waterState, 2)
+        serverLevel.setBlock(pos, waterState, 3)
     }
 
     override fun remove(reason: RemovalReason) {
@@ -421,10 +431,11 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     fun distanceToSolidFloor(): Double {
         val origin = blockPosition()
         val lv = level()
+        val mutablePos = BlockPos.MutableBlockPos()
         for (i in 0..HOVER_FLOOR_SCAN_DEPTH) {
-            val pos = BlockPos(origin.x, origin.y - i, origin.z)
-            if (!lv.getBlockState(pos).getCollisionShape(lv, pos).isEmpty)
-                return y - (pos.y + 1.0)
+            mutablePos.set(origin.x, origin.y - i, origin.z)
+            if (!lv.getBlockState(mutablePos).getCollisionShape(lv, mutablePos).isEmpty)
+                return y - (mutablePos.y + 1.0)
         }
         return (HOVER_FLOOR_SCAN_DEPTH + 1).toDouble()
     }
@@ -439,6 +450,12 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         val dx = entity.x - x
         val dz = entity.z - z
         return sqrt(dx * dx + dz * dz)
+    }
+
+    fun xzDistToSqr(entity: LivingEntity): Double {
+        val dx = entity.x - x
+        val dz = entity.z - z
+        return dx * dx + dz * dz
     }
 
     inner class BrineHoverGoal : Goal() {
@@ -521,12 +538,12 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
         override fun canUse(): Boolean {
             val p = target ?: return false
-            return isInWater && xzDistTo(p) > ATTACK_ENTER_RADIUS
+            return isInWater && xzDistToSqr(p) > ATTACK_ENTER_RADIUS_SQR
         }
 
         override fun canContinueToUse(): Boolean {
             val p = target ?: return false
-            return isInWater && xzDistTo(p) > ATTACK_ENTER_RADIUS
+            return isInWater && xzDistToSqr(p) > ATTACK_ENTER_RADIUS_SQR
         }
 
         override fun requiresUpdateEveryTick() = true
@@ -546,13 +563,13 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         override fun canUse(): Boolean {
             val p = target ?: return false
             if (!isInWater) return false
-            return xzDistTo(p) <= ATTACK_ENTER_RADIUS && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
+            return xzDistToSqr(p) <= ATTACK_ENTER_RADIUS_SQR && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
         }
 
         override fun canContinueToUse(): Boolean {
             val p = target ?: return false
             if (!isInWater) return false
-            return xzDistTo(p) <= ATTACK_EXIT_RADIUS && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
+            return xzDistToSqr(p) <= ATTACK_EXIT_RADIUS_SQR && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
         }
 
         override fun requiresUpdateEveryTick() = true
@@ -588,13 +605,13 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         override fun canUse(): Boolean {
             val p = target ?: return false
             if (!isInWater) return false
-            return xzDistTo(p) <= ATTACK_ENTER_RADIUS && (p.y - y) <= COLUMN_VS_DIRECT_Y_THRESHOLD
+            return xzDistToSqr(p) <= ATTACK_ENTER_RADIUS_SQR && (p.y - y) <= COLUMN_VS_DIRECT_Y_THRESHOLD
         }
 
         override fun canContinueToUse(): Boolean {
             val p = target ?: return false
             if (!isInWater) return false
-            if (xzDistTo(p) > ATTACK_EXIT_RADIUS && directExitTimer >= DIRECT_EXIT_GRACE_TICKS) return false
+            if (xzDistToSqr(p) > ATTACK_EXIT_RADIUS_SQR && directExitTimer >= DIRECT_EXIT_GRACE_TICKS) return false
             if ((p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD && directYTimer >= DIRECT_Y_GRACE_TICKS) return false
             return true
         }
