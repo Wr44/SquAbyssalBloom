@@ -327,7 +327,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 }
 
                 GOAL_ATTACK -> {
-                    if (getCurrentTarget() != null && getCurrentTarget()!!.isAlive) {
+                    val currentTarget = getCurrentTarget()
+                    if (currentTarget != null && currentTarget.isAlive) {
                         swallowStopAnimationState.stop()
                         if (!currentSwallowing) {
                             swallowStartAnimationState.startIfStopped(tickCount)
@@ -354,14 +355,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 }
             }
         } else {
-            val newTargetRef = myTarget?.let { EntityReference.of(it) }
-            val currentSyncedTarget = entityData.get(TARGET)?.orElse(null) ?: null
+            val newTarget = myTarget
+            val currentSyncedEntity = entityData.get(TARGET)
+                .orElse(null)
+                ?.getEntity(level(), LivingEntity::class.java)
 
-            if (newTargetRef != currentSyncedTarget) {
-                entityData.set(
-                    TARGET,
-                    Optional.ofNullable(newTargetRef)
-                )
+            if (newTarget != currentSyncedEntity) {
+                entityData.set(TARGET, Optional.ofNullable(newTarget?.let { EntityReference.of(it) }))
             }
         }
     }
@@ -688,35 +688,26 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         private var isPlaying = false
         private var previousThreat: LivingEntity = this@BarnacleEntity
+        private var currentThreat: LivingEntity? = null
 
         init {
             flags = EnumSet.of(Flag.MOVE, Flag.LOOK)
         }
 
-        override fun canUse(): Boolean =
-            isPlaying || (
-                    isUnderWater &&
-                            !entityData.get(MOUTH_OPEN) &&
-                            isHealthCritical &&
-                            getAnyThreat() != null
-                    )
-
-        override fun start() {
-            if (level().isClientSide) return
-
-            ensureGoalState(GOAL_FLEE)
-            entityData.set(RUSH_PHASE, false)
-            animationStartTick = tickCount
-
-            getAnyThreat()?.let { setFleeDirection(it) }
+        override fun canUse(): Boolean {
+            currentThreat = getAnyThreat()
+            return isPlaying || (isUnderWater && !entityData.get(MOUTH_OPEN) && isHealthCritical && currentThreat != null)
         }
+
+        override fun start() { currentThreat?.let { setFleeDirection(it) } }
 
         override fun tick() {
             if (level().isClientSide) return
 
             ensureGoalState(GOAL_FLEE)
 
-            val threat = getAnyThreat() ?: previousThreat
+            currentThreat = getAnyThreat()
+            val threat = currentThreat ?: previousThreat ?: return
             previousThreat = threat
 
             if (entityData.get(RUSH_PHASE)) {

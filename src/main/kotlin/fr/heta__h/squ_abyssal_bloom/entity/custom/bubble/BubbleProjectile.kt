@@ -424,7 +424,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 val dz = target.z - z
                 val dist = sqrt(dx * dx + dy * dy + dz * dz).coerceAtLeast(BURST_MIN_DIST)
 
-                var damage = stageData.burstDamage
+                val damage = stageData.burstDamage
 
                 target.hurtServer(lvl, bubbleBurstSource(), damage)
                 target.deltaMovement = target.deltaMovement.add(
@@ -507,10 +507,14 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     private fun isBoxFullySubmerged(): Boolean {
         val bb = boundingBox
         val lv = level()
-        for (cx in listOf(bb.minX, bb.maxX))
-            for (cy in listOf(bb.minY, bb.maxY))
-                for (cz in listOf(bb.minZ, bb.maxZ))
-                    if (lv.getFluidState(BlockPos.containing(cx, cy, cz)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.minX, bb.minY, bb.minZ)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.maxX, bb.minY, bb.minZ)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.minX, bb.maxY, bb.minZ)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.maxX, bb.maxY, bb.minZ)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.minX, bb.minY, bb.maxZ)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.maxX, bb.minY, bb.maxZ)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.minX, bb.maxY, bb.maxZ)).isEmpty) return false
+        if (lv.getFluidState(BlockPos.containing(bb.maxX, bb.maxY, bb.maxZ)).isEmpty) return false
         return true
     }
 

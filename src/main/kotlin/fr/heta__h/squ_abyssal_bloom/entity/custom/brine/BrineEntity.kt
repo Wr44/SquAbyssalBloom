@@ -46,8 +46,6 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     private val activeColumnPositions = mutableSetOf<BlockPos>()
 
     
-    var directExitTimer = 0
-    var directYTimer = 0
     var knockbackTicks = 0
     var climbingTicks = 0
 
@@ -582,6 +580,8 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
     inner class BrineDirectAttackGoal : Goal() {
         private var bubbleCooldown = 0
+        var directExitTimer = 0
+        var directYTimer = 0
 
         init { flags = EnumSet.of(Flag.MOVE) }
 
