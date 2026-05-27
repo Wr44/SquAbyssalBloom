@@ -43,7 +43,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
     private var ticksOutOfWater = 0
     private val activeColumnPositions = mutableSetOf<BlockPos>()
-    private val nextColumnPositions = mutableSetOf<BlockPos>() 
+    private val nextColumnPositions = mutableSetOf<BlockPos>()
 
     
     var knockbackTicks = 0

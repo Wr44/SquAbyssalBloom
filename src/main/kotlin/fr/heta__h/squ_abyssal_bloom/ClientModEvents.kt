@@ -5,8 +5,6 @@ import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
-import fr.heta__h.squ_abyssal_bloom.particle.marine_snow.MarineSnowParticleProvider
-import fr.heta__h.squ_abyssal_bloom.particle.nautilus.NautilusTrackingParticleProvider
 import net.minecraft.client.renderer.ItemBlockRenderTypes
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer
 import net.neoforged.api.distmarker.Dist

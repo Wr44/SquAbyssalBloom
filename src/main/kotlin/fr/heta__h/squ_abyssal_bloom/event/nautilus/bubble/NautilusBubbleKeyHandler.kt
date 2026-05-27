@@ -37,7 +37,7 @@ object NautilusBubbleKeyHandler {
                 BubbleProjectile::class.java, nautilus.boundingBox.inflate(3.0)
             ) { it.isHeld }?.isNotEmpty() ?: false
 
-            if (!hasHeld && nautilus.getJumpCooldown() <= 0) {
+            if (!hasHeld && nautilus.jumpCooldown <= 0) {
 
                 mc.connection?.send(ServerboundCustomPayloadPacket(C2SBubbleChargeStartPacket))
                 chargePacketSent = true

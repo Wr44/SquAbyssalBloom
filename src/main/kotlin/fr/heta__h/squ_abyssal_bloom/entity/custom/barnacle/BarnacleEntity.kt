@@ -579,16 +579,20 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             tgt.stopRiding()
         }
 
-        tgt.deltaMovement = Vec3.ZERO
         tgt.fallDistance = 0.0
         tgt.addEffect(MobEffectInstance(MobEffects.BLINDNESS, BLINDNESS_DURATION_TICKS, BLINDNESS_AMPLIFIER, true, false))
 
-        if (tgt is ServerPlayer) {
-            tgt.connection.teleport(holdPos.x, holdPos.y, holdPos.z, tgt.yRot, tgt.xRot)
-            tgt.connection.send(ClientboundSetEntityMotionPacket(tgt))
+        val pullVec = holdPos.subtract(tgt.position())
+        val distance = pullVec.length()
+
+        if (distance > 0.1) {
+            val pullSpeed = (distance * 0.4).coerceAtMost(1.5)
+            tgt.deltaMovement = pullVec.normalize().scale(pullSpeed)
         } else {
-            tgt.setPos(holdPos.x, holdPos.y, holdPos.z)
+            tgt.deltaMovement = Vec3.ZERO
         }
+
+        tgt.hurtMarked = true
     }
 
     fun spawnInk() {
