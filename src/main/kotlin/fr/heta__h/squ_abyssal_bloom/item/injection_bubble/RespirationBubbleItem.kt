@@ -26,7 +26,7 @@ class RespirationBubbleItem(properties: Properties) : Item(properties) {
 
         level.playSound(
             null, player.x, player.y, player.z,
-            ModSounds.RESPIRATION_BUBBLE, SoundSource.PLAYERS, 0.2f, 1f
+            ModSounds.RESPIRATION_BUBBLE, SoundSource.PLAYERS, 0.75f, 1f
         )
 
         val headY = player.y + player.eyeHeight.toDouble()

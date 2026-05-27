@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "squ_abyssal_bloom:block/astral_prismarine"
+    },
+    "lit=true": {
+      "model": "squ_abyssal_bloom:block/astral_prismarine_active"
+    }
+  }
+}

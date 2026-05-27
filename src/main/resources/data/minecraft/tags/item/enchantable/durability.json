@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:copper_nautilus_armor",
+    "minecraft:iron_nautilus_armor",
+    "minecraft:golden_nautilus_armor",
+    "minecraft:diamond_nautilus_armor",
+    "minecraft:netherite_nautilus_armor",
+
+    "squ_abyssal_bloom:abyssal_guardian_focalist",
+    "squ_abyssal_bloom:barbed_nautilus_scale",
+    "squ_abyssal_bloom:bubble_spitter"
+  ]
+}

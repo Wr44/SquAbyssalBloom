@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": "minecraft:shield",
+    "B": "squ_abyssal_bloom:prismarine_spike",
+    "C": "minecraft:prismarine"
+  },
+  "pattern": [
+    "CB ",
+    "AB ",
+    "CB "
+  ],
+  "result": {
+    "count": 1,
+    "id": "squ_abyssal_bloom:barbed_nautilus_scale"
+  }
+}

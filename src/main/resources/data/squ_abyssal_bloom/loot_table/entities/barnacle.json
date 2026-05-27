@@ -1,0 +1,83 @@
+{
+  "type": "minecraft:entity",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:ink_sac",
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 5,
+                "type": "minecraft:uniform"
+              }
+            },
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": {
+                "min": 2.0,
+                "max": 3.0,
+                "type": "minecraft:uniform"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "squ_abyssal_bloom:barnacle_tooth",
+          "conditions": [
+            {
+              "condition": "minecraft:killed_by_player"
+            }
+          ],
+          "functions": [
+            {
+              "function": "minecraft:enchanted_count_increase",
+              "enchantment": "minecraft:looting",
+              "count": {
+                "type": "minecraft:uniform",
+                "min": 0.0,
+                "max": 1.0
+              },
+              "limit": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "rolls": 1,
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "squ_abyssal_bloom:guardian_eye"
+        }
+      ],
+      "conditions": [
+        {
+          "condition": "minecraft:killed_by_player"
+        },
+        {
+          "condition": "minecraft:random_chance_with_enchanted_bonus",
+          "enchantment": "minecraft:looting",
+          "unenchanted_chance": 0.10,
+          "enchanted_chance": {
+            "type": "minecraft:linear",
+            "base": 0.15,
+            "per_level_above_first": 0.05
+          }
+        }
+      ]
+    }
+  ]
+}

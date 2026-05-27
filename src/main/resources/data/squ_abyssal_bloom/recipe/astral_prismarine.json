@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": "minecraft:amethyst_shard",
+    "B": "minecraft:prismarine_shard",
+    "C": "minecraft:obsidian"
+  },
+  "pattern": [
+    "ABA",
+    "BCB",
+    "ABA"
+  ],
+  "result": {
+    "count": 1,
+    "id": "squ_abyssal_bloom:astral_prismarine"
+  }
+}

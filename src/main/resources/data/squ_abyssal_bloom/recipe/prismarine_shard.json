@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "squ_abyssal_bloom:prismarine_bulb" ,
+    "squ_abyssal_bloom:prismarine_bulb"
+  ],
+  "result": {
+    "id": "minecraft:prismarine_shard",
+    "count": 1
+  }
+}

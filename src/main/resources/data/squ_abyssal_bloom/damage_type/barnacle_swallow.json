@@ -1,0 +1,6 @@
+{
+  "message_id": "squ_abyssal_bloom.barnacle_swallow",
+  "scaling": "when_caused_by_living_non_player",
+  "exhaustion": 0.1,
+  "effects": "hurt"
+}

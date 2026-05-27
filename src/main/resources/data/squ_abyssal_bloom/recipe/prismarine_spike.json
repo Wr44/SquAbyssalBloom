@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "squ_abyssal_bloom:barnacle_tooth",
+    "minecraft:prismarine_shard"
+  ],
+  "result": {
+    "id": "squ_abyssal_bloom:prismarine_spike",
+    "count": 1
+  }
+}

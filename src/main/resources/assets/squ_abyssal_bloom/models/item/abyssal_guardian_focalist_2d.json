@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "squ_abyssal_bloom:item/abyssal_guardian_focalist_2d"
+  }
+}

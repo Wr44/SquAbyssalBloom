@@ -1,0 +1,16 @@
+{
+  "description": { "translate": "enchantment.squ_abyssal_bloom.tidal_immunity" },
+  "supported_items": "#squ_abyssal_bloom:enchantable/nautilus_armor",
+  "weight": 2,
+  "max_level": 1,
+  "min_cost": {
+    "base": 10,
+    "per_level_above_first": 0
+  },
+  "max_cost": {
+    "base": 25,
+    "per_level_above_first": 0
+  },
+  "anvil_cost": 2,
+  "slots": ["body"]
+}

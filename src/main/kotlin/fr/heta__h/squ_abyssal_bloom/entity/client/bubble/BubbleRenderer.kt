@@ -115,7 +115,7 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
 
             val finalYaw = if (renderState.ticksSinceRelease in 0f..15f) {
                 val t = renderState.ticksSinceRelease / 15f
-                val smooth = t * t * (3f - 2f * t) 
+                val smooth = t * t * (3f - 2f * t) // smoothstep
                 rotLerp(smooth, renderState.releaseYaw, spinAngle)
             } else {
                 spinAngle

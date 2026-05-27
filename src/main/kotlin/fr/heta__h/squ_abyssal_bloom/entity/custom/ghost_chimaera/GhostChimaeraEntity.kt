@@ -47,7 +47,7 @@ class GhostChimaeraEntity(type: EntityType<out AgeableWaterCreature>, level: Lev
                 .add(Attributes.FOLLOW_RANGE, 55.0)
     }
 
-    
+    // Alpha du corps (0.0 = invisible, 1.0 = opaque) - les yeux restent toujours visibles
     var bodyAlpha: Float
         get() = entityData.get(BODY_ALPHA)
         set(value) = entityData.set(BODY_ALPHA, value.coerceIn(0.0f, 1.0f))

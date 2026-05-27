@@ -41,7 +41,7 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
         return RenderTypes.entityTranslucent(texture)
     }
 
-    
+    // Appliquer l'alpha du corps à la couleur de rendu
     override fun getModelTint(renderState: GhostChimaeraRenderState): Int {
         val alpha = (renderState.bodyAlpha * 255).toInt().coerceIn(0, 255)
         return ARGB.color(alpha, 255, 255, 255)

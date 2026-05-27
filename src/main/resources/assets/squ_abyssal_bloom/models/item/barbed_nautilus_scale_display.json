@@ -1,0 +1,17 @@
+{
+  "loader": "neoforge:obj",
+  "model": "squ_abyssal_bloom:models/item/barbed_nautilus_scale_display.obj",
+  "flip_v": true,
+  "textures": {
+    "particle": "squ_abyssal_bloom:item/barbed_nautilus_scale_display",
+    "texture_principale": "squ_abyssal_bloom:item/barbed_nautilus_scale_display",
+    "none": "squ_abyssal_bloom:item/barbed_nautilus_scale_display"
+  },
+  "display": {
+    "fixed": {
+      "rotation": [0, 0, 0],
+      "translation": [8, 14, 8],
+      "scale": [1, 1, 1]
+    }
+  }
+}

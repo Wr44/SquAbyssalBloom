@@ -12,14 +12,14 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries
 object ModAttachments {
     val ATTACHMENTS = DeferredRegister.create(NeoForgeRegistries.Keys.ATTACHMENT_TYPES, SquAbyssalBloom.ID)
 
-    
+    // RENDER LAYER
     val HAS_GUARDIAN_SPIKES = ATTACHMENTS.register("has_spikes") { ->
         AttachmentType.builder { -> false }
             .sync(ByteBufCodecs.BOOL)
             .build()
     }
 
-    
+    // MOB INVENTORY
     val NAUTILUS_EXTRA_SLOT = ATTACHMENTS.register("nautilus_extra_slot") { ->
         AttachmentType.builder { -> ItemStack.EMPTY }
             .serialize(ItemStack.OPTIONAL_CODEC.fieldOf("item"))
@@ -28,7 +28,7 @@ object ModAttachments {
 
     }
 
-    
+    // NAUTILUS CHEST INVENTORY
     val NAUTILUS_CHEST_ITEMS = ATTACHMENTS.register("nautilus_chest_items") { ->
         AttachmentType.builder { -> emptyList<ItemStack>() }
             .serialize(ItemStack.OPTIONAL_CODEC.listOf().fieldOf("items"))

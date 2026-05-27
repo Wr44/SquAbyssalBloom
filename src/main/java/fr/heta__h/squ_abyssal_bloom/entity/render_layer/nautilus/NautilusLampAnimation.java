@@ -5,7 +5,11 @@ import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
 
-
+/**
+ * Made with Blockbench 5.0.7
+ * Exported for Minecraft version 1.19 or later with Mojang mappings
+ * @author Author
+ */
 public class NautilusLampAnimation {
 	public static final AnimationDefinition idle = AnimationDefinition.Builder.withLength(1.5F).looping()
 		.addAnimation("lantern_right1", new AnimationChannel(AnimationChannel.Targets.ROTATION,

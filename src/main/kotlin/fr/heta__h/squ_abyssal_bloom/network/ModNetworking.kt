@@ -15,7 +15,7 @@ object ModNetworking {
     fun register(event: RegisterPayloadHandlersEvent) {
         val registrar = event.registrar(SquAbyssalBloom.ID).versioned("1.0")
 
-        
+        // Server -> Client
         registrar.playToClient(
             FocalistBeamSyncPayload.ID,
             FocalistBeamSyncPayload.CODEC,
@@ -28,7 +28,7 @@ object ModNetworking {
             SyncNautilusExtraSlotPayload::handle
         )
 
-        
+        // Client -> Server
         registrar.playToServer(
             C2SBubbleChargeStartPacket.ID,
             C2SBubbleChargeStartPacket.STREAM_CODEC,

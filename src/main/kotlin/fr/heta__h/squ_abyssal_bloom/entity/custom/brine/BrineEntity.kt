@@ -45,41 +45,41 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     private val activeColumnPositions = mutableSetOf<BlockPos>()
     private val nextColumnPositions = mutableSetOf<BlockPos>()
 
-    
+    // Timer
     var knockbackTicks = 0
     var climbingTicks = 0
 
-    
+    // Animation state machine
     private var clientAnimPhase = CANIM_IDLE
     private var clientAnimTicks = 0
 
 
     companion object {
 
-        
+        // Animation
         const val ANIMATION_FPS = 20
         const val CANIM_IDLE = 0
         const val CANIM_STARTING = 1
         const val CANIM_LOOPING = 2
         const val CANIM_STOPPING = 3
 
-        
+        // Survival
         const val TICKS_BEFORE_DEATH = 3
         const val INSTANT_KILL_DAMAGE = 10000f
 
-        
+        // Stats
         const val MAX_HEALTH = 15.0
         const val ATTACK_DAMAGE = 4.0
         const val MOVEMENT_SPEED = 0.25
         const val FOLLOW_RANGE = 24.0
 
-        
+        // Float
         const val FLOAT_SPEED = 0.25
         const val FLOAT_LERP_FACTOR = 0.12
         const val FLOAT_Y_SCALE = 0.6
         const val FLOAT_MOVING_THRESHOLD_SQR = 0.002
 
-        
+        // Idle
         const val STILL_MIN_TICKS = 40
         const val STILL_MAX_TICKS = 80
         const val MOVE_MIN_TICKS = 50
@@ -87,30 +87,30 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val STILL_FRICTION = 0.88
         const val STILL_ROTATION_SPEED = 1.8f
 
-        
+        // Hover
         const val HOVER_FLOOR_SCAN_DEPTH = 8
         const val HOVER_TARGET_HEIGHT = 0.5
         const val HOVER_SPRING_K = 0.05
         const val HOVER_DAMPING = 0.45
         const val HOVER_FORCE_CLAMP = 0.15
 
-        
+        // Rotation
         const val ROTATION_MOVING_THRESHOLD = 0.01
 
-        
+        // Move
         const val SHADOW_SPEED = 0.20
         const val ATTACK_MOVE_SPEED = SHADOW_SPEED * 0.5
         const val SHADOW_STOP_DIST = 0.15
 
-        
+        // Attack zones
         const val ATTACK_ENTER_RADIUS = 2.0
-        const val ATTACK_ENTER_RADIUS_SQR = ATTACK_ENTER_RADIUS * ATTACK_ENTER_RADIUS 
+        const val ATTACK_ENTER_RADIUS_SQR = ATTACK_ENTER_RADIUS * ATTACK_ENTER_RADIUS // Opti: Précalcul
         const val ATTACK_EXIT_RADIUS = 5.0
-        const val ATTACK_EXIT_RADIUS_SQR = ATTACK_EXIT_RADIUS * ATTACK_EXIT_RADIUS 
+        const val ATTACK_EXIT_RADIUS_SQR = ATTACK_EXIT_RADIUS * ATTACK_EXIT_RADIUS // Opti: Précalcul
         const val DIRECT_EXIT_GRACE_TICKS = 15
         const val DIRECT_Y_GRACE_TICKS = 15
 
-        
+        // Attack thresholds
         const val COLUMN_VS_DIRECT_Y_THRESHOLD = 2.0
 
         val CROSS_OFFSETS = listOf(0 to 0, 1 to 0, -1 to 0, 0 to 1, 0 to -1)
@@ -126,7 +126,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val PARTICLE_BUBBLE_SPREAD = 0.5
         const val PARTICLE_BUBBLE_SPEED_Y = 0.08
 
-        
+        // Data parameters
         private val IS_MOVING: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BrineEntity::class.java, EntityDataSerializers.BOOLEAN)
         val COLUMN_ACTIVE: EntityDataAccessor<Boolean> =
@@ -292,7 +292,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
                     }
                     current.`is`(Blocks.WATER) -> {
                         val immutable = mutablePos.immutable()
-                        
+                        // FIX BUG 1 : Utilisation de serverLevel.setBlock avec le flag 3
                         serverLevel.setBlock(immutable, colState, 3)
                         nextColumnPositions.add(immutable)
                     }

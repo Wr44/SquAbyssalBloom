@@ -55,7 +55,7 @@ object ModEntities {
         ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "barnacle"))
 
 
-    
+    //Entity
 
     val BARNACLE: DeferredHolder<EntityType<*>, EntityType<BarnacleEntity>> =
         ENTITY_TYPES.register("barnacle") { _: Identifier ->
@@ -103,17 +103,17 @@ object ModEntities {
 
 
     fun registerEntityRenderers(event: EntityRenderersEvent.RegisterRenderers) {
-        
+        //Entity
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
         event.registerEntityRenderer(GHOST_CHIMAERA.get() as EntityType<out GhostChimaeraEntity>, ::GhostChimaeraRenderer)
         event.registerEntityRenderer(BRINE.get() as EntityType<out BrineEntity>, ::BrineRenderer)
 
-        
+        //Projectile
         event.registerEntityRenderer(BUBBLE.get() as EntityType<out BubbleProjectile>, ::BubbleRenderer)
     }
 
     fun registerLayerDefinitions(event: EntityRenderersEvent.RegisterLayerDefinitions) {
-        
+        //Entity
         event.registerLayerDefinition(
             BarnacleModel.LAYER_LOCATION,
             BarnacleModel::createBodyLayer
@@ -144,7 +144,7 @@ object ModEntities {
             BubbleStage3Model::createBodyLayer
         )
 
-        
+        //Render layer
         event.registerLayerDefinition(
             GuardianSpikeModel.LAYER_LOCATION,
             GuardianSpikeModel::createBodyLayer

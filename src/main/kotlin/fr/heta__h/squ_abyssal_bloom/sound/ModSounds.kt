@@ -11,7 +11,7 @@ object ModSounds {
         DeferredRegister.create(Registries.SOUND_EVENT, SquAbyssalBloom.ID)
 
 
-    
+    // Barnacle
     val BARNACLE_AMBIENT = SOUNDS.register("barnacle_ambient") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
@@ -32,7 +32,7 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
-    
+    // Brine
     val BRINE_AMBIENT = SOUNDS.register("brine_ambient") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
@@ -45,7 +45,7 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
-    
+    // Bubble projectile
     val BUBBLE_PROJECTILE_BURST = SOUNDS.register("bubble_projectile_burst") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
@@ -63,24 +63,24 @@ object ModSounds {
     }
 
 
-    
+    // Item
 
-    
+    // Abyssal Guardian Focalist
 
     val ABYSSAL_GUARDIAN_FOCALIST_READY = SOUNDS.register("abyssal_guardian_focalist_ready") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 
-    
+    // Respiration Bubble
 
     val RESPIRATION_BUBBLE = SOUNDS.register("respiration_bubble") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 
     
+    // Blocks 
     
-    
-    
+    // Conduit
     
     val CONDUIT_ENTERING = SOUNDS.register("conduit_entering") { id ->
         SoundEvent.createVariableRangeEvent(id)
@@ -91,9 +91,9 @@ object ModSounds {
     }
 
 
-    
+    // Damage Types
 
-    
+    // Pressure
     val PRESSURE_DAMAGE = SOUNDS.register("pressure_damage") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }

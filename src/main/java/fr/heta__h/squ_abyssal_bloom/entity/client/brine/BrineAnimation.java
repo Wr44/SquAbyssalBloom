@@ -989,7 +989,7 @@ public class BrineAnimation {
 					new Keyframe(1.75F, KeyframeAnimations.posVec(0.0F, -0.3F, 0.0F), AnimationChannel.Interpolations.LINEAR),
 					new Keyframe(2.0F,  KeyframeAnimations.posVec(0.0F,  0.3F, 0.0F), AnimationChannel.Interpolations.LINEAR)
 			))
-			
+			// Bones structurels — inchangés, ils ferment correctement
 			.addAnimation("L2", new AnimationChannel(AnimationChannel.Targets.POSITION,
 					new Keyframe(1.5F, KeyframeAnimations.posVec(0.0F, -0.8F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(1.75F, KeyframeAnimations.posVec(0.0F, -0.3F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),

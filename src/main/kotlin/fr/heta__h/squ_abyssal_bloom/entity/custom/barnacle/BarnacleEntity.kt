@@ -83,7 +83,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     }
 
     companion object {
-        
+        // BASE STATS
         const val XP_REWARD = 15
         const val CRITICAL_HEALTH_RATIO = 0.25f
         const val REGEN_COOLDOWN_TICKS = 100
@@ -93,13 +93,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val TARGET_SCAN_INTERVAL_TICKS = 5
         const val DEFAULT_TARGET_RADIUS = 5.5
 
-        
+        // FLOP
         const val FLOP_DELAY_TICKS = 20
         const val FLOP_MOTION_Y = 0.45
         const val FLOP_MOTION_XZ = 0.1
         const val BODY_ROTATION_SPEED = 10f
 
-        
+        // SOUNDS
         const val DEFAULT_SOUND_VOLUME = 1.3f
         const val AMBIENT_SOUND_INTERVAL = 550
         const val INK_PARTICLE_COUNT = 500
@@ -108,14 +108,14 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val BLINDNESS_DURATION_TICKS = 40
         const val BLINDNESS_AMPLIFIER = 1
 
-        
+        // GOALS
         const val GOAL_FLEE = 0
         const val GOAL_ATTACK = 1
         const val GOAL_GRAB = 2
         const val GOAL_SWIM = 3
         const val GOAL_IDLE = 4
 
-        
+        // FLEE
         const val FLEE_ANIM_FPS = 20.0
         const val FLEE_RADIUS = 17.0
         const val FLEE_MAX_SPEED = 3.0f
@@ -124,7 +124,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val FLEE_JITTER_SCALE = 0.2
         const val FLEE_STILL_FRICTION = 0.8
 
-        
+        // ATTACK / SWALLOW
         const val SWALLOW_START_FPS = 21.0
         const val SWALLOW_STOP_FPS = 21.0
         const val SWALLOW_FPS = 20.0
@@ -139,20 +139,20 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val SPIT_SOUND_VOL = 0.5f
         const val SPIT_SOUND_PITCH = 0.5f
 
-        
+        // GRAB
         const val GRAB_ANIM_FPS = 21.0
         const val GRAB_HOLD_DURATION_TICKS = 7
         const val GRAB_HOLD_FACTOR = 4.5
         const val GRAB_OPEN_SOUND_DELAY_TICKS = 2
         const val GRAB_CLOSE_SOUND_DELAY_TICKS = 2
 
-        
+        // SWIM
         const val SWIM_ANIM_FPS = 22.0
         const val SWIM_TARGET_RADIUS = 55.0
         const val SWIM_MAX_SPEED = 2.0f
         const val SWIM_SPEED_K = 2.5f
 
-        
+        // IDLE
         const val IDLE_ANIM_FPS = 30.0
         const val IDLE_MIN_TICKS = 60
         const val IDLE_MAX_TICKS = 150

@@ -1,0 +1,33 @@
+{
+  "model": {
+    "type": "minecraft:select",
+    "property": "minecraft:display_context",
+    "fallback": {
+      "type": "minecraft:model",
+      "model": "squ_abyssal_bloom:item/abyssal_guardian_focalist_3d"
+    },
+    "cases": [
+      {
+        "when": "gui",
+        "model": {
+          "type": "minecraft:model",
+          "model": "squ_abyssal_bloom:item/abyssal_guardian_focalist_2d"
+        }
+      },
+      {
+        "when": "ground",
+        "model": {
+          "type": "minecraft:model",
+          "model": "squ_abyssal_bloom:item/abyssal_guardian_focalist_2d"
+        }
+      },
+      {
+        "when": "fixed",
+        "model": {
+          "type": "minecraft:model",
+          "model": "squ_abyssal_bloom:item/abyssal_guardian_focalist_2d"
+        }
+      }
+    ]
+  }
+}
