@@ -5,7 +5,6 @@ import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBloc
 import fr.heta__h.squ_abyssal_bloom.util.conduit.AstralPrismarineTracker;
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -24,96 +23,82 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Mixin(ConduitBlockEntity.class)
 public abstract class ConduitBlockEntityMixin {
 
-    @Redirect(
-            method = "applyEffects",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;addEffect(Lnet/minecraft/world/effect/MobEffectInstance;)Z")
-    )
-    private static boolean suppressVanillaConduitPower(Player player, MobEffectInstance effect) {
-        return false;
-    }
+    @Unique
+    private static final int[][] ASTRAL_OFFSETS = {
+            {0, 2, 0}, {0, -2, 0}, {0, 0, 2}, {0, 0, -2},
+            {0, 2, 2}, {0, 2, -2}, {0, -2, 2}, {0, -2, -2},
+            {2, 0, 0}, {-2, 0, 0},
+            {2, 0, 2}, {2, 0, -2}, {-2, 0, 2}, {-2, 0, -2},
+            {2, 2, 0}, {2, -2, 0}, {-2, 2, 0}, {-2, -2, 0}
+    };
 
-    @Redirect(
-            method = "updateAndAttackTarget",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z")
-    )
+    @Unique
+    private static final int[][] MERIDIONAL_OFFSETS = {{0, 2, 0}, {0, -2, 0}, {0, 0, -2}, {0, 0, 2}};
+
+    @Unique
+    private static final int[][] EQUATORIAL_OFFSETS = {{0, 2, 0}, {0, -2, 0}, {2, 0, 0}, {-2, 0, 0}};
+
+    @Redirect(method = "applyEffects", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Player;addEffect(Lnet/minecraft/world/effect/MobEffectInstance;)Z"))
+    private static boolean suppressVanillaConduitPower(Player player, MobEffectInstance effect) { return false; }
+
+    @Redirect(method = "updateAndAttackTarget", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
     private static boolean redirectHuntingAttack(LivingEntity entity, ServerLevel level, DamageSource source, float amount) {
         if (!ConduitHuntingTracker.tryMarkHit(entity.getUUID())) return false;
         return entity.hurtServer(level, source, amount);
     }
 
     @ModifyConstant(method = "getDestroyRangeAABB", constant = @Constant(doubleValue = 8.0))
-    private static double modifyHuntingSearchRange(double original) {
-        return 32.0;
-    }
+    private static double modifyHuntingSearchRange(double original) { return 32.0; }
 
     @ModifyConstant(method = "updateDestroyTarget", constant = @Constant(doubleValue = 8.0))
-    private static double modifyHuntingCheckRange(double original) {
-        return 32.0;
-    }
+    private static double modifyHuntingCheckRange(double original) { return 32.0; }
 
     @ModifyConstant(method = "updateAndAttackTarget", constant = @Constant(floatValue = 4.0f))
-    private static float modifyHuntingDamage(float original) {
-        return 0.75f;
-    }
+    private static float modifyHuntingDamage(float original) { return 0.75f; }
 
     @Inject(method = "updateShape", at = @At("RETURN"), cancellable = true)
     private static void enforceAstralPrismarineArches(
             Level level, BlockPos pos, List<BlockPos> positions,
             CallbackInfoReturnable<Boolean> cir
     ) {
-        BlockPos up = pos.offset(0, 2, 0);
-        BlockPos down = pos.offset(0, -2, 0);
-        BlockPos north = pos.offset(0, 0, -2);
-        BlockPos south = pos.offset(0, 0, 2);
-        BlockPos east = pos.offset(2, 0, 0);
-        BlockPos west = pos.offset(-2, 0, 0);
-
-        boolean hasNorthOrSouth = !level.getBlockState(north).isAir() || !level.getBlockState(south).isAir();
-        boolean hasEastOrWest = !level.getBlockState(east).isAir() || !level.getBlockState(west).isAir();
-
         boolean meridionalValid = true;
         boolean equatorialValid = true;
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
-        if (hasNorthOrSouth) {
-            BlockPos[] cardinals = {up, down, north, south};
-            for (BlockPos p : cardinals) {
-                if (!level.getBlockState(p).is(ModBlocks.ASTRAL_PRISMARINE)) {
-                    meridionalValid = false;
-                    break;
-                }
+        for (int[] off : MERIDIONAL_OFFSETS) {
+            mutablePos.set(pos.getX() + off[0], pos.getY() + off[1], pos.getZ() + off[2]);
+            if (!level.getBlockState(mutablePos).is(ModBlocks.ASTRAL_PRISMARINE)) {
+                meridionalValid = false;
+                break;
             }
-            if (meridionalValid) {
-                for (BlockPos p : cardinals) {
-                    if (!positions.contains(p)) positions.add(p);
-                }
+        }
+        if (meridionalValid) {
+            for (int[] off : MERIDIONAL_OFFSETS) {
+                BlockPos p = pos.offset(off[0], off[1], off[2]);
+                if (!positions.contains(p)) positions.add(p);
             }
         }
 
-        if (hasEastOrWest) {
-            BlockPos[] cardinals = {up, down, east, west};
-            for (BlockPos p : cardinals) {
-                if (!level.getBlockState(p).is(ModBlocks.ASTRAL_PRISMARINE)) {
-                    equatorialValid = false;
-                    break;
-                }
+        for (int[] off : EQUATORIAL_OFFSETS) {
+            mutablePos.set(pos.getX() + off[0], pos.getY() + off[1], pos.getZ() + off[2]);
+            if (!level.getBlockState(mutablePos).is(ModBlocks.ASTRAL_PRISMARINE)) {
+                equatorialValid = false;
+                break;
             }
-            if (equatorialValid) {
-                for (BlockPos p : cardinals) {
-                    if (!positions.contains(p)) positions.add(p);
-                }
+        }
+        if (equatorialValid) {
+            for (int[] off : EQUATORIAL_OFFSETS) {
+                BlockPos p = pos.offset(off[0], off[1], off[2]);
+                if (!positions.contains(p)) positions.add(p);
             }
         }
 
-        int validArchCount = 0;
-        if (hasNorthOrSouth && meridionalValid) validArchCount++;
-        if (hasEastOrWest && equatorialValid) validArchCount++;
-
+        int validArchCount = (meridionalValid ? 1 : 0) + (equatorialValid ? 1 : 0);
         if (validArchCount == 0) {
             cir.setReturnValue(false);
         } else {
@@ -127,77 +112,55 @@ public abstract class ConduitBlockEntityMixin {
             CallbackInfo ci
     ) {
         boolean isActive = blockEntity.isActive();
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
-        BlockPos up = pos.offset(0, 2, 0);
-        BlockPos down = pos.offset(0, -2, 0);
-        BlockPos north = pos.offset(0, 0, -2);
-        BlockPos south = pos.offset(0, 0, 2);
-        BlockPos east = pos.offset(2, 0, 0);
-        BlockPos west = pos.offset(-2, 0, 0);
+        boolean meridionalValid = isActive;
+        boolean equatorialValid = isActive;
 
-        boolean hasNorthOrSouth = !level.getBlockState(north).isAir() || !level.getBlockState(south).isAir();
-        boolean hasEastOrWest = !level.getBlockState(east).isAir() || !level.getBlockState(west).isAir();
-
-        List<BlockPos> shouldBeActive = new ArrayList<>();
-
-        if (hasNorthOrSouth && isActive) {
-            BlockPos[] cardinals = {up, down, north, south};
-            boolean allAstral = true;
-
-            for (BlockPos p : cardinals) {
-                if (!level.getBlockState(p).is(ModBlocks.ASTRAL_PRISMARINE)) {
-                    allAstral = false;
+        if (isActive) {
+            for (int[] off : MERIDIONAL_OFFSETS) {
+                mutablePos.set(pos.getX() + off[0], pos.getY() + off[1], pos.getZ() + off[2]);
+                if (!level.getBlockState(mutablePos).is(ModBlocks.ASTRAL_PRISMARINE)) {
+                    meridionalValid = false;
                     break;
                 }
             }
-
-            if (allAstral) {
-                shouldBeActive.addAll(List.of(cardinals));
-            }
-        }
-
-        if (hasEastOrWest && isActive) {
-            BlockPos[] cardinals = {up, down, east, west};
-            boolean allAstral = true;
-
-            for (BlockPos p : cardinals) {
-                if (!level.getBlockState(p).is(ModBlocks.ASTRAL_PRISMARINE)) {
-                    allAstral = false;
+            for (int[] off : EQUATORIAL_OFFSETS) {
+                mutablePos.set(pos.getX() + off[0], pos.getY() + off[1], pos.getZ() + off[2]);
+                if (!level.getBlockState(mutablePos).is(ModBlocks.ASTRAL_PRISMARINE)) {
+                    equatorialValid = false;
                     break;
                 }
             }
-
-            if (allAstral) {
-                shouldBeActive.addAll(List.of(cardinals));
-            }
         }
 
-        List<BlockPos> allPossiblePositions = List.of(
-                pos.offset(0, 2, 0), pos.offset(0, -2, 0), pos.offset(0, 0, 2), pos.offset(0, 0, -2),
-                pos.offset(0, 2, 2), pos.offset(0, 2, -2), pos.offset(0, -2, 2), pos.offset(0, -2, -2),
-                pos.offset(2, 0, 0), pos.offset(-2, 0, 0),
-                pos.offset(2, 0, 2), pos.offset(2, 0, -2), pos.offset(-2, 0, 2), pos.offset(-2, 0, -2),
-                pos.offset(2, 2, 0), pos.offset(2, -2, 0), pos.offset(-2, 2, 0), pos.offset(-2, -2, 0)
-        );
-
-        for (BlockPos checkPos : allPossiblePositions) {
-            BlockState blockState = level.getBlockState(checkPos);
+        for (int[] offset : ASTRAL_OFFSETS) {
+            mutablePos.set(pos.getX() + offset[0], pos.getY() + offset[1], pos.getZ() + offset[2]);
+            BlockState blockState = level.getBlockState(mutablePos);
 
             if (blockState.is(ModBlocks.ASTRAL_PRISMARINE)) {
-                boolean shouldActivate = shouldBeActive.contains(checkPos);
+                boolean shouldActivate = false;
+
+                if (meridionalValid && offset[0] == 0 && (Math.abs(offset[1]) + Math.abs(offset[2]) == 2)) {
+                    shouldActivate = true;
+                } else if (equatorialValid && offset[2] == 0 && (Math.abs(offset[0]) + Math.abs(offset[1]) == 2)) {
+                    shouldActivate = true;
+                }
+
                 boolean currentlyActive = blockState.getValue(AstralPrismarineBlock.ACTIVE);
 
                 if (currentlyActive != shouldActivate) {
+                    BlockPos immutablePos = mutablePos.immutable();
                     level.setBlock(
-                            checkPos,
+                            immutablePos,
                             blockState.setValue(AstralPrismarineBlock.ACTIVE, shouldActivate),
                             3
                     );
 
                     if (shouldActivate) {
-                        AstralPrismarineTracker.INSTANCE.markActive(checkPos);
+                        AstralPrismarineTracker.INSTANCE.markActive(immutablePos);
                     } else {
-                        AstralPrismarineTracker.INSTANCE.markInactive(checkPos);
+                        AstralPrismarineTracker.INSTANCE.markInactive(immutablePos);
                     }
                 }
             }
