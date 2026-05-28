@@ -1,19 +1,16 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
-import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.core.registries.Registries
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
@@ -160,6 +157,17 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val IDLE_WATER_CHECK_DIST = 10
         const val IDLE_DIR_CHANCE_1 = 0.33
         const val IDLE_DIR_CHANCE_2 = 0.55
+
+        // ANIMATION
+        const val ANIM_FLEE_STILL_S = 0.7083f
+        const val ANIM_FLEE_RUSH_S = 1.25f
+        const val ANIM_MOVE_STILL_S = 0.7083f
+        const val ANIM_MOVE_RUSH_S = 0.875f
+        const val ANIM_MOUTH_OPEN_S = 0.3333f
+        const val ANIM_MOUTH_CLOSE_S = 0.75f
+        const val ANIM_SWALLOW_START_S = 0.2083f
+        const val ANIM_SWALLOW_STOP_S = 0.375f
+        const val ANIM_SWALLOW_S = 0.375f
 
         private val CURRENT_GOAL_STATE: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.INT)
@@ -684,9 +692,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     inner class BarnacleFleeGoal : Goal() {
 
         private val moveStillDuration =
-            ceil(BarnacleAnimation.flee_still.lengthInSeconds * FLEE_ANIM_FPS).toInt()
+            ceil(ANIM_FLEE_STILL_S * FLEE_ANIM_FPS).toInt()
         private val moveRushDuration =
-            ceil(BarnacleAnimation.flee_rush.lengthInSeconds * FLEE_ANIM_FPS).toInt()
+            ceil(ANIM_FLEE_RUSH_S * FLEE_ANIM_FPS).toInt()
 
         private val fleeRadiusSqr = FLEE_RADIUS * FLEE_RADIUS
 
@@ -811,11 +819,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     inner class BarnacleAttackGoal : Goal() {
 
         private val startSwallowDuration =
-            ceil(BarnacleAnimation.swallow_start.lengthInSeconds * SWALLOW_START_FPS).toInt()
+            ceil(ANIM_SWALLOW_START_S * SWALLOW_START_FPS).toInt()
         private val stopSwallowDuration =
-            ceil(BarnacleAnimation.swallow_stop.lengthInSeconds * SWALLOW_STOP_FPS).toInt()
+            ceil(ANIM_SWALLOW_STOP_S * SWALLOW_STOP_FPS).toInt()
         private val swallowDuration =
-            ceil(BarnacleAnimation.swallow.lengthInSeconds * SWALLOW_FPS).toInt()
+            ceil(ANIM_SWALLOW_S * SWALLOW_FPS).toInt()
 
         private val startDist = ATTACK_START_DIST
         private val holdDist = ATTACK_HOLD_DIST
@@ -957,9 +965,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     inner class BarnacleGrabGoal : Goal() {
 
         private val openMouthDuration =
-            ceil(BarnacleAnimation.mouth_open.lengthInSeconds * GRAB_ANIM_FPS).toInt()
+            ceil(ANIM_MOUTH_OPEN_S * GRAB_ANIM_FPS).toInt()
         private val closeMouthDuration =
-            ceil(BarnacleAnimation.mouth_close.lengthInSeconds * GRAB_ANIM_FPS).toInt()
+            ceil(ANIM_MOUTH_CLOSE_S * GRAB_ANIM_FPS).toInt()
 
         private val holdOpenDuration = GRAB_HOLD_DURATION_TICKS
         private val factor = GRAB_HOLD_FACTOR
@@ -1058,8 +1066,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     inner class BarnacleSwimTowardsGoal : Goal() {
 
-        private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * SWIM_ANIM_FPS).toInt()
-        private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * SWIM_ANIM_FPS).toInt()
+        private val moveStillDuration = ceil(ANIM_MOVE_STILL_S * SWIM_ANIM_FPS).toInt()
+        private val moveRushDuration = ceil(ANIM_MOVE_RUSH_S * SWIM_ANIM_FPS).toInt()
 
         private var lockedTarget: LivingEntity? = null
 
@@ -1164,9 +1172,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     inner class BarnacleIdleGoal : Goal() {
 
         private val moveStillDuration =
-            ceil(BarnacleAnimation.move_still.lengthInSeconds * IDLE_ANIM_FPS).toInt()
+            ceil(ANIM_MOVE_STILL_S * IDLE_ANIM_FPS).toInt()
         private val moveRushDuration =
-            ceil(BarnacleAnimation.move_rush.lengthInSeconds * IDLE_ANIM_FPS).toInt()
+            ceil(ANIM_MOVE_RUSH_S * IDLE_ANIM_FPS).toInt()
 
         private var stillDuration = 0
 
