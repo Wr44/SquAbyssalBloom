@@ -18,17 +18,14 @@ import kotlin.math.sin
 class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
     renderer: RenderLayerParent<S, M>,
     private val spikeModel: GuardianSpikeModel
-) : RenderLayer<S, M>(renderer)
+) : RenderLayer<S, M>(renderer) {
 
-{
     companion object {
         private val TEXTURE = Identifier.fromNamespaceAndPath(
             SquAbyssalBloom.ID,
             "textures/entity/guardian_spike/guardian_spike.png")
         const val NUMBER_OF_SPIKES = 10
     }
-
-    val position = Array(NUMBER_OF_SPIKES) { 0f }
 
     override fun submit(
         poseStack: PoseStack,
@@ -38,17 +35,17 @@ class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         p4: Float,
         p5: Float
     ) {
-
         val hasPotion = (state as? AddPropertiesToRenderState)?.getHasGuardianSpikes() ?: false
         if (!hasPotion) return
 
         val renderType = RenderTypes.entityCutout(TEXTURE)
 
-        val dimension = Pair(state.boundingBoxWidth, state.boundingBoxHeight)
+        val width = state.boundingBoxWidth
+        val height = state.boundingBoxHeight
         val tick = state.ageInTicks
+        val eyeHeight = (state as? AddPropertiesToRenderState)?.getEyeHeight() ?: (height * 0.85f)
 
-        val radius = dimension.first*0.8 + 0.75
-        val centerY = dimension.second
+        val radius = width * 0.8f + 0.75f
         val rotationSpeed = tick * 0.05f
 
         poseStack.pushPose()
@@ -56,28 +53,23 @@ class GuardianSpikesLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         val compensationRad = -state.bodyRot * (Math.PI.toFloat() / 180f)
         poseStack.mulPose(Quaternionf().rotationY(compensationRad))
 
-        poseStack.translate(0.0, (-centerY).toDouble(), 0.0)
-
         for (i in 0 until NUMBER_OF_SPIKES) {
             poseStack.pushPose()
 
             val normalizedRandom = cos(i.toDouble() * 654.321).toFloat()
-
-            val randomOffsetV = normalizedRandom * (dimension.second / 3)
+            val randomOffsetV = -(height * 0.65f + normalizedRandom * (height * 0.35f))
 
             val baseAngle = i * (Math.PI.toFloat() * 2.0f / NUMBER_OF_SPIKES)
             val finalAngle = baseAngle + rotationSpeed
-
             val floatY = sin((tick * 0.1f + i).toDouble()).toFloat() * 0.15f
 
             val posX = cos(finalAngle.toDouble()).toFloat() * radius
             val posZ = sin(finalAngle.toDouble()).toFloat() * radius
 
-            poseStack.translate(posX, (floatY + randomOffsetV).toDouble(), posZ)
-
+            poseStack.translate(posX.toDouble(), (floatY + randomOffsetV).toDouble(), posZ.toDouble())
             poseStack.mulPose(Quaternionf().rotationY(-finalAngle))
 
-            val scaleFactor = (state.boundingBoxWidth / 0.6f).coerceIn(0.4f, 2.5f)
+            val scaleFactor = (width / 0.6f).coerceIn(0.4f, 2.5f)
             poseStack.scale(scaleFactor, scaleFactor, scaleFactor)
 
             collector.submitModel(

@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.item.injection_bubble
+package fr.heta__h.squ_abyssal_bloom.item.respiration_bubble
 
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.particles.ParticleTypes
@@ -26,7 +26,7 @@ class RespirationBubbleItem(properties: Properties) : Item(properties) {
 
         level.playSound(
             null, player.x, player.y, player.z,
-            ModSounds.RESPIRATION_BUBBLE, SoundSource.PLAYERS, 0.75f, 1f
+            ModSounds.RESPIRATION_BUBBLE, SoundSource.PLAYERS, 1f, 1f
         )
 
         val headY = player.y + player.eyeHeight.toDouble()

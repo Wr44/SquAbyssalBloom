@@ -4,9 +4,8 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
-import fr.heta__h.squ_abyssal_bloom.item.injection_bubble.RespirationBubbleItem
+import fr.heta__h.squ_abyssal_bloom.item.respiration_bubble.RespirationBubbleItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
-import net.minecraft.world.item.BlockItem
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.SpawnEggItem

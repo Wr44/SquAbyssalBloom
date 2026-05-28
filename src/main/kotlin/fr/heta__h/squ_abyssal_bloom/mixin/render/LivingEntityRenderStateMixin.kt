@@ -15,6 +15,9 @@ abstract class LivingEntityRenderStateMixin : AddPropertiesToRenderState {
     @Unique
     private var nautilusExtraItem : ItemStack = ItemStack.EMPTY
 
+    @Unique
+    private var eyeHeight: Float = 0f
+
     override fun getHasGuardianSpikes(): Boolean = hasGuardianSpikes
 
     override fun setHasGuardianSpikes(value: Boolean) {
@@ -25,5 +28,11 @@ abstract class LivingEntityRenderStateMixin : AddPropertiesToRenderState {
 
     override fun setNautilusExtraItem(stack: ItemStack) {
         nautilusExtraItem = stack
+    }
+
+    override fun getEyeHeight(): Float = eyeHeight
+
+    override fun setEyeHeight(value: Float) {
+        eyeHeight = value
     }
 }

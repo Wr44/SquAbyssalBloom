@@ -6,6 +6,9 @@ interface AddPropertiesToRenderState {
     fun getHasGuardianSpikes(): Boolean
     fun setHasGuardianSpikes(value: Boolean)
 
+    fun getEyeHeight(): Float
+    fun setEyeHeight(value: Float)
+
     fun getNautilusExtraItem(): ItemStack
     fun setNautilusExtraItem(stack: ItemStack)
 }
