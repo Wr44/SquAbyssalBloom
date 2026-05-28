@@ -20,12 +20,7 @@
     "enable.AbstractContainerMenuAccessor",
     "enable.AbstractNautilusAccessor",
     "enable.LivingEntityFluidAccessor",
-    "enable.AbstractContainerScreenAccessor",
-    "enable.ConduitBlockEntityAccessor",
-
-    "render.LivingEntityRenderStateMixin",
-    "render.LivingEntityRendererMixin",
-    "render.LevelRendererSkyMixin"
+    "enable.ConduitBlockEntityAccessor"
   ],
   "client": [
     "block.conduit.ConduitRendererMixin",
@@ -34,7 +29,9 @@
 
     "enable.AbstractContainerScreenAccessor",
 
-    "render.LivingEntityRendererMixin"
+    "render.LivingEntityRenderStateMixin",
+    "render.LivingEntityRendererMixin",
+    "render.LevelRendererSkyMixin"
   ],
   "injectors": {
     "defaultRequire": 1
