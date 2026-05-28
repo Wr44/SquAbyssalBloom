@@ -73,6 +73,13 @@ object ModItems {
         .repairable(BRINE_BUBBLES.get())
     ) }
 
+    val MOBILE_CONDUIT = ITEMS.registerItem(
+        "mobile_conduit"
+    ) { properties -> Item(properties
+        .rarity(Rarity.RARE)
+        .stacksTo(1)
+    ) }
+
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
     ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)

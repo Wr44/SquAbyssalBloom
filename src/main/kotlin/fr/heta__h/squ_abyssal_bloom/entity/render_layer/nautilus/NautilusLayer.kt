@@ -55,7 +55,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         val SHIELD: Item = ModItems.BARBED_NAUTILUS_SCALE.get()
         val BUBBLE: Item = ModItems.BUBBLE_SPITTER.get()
         val CHEST: Item = Items.CHEST
-        val CONDUIT: Item = Items.CONDUIT
+        val CONDUIT: Item = ModItems.MOBILE_CONDUIT.get()
 
         const val BASE_HEIGHT = 1f
         const val ORBIT_RADIUS = 1.8f

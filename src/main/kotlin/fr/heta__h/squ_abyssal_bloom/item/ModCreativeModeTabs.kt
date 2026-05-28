@@ -34,6 +34,7 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.BARBED_NAUTILUS_SCALE.get())
                 output.accept(ModItems.ABYSSAL_GUARDIAN_FOCALIST.get())
                 output.accept(ModItems.BUBBLE_SPITTER.get())
+                output.accept(ModItems.MOBILE_CONDUIT.get())
 
                 output.accept(ModItems.ASTRAL_PRISMARINE.get())
 

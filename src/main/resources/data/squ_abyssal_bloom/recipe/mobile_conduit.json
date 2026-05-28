@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": "squ_abyssal_bloom:astral_prismarine",
+    "B": "minecraft:conduit"
+  },
+  "pattern": [
+    " A ",
+    "ABA",
+    " A "
+  ],
+  "result": {
+    "count": 1,
+    "id": "squ_abyssal_bloom:mobile_conduit"
+  }
+}
