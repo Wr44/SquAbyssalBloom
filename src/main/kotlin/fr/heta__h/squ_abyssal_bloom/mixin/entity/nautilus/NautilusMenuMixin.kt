@@ -8,6 +8,7 @@ import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerMenuAccessor
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractNautilusAccessor
 import fr.heta__h.squ_abyssal_bloom.network.nautilus_chest.SyncNautilusExtraSlotPayload
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusReopenQueue
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
@@ -64,8 +65,8 @@ abstract class NautilusMenuMixin {
                 mount.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, newItem)
 
                 if (!mount.level().isClientSide) {
-                    val hasConduitNow = newItem.item == NautilusLayer.CONDUIT
-                    val hadConduit = oldItem.item == NautilusLayer.CONDUIT
+                    val hasConduitNow = newItem.item == NautilusLayerItems.CONDUIT
+                    val hadConduit = oldItem.item == NautilusLayerItems.CONDUIT
 
                     if (hasConduitNow != hadConduit
                         && player.isInWater

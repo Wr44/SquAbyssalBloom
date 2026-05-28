@@ -2,9 +2,8 @@ package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity
 
 import dev.lambdaurora.lambdynlights.api.entity.luminance.EntityLuminance
 import dev.lambdaurora.lambdynlights.api.item.ItemLightSourceManager
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer.Companion.LAMP
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer.Companion.CONDUIT
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.resources.Identifier
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -25,7 +24,7 @@ class NautilusLampLuminance : EntityLuminance {
         if (entity is AbstractNautilus) {
             val extraItem = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
 
-            if (!extraItem.isEmpty && (extraItem.`is`(LAMP) || extraItem.`is`(CONDUIT))) {
+            if (!extraItem.isEmpty && (extraItem.`is`(NautilusLayerItems.LAMP) || extraItem.`is`(NautilusLayerItems.CONDUIT))) {
                 return 15
             }
         }

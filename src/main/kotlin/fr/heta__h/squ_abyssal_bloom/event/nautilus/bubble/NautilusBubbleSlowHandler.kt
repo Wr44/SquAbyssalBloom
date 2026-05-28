@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.resources.Identifier
 import net.minecraft.world.entity.ai.attributes.AttributeModifier
 import net.minecraft.world.entity.ai.attributes.Attributes
@@ -34,7 +35,7 @@ object NautilusBubbleSlowHandler {
 
         val speedAttribute = nautilus.getAttribute(Attributes.MOVEMENT_SPEED) ?: return
 
-        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) {
+        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayerItems.BUBBLE) {
             if (speedAttribute.getModifier(MODIFIER_ID) != null) speedAttribute.removeModifier(MODIFIER_ID)
             return
         }

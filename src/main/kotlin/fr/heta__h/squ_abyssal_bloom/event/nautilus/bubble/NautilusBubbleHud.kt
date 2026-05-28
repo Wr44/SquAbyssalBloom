@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile.Companion.stageFor
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
@@ -47,7 +48,7 @@ object NautilusBubbleHud {
 
         val player = mc.player ?: return
         val nautilus = player.vehicle as? AbstractNautilus ?: return
-        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) return
+        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayerItems.BUBBLE) return
 
         event.isCanceled = true
 
@@ -112,7 +113,7 @@ object NautilusBubbleHud {
         if (event.name != VanillaGuiLayers.CONTEXTUAL_INFO_BAR_BACKGROUND) return
         val mc = Minecraft.getInstance()
         val nautilus = mc.player?.vehicle as? AbstractNautilus ?: return
-        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) return
+        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayerItems.BUBBLE) return
         event.isCanceled = true
     }
 

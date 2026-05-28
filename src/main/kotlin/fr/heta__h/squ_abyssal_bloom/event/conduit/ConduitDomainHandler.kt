@@ -13,6 +13,7 @@ import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.conduit.AstralPrismarineTracker
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel
@@ -324,7 +325,7 @@ object ConduitDomainHandler {
                 }
                 is ConduitTarget.Entity -> {
                     val nautilusList = level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(PORTABLE_RADIUS))
-                    val nautilus = nautilusList.firstOrNull { it.uuid == attachedTarget.uuid && it.isAlive && it.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item == NautilusLayer.CONDUIT }
+                    val nautilus = nautilusList.firstOrNull { it.uuid == attachedTarget.uuid && it.isAlive && it.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item == NautilusLayerItems.CONDUIT }
                     if (nautilus != null && nautilus.distanceTo(player) <= PORTABLE_RADIUS) {
                         return DomainInfo(attachedTarget, nautilus.x, nautilus.y + nautilus.bbHeight / 2.0, nautilus.z, PORTABLE_RADIUS, false)
                     }
@@ -349,7 +350,7 @@ object ConduitDomainHandler {
         }
 
         val nautilusList = level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(PORTABLE_RADIUS))
-        val nautilus = nautilusList.firstOrNull { it.isAlive && it.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item == NautilusLayer.CONDUIT }
+        val nautilus = nautilusList.firstOrNull { it.isAlive && it.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item == NautilusLayerItems.CONDUIT }
         if (nautilus != null && nautilus.distanceTo(player) <= PORTABLE_RADIUS) {
             val target = ConduitTarget.Entity(nautilus.uuid)
             playerAttachment[player.uuid] = target

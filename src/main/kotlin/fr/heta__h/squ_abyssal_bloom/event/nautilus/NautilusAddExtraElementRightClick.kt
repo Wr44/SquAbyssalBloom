@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.event.conduit.ConduitDomainHandler
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.InteractionResult
@@ -42,7 +43,7 @@ object NautilusAddExtraElementRightClick {
                     1.0f, 1.5f
                 )
 
-                if (itemToEquip.item == NautilusLayer.CONDUIT && player.isUnderWater && target.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS) {
+                if (itemToEquip.item == NautilusLayerItems.CONDUIT && player.isUnderWater && target.distanceTo(player) <= ConduitDomainHandler.PORTABLE_RADIUS) {
                     target.playSound(SoundEvents.CONDUIT_ACTIVATE, 1.0f, 1.0f)
                     ConduitDomainHandler.markConduitEquipmentChange(player.uuid)
                 }

@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
@@ -111,7 +112,7 @@ object ModUtilities {
         val vehicle = entity.vehicle
         if (vehicle is AbstractNautilus) {
             val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (!extra.isEmpty && extra.item == NautilusLayer.LAMP) return 1.0
+            if (!extra.isEmpty && extra.item == NautilusLayerItems.LAMP) return 1.0
         }
         return 0.0
     }
@@ -122,11 +123,11 @@ object ModUtilities {
 
         val item = stack.item
         return item in listOf(
-            NautilusLayer.LAMP,
-            NautilusLayer.SHIELD,
-            NautilusLayer.BUBBLE,
-            NautilusLayer.CHEST,
-            NautilusLayer.CONDUIT
+            NautilusLayerItems.LAMP,
+            NautilusLayerItems.SHIELD,
+            NautilusLayerItems.BUBBLE,
+            NautilusLayerItems.CHEST,
+            NautilusLayerItems.CONDUIT
         )
     }
 
@@ -139,7 +140,7 @@ object ModUtilities {
         var maxFound = 0.0
         for (entity in nautili) {
             val extra = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (extra.item == NautilusLayer.LAMP) {
+            if (extra.item == NautilusLayerItems.LAMP) {
                 val dist = entity.position().distanceTo(Vec3(pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble()))
                 val influence = (1.0 - dist / maxRange).coerceIn(0.0, 1.0) * maxInfluence
                 if (influence > maxFound) maxFound = influence

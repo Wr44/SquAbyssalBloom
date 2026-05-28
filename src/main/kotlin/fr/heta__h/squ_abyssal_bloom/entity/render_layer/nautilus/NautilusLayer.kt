@@ -5,6 +5,11 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.util.accessor.AddPropertiesToRenderState
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitMaterialHolder
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems.BUBBLE
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems.CHEST
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems.CONDUIT
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems.LAMP
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems.SHIELD
 import net.minecraft.client.Minecraft
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelPart
@@ -50,12 +55,6 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         private val MOBILE_CAGE = Identifier.fromNamespaceAndPath(
             SquAbyssalBloom.ID, "textures/entity/mobile_conduit/mobile_cage.png"
         )
-
-        val LAMP: Item = ModItems.NAUTILUS_LAMP.get()
-        val SHIELD: Item = ModItems.BARBED_NAUTILUS_SCALE.get()
-        val BUBBLE: Item = ModItems.BUBBLE_SPITTER.get()
-        val CHEST: Item = Items.CHEST
-        val CONDUIT: Item = ModItems.MOBILE_CONDUIT.get()
 
         const val BASE_HEIGHT = 1f
         const val ORBIT_RADIUS = 1.8f

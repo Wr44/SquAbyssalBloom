@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.network.bubble.C2SBubbleChargeStartPacket
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.client.Minecraft
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -25,7 +26,7 @@ object NautilusBubbleKeyHandler {
         val player = mc.player ?: run { chargePacketSent = false; return }
         val nautilus = player.vehicle as? AbstractNautilus ?: run { chargePacketSent = false; return }
 
-        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayer.BUBBLE) {
+        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayerItems.BUBBLE) {
             chargePacketSent = false
             return
         }

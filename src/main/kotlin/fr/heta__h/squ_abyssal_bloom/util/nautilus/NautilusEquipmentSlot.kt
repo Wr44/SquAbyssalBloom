@@ -39,7 +39,7 @@ class NautilusEquipmentSlot(
     override fun onTake(player: Player, stack: ItemStack) {
         super.onTake(player, stack)
 
-        if (stack.item == NautilusLayer.CONDUIT) {
+        if (stack.item == NautilusLayerItems.CONDUIT) {
             if (listenerPlayedDeactivate) {
                 listenerPlayedDeactivate = false
                 return

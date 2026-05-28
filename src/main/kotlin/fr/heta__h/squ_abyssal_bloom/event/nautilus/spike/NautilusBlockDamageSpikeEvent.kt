@@ -1,9 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.spike
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvents
@@ -26,7 +26,7 @@ object NautilusBlockDamageSpikeEvent {
         if (!entity.isDashing) return
 
         val extraItemStack = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-        if (extraItemStack.item != NautilusLayer.SHIELD) return
+        if (extraItemStack.item != NautilusLayerItems.SHIELD) return
 
         val attacker = event.source.entity ?: return
 

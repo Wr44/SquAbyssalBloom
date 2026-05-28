@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.client.Minecraft
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.neoforged.api.distmarker.Dist
@@ -27,7 +28,7 @@ object PortableConduitParticleHandler {
 
         level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(ConduitDomainHandler.PORTABLE_RADIUS))
             .forEach { nautilus ->
-                if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item != NautilusLayer.CONDUIT) return@forEach
+                if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item != NautilusLayerItems.CONDUIT) return@forEach
 
                 val random = level.random
 
