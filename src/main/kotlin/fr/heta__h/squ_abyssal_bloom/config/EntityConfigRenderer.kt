@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.config
 
 import dev.isxander.yacl3.gui.image.ImageRenderer
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
@@ -43,7 +43,7 @@ class EntityConfigRenderer(
     }
 
     override fun render(
-        graphics: GuiGraphics?,
+        graphics: GuiGraphicsExtractor?,
         x: Int,
         y: Int,
         renderWidth: Int,
@@ -81,7 +81,7 @@ class EntityConfigRenderer(
             val dispatcher  = mc.entityRenderDispatcher
             val renderState = dispatcher.extractEntity(entity, tickDelta)
 
-            graphics.submitEntityRenderState(
+            graphics.entity(
                 renderState,
                 scale,
                 Vector3f(0f, 0f, 0f),

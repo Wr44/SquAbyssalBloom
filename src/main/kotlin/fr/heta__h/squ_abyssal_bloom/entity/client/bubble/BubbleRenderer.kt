@@ -10,7 +10,7 @@ import net.minecraft.client.renderer.entity.EntityRenderer
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.state.EntityRenderState
 import net.minecraft.client.renderer.rendertype.RenderTypes
-import net.minecraft.client.renderer.state.CameraRenderState
+import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.resources.Identifier
 import net.minecraft.util.Mth.lerp
@@ -153,7 +153,7 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             else -> textureStage1
         }
 
-        val renderType = RenderTypes.entityCutoutNoCull(activeTexture)
+        val renderType = RenderTypes.entityCutout(activeTexture)
 
         nodeCollector.submitCustomGeometry(poseStack, renderType) { pose, vertexConsumer ->
             val tempStack = PoseStack()

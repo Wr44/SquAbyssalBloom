@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.EntityTypeTags
@@ -60,7 +61,7 @@ object PressureEffectEvent {
             return
         }
 
-        if (entity.type.`is`(EntityTypeTags.CAN_BREATHE_UNDER_WATER)) return
+        if (BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.type).`is`(EntityTypeTags.CAN_BREATHE_UNDER_WATER)) return
 
         val sealLevel = (entity.vehicle as? AbstractNautilus)?.let { nautilus ->
             ModUtilities.getEnchantLevel(nautilus.getItemBySlot(EquipmentSlot.BODY), serverLevel, "pressure_seal")

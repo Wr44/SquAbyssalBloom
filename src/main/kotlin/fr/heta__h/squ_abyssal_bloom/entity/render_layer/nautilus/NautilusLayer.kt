@@ -209,7 +209,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         collector.submitModelPart(
             conduitCage,
             poseStack,
-            RenderTypes.entityCutoutNoCull(MOBILE_CAGE),
+            RenderTypes.entityCutout(MOBILE_CAGE),
             packedLight,
             OverlayTexture.NO_OVERLAY,
             null
@@ -217,7 +217,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
         poseStack.popPose()
         val windSprite = materials.get(ConduitRenderer.WIND_TEXTURE)
-        val windType = ConduitRenderer.WIND_TEXTURE.renderType(RenderTypes::entityCutoutNoCull)
+        val windType = ConduitRenderer.WIND_TEXTURE.renderType(RenderTypes::entityCutout)
 
         poseStack.pushPose()
         poseStack.translate(0.5f, 0.5f, 0.5f)
@@ -246,7 +246,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
 
         collector.submitModelPart(
             conduitEye, poseStack,
-            ConduitRenderer.CLOSED_EYE_TEXTURE.renderType(RenderTypes::entityCutoutNoCull),
+            ConduitRenderer.CLOSED_EYE_TEXTURE.renderType(RenderTypes::entityCutout),
             packedLight, OverlayTexture.NO_OVERLAY,
             materials.get(ConduitRenderer.CLOSED_EYE_TEXTURE)
         )

@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.util.RandomSource
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import net.minecraft.world.item.ShearsItem
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.LevelReader
 import net.minecraft.world.level.block.Block
@@ -21,6 +20,7 @@ import net.minecraft.world.level.material.FluidState
 import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.level.storage.loot.LootParams
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams
+import net.neoforged.neoforge.common.ItemAbilities
 
 
 class SproutingSeagrassBlock(properties: Properties) : SeagrassBlock(properties) {
@@ -67,15 +67,17 @@ class SproutingSeagrassBlock(properties: Properties) : SeagrassBlock(properties)
 
         val tool = builder.getOptionalParameter(LootContextParams.TOOL) ?: ItemStack.EMPTY
 
+        val toolStack = tool as? ItemStack ?: ItemStack.EMPTY
+
         val hasBulb = state.getValue(HAS_BULB)
 
         if (hasBulb) {
             loot.add(ItemStack(ModItems.PRISMARINE_BULB.get()))
         }
 
-        val isShears = tool.item is ShearsItem
+        val isShears = toolStack.canPerformAction(ItemAbilities.SHEARS_HARVEST)
 
-        val hasSilkTouch = getEnchantLevel(tool, builder.level, "silk_touch", "minecraft") > 0
+        val hasSilkTouch = getEnchantLevel(toolStack, builder.level, "silk_touch", "minecraft") > 0
 
         if (isShears || hasSilkTouch) {
             val grassStack = ItemStack(Items.SEAGRASS)

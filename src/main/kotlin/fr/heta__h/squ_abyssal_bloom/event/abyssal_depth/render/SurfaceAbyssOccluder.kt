@@ -156,7 +156,7 @@ object SurfaceAbyssOccluder {
     }
 
     @SubscribeEvent
-    fun onRenderStage(event: RenderLevelStageEvent.AfterEntities) {
+    fun onRenderStage(event: RenderLevelStageEvent.AfterOpaqueFeatures) {
         if (!ModConfig.enableAbyssFog) return
 
         val mc = Minecraft.getInstance()
@@ -210,7 +210,7 @@ object SurfaceAbyssOccluder {
         val targetDarknessDepth = maxOf(1.0f, (ModConfig.abyssDepthStart + ModConfig.abyssMaxDepth).toFloat() / 2)
         val depthStep = targetDarknessDepth / NUM_LAYERS.toFloat()
 
-        val frustum = Minecraft.getInstance().levelRenderer.capturedFrustum
+        val frustum = Minecraft.getInstance().gameRenderer.mainCamera.cullFrustum
 
         activeKeysThisFrame.clear()
 

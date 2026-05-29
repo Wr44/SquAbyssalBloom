@@ -201,7 +201,7 @@ object ConduitDomainHandler {
         val player = event.entity
         if (!player.isUnderWater) return
         val effect = player.getEffect(MobEffects.CONDUIT_POWER) ?: return
-        val multiplier = if (effect.amplifier == 0) 1.5f else 2.25f
+        val multiplier = if (effect.amplifier == 0) 2f else 3f
         event.newSpeed = event.originalSpeed * multiplier
     }
 
