@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "has_bulb=false": { "model": "minecraft:block/seagrass" },
+    "has_bulb=true": { "model": "squ_abyssal_bloom:block/sprouting_seagrass" }
+  }
+}

@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.effect
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.core.Holder
 import net.minecraft.core.registries.BuiltInRegistries
@@ -14,7 +14,7 @@ import net.neoforged.neoforge.registries.DeferredRegister
 
 object ModPotions {
     val POTIONS: DeferredRegister<Potion> =
-        DeferredRegister.create(BuiltInRegistries.POTION, Squ_abyssal_bloom.ID)
+        DeferredRegister.create(BuiltInRegistries.POTION, SquAbyssalBloom.ID)
 
     val GUARDIAN_S_REDISTRIBUTION: Holder<Potion> =
         POTIONS.register("guardian_s_redistribution") { _ -> Potion(
@@ -52,7 +52,6 @@ object ModPotions {
             "guardian_s_redistribution",
             MobEffectInstance(ModEffects.GUARDIAN_S_REDISTRIBUTION, 1200, 2))
         }
-
 
     fun register(eventBus: IEventBus) {
         POTIONS.register(eventBus)

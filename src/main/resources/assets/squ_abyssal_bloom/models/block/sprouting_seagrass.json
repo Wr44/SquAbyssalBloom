@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_seagrass",
+  "textures": {
+    "texture": "squ_abyssal_bloom:block/sprouting_seagrass"
+  }
+}

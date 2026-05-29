@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": "minecraft:glow_ink_sac",
+    "B": "squ_abyssal_bloom:prismarine_bulb"
+  },
+  "pattern": [
+    "AB ",
+    "BB ",
+    "   "
+  ],
+  "result": {
+    "count": 2,
+    "id": "minecraft:prismarine_crystals"
+  }
+}

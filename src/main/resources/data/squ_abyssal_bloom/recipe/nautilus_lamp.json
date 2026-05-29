@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": "minecraft:lantern",
+    "B": "minecraft:prismarine_crystals",
+    "C": "minecraft:iron_chain"
+  },
+  "pattern": [
+    "CCC",
+    "A A",
+    "B B"
+  ],
+  "result": {
+    "count": 1,
+    "id": "squ_abyssal_bloom:nautilus_lamp"
+  }
+}

@@ -3,6 +3,8 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_guardian_focalist
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import com.mojang.math.Axis
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.abyssal_guardian_focalist.GuardianBeamDynamicLightCompat
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.ClientBeamData
 import net.minecraft.client.Minecraft
@@ -13,20 +15,29 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.LivingEntity
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
+import net.neoforged.fml.ModList
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
 import kotlin.math.acos
 import kotlin.math.atan2
 
-@EventBusSubscriber(modid = "squ_abyssal_bloom", value = [Dist.CLIENT])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object FocalistBeamRenderer {
 
     private val BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/guardian_beam.png")
+
+    private val playersShootingLastFrame = mutableSetOf<Int>()
+
+    private val hasDynLights: Boolean by lazy {
+        ModList.get().mods.any { it.modId.contains("lambdynlights", ignoreCase = true) }
+    }
 
     @SubscribeEvent
     fun onRenderLevel(event: RenderLevelStageEvent.AfterEntities) {
         val mc = Minecraft.getInstance()
         val level = mc.level ?: return
+
+        val currentlyShooting = mutableSetOf<Int>()
 
         for (player in level.players()) {
 
@@ -34,6 +45,8 @@ object FocalistBeamRenderer {
 
             val targetId = ClientBeamData.activeBeams[player.id] ?: continue
             val target = level.getEntity(targetId) as? LivingEntity ?: continue
+
+            currentlyShooting.add(player.id)
 
             val poseStack = event.poseStack
             val partialTick = mc.deltaTracker.gameTimeDeltaTicks
@@ -44,7 +57,7 @@ object FocalistBeamRenderer {
 
             var beamVector = endPos.subtract(startPos)
             val distance = beamVector.length().toFloat()
-            if (distance == 0f) return
+            if (distance == 0f) continue
 
             val attackTime = player.ticksUsingItem + partialTick
             val scale = attackTime / AbyssalGuardianFocalistItem.MAX_CHARGE_TICKS.toFloat()
@@ -111,6 +124,20 @@ object FocalistBeamRenderer {
             vertex(consumer, pose, f11, f, f12, i, j, k, 0.5f, f27)
 
             poseStack.popPose()
+
+            if (hasDynLights) {
+                GuardianBeamDynamicLightCompat.updateBeamLight(player, endPos.x, endPos.y, endPos.z, scale)
+            }
+        }
+
+        if (hasDynLights) {
+            val stoppedShooting = playersShootingLastFrame.subtract(currentlyShooting)
+            for (playerId in stoppedShooting) {
+                GuardianBeamDynamicLightCompat.removeBeamLight(playerId)
+            }
+
+            playersShootingLastFrame.clear()
+            playersShootingLastFrame.addAll(currentlyShooting)
         }
     }
 

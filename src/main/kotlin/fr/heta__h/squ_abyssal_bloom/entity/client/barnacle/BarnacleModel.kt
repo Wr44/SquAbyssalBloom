@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.client.barnacle
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.client.animation.KeyframeAnimation
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
@@ -29,7 +29,7 @@ class BarnacleModel(modelPart: ModelPart) : EntityModel<BarnacleRenderState>(mod
     companion object {
         val LAYER_LOCATION: ModelLayerLocation = ModelLayerLocation(
             Identifier.fromNamespaceAndPath(
-                Squ_abyssal_bloom.ID, "barnacle"
+                SquAbyssalBloom.ID, "barnacle"
             ), "main"
         )
 

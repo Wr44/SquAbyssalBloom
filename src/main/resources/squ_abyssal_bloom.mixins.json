@@ -1,0 +1,43 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "fr.heta__h.squ_abyssal_bloom.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "block.sprouting_sea_grass.SeaGrassFeatureMixin",
+    "block.conduit.PlayerConduitMixin",
+    "block.conduit.ConduitBlockEntityMixin",
+    "block.conduit.PlayerSwimPoseMixin",
+
+    "entity.guardian.GuardianMixin",
+    "entity.nautilus.NautilusMenuMixin",
+
+    "entity.nautilus.NautilusMountMenuShiftClickMixin",
+    "entity.nautilus.NautilusDashBubble",
+    "entity.nautilus.NautilusBubbleColumnTidal",
+    "entity.nautilus.NautilusChestMixin",
+    "entity.nautilus.NautilusRegenMixin",
+
+    "enable.AbstractContainerMenuAccessor",
+    "enable.AbstractNautilusAccessor",
+    "enable.LivingEntityFluidAccessor",
+    "enable.ConduitBlockEntityAccessor"
+  ],
+  "client": [
+    "block.conduit.ConduitRendererMixin",
+
+    "entity.nautilus.NautilusScreenMixin",
+
+    "enable.AbstractContainerScreenAccessor",
+
+    "render.LivingEntityRenderStateMixin",
+    "render.LivingEntityRendererMixin",
+    "render.LevelRendererSkyMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

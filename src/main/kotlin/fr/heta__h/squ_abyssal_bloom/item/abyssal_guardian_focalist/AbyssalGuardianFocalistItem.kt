@@ -2,14 +2,13 @@ package fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist
 
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.FocalistBeamSyncPayload
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.playSoundLocal
-import net.minecraft.core.registries.BuiltInRegistries
-import net.minecraft.network.protocol.game.ClientboundSoundPacket
-import net.minecraft.server.level.ServerPlayer
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.hasClearPath
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
-import net.minecraft.util.Mth
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.effect.MobEffectInstance
@@ -23,9 +22,11 @@ import net.minecraft.world.item.ItemUseAnimation
 import net.minecraft.world.level.Level
 import net.neoforged.neoforge.network.PacketDistributor
 import java.lang.Math.clamp
+import java.lang.Math.random
 import java.lang.Math.toRadians
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.acos
 import kotlin.math.cos
 import kotlin.math.max
 
@@ -39,7 +40,12 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
         const val BASE_DAMAGE = 7.5f
         const val ADD_DAMAGE = 8.5f
+
         const val MAX_LOCK_ANGLE = 45.0
+
+        const val TARGETING_SEARCH_INFLATION = 5.0
+        const val TARGETING_FORGIVENESS_ANGLE = 15.0
+        const val TARGETING_ANGLE_WEIGHT = 5.0
 
         const val VISION_MIN = 2
         const val VISION_MAX = 8
@@ -48,7 +54,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         const val SYPHON_HEAL_FACTOR = 0.33f
         const val SYPHON_ABSORB_CAP = 4.0f
         const val SINGULARITY_PULL = 10.0
-        const val SINGULARITY_PULL_FACTOR = 1.8
+        const val SINGULARITY_PULL_FACTOR = 0.25
         const val SINGULARITY_STUN_DURATION = 100
 
         private val LOCK_DOT_THRESHOLD = cos(toRadians(MAX_LOCK_ANGLE))
@@ -85,12 +91,11 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                 1f
             )
 
-            level.playSound(
+            playSoundLocal(
                 target,
-                target.x, target.y, target.z,
                 SoundEvents.GUARDIAN_ATTACK,
                 SoundSource.PLAYERS,
-                0.8f,
+                1f,
                 1f
             )
 
@@ -109,7 +114,10 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
             return
         }
 
-        if (target == null || !target.isAlive || entity.distanceTo(target) > MAX_RANGE + 2.0 || !isLookingAtTarget(entity, target)) {
+        if (!target.isAlive
+            || entity.distanceTo(target) > MAX_RANGE + 2.0
+            || !isLookingAtTarget(entity, target)
+            || !hasClearPath(level, entity, target)) {
             if (!level.isClientSide) entity.releaseUsingItem()
             return
         }
@@ -130,10 +138,10 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         if (duration == actualMinCharge) {
             playSoundLocal(
                 entity,
-                SoundEvents.TRIDENT_RETURN,
+                ModSounds.ABYSSAL_GUARDIAN_FOCALIST_READY.value(),
                 SoundSource.PLAYERS,
                 0.75f,
-                2f
+                1.5f + 0.5f*random().toFloat()
             )
         }
 
@@ -141,7 +149,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
             if (!level.isClientSide) entity.releaseUsingItem()
         }
 
-        if (duration % 20 == 0) {
+        if (duration % 30 == 0) {
             level.playSound(
                 null,
                 entity.x, entity.y, entity.z,
@@ -191,8 +199,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
 
             val chargeProgress = clamp(
-                (ticksUsed - actualMinCharge).toFloat() /
-                        (actualMaxCharge - actualMinCharge).toFloat(),
+                (ticksUsed - actualMinCharge).toFloat() / (actualMaxCharge - actualMinCharge).toFloat(),
                 0.0f,
                 1.0f
             )
@@ -202,7 +209,8 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
             val damage = actualBaseDamage + (chargeProgress * actualAddDamage)
 
-            target.hurt(
+            target.hurtServer(
+                level as ServerLevel,
                 level.damageSources().indirectMagic(entity, entity),
                 damage
             )
@@ -250,7 +258,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                             it.rootVehicle != target.rootVehicle
                 }
                 for (pulled in nearbyEntities) {
-                    val pullVector = target.position().subtract(pulled.position()).normalize().scale(SINGULARITY_PULL_FACTOR)
+                    val pullVector = target.position().subtract(pulled.position()).scale(SINGULARITY_PULL_FACTOR)
                     pulled.deltaMovement = pullVector
                     pulled.hurtMarked = true
                 }
@@ -266,14 +274,6 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                     0.5f)
             }
 
-            level.playSound(
-                null,
-                target.x, target.y, target.z,
-                SoundEvents.GUARDIAN_FLOP,
-                SoundSource.PLAYERS,
-                1.0f,
-                1.5f
-            )
 
             val durabilityLoss = 1 + (chargeProgress * 4).toInt()
             stack.hurtAndBreak(durabilityLoss, entity, entity.usedItemHand)
@@ -294,31 +294,33 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
     fun getTarget(player: Player, range: Double): Entity? {
         val startPos = player.eyePosition
         val lookVec = player.lookAngle
-        val endPos = startPos.add(lookVec.scale(range))
 
-        val boundingBox =
-            player.boundingBox.expandTowards(lookVec.scale(range)).inflate(1.0)
+        val searchBox = player.boundingBox.expandTowards(lookVec.scale(range)).inflate(TARGETING_SEARCH_INFLATION)
 
-        var targetEntity: Entity? = null
-        var minDistance = range
+        var bestTarget: Entity? = null
+        var bestScore = Double.MAX_VALUE
 
-        for (entity in player.level().getEntities(player, boundingBox) {
-            it is LivingEntity && it != player
-        }) {
-            val aabb = entity.boundingBox.inflate(entity.pickRadius.toDouble())
-            val hit = aabb.clip(startPos, endPos)
+        for (entity in player.level().getEntities(player, searchBox) { it is LivingEntity && it != player }) {
+            val dist = startPos.distanceTo(entity.eyePosition)
+            if (dist > range) continue
 
-            if (aabb.contains(startPos)) return entity
+            val toEntity = entity.eyePosition.subtract(startPos).normalize()
+            val dotProduct = lookVec.dot(toEntity).coerceIn(-1.0, 1.0)
+            val angle = Math.toDegrees(acos(dotProduct))
 
-            if (hit.isPresent) {
-                val dist = startPos.distanceTo(hit.get())
-                if (dist < minDistance) {
-                    targetEntity = entity
-                    minDistance = dist
+            if (angle <= TARGETING_FORGIVENESS_ANGLE) {
+                if (hasClearPath(player.level(), player, entity as LivingEntity)) {
+
+                    val score = (angle * TARGETING_ANGLE_WEIGHT) + dist
+
+                    if (score < bestScore) {
+                        bestTarget = entity
+                        bestScore = score
+                    }
                 }
             }
         }
 
-        return targetEntity
+        return bestTarget
     }
 }

@@ -1,21 +1,36 @@
 package fr.heta__h.squ_abyssal_bloom.util
 
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
+import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
+import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
+import net.minecraft.tags.FluidTags
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.enchantment.EnchantmentHelper
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.level.material.Fluids
+import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
+import net.minecraft.world.phys.Vec3
+import kotlin.jvm.optionals.getOrNull
 
 object ModUtilities {
+
     fun findWaterSurface(
         level: Level,
         start: BlockPos,
@@ -48,22 +63,6 @@ object ModUtilities {
         return ((depth - abyssDepthStart) / (abyssMaxDepth - abyssDepthStart)).coerceIn(0.0, 1.0)
     }
 
-    fun isLargeBodyWater(level: Level, pos: BlockPos, radius: Int): Boolean {
-        var count = 0
-        for (x in -radius..radius) {
-            for (z in -radius..radius) {
-                val checkPos = pos.offset(x, 0, z)
-                if (level.getFluidState(checkPos).`is`(Fluids.WATER)) {
-                    count ++
-                }
-            }
-        }
-        if (count < (radius * 2 + 1) * (radius * 2 + 1) * 0.4) {
-            return false
-        }
-        return true
-    }
-
     fun hasClearPath(level: Level, from: LivingEntity, to: LivingEntity): Boolean {
         val start = from.eyePosition
         val end = to.eyePosition
@@ -81,40 +80,19 @@ object ModUtilities {
         return hit.type == HitResult.Type.MISS
     }
 
-    fun gaussianWeight(dx: Int, dy: Int, dz: Int, sigma: Double): Double {
-        val r2 = (dx*dx + dy*dy + dz*dz).toDouble()
-        return kotlin.math.exp(-r2 / (2.0 * sigma*sigma))
-    }
 
-    fun smoothDepthGaussian(level: Level, pos: BlockPos, sigma: Double = 1.0): Double {
-        var sum = 0.0
-        var weightSum = 0.0
+    fun getEnchantLevel(
+        stack: ItemStack,
+        level: Level,
+        enchantName: String,
+        namespace: String = SquAbyssalBloom.ID
+    ): Int {
+        val registry = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+        val key = ResourceKey.create(Registries.ENCHANTMENT, Identifier.fromNamespaceAndPath(namespace, enchantName))
 
-        for (dx in -2..2) {
-            for (dy in -2..2) {
-                for (dz in -2..2) {
-                    val neighborPos = pos.offset(dx, dy, dz)
-                    val w = gaussianWeight(dx, dy, dz, sigma)
-                    sum += w * getDepthFactor(findWaterSurface(level, neighborPos).toDouble())
-                    weightSum += w
-                }
-            }
-        }
-
-        return sum / weightSum
-    }
-
-
-    fun getEnchantLevel(stack: ItemStack, level: Level, enchantName: String): Int {
-        val registry = level.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
-        val key = net.minecraft.resources.ResourceKey.create(
-            net.minecraft.core.registries.Registries.ENCHANTMENT,
-            net.minecraft.resources.Identifier.fromNamespaceAndPath("squ_abyssal_bloom", enchantName)
-        )
-        val holder = registry.get(key)
-        return if (holder.isPresent) {
-            net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(holder.get(), stack)
-        } else 0
+        return registry.get(key).getOrNull()?.let { holder ->
+            stack.getEnchantmentLevel(holder)
+        } ?: 0
     }
 
     fun playSoundLocal(entity: LivingEntity, sound: SoundEvent, source: SoundSource, volume: Float, pitch: Float) {
@@ -128,6 +106,96 @@ object ModUtilities {
                 entity.random.nextLong()
             ))
         }
+    }
+
+    fun getRiderLampInfluence(entity: LivingEntity): Double {
+        val vehicle = entity.vehicle
+        if (vehicle is AbstractNautilus) {
+            val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+            if (!extra.isEmpty && extra.item == NautilusLayerItems.LAMP) return 1.0
+        }
+        return 0.0
+    }
+
+
+    fun isNautilusExtraEquipment(stack: ItemStack): Boolean {
+        if (stack.isEmpty) return false
+
+        val item = stack.item
+        return item in listOf(
+            NautilusLayerItems.LAMP,
+            NautilusLayerItems.SHIELD,
+            NautilusLayerItems.BUBBLE,
+            NautilusLayerItems.CHEST,
+            NautilusLayerItems.CONDUIT
+        )
+    }
+
+    fun getNautilusLampInfluence(level: Level, pos: BlockPos, maxRange: Double, maxInfluence: Double): Double {
+        val aabb = AABB(
+            pos.x - maxRange, pos.y - maxRange, pos.z - maxRange,
+            pos.x + maxRange, pos.y + maxRange, pos.z + maxRange
+        )
+        val nautili = level.getEntitiesOfClass(AbstractNautilus::class.java, aabb)
+        var maxFound = 0.0
+        for (entity in nautili) {
+            val extra = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+            if (extra.item == NautilusLayerItems.LAMP) {
+                val dist = entity.position().distanceTo(Vec3(pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble()))
+                val influence = (1.0 - dist / maxRange).coerceIn(0.0, 1.0) * maxInfluence
+                if (influence > maxFound) maxFound = influence
+            }
+        }
+        return maxFound
+    }
+
+    fun getDepth(level: Level, pos: BlockPos): Double {
+        if (!level.getFluidState(pos).`is`(FluidTags.WATER)) return 0.0
+
+        val mutPos = BlockPos.MutableBlockPos()
+
+        val offsets = intArrayOf(
+            0, 0,
+            8, 0, -8, 0, 0, 8, 0, -8,
+            16, 0, -16, 0, 0, 16, 0, -16,
+            24, 0, -24, 0, 0, 24, 0, -24
+        )
+
+        for (i in offsets.indices step 2) {
+            val cx = pos.x + offsets[i]
+            val cz = pos.z + offsets[i + 1]
+
+            val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, cx, cz) - 1
+            mutPos.set(cx, topY, cz)
+
+            if (level.getFluidState(mutPos).`is`(FluidTags.WATER)) {
+
+                var isFloatingStructure = false
+                for (y in topY downTo pos.y) {
+                    mutPos.set(cx, y, cz)
+                    if (level.getBlockState(mutPos).isAir) {
+                        isFloatingStructure = true
+                        break
+                    }
+                }
+
+                if (!isFloatingStructure) {
+                    return (topY - pos.y).toDouble()
+                }
+            }
+        }
+
+        mutPos.set(pos)
+        var surfaceY = pos.y
+        while (surfaceY < level.maxY) {
+            mutPos.setY(surfaceY + 1)
+            if (!level.getFluidState(mutPos).`is`(FluidTags.WATER)) {
+                break
+            }
+            surfaceY++
+        }
+
+        return (surfaceY - pos.y).toDouble()
     }
 
 }

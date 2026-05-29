@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.item
 
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
-import fr.heta__h.squ_abyssal_bloom.item.ModItems.ITEMS
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.CreativeModeTab
@@ -13,7 +13,7 @@ import java.util.function.Supplier
 object ModCreativeModeTabs {
     val CREATIVE_MODE_TAB: DeferredRegister<CreativeModeTab> = DeferredRegister.create(
         Registries.CREATIVE_MODE_TAB,
-        Squ_abyssal_bloom.ID
+        SquAbyssalBloom.ID
     )
 
     val SPAWN_EGG_TAB: Supplier<CreativeModeTab> = CREATIVE_MODE_TAB.register(
@@ -25,8 +25,21 @@ object ModCreativeModeTabs {
             .displayItems { itemDisplayParameters, output ->
                 output.accept(ModItems.BARNACLE_TOOTH.get())
                 output.accept(ModItems.GUARDIAN_EYE.get())
+                output.accept(ModItems.PRISMARINE_BULB.get())
+                output.accept(ModItems.PRISMARINE_SPIKE.get())
+                output.accept(ModItems.BRINE_BUBBLES.get())
+                output.accept(ModItems.LIFELINE_BUBBLE.get())
+                output.accept(ModItems.RESPIRATION_BUBBLE.get())
+                output.accept(ModItems.NAUTILUS_LAMP.get())
+                output.accept(ModItems.BARBED_NAUTILUS_SCALE.get())
                 output.accept(ModItems.ABYSSAL_GUARDIAN_FOCALIST.get())
+                output.accept(ModItems.BUBBLE_SPITTER.get())
+                output.accept(ModItems.MOBILE_CONDUIT.get())
+
+                output.accept(ModItems.ASTRAL_PRISMARINE.get())
+
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
+                output.accept(ModItems.BRINE_SPAWN_EGG.get())
             }
             .build()
     }

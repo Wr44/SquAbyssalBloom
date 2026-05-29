@@ -1,18 +1,16 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
-import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findWaterSurface
 import net.minecraft.core.BlockPos
+import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.core.registries.Registries
-import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
@@ -82,7 +80,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     }
 
     companion object {
-        
+        // BASE STATS
         const val XP_REWARD = 15
         const val CRITICAL_HEALTH_RATIO = 0.25f
         const val REGEN_COOLDOWN_TICKS = 100
@@ -92,13 +90,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val TARGET_SCAN_INTERVAL_TICKS = 5
         const val DEFAULT_TARGET_RADIUS = 5.5
 
-        
+        // FLOP
         const val FLOP_DELAY_TICKS = 20
         const val FLOP_MOTION_Y = 0.45
         const val FLOP_MOTION_XZ = 0.1
         const val BODY_ROTATION_SPEED = 10f
 
-        
+        // SOUNDS
         const val DEFAULT_SOUND_VOLUME = 1.3f
         const val AMBIENT_SOUND_INTERVAL = 550
         const val INK_PARTICLE_COUNT = 500
@@ -107,14 +105,14 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val BLINDNESS_DURATION_TICKS = 40
         const val BLINDNESS_AMPLIFIER = 1
 
-        
+        // GOALS
         const val GOAL_FLEE = 0
         const val GOAL_ATTACK = 1
         const val GOAL_GRAB = 2
         const val GOAL_SWIM = 3
         const val GOAL_IDLE = 4
 
-        
+        // FLEE
         const val FLEE_ANIM_FPS = 20.0
         const val FLEE_RADIUS = 17.0
         const val FLEE_MAX_SPEED = 3.0f
@@ -123,7 +121,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val FLEE_JITTER_SCALE = 0.2
         const val FLEE_STILL_FRICTION = 0.8
 
-        
+        // ATTACK / SWALLOW
         const val SWALLOW_START_FPS = 21.0
         const val SWALLOW_STOP_FPS = 21.0
         const val SWALLOW_FPS = 20.0
@@ -138,20 +136,20 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val SPIT_SOUND_VOL = 0.5f
         const val SPIT_SOUND_PITCH = 0.5f
 
-        
+        // GRAB
         const val GRAB_ANIM_FPS = 21.0
         const val GRAB_HOLD_DURATION_TICKS = 7
         const val GRAB_HOLD_FACTOR = 4.5
         const val GRAB_OPEN_SOUND_DELAY_TICKS = 2
         const val GRAB_CLOSE_SOUND_DELAY_TICKS = 2
 
-        
+        // SWIM
         const val SWIM_ANIM_FPS = 22.0
         const val SWIM_TARGET_RADIUS = 55.0
         const val SWIM_MAX_SPEED = 2.0f
         const val SWIM_SPEED_K = 2.5f
 
-        
+        // IDLE
         const val IDLE_ANIM_FPS = 30.0
         const val IDLE_MIN_TICKS = 60
         const val IDLE_MAX_TICKS = 150
@@ -159,6 +157,17 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val IDLE_WATER_CHECK_DIST = 10
         const val IDLE_DIR_CHANCE_1 = 0.33
         const val IDLE_DIR_CHANCE_2 = 0.55
+
+        // ANIMATION
+        const val ANIM_FLEE_STILL_S = 0.7083f
+        const val ANIM_FLEE_RUSH_S = 1.25f
+        const val ANIM_MOVE_STILL_S = 0.7083f
+        const val ANIM_MOVE_RUSH_S = 0.875f
+        const val ANIM_MOUTH_OPEN_S = 0.3333f
+        const val ANIM_MOUTH_CLOSE_S = 0.75f
+        const val ANIM_SWALLOW_START_S = 0.2083f
+        const val ANIM_SWALLOW_STOP_S = 0.375f
+        const val ANIM_SWALLOW_S = 0.375f
 
         private val CURRENT_GOAL_STATE: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BarnacleEntity::class.java, EntityDataSerializers.INT)
@@ -185,10 +194,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         fun createAttributes(): AttributeSupplier.Builder =
             createMonsterAttributes()
                 .add(Attributes.MAX_HEALTH, 60.0)
-                .add(Attributes.ATTACK_DAMAGE, 3.0)
+                .add(Attributes.ATTACK_DAMAGE, SWALLOW_DAMAGE.toDouble())
                 .add(Attributes.MOVEMENT_SPEED, 0.25)
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0)
-                .add(Attributes.FOLLOW_RANGE, 55.0)
+                .add(Attributes.FOLLOW_RANGE, SWIM_TARGET_RADIUS)
     }
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
@@ -326,7 +335,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 }
 
                 GOAL_ATTACK -> {
-                    if (getCurrentTarget() != null && getCurrentTarget()!!.isAlive) {
+                    val currentTarget = getCurrentTarget()
+                    if (currentTarget != null && currentTarget.isAlive) {
                         swallowStopAnimationState.stop()
                         if (!currentSwallowing) {
                             swallowStartAnimationState.startIfStopped(tickCount)
@@ -353,14 +363,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 }
             }
         } else {
-            val newTargetRef = myTarget?.let { EntityReference.of(it) }
-            val currentSyncedTarget = entityData.get(TARGET)?.orElse(null) ?: null
+            val newTarget = myTarget
+            val currentSyncedEntity = entityData.get(TARGET)
+                .orElse(null)
+                ?.getEntity(level(), LivingEntity::class.java)
 
-            if (newTargetRef != currentSyncedTarget) {
-                entityData.set(
-                    TARGET,
-                    Optional.ofNullable(newTargetRef)
-                )
+            if (newTarget != currentSyncedEntity) {
+                entityData.set(TARGET, Optional.ofNullable(newTarget?.let { EntityReference.of(it) }))
             }
         }
     }
@@ -407,7 +416,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         } else {
             timeExposedInAir++
             if (timeExposedInAir >= MAX_AIR_TICKS) {
-                hurt(damageSources().drown(), DROWN_DAMAGE)
+                hurtServer(
+                    level() as ServerLevel,
+                    damageSources().drown(),
+                    DROWN_DAMAGE)
             }
 
             if (onGround() && tickCount > FLOP_DELAY_TICKS) {
@@ -423,13 +435,46 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
     }
 
-    private fun isClosestBarnacle(victim: LivingEntity, searchRadius: Double): Boolean {
-        val myDistanceSqr = this.distanceToSqr(victim)
 
-        val nearbyBarnacles = this.level().getEntitiesOfClass(
-            BarnacleEntity::class.java,
-            this.boundingBox.inflate(searchRadius)
-        )
+    fun getMyTarget(radius: Double): LivingEntity? {
+        if (this.tickCount < lastTargetScanTick + TARGET_SCAN_INTERVAL_TICKS) {
+            val target = cachedTarget
+            if (target != null && target.isAlive && this.distanceToSqr(target) <= radius * radius && this.target == target) {
+                return target
+            }
+        }
+
+        val searchBox = boundingBox.inflate(radius)
+
+        val nearbyBarnacles = level().getEntitiesOfClass(BarnacleEntity::class.java, searchBox)
+
+        val potentialTarget = level().getEntitiesOfClass(
+            LivingEntity::class.java,
+            searchBox
+        ) { entity ->
+            when (entity) {
+                is Player ->
+                    (entity.gameMode() == GameType.SURVIVAL ||
+                            entity.gameMode() == GameType.ADVENTURE) &&
+                            !entity.hasEffect(MobEffects.INVISIBILITY)
+
+                is Guardian -> true
+                else -> false
+            } &&
+                    entity.isAlive &&
+                    isClosestBarnacleOptimized(entity, nearbyBarnacles) &&
+                    ModUtilities.hasClearPath(level(), this, entity)
+        }.minByOrNull { it.distanceToSqr(this) }
+
+        this.target = potentialTarget
+        cachedTarget = this.target
+        lastTargetScanTick = this.tickCount
+
+        return cachedTarget
+    }
+
+    private fun isClosestBarnacleOptimized(victim: LivingEntity, nearbyBarnacles: List<BarnacleEntity>): Boolean {
+        val myDistanceSqr = this.distanceToSqr(victim)
 
         for (otherBarnacle in nearbyBarnacles) {
             if (otherBarnacle == this) continue
@@ -448,43 +493,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return true
     }
 
-
-    fun getMyTarget(radius: Double): LivingEntity? {
-        if (this.tickCount < lastTargetScanTick + TARGET_SCAN_INTERVAL_TICKS) {
-            val target = cachedTarget
-            if (target != null && target.isAlive && this.distanceToSqr(target) <= radius * radius && this.target == target) {
-                return target
-            }
-        }
-
-        val searchBox = boundingBox.inflate(radius)
-        val potentialTarget = level().getEntitiesOfClass(
-            LivingEntity::class.java,
-            searchBox
-        ) { entity ->
-            when (entity) {
-                is Player ->
-                    (entity.gameMode() == GameType.SURVIVAL ||
-                            entity.gameMode() == GameType.ADVENTURE) &&
-                            !entity.hasEffect(MobEffects.INVISIBILITY
-                            )
-
-                is Guardian -> true
-                else -> false
-            } &&
-                    entity.isAlive &&
-                    isClosestBarnacle(entity, radius) &&
-                    ModUtilities.hasClearPath(level(), this, entity)
-        }.minByOrNull { it.distanceToSqr(this) }
-
-        this.target = potentialTarget
-
-        cachedTarget = this.target
-
-        lastTargetScanTick = this.tickCount
-
-        return cachedTarget
-    }
     fun getMyDir(target: LivingEntity?): Vec3? {
         val tgt = target ?: return null
         val targetPos = tgt.position().add(0.0, 1.0, 0.0)
@@ -495,21 +503,19 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return ModSounds.BARNACLE_AMBIENT.get()
     }
 
-    override fun playAmbientSound() {
-        val soundEvent = this.ambientSound
-        if (soundEvent != null) {
-            this.playSound(soundEvent, getSoundVolume() * 1.5f, this.voicePitch)
-        }
-    }
+//    override fun playAmbientSound() {
+//        val soundEvent = this.ambientSound
+//        if (soundEvent != null) {
+//            this.playSound(soundEvent, getSoundVolume() * 1.5f, this.voicePitch)
+//        }
+//    }
 
     override fun getHurtSound(source: DamageSource): SoundEvent = ModSounds.BARNACLE_HURT.get()
 
 
     override fun getDeathSound(): SoundEvent = ModSounds.BARNACLE_DEATH.get()
 
-    fun getFlopSound(): SoundEvent {
-        return SoundEvents.GUARDIAN_FLOP
-    }
+    fun getFlopSound(): SoundEvent = SoundEvents.GUARDIAN_FLOP
 
     override fun getSoundVolume(): Float = DEFAULT_SOUND_VOLUME
 
@@ -581,16 +587,20 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             tgt.stopRiding()
         }
 
-        tgt.deltaMovement = Vec3.ZERO
         tgt.fallDistance = 0.0
         tgt.addEffect(MobEffectInstance(MobEffects.BLINDNESS, BLINDNESS_DURATION_TICKS, BLINDNESS_AMPLIFIER, true, false))
 
-        if (tgt is ServerPlayer) {
-            tgt.connection.teleport(holdPos.x, holdPos.y, holdPos.z, tgt.yRot, tgt.xRot)
-            tgt.connection.send(ClientboundSetEntityMotionPacket(tgt))
+        val pullVec = holdPos.subtract(tgt.position())
+        val distance = pullVec.length()
+
+        if (distance > 0.1) {
+            val pullSpeed = (distance * 0.4).coerceAtMost(1.5)
+            tgt.deltaMovement = pullVec.normalize().scale(pullSpeed)
         } else {
-            tgt.setPos(holdPos.x, holdPos.y, holdPos.z)
+            tgt.deltaMovement = Vec3.ZERO
         }
+
+        tgt.hurtMarked = true
     }
 
     fun spawnInk() {
@@ -604,7 +614,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             )
 
             level.sendParticles(
-                net.minecraft.core.particles.ParticleTypes.SQUID_INK,
+                ParticleTypes.SQUID_INK,
                 this.x, this.eyeY, this.z,
                 INK_PARTICLE_COUNT,
                 2.0, 2.0, 4.0,
@@ -678,46 +688,38 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     }
 
 
+
     inner class BarnacleFleeGoal : Goal() {
 
         private val moveStillDuration =
-            ceil(BarnacleAnimation.flee_still.lengthInSeconds * FLEE_ANIM_FPS).toInt()
+            ceil(ANIM_FLEE_STILL_S * FLEE_ANIM_FPS).toInt()
         private val moveRushDuration =
-            ceil(BarnacleAnimation.flee_rush.lengthInSeconds * FLEE_ANIM_FPS).toInt()
+            ceil(ANIM_FLEE_RUSH_S * FLEE_ANIM_FPS).toInt()
 
         private val fleeRadiusSqr = FLEE_RADIUS * FLEE_RADIUS
 
         private var isPlaying = false
         private var previousThreat: LivingEntity = this@BarnacleEntity
+        private var currentThreat: LivingEntity? = null
 
         init {
             flags = EnumSet.of(Flag.MOVE, Flag.LOOK)
         }
 
-        override fun canUse(): Boolean =
-            isPlaying || (
-                    isUnderWater &&
-                            !entityData.get(MOUTH_OPEN) &&
-                            isHealthCritical &&
-                            getAnyThreat() != null
-                    )
-
-        override fun start() {
-            if (level().isClientSide) return
-
-            ensureGoalState(GOAL_FLEE)
-            entityData.set(RUSH_PHASE, false)
-            animationStartTick = tickCount
-
-            getAnyThreat()?.let { setFleeDirection(it) }
+        override fun canUse(): Boolean {
+            currentThreat = getAnyThreat()
+            return isPlaying || (isUnderWater && !entityData.get(MOUTH_OPEN) && isHealthCritical && currentThreat != null)
         }
+
+        override fun start() { currentThreat?.let { setFleeDirection(it) } }
 
         override fun tick() {
             if (level().isClientSide) return
 
             ensureGoalState(GOAL_FLEE)
 
-            val threat = getAnyThreat() ?: previousThreat
+            currentThreat = getAnyThreat()
+            val threat = currentThreat ?: previousThreat ?: return
             previousThreat = threat
 
             if (entityData.get(RUSH_PHASE)) {
@@ -817,11 +819,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     inner class BarnacleAttackGoal : Goal() {
 
         private val startSwallowDuration =
-            ceil(BarnacleAnimation.swallow_start.lengthInSeconds * SWALLOW_START_FPS).toInt()
+            ceil(ANIM_SWALLOW_START_S * SWALLOW_START_FPS).toInt()
         private val stopSwallowDuration =
-            ceil(BarnacleAnimation.swallow_stop.lengthInSeconds * SWALLOW_STOP_FPS).toInt()
+            ceil(ANIM_SWALLOW_STOP_S * SWALLOW_STOP_FPS).toInt()
         private val swallowDuration =
-            ceil(BarnacleAnimation.swallow.lengthInSeconds * SWALLOW_FPS).toInt()
+            ceil(ANIM_SWALLOW_S * SWALLOW_FPS).toInt()
 
         private val startDist = ATTACK_START_DIST
         private val holdDist = ATTACK_HOLD_DIST
@@ -887,7 +889,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 maintenirCible(target, holdDist)
 
                 if (t % ceil(swallowDuration / 2.0).toInt() == 0) {
-                    target.hurt(swallowDamageSource(), SWALLOW_DAMAGE)
+                    target.hurtServer(
+                        level() as ServerLevel,
+                        swallowDamageSource(),
+                        SWALLOW_DAMAGE)
                 }
             }
         }
@@ -960,9 +965,9 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     inner class BarnacleGrabGoal : Goal() {
 
         private val openMouthDuration =
-            ceil(BarnacleAnimation.mouth_open.lengthInSeconds * GRAB_ANIM_FPS).toInt()
+            ceil(ANIM_MOUTH_OPEN_S * GRAB_ANIM_FPS).toInt()
         private val closeMouthDuration =
-            ceil(BarnacleAnimation.mouth_close.lengthInSeconds * GRAB_ANIM_FPS).toInt()
+            ceil(ANIM_MOUTH_CLOSE_S * GRAB_ANIM_FPS).toInt()
 
         private val holdOpenDuration = GRAB_HOLD_DURATION_TICKS
         private val factor = GRAB_HOLD_FACTOR
@@ -1061,8 +1066,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     inner class BarnacleSwimTowardsGoal : Goal() {
 
-        private val moveStillDuration = ceil(BarnacleAnimation.move_still.lengthInSeconds * SWIM_ANIM_FPS).toInt()
-        private val moveRushDuration = ceil(BarnacleAnimation.move_rush.lengthInSeconds * SWIM_ANIM_FPS).toInt()
+        private val moveStillDuration = ceil(ANIM_MOVE_STILL_S * SWIM_ANIM_FPS).toInt()
+        private val moveRushDuration = ceil(ANIM_MOVE_RUSH_S * SWIM_ANIM_FPS).toInt()
 
         private var lockedTarget: LivingEntity? = null
 
@@ -1167,11 +1172,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     inner class BarnacleIdleGoal : Goal() {
 
         private val moveStillDuration =
-            ceil(BarnacleAnimation.move_still.lengthInSeconds * IDLE_ANIM_FPS).toInt()
+            ceil(ANIM_MOVE_STILL_S * IDLE_ANIM_FPS).toInt()
         private val moveRushDuration =
-            ceil(BarnacleAnimation.move_rush.lengthInSeconds * IDLE_ANIM_FPS).toInt()
+            ceil(ANIM_MOVE_RUSH_S * IDLE_ANIM_FPS).toInt()
 
         private var stillDuration = 0
+
+        private var ticksSinceLastObstacleCheck = 0
 
         init {
             flags = EnumSet.of(Flag.MOVE, Flag.LOOK)
@@ -1188,6 +1195,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             entityData.set(RUSH_PHASE, false)
             entityData.set(IS_IDLE, false)
             animationStartTick = tickCount
+
+            ticksSinceLastObstacleCheck = 10
 
             setDirectionInData(getRandomDirection().normalize())
             deltaMovement = Vec3.ZERO
@@ -1216,6 +1225,8 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             if (tickCount - animationStartTick >= moveStillDuration) {
                 entityData.set(RUSH_PHASE, true)
                 animationStartTick = tickCount
+
+                ticksSinceLastObstacleCheck = 10
             }
         }
 
@@ -1228,8 +1239,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 deltaMovement = Vec3.ZERO
 
                 when (random.nextDouble()) {
-                    in 0.0..IDLE_DIR_CHANCE_1 ->
-                        setDirectionInData(getRandomDirection().normalize())
+                    in 0.0..IDLE_DIR_CHANCE_1 -> setDirectionInData(getRandomDirection().normalize())
 
                     in IDLE_DIR_CHANCE_1..IDLE_DIR_CHANCE_2 -> {
                         entityData.set(IS_IDLE, true)
@@ -1239,14 +1249,21 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 return
             }
 
-            val dir = adjustDirectionForObstacles(getDirectionFromData())
+            ticksSinceLastObstacleCheck++
+            var currentDir = getDirectionFromData()
+
+            if (ticksSinceLastObstacleCheck >= 10) {
+                currentDir = adjustDirectionForObstacles(currentDir)
+                ticksSinceLastObstacleCheck = 0
+            }
+
             val speed = barnacleSpeed(
                 t.toFloat(),
                 moveRushDuration.toFloat(),
                 IDLE_MAX_SPEED
             )
 
-            deltaMovement = dir.scale(speed.toDouble())
+            deltaMovement = currentDir.scale(speed.toDouble())
         }
 
         private fun adjustDirectionForObstacles(dirIn: Vec3): Vec3 {

@@ -1,0 +1,16 @@
+{
+  "description": { "translate": "enchantment.squ_abyssal_bloom.focused_vision" },
+  "supported_items": "#squ_abyssal_bloom:enchantable/focalist",
+  "weight": 4,
+  "max_level": 4,
+  "min_cost": {
+    "base": 1,
+    "per_level_above_first": 15
+  },
+  "max_cost": {
+    "base": 60,
+    "per_level_above_first": 15
+  },
+  "anvil_cost": 2,
+  "slots": ["mainhand", "offhand"]
+}

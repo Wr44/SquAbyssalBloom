@@ -1,0 +1,16 @@
+{
+  "description": { "translate": "enchantment.squ_abyssal_bloom.converging_lens" },
+  "supported_items": "#squ_abyssal_bloom:enchantable/focalist",
+  "weight": 10,
+  "max_level": 5,
+  "min_cost": {
+    "base": 1,
+    "per_level_above_first": 11
+  },
+  "max_cost": {
+    "base": 21,
+    "per_level_above_first": 11
+  },
+  "anvil_cost": 1,
+  "slots": ["mainhand", "offhand"]
+}

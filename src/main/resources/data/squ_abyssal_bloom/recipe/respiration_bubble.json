@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "squ_abyssal_bloom:brine_bubbles" ,
+    "minecraft:copper_nugget"
+  ],
+  "result": {
+    "id": "squ_abyssal_bloom:respiration_bubble",
+    "count": 1
+  }
+}

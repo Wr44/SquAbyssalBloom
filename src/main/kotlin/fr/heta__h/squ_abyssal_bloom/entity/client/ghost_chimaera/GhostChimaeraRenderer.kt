@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera
 
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
-import fr.heta__h.squ_abyssal_bloom.Squ_abyssal_bloom
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRendererProvider
@@ -26,7 +26,7 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
 
     companion object {
         private val TEXTURE = Identifier.fromNamespaceAndPath(
-            Squ_abyssal_bloom.ID,
+            SquAbyssalBloom.ID,
             "textures/entity/ghost_chimaera/ghost_chimaera.png"
         )
     }
@@ -41,7 +41,7 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
         return RenderTypes.entityTranslucent(texture)
     }
 
-    
+    // Appliquer l'alpha du corps à la couleur de rendu
     override fun getModelTint(renderState: GhostChimaeraRenderState): Int {
         val alpha = (renderState.bodyAlpha * 255).toInt().coerceIn(0, 255)
         return ARGB.color(alpha, 255, 255, 255)

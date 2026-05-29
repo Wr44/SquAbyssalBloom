@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "A": "minecraft:heart_of_the_sea",
+    "B": "squ_abyssal_bloom:prismarine_spike",
+    "C": "minecraft:stick"
+  },
+  "pattern": [
+    "BB ",
+    "BA ",
+    "  C"
+  ],
+  "result": {
+    "count": 1,
+    "id": "minecraft:trident"
+  }
+}

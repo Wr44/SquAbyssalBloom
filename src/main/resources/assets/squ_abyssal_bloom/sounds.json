@@ -1,0 +1,85 @@
+{
+  "barnacle_ambient": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_ambient",
+    "sounds": [ "squ_abyssal_bloom:entity/barnacle/barnacle_ambient_1", "squ_abyssal_bloom:entity/barnacle/barnacle_ambient_2", "squ_abyssal_bloom:entity/barnacle/barnacle_ambient_3" ]
+  },
+  "barnacle_open_mouth": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_open_mouth",
+    "sounds": [ "squ_abyssal_bloom:entity/barnacle/barnacle_open_mouth" ]
+  },
+  "barnacle_close_mouth": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_close_mouth",
+    "sounds": [ "squ_abyssal_bloom:entity/barnacle/barnacle_close_mouth" ]
+  },
+  "barnacle_hurt": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_hurt",
+    "sounds": [ "squ_abyssal_bloom:entity/barnacle/barnacle_hurt_1", "squ_abyssal_bloom:entity/barnacle/barnacle_hurt_2", "squ_abyssal_bloom:entity/barnacle/barnacle_hurt_3" ]
+  },
+  "barnacle_death": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_death",
+    "sounds": [ "squ_abyssal_bloom:entity/barnacle/barnacle_death" ]
+  },
+
+
+
+  "brine_ambient": {
+    "subtitle": "subtitles.squ_abyssal_bloom.brine_ambient",
+    "sounds": [ "squ_abyssal_bloom:entity/brine/brine_ambient_1", "squ_abyssal_bloom:entity/brine/brine_ambient_2", "squ_abyssal_bloom:entity/brine/brine_ambient_3", "squ_abyssal_bloom:entity/brine/brine_ambient_4" ]
+  },
+
+  "brine_hurt": {
+    "subtitle": "subtitles.squ_abyssal_bloom.brine_hurt",
+    "sounds": [ "squ_abyssal_bloom:entity/brine/brine_hurt_1", "squ_abyssal_bloom:entity/brine/brine_hurt_2", "squ_abyssal_bloom:entity/brine/brine_hurt_3", "squ_abyssal_bloom:entity/brine/brine_hurt_4" ]
+  },
+
+  "brine_death": {
+    "subtitle": "subtitles.squ_abyssal_bloom.brine_death",
+    "sounds": [ "squ_abyssal_bloom:entity/brine/brine_death" ]
+  },
+
+
+
+  "bubble_projectile_burst": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_burst",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_burst" ]
+  },
+  "bubble_projectile_bouncing": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_bouncing",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_bouncing" ]
+  },
+  "bubble_projectile_stage_up": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_stage_up",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_stage_up" ]
+  },
+  "bubble_projectile_launch": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_launch",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_launch" ]
+  },
+
+
+  "abyssal_guardian_focalist_ready": {
+    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_guardian_focalist_ready",
+    "sounds": [ "squ_abyssal_bloom:item/abyssal_guardian_focalist/abyssal_guardian_focalist_ready" ]
+  },
+  "respiration_bubble": {
+    "subtitle": "subtitles.squ_abyssal_bloom.respiration_bubble",
+    "sounds": [ "squ_abyssal_bloom:item/respiration_bubble/respiration_bubble" ]
+  },
+
+
+  "conduit_entering": {
+    "subtitle": "subtitles.squ_abyssal_bloom.conduit_entering",
+    "sounds": [ "squ_abyssal_bloom:block/conduit/conduit_entering" ]
+  },
+
+  "conduit_leaving": {
+    "subtitle": "subtitles.squ_abyssal_bloom.conduit_leaving",
+    "sounds": [ "squ_abyssal_bloom:block/conduit/conduit_leaving" ]
+  },
+
+
+  "pressure_damage": {
+    "subtitle": "subtitles.squ_abyssal_bloom.pressure_damage",
+    "sounds": [ "squ_abyssal_bloom:damage_type/pressure_damage" ]
+  }
+}
