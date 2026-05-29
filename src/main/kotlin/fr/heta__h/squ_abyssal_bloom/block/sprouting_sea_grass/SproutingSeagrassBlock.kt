@@ -47,7 +47,8 @@ class SproutingSeagrassBlock(properties: Properties) : SeagrassBlock(properties)
 
         if (!state.getValue(HAS_BULB)) {
             if (random.nextInt(8) == 0) {
-                level.setBlock(pos, state.setValue(HAS_BULB, true), 2)
+                level.setBlock(pos, state.setValue(HAS_BULB, true), 3)
+                level.sendBlockUpdated(pos, state, state.setValue(HAS_BULB, true), 3)
             }
         }
     }
@@ -74,14 +75,14 @@ class SproutingSeagrassBlock(properties: Properties) : SeagrassBlock(properties)
 
         val isShears = tool.item is ShearsItem
 
-        val hasSilkTouch = getEnchantLevel(tool, builder.level,  "silk_touch") > 0
+        val hasSilkTouch = getEnchantLevel(tool, builder.level, "silk_touch", "minecraft") > 0
 
         if (isShears || hasSilkTouch) {
             val grassStack = ItemStack(Items.SEAGRASS)
 
-            if (hasBulb) {
-                grassStack.set(ModDataComponents.IS_SPROUTING.get(), true)
-            }
+
+            grassStack.set(ModDataComponents.IS_SPROUTING.get(), true)
+
 
             loot.add(grassStack)
         }
@@ -96,7 +97,9 @@ class SproutingSeagrassBlock(properties: Properties) : SeagrassBlock(properties)
     override fun isBonemealSuccess(level: Level, random: RandomSource, pos: BlockPos, state: BlockState): Boolean = true
 
     override fun performBonemeal(level: ServerLevel, random: RandomSource, pos: BlockPos, state: BlockState) {
+        if (state.getValue(HAS_BULB)) return
         level.setBlock(pos, state.setValue(HAS_BULB, true), 3)
+        level.sendBlockUpdated(pos, state, state.setValue(HAS_BULB, true), 3)
     }
 
     override fun getCloneItemStack(level: LevelReader, pos: BlockPos, state: BlockState, includeData: Boolean): ItemStack {

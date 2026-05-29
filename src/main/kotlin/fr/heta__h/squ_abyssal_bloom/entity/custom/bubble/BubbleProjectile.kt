@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.bubble
 
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble.NautilusBubbleSlowHandler
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
@@ -424,7 +425,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 val dz = target.z - z
                 val dist = sqrt(dx * dx + dy * dy + dz * dz).coerceAtLeast(BURST_MIN_DIST)
 
-                val damage = stageData.burstDamage
+                val coef = if (target is AbstractNautilus) 0.33f else if (target is BrineEntity) 0.25f else 1f
+                val damage = stageData.burstDamage * coef
 
                 target.hurtServer(lvl, bubbleBurstSource(), damage)
                 target.deltaMovement = target.deltaMovement.add(

@@ -16,6 +16,7 @@
     "entity.nautilus.NautilusDashBubble",
     "entity.nautilus.NautilusBubbleColumnTidal",
     "entity.nautilus.NautilusChestMixin",
+    "entity.nautilus.NautilusRegenMixin",
 
     "enable.AbstractContainerMenuAccessor",
     "enable.AbstractNautilusAccessor",

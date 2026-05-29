@@ -114,7 +114,10 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
             return
         }
 
-        if (!target.isAlive || entity.distanceTo(target) > MAX_RANGE + 2.0 || !isLookingAtTarget(entity, target)) {
+        if (!target.isAlive
+            || entity.distanceTo(target) > MAX_RANGE + 2.0
+            || !isLookingAtTarget(entity, target)
+            || !hasClearPath(level, entity, target)) {
             if (!level.isClientSide) entity.releaseUsingItem()
             return
         }

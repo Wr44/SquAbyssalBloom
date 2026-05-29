@@ -40,6 +40,7 @@ object AstralPrismarineTracker {
                 iterator.remove()
             } else if (!hasActiveConduitNearby(level, pos)) {
                 level.setBlock(pos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
+                level.sendBlockUpdated(pos , state, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
                 iterator.remove()
             }
         }
@@ -79,6 +80,12 @@ object AstralPrismarineTracker {
                             } else {
                                 level.setBlock(
                                     worldPos,
+                                    state.setValue(AstralPrismarineBlock.ACTIVE, false),
+                                    3
+                                )
+                                level.sendBlockUpdated(
+                                    worldPos,
+                                    state,
                                     state.setValue(AstralPrismarineBlock.ACTIVE, false),
                                     3
                                 )

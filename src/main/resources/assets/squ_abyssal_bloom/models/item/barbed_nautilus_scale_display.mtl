@@ -1,0 +1,4 @@
+# Made in Blockbench 5.1.1
+newmtl texture_principale
+map_Kd #texture_principale
+newmtl none

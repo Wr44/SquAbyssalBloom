@@ -156,6 +156,12 @@ public abstract class ConduitBlockEntityMixin {
                             blockState.setValue(AstralPrismarineBlock.ACTIVE, shouldActivate),
                             3
                     );
+                    level.sendBlockUpdated(
+                            immutablePos,
+                            blockState,
+                            blockState.setValue(AstralPrismarineBlock.ACTIVE, shouldActivate),
+                            3
+                    );
 
                     if (shouldActivate) {
                         AstralPrismarineTracker.INSTANCE.markActive(immutablePos);

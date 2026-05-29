@@ -503,12 +503,12 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return ModSounds.BARNACLE_AMBIENT.get()
     }
 
-    override fun playAmbientSound() {
-        val soundEvent = this.ambientSound
-        if (soundEvent != null) {
-            this.playSound(soundEvent, getSoundVolume() * 1.5f, this.voicePitch)
-        }
-    }
+//    override fun playAmbientSound() {
+//        val soundEvent = this.ambientSound
+//        if (soundEvent != null) {
+//            this.playSound(soundEvent, getSoundVolume() * 1.5f, this.voicePitch)
+//        }
+//    }
 
     override fun getHurtSound(source: DamageSource): SoundEvent = ModSounds.BARNACLE_HURT.get()
 

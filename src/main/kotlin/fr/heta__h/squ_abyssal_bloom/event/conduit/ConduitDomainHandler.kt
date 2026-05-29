@@ -197,6 +197,15 @@ object ConduitDomainHandler {
     }
 
     @SubscribeEvent
+    fun onBreakSpeed(event: PlayerEvent.BreakSpeed) {
+        val player = event.entity
+        if (!player.isUnderWater) return
+        val effect = player.getEffect(MobEffects.CONDUIT_POWER) ?: return
+        val multiplier = if (effect.amplifier == 0) 1.5f else 2.25f
+        event.newSpeed = event.originalSpeed * multiplier
+    }
+
+    @SubscribeEvent
     fun onPlayerTick(event: PlayerTickEvent.Post) {
         val player = event.entity
 
@@ -487,6 +496,7 @@ object ConduitDomainHandler {
             if (state.`is`(ModBlocks.ASTRAL_PRISMARINE) &&
                 state.getValue(AstralPrismarineBlock.ACTIVE)) {
                 level.setBlock(checkPos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
+                level.sendBlockUpdated(checkPos, state, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
                 AstralPrismarineTracker.markInactive(checkPos)
             }
         }
