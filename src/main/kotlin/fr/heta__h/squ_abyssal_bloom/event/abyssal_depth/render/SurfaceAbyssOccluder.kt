@@ -31,9 +31,6 @@ object SurfaceAbyssOccluder {
 
     private val WHITE_TEXTURE = Identifier.withDefaultNamespace("textures/misc/white.png")
 
-    private const val NUM_LAYERS = 5
-
-    private const val BAND_WIDTH = 64
     private const val BASE_STEP = 4
 
     private data class LodBand(
@@ -47,9 +44,6 @@ object SurfaceAbyssOccluder {
     private const val COLOR_G = 0.01f
     private const val COLOR_B = 0.03f
 
-    private const val BASE_ALPHA_MIN = 0.05f
-    private const val BASE_ALPHA_RANGE = 0.65f
-
     private const val LAMP_REDUCTION_MULTIPLIER = 0.15f
     private const val ALPHA_RENDER_THRESHOLD = 0.01f
 
@@ -59,39 +53,34 @@ object SurfaceAbyssOccluder {
 
     private var cachedBands: List<LodBand> = emptyList()
     private var cachedRenderDist = -1
+    private var cachedBandWidth = -1
 
     private val chunkFadeProgress = Long2FloatOpenHashMap(4096).apply {
         defaultReturnValue(0f)
     }
     private val activeKeysThisFrame = it.unimi.dsi.fastutil.longs.LongOpenHashSet(4096)
     private var lastFrameNanos = 0L
-    private const val FADE_SPEED = 2.5f
 
     private var lastCeilingCheckTick = -1L
     private var cachedUnderCeiling = false
     private const val CEILING_CHECK_INTERVAL = 5L
 
-    val offsetsX = intArrayOf(0, 3, -3, 0, 0)
-    val offsetsZ = intArrayOf(0, 0, 0, 3, -3)
-
-    private fun buildBands(maxRadius: Int): List<LodBand> {
+    private fun buildBands(maxRadius: Int, bandWidth: Int): List<LodBand> {
         val bands = mutableListOf<LodBand>()
         var offset = 0
         var step = BASE_STEP
 
         while (offset < maxRadius) {
-            val width = maxOf(BAND_WIDTH, step)
+            val width = maxOf(bandWidth, step)
             val isLast = (offset + width) >= maxRadius
             val bandEnd = if (isLast) maxRadius + width else offset + width
 
-            bands.add(
-                LodBand(
-                    minDist = offset,
-                    maxDist = bandEnd,
-                    step = step,
-                    scanRadius = bandEnd
-                )
-            )
+            bands.add(LodBand(
+                minDist = offset,
+                maxDist = bandEnd,
+                step = step,
+                scanRadius = bandEnd
+            ))
 
             offset = bandEnd
             step *= 2
@@ -100,10 +89,11 @@ object SurfaceAbyssOccluder {
         return bands
     }
 
-    private fun getBands(maxRadius: Int): List<LodBand> {
-        if (maxRadius != cachedRenderDist) {
-            cachedBands = buildBands(maxRadius)
+    private fun getBands(maxRadius: Int, bandWidth: Int): List<LodBand> {
+        if (maxRadius != cachedRenderDist || bandWidth != cachedBandWidth) {
+            cachedBands = buildBands(maxRadius, bandWidth)
             cachedRenderDist = maxRadius
+            cachedBandWidth = bandWidth
         }
         return cachedBands
     }
@@ -126,7 +116,6 @@ object SurfaceAbyssOccluder {
         var minSurface = Int.MAX_VALUE
 
         for ((bx, bz) in beams) {
-
             if (!level.hasChunk(bx shr 4, bz shr 4)) continue
 
             val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz)
@@ -138,7 +127,6 @@ object SurfaceAbyssOccluder {
 
                 if (fluidState.`is`(FluidTags.WATER)) {
                     minSurface = minOf(minSurface, y)
-                    solidStreak = 0
                     break
                 }
 
@@ -157,7 +145,7 @@ object SurfaceAbyssOccluder {
 
     @SubscribeEvent
     fun onRenderStage(event: RenderLevelStageEvent.AfterOpaqueFeatures) {
-        if (!ModConfig.enableAbyssFog) return
+        if (!ModConfig.enableSurfaceOccluder) return
 
         val mc = Minecraft.getInstance()
         val level = mc.level ?: return
@@ -171,7 +159,6 @@ object SurfaceAbyssOccluder {
             lastCeilingCheckTick = gameTick
         }
         if (!cachedUnderCeiling) return
-
         if (camera.fluidInCamera == FogType.WATER) return
 
         val now = System.nanoTime()
@@ -189,9 +176,19 @@ object SurfaceAbyssOccluder {
         } else 0f
         val lampReduction = lampInfluence * ModConfig.nautilusLampInfluence.toFloat() * LAMP_REDUCTION_MULTIPLIER
 
-        val maxRadius = mc.options.renderDistance().get() * 16
+        val alphaMin = ModConfig.surfaceOccluderAlphaMin.toFloat()
+        val alphaRange = (ModConfig.surfaceOccluderAlphaMax - ModConfig.surfaceOccluderAlphaMin).toFloat()
+        val numLayers = ModConfig.surfaceOccluderNumLayers
+        val fadeSpeed = ModConfig.surfaceOccluderFadeSpeed.toFloat()
+        val bandWidth = ModConfig.surfaceOccluderLodBandWidth
 
-        val bands = getBands(maxRadius)
+        val targetDepthRatio = ModConfig.surfaceOccluderTargetDepth
+        val targetDarknessDepth = maxOf(1.0f,
+            (ModConfig.abyssDepthStart + (ModConfig.abyssMaxDepth - ModConfig.abyssDepthStart) * targetDepthRatio).toFloat()
+        )
+
+        val maxRadius = mc.options.renderDistance().get() * 16
+        val bands = getBands(maxRadius, bandWidth)
         val maxStep = bands.lastOrNull()?.step ?: BASE_STEP
 
         val px = snapToGrid(camPos.x.toInt(), maxStep)
@@ -207,10 +204,9 @@ object SurfaceAbyssOccluder {
         val renderType = RenderTypes.entityTranslucent(WHITE_TEXTURE)
         val buffer = bufferSource.getBuffer(renderType)
 
-        val targetDarknessDepth = maxOf(1.0f, (ModConfig.abyssDepthStart + ModConfig.abyssMaxDepth).toFloat() / 2)
-        val depthStep = targetDarknessDepth / NUM_LAYERS.toFloat()
+        val depthStep = targetDarknessDepth / numLayers.toFloat()
 
-        val frustum = Minecraft.getInstance().gameRenderer.mainCamera.cullFrustum
+        val frustum = mc.gameRenderer.mainCamera.cullFrustum
 
         activeKeysThisFrame.clear()
 
@@ -225,7 +221,6 @@ object SurfaceAbyssOccluder {
 
             for (x in gridMinX..gridMaxX step step) {
                 for (z in gridMinZ..gridMaxZ step step) {
-
                     val cx = x + (step / 2)
                     val cz = z + (step / 2)
 
@@ -251,7 +246,7 @@ object SurfaceAbyssOccluder {
 
                     val key = chunkKey(cx, cz)
                     val rawFade = chunkFadeProgress.get(key)
-                    val newFade = (rawFade + dt * FADE_SPEED).coerceAtMost(1.0f)
+                    val newFade = (rawFade + dt * fadeSpeed).coerceAtMost(1.0f)
                     chunkFadeProgress.put(key, newFade)
                     activeKeysThisFrame.add(key)
 
@@ -261,28 +256,22 @@ object SurfaceAbyssOccluder {
                     val rx = x.toFloat() - camPos.x.toFloat()
                     val rz = z.toFloat() - camPos.z.toFloat()
 
-                    for (i in 0 until NUM_LAYERS) {
+                    for (i in 0 until numLayers) {
                         val layerCenterY = waterSurfaceY - (i * depthStep) - (depthStep * 0.5f)
-
                         if (layerCenterY <= floorY) continue
 
                         val physicalDepth = waterSurfaceY - layerCenterY
                         val xRatio = (physicalDepth / targetDarknessDepth).coerceIn(0f, 1f)
                         val curvedRatio = (3f * xRatio * xRatio) - (2f * xRatio * xRatio * xRatio)
 
-                        val baseAlpha = BASE_ALPHA_MIN + (BASE_ALPHA_RANGE * curvedRatio)
+                        val baseAlpha = alphaMin + (alphaRange * curvedRatio)
                         val finalAlpha = (baseAlpha - lampReduction).coerceIn(0f, 1f) * fadeFactor
 
                         if (finalAlpha <= ALPHA_RENDER_THRESHOLD) continue
 
                         val ry = layerCenterY - camPos.y.toFloat()
 
-                        drawDoubleSidedQuad(
-                            buffer, matrix4f,
-                            rx, ry, rz, size,
-                            COLOR_R, COLOR_G, COLOR_B,
-                            finalAlpha
-                        )
+                        drawDoubleSidedQuad(buffer, matrix4f, rx, ry, rz, size, COLOR_R, COLOR_G, COLOR_B, finalAlpha)
                     }
                 }
             }
@@ -294,9 +283,7 @@ object SurfaceAbyssOccluder {
         val iter = chunkFadeProgress.long2FloatEntrySet().iterator()
         while (iter.hasNext()) {
             val entry = iter.next()
-            if (!activeKeysThisFrame.contains(entry.longKey)) {
-                iter.remove()
-            }
+            if (!activeKeysThisFrame.contains(entry.longKey)) iter.remove()
         }
     }
 
@@ -307,11 +294,8 @@ object SurfaceAbyssOccluder {
     }
 
     private fun snapToGrid(value: Int, snap: Int): Int {
-        return if (value >= 0) {
-            (value / snap) * snap
-        } else {
-            ((value - snap + 1) / snap) * snap
-        }
+        return if (value >= 0) (value / snap) * snap
+        else ((value - snap + 1) / snap) * snap
     }
 
     private fun drawDoubleSidedQuad(
