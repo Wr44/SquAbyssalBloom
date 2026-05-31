@@ -11,4 +11,5 @@ class BubbleRenderState : EntityRenderState() {
     var releaseYaw = 0f
     var hasAttachedPlayer = false
     var attachedLeash: LeashState? = null
+    var effectColor: Int = 0
 }

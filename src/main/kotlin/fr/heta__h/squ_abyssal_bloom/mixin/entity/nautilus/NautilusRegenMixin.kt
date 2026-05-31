@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 @Mixin(AbstractNautilus::class)
 abstract class NautilusRegenMixin {
 
-    val REGEN_INTERVAL = 200
+    val REGEN_INTERVAL = 600
     val REGEN_HEAL = 1f
 
     @Unique

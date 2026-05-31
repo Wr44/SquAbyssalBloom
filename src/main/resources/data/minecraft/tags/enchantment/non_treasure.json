@@ -1,0 +1,11 @@
+{
+  "replace": false,
+  "values": [
+    "squ_abyssal_bloom:focused_vision",
+    "squ_abyssal_bloom:converging_lens",
+    "squ_abyssal_bloom:prismarine_aegis",
+    "squ_abyssal_bloom:pressure_seal",
+    "squ_abyssal_bloom:tidal_immunity",
+    "squ_abyssal_bloom:splatter"
+  ]
+}

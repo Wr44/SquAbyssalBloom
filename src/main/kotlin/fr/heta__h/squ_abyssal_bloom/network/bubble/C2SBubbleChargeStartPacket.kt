@@ -4,9 +4,9 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
+import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
@@ -35,7 +35,8 @@ object C2SBubbleChargeStartPacket : CustomPacketPayload {
             val player = context.player() as? ServerPlayer ?: return@enqueueWork
             val nautilus = player.vehicle as? AbstractNautilus ?: return@enqueueWork
 
-            if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayerItems.BUBBLE) return@enqueueWork
+            val extraStack = nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get())
+            if (extraStack.item != NautilusLayerItems.BUBBLE) return@enqueueWork
             if (nautilus.jumpCooldown > 0) return@enqueueWork
 
             val level = nautilus.level() as? ServerLevel ?: return@enqueueWork
@@ -50,6 +51,11 @@ object C2SBubbleChargeStartPacket : CustomPacketPayload {
             val bubble = BubbleProjectile(ModEntities.BUBBLE.get(), level)
             bubble.owner = nautilus
             bubble.isHeld = true
+
+            val splatter = extraStack.get(ModDataComponents.SPLATTER_DATA.get())
+            if (splatter != null) {
+                bubble.applySplatter(splatter)
+            }
 
             val controller = nautilus.controllingPassenger ?: nautilus
             val yawRad = Math.toRadians(controller.yRot.toDouble())

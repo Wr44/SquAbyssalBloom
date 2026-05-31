@@ -1,21 +1,28 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.bubble
 
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
+import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterData
+import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterEntry
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble.NautilusBubbleSlowHandler
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
+import net.minecraft.core.particles.ColorParticleOption
 import net.minecraft.core.particles.ParticleTypes
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
+import net.minecraft.resources.Identifier
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.damagesource.DamageSource
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.entity.AreaEffectCloud
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityDimensions
 import net.minecraft.world.entity.EntityType
@@ -89,6 +96,14 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         const val LEASH_IDLE_PULL = 0.03
         const val LEASH_IDLE_MAX_VEL_Y = 0.12
 
+        const val CLOUD_RADIUS_RATIO = 2f
+        const val CLOUD_RADIUS_ON_USE = -0.05f
+        const val CLOUD_WAIT_TIME = 10
+        const val CLOUD_DURATION_RATIO = 0.25
+        const val CHILD_CLOUD_RADIUS_RATIO = 1f
+
+        const val EFFECT_PARTICLE_CHANCE = 0.4f
+
         val STAGES = arrayOf(
             BubbleStageData(
                 size = 0.5f, burstRadius = 1.0, burstDamage = 2.5f,
@@ -124,17 +139,23 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
         private val ATTACHED_PLAYER_ID: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
+        private val EFFECT_COLOR: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
     }
 
     var releaseYaw: Float = 0f
     var releaseTick: Int = -1
     var player: Player? = null
 
+    var splatterEntries: List<SplatterEntry> = emptyList()
+    private var isChildBubble = false
+
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         builder.define(BUBBLE_STAGE, 0)
         builder.define(IS_HELD, false)
         builder.define(HOLD_TICKS_SYNC, 0)
         builder.define(ATTACHED_PLAYER_ID, -1)
+        builder.define(EFFECT_COLOR, 0)
     }
 
     var bubbleStage: Int
@@ -166,6 +187,10 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         get() = entityData.get(ATTACHED_PLAYER_ID)
         set(value) { entityData.set(ATTACHED_PLAYER_ID, value) }
 
+    var effectColor: Int
+        get() = entityData.get(EFFECT_COLOR)
+        set(value) { entityData.set(EFFECT_COLOR, value) }
+
     private val stageData get() = STAGES[bubbleStage]
 
     override fun getDimensions(pose: Pose): EntityDimensions {
@@ -177,6 +202,13 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     private var isBursting = false
     private var spawnCooldown = 0
     private var interBubbleCooldown = 0
+
+    fun applySplatter(data: SplatterData) {
+        splatterEntries = data.entries
+        effectColor = data.color
+    }
+
+    fun hasSplatter(): Boolean = splatterEntries.isNotEmpty()
 
     override fun tick() {
         super.tick()
@@ -254,8 +286,13 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             return
         }
 
-        if (level().isClientSide && random.nextFloat() < TRAIL_PARTICLE_CHANCE) {
-            spawnTrailParticle()
+        if (level().isClientSide) {
+            if (random.nextFloat() < TRAIL_PARTICLE_CHANCE) {
+                spawnTrailParticle()
+            }
+            if (effectColor != 0 && random.nextFloat() < EFFECT_PARTICLE_CHANCE) {
+                spawnEffectParticle()
+            }
         }
 
         if (!level().isClientSide && interBubbleCooldown <= 0) {
@@ -392,6 +429,13 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             child.player = player
             child.interBubbleCooldown = INTER_BUBBLE_COOLDOWN_TICKS
             child.holdTicks = holdTicks
+            child.isChildBubble = true
+
+            if (hasSplatter()) {
+                child.splatterEntries = splatterEntries
+                child.effectColor = effectColor
+            }
+
             level.addFreshEntity(child)
         }
     }
@@ -443,11 +487,44 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 if (target is ServerPlayer)
                     target.connection.send(ClientboundSetEntityMotionPacket(target))
             }
+
+            if (hasSplatter()) {
+                targets.forEach { target ->
+                    for (entry in splatterEntries) {
+                        target.addEffect(MobEffectInstance(entry.effect, entry.duration / 2, entry.amplifier))
+                    }
+                }
+                spawnLingeringCloud(lvl)
+            }
         }
 
         lvl.broadcastEntityEvent(this, BURST_EVENT_ID)
         discard()
         chainTargets.forEach { it.burstWithSplit() }
+    }
+
+    private fun spawnLingeringCloud(level: ServerLevel) {
+
+        if (splatterEntries.isEmpty()) return
+
+        val cloud = AreaEffectCloud(level, x, y, z)
+        val radiusRatio = if (isChildBubble) CHILD_CLOUD_RADIUS_RATIO else CLOUD_RADIUS_RATIO
+        val maxDuration = splatterEntries.maxOf { it.duration }
+
+        cloud.apply {
+            radius = stageData.burstRadius.toFloat() * radiusRatio
+            radiusOnUse = CLOUD_RADIUS_ON_USE
+            waitTime = CLOUD_WAIT_TIME
+            duration = (maxDuration * CLOUD_DURATION_RATIO).toInt().coerceAtLeast(60).coerceAtMost(200)
+            radiusPerTick = -radius / duration.toFloat()
+        }
+
+        for (entry in splatterEntries) {
+            cloud.addEffect(MobEffectInstance(entry.effect, entry.duration, entry.amplifier))
+        }
+
+        cloud.owner = player ?: owner?.getEntity(level, Entity::class.java) as? LivingEntity
+        level.addFreshEntity(cloud)
     }
 
     override fun hurtServer(p_376191_: ServerLevel, p_376581_: DamageSource, p_376638_: Float): Boolean {
@@ -460,15 +537,38 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         val radius = bbWidth / 2.0
         val theta = random.nextDouble() * 2 * Math.PI
         val phi = acos(2 * random.nextDouble() - 1)
+        val px = x + sin(phi) * cos(theta) * radius
+        val py = y + bbHeight / 2.0 + sin(phi) * sin(theta) * radius
+        val pz = z + cos(phi) * radius
 
         level().addParticle(
             ParticleTypes.BUBBLE_POP,
-            x + sin(phi) * cos(theta) * radius,
-            y + bbHeight / 2.0 + sin(phi) * sin(theta) * radius,
-            z + cos(phi) * radius,
+            px, py, pz,
             -vel.x * TRAIL_PARTICLE_VELOCITY_DAMPEN,
             -vel.y * TRAIL_PARTICLE_VELOCITY_DAMPEN,
             -vel.z * TRAIL_PARTICLE_VELOCITY_DAMPEN,
+        )
+
+        val col = effectColor
+        if (col != 0 && random.nextFloat() < 0.35f) {
+            level().addParticle(
+                ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, col),
+                px, py, pz, 0.0, 0.01, 0.0
+            )
+        }
+    }
+
+    private fun spawnEffectParticle() {
+        val col = effectColor
+        if (col == 0) return
+        val radius = bbWidth / 2.0
+        val ox = (random.nextDouble() - 0.5) * radius * 2
+        val oy = random.nextDouble() * bbHeight
+        val oz = (random.nextDouble() - 0.5) * radius * 2
+        level().addParticle(
+            ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, col),
+            x + ox, y + oy, z + oz,
+            0.0, 0.02, 0.0,
         )
     }
 
@@ -482,6 +582,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         val halfW = bbWidth / 2.0
         val halfH = bbHeight / 2.0
         val data = stageData
+        val col = effectColor
 
         repeat(data.particleRings) { ring ->
             val progress = (ring + 1).toDouble() / data.particleRings
@@ -489,21 +590,45 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             repeat(data.particlePerRing) { i ->
                 val angle = (i.toDouble() / data.particlePerRing) * 2 * Math.PI
                 val cosA = cos(angle); val sinA = sin(angle)
-                lvl.addParticle(ParticleTypes.BUBBLE_POP,
-                    cx + cosA * halfW, cy + (random.nextDouble() - 0.5) * halfH, cz + sinA * halfW,
+                val px = cx + cosA * halfW
+                val py = cy + (random.nextDouble() - 0.5) * halfH
+                val pz = cz + sinA * halfW
+                lvl.addParticle(ParticleTypes.BUBBLE_POP, px, py, pz,
                     cosA * speed, (random.nextDouble() - 0.3) * 0.1, sinA * speed)
+                if (col != 0 && random.nextFloat() < 0.4f) {
+                    lvl.addParticle(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, col),
+                        px, py, pz, cosA * speed * 0.5, 0.02, sinA * speed * 0.5)
+                }
             }
         }
 
         repeat(data.particleSplashCount) {
             val angle = random.nextDouble() * 2 * Math.PI
             val r = random.nextDouble() * halfW
-            lvl.addParticle(ParticleTypes.SPLASH,
-                cx + cos(angle) * r, cy + halfH, cz + sin(angle) * r,
+            val px = cx + cos(angle) * r
+            val pz = cz + sin(angle) * r
+            lvl.addParticle(ParticleTypes.SPLASH, px, cy + halfH, pz,
                 (random.nextDouble() - 0.5) * 0.3, 0.3 + random.nextDouble() * 0.4, (random.nextDouble() - 0.5) * 0.3)
+            if (col != 0 && random.nextFloat() < 0.3f) {
+                lvl.addParticle(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, col),
+                    px, cy + halfH, pz, 0.0, 0.05, 0.0)
+            }
         }
 
         lvl.addParticle(ParticleTypes.BUBBLE_POP, cx, cy, cz, 0.0, 0.0, 0.0)
+
+        if (col != 0) {
+            repeat(data.particlePerRing) {
+                val angle = random.nextDouble() * 2 * Math.PI
+                val r = random.nextDouble() * halfW * 1.5
+                val speed = 0.1 + random.nextDouble() * 0.2
+                lvl.addParticle(
+                    ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, col),
+                    cx + cos(angle) * r, cy + (random.nextDouble() - 0.5) * halfH, cz + sin(angle) * r,
+                    cos(angle) * speed, 0.05, sin(angle) * speed,
+                )
+            }
+        }
     }
 
     private fun isBoxFullySubmerged(): Boolean {
@@ -524,6 +649,19 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         super.addAdditionalSaveData(p_422546_)
         p_422546_.putInt("BubbleStage", bubbleStage)
         p_422546_.putInt("BounceCount", bounceCount)
+
+        if (splatterEntries.isNotEmpty()) {
+            p_422546_.putInt("SplatterCount", splatterEntries.size)
+            p_422546_.putInt("SplatterColor", effectColor)
+            splatterEntries.forEachIndexed { i, entry ->
+                val key = BuiltInRegistries.MOB_EFFECT.getKey(entry.effect.value())
+                if (key != null) {
+                    p_422546_.putString("SplatterEffect$i", key.toString())
+                    p_422546_.putInt("SplatterDuration$i", entry.duration)
+                    p_422546_.putInt("SplatterAmplifier$i", entry.amplifier)
+                }
+            }
+        }
     }
 
     override fun readAdditionalSaveData(p_422548_: ValueInput) {
@@ -531,6 +669,24 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         bubbleStage = p_422548_.getIntOr("BubbleStage", 0)
         bounceCount = p_422548_.getIntOr("BounceCount", 0)
         if (isHeld) discard()
+
+        val count = p_422548_.getIntOr("SplatterCount", 0)
+        if (count > 0) {
+            effectColor = p_422548_.getIntOr("SplatterColor", 0)
+            val entries = mutableListOf<SplatterEntry>()
+            for (i in 0 until count) {
+                val effId = p_422548_.getStringOr("SplatterEffect$i", "")
+                if (effId.isEmpty()) continue
+                val id = Identifier.tryParse(effId) ?: continue
+                val holder = BuiltInRegistries.MOB_EFFECT.get(id).orElse(null) ?: continue
+                entries.add(SplatterEntry(
+                    holder,
+                    p_422548_.getIntOr("SplatterDuration$i", 600),
+                    p_422548_.getIntOr("SplatterAmplifier$i", 0)
+                ))
+            }
+            splatterEntries = entries
+        }
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {

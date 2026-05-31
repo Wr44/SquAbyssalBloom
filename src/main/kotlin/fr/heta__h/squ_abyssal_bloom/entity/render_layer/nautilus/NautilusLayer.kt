@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus
 
 import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.util.accessor.AddPropertiesToRenderState
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitMaterialHolder
@@ -46,8 +47,11 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         private val TEXTURE_NAUTILUS_LAMP = Identifier.fromNamespaceAndPath(
             SquAbyssalBloom.ID, "textures/entity/nautilus_lamp/nautilus_lamp.png"
         )
-        private val TEXTURE_BUBBLE = Identifier.fromNamespaceAndPath(
-            SquAbyssalBloom.ID, "textures/entity/nautilus_bubble_spitter/nautilus_bubble_spitter.png"
+        private val TEXTURE_BUBBLE_BACK = Identifier.fromNamespaceAndPath(
+            SquAbyssalBloom.ID, "textures/entity/nautilus_bubble_spitter/nautilus_bubble_spitter_back.png"
+        )
+        private val TEXTURE_BUBBLE_FRONT = Identifier.fromNamespaceAndPath(
+            SquAbyssalBloom.ID, "textures/entity/nautilus_bubble_spitter/nautilus_bubble_spitter_front.png"
         )
         private val TEXTURE_CHEST = Identifier.fromNamespaceAndPath(
             SquAbyssalBloom.ID, "textures/entity/nautilus_chest/nautilus_chest.png"
@@ -128,9 +132,30 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                     bubbleModel,
                     state,
                     poseStack,
-                    RenderTypes.entityTranslucent(TEXTURE_BUBBLE),
+                    RenderTypes.entityCutout(TEXTURE_BUBBLE_BACK),
                     packedLight,
                     OverlayTexture.NO_OVERLAY,
+                    0,
+                    null
+                )
+
+                val splatterData = extraItem.get(ModDataComponents.SPLATTER_DATA.get())
+                val tintColor = if (splatterData != null) {
+                    val col = splatterData.color
+                    col or (0xFF shl 24)
+                } else {
+                    -1
+                }
+
+                collector.submitModel(
+                    bubbleModel,
+                    state,
+                    poseStack,
+                    RenderTypes.entityCutout(TEXTURE_BUBBLE_FRONT),
+                    packedLight,
+                    OverlayTexture.NO_OVERLAY,
+                    tintColor,
+                    null,
                     0,
                     null
                 )

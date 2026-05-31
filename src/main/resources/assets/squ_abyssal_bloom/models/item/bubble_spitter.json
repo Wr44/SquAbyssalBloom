@@ -1,6 +1,7 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "squ_abyssal_bloom:item/bubble_spitter"
+    "layer0": "squ_abyssal_bloom:item/bubble_spitter_back",
+    "layer1": "squ_abyssal_bloom:item/bubble_spitter_front"
   }
 }

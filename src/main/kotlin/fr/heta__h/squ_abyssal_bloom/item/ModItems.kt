@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
+import fr.heta__h.squ_abyssal_bloom.item.bubble_spitter.BubbleSpitterItem
 import fr.heta__h.squ_abyssal_bloom.item.respiration_bubble.RespirationBubbleItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
 import net.minecraft.world.item.Item
@@ -67,11 +68,15 @@ object ModItems {
 
     val BUBBLE_SPITTER = ITEMS.registerItem(
         "bubble_spitter"
-    ) { properties -> Item(properties
-        .durability(250)
-        .enchantable(10)
-        .repairable(BRINE_BUBBLES.get())
-    ) }
+    ) { properties ->
+        BubbleSpitterItem(
+            properties
+                .durability(250)
+                .enchantable(10)
+                .repairable(BRINE_BUBBLES.get())
+        )
+    }
+
 
     val MOBILE_CONDUIT = ITEMS.registerItem(
         "mobile_conduit"

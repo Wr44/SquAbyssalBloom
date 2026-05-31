@@ -63,6 +63,7 @@
   "enchantment.squ_abyssal_bloom.pressure_seal" : "Sceau de Pression",
   "enchantment.squ_abyssal_bloom.tidal_immunity" : "Immunité aux Marées",
   "enchantment.squ_abyssal_bloom.murk_veil" : "Voile de l'Ombre",
+  "enchantment.squ_abyssal_bloom.splatter" : "Éclaboussure",
 
   "entity.squ_abyssal_bloom.barnacle": "Barnacle",
   "entity.squ_abyssal_bloom.ghost_chimaera": "Chimère fantôme",
@@ -89,6 +90,7 @@
   "item.squ_abyssal_bloom.barbed_nautilus_scale": "Ecaille de Nautile Barbelé",
   "item.squ_abyssal_bloom.nautilus_lamp": "Lampe de Nautile",
   "item.squ_abyssal_bloom.bubble_spitter": "Cracheur de bulles",
+  "item.squ_abyssal_bloom.bubble_spitter.splatter_effects": "Effets d'éclaboussure :",
   "item.squ_abyssal_bloom.lifeline_bubble": "Bulle de sauvetage",
   "item.squ_abyssal_bloom.respiration_bubble": "Bulle de respiration",
   "item.squ_abyssal_bloom.mobile_conduit": "Conduit mobile",

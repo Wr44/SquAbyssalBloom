@@ -33,6 +33,10 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
     private val textureStage2 = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage2.png")
     private val textureStage3 = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage3.png")
 
+    private val textureStage1Desat = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage1_desaturated.png")
+    private val textureStage2Desat = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage2_desaturated.png")
+    private val textureStage3Desat = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/entity/projectiles/bubble_stage3_desaturated.png")
+
     override fun createRenderState(): BubbleRenderState = BubbleRenderState()
 
     override fun extractRenderState(
@@ -44,6 +48,7 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
         state.packedLight = getPackedLightCoords(entity, partialTicks)
         state.bubbleStage = entity.bubbleStage
         state.ageInTicks = entity.tickCount + partialTicks
+        state.effectColor = entity.effectColor
         if (entity.isHeld) {
             state.isHeld = true
             val controller = (entity.owner as? AbstractNautilus)?.controllingPassenger ?: entity.owner
@@ -65,7 +70,6 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             val px = lerp(partialTicks.toDouble(), player.xOld, player.x)
             val py = lerp(partialTicks.toDouble(), player.yOld, player.y) + player.bbHeight * 0.8
             val pz = lerp(partialTicks.toDouble(), player.zOld, player.z)
-
 
             val mc = Minecraft.getInstance()
             val camPos = mc.gameRenderer.mainCamera.position()
@@ -115,7 +119,7 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
 
             val finalYaw = if (renderState.ticksSinceRelease in 0f..15f) {
                 val t = renderState.ticksSinceRelease / 15f
-                val smooth = t * t * (3f - 2f * t) // smoothstep
+                val smooth = t * t * (3f - 2f * t)
                 rotLerp(smooth, renderState.releaseYaw, spinAngle)
             } else {
                 spinAngle
@@ -127,19 +131,8 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
 
         poseStack.mulPose(Axis.XP.rotationDegrees(180.0f))
 
-        poseStack.scale( when ( renderState.bubbleStage ) {
-            2 -> 3f
-            1 -> 2f
-            else -> 1.5f
-        }, when ( renderState.bubbleStage ) {
-            2 -> 3f
-            1 -> 2f
-            else -> 1.5f
-        }, when ( renderState.bubbleStage ) {
-            2 -> 3f
-            1 -> 2f
-            else -> 1.5f
-        })
+        val scaleFactor = when (renderState.bubbleStage) { 2 -> 3f; 1 -> 2f; else -> 1.5f }
+        poseStack.scale(scaleFactor, scaleFactor, scaleFactor)
 
         val activeModel = when (renderState.bubbleStage) {
             2 -> modelStage3
@@ -147,33 +140,45 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             else -> modelStage1
         }
 
-        val activeTexture = when (renderState.bubbleStage) {
-            2 -> textureStage3
-            1 -> textureStage2
-            else -> textureStage1
+        val hasEffect = renderState.effectColor != 0
+
+        val activeTexture = if (hasEffect) {
+            when (renderState.bubbleStage) {
+                2 -> textureStage3Desat
+                1 -> textureStage2Desat
+                else -> textureStage1Desat
+            }
+        } else {
+            when (renderState.bubbleStage) {
+                2 -> textureStage3
+                1 -> textureStage2
+                else -> textureStage1
+            }
+        }
+
+        val tintColor = if (hasEffect) {
+            val col = renderState.effectColor
+            (0xFF shl 24) or (col and 0x00FFFFFF)
+        } else {
+            -1
         }
 
         val renderType = RenderTypes.entityCutout(activeTexture)
 
         nodeCollector.submitCustomGeometry(poseStack, renderType) { pose, vertexConsumer ->
             val tempStack = PoseStack()
-
             tempStack.last().pose().set(pose.pose())
             tempStack.last().normal().set(pose.normal())
 
-            activeModel.renderToBuffer(
-                tempStack,
-                vertexConsumer,
-                renderState.packedLight,
-                OverlayTexture.NO_OVERLAY,
-                -1
-            )
+            val parts = activeModel.root().allParts.toList()
+            parts.forEach { part ->
+                part.render(tempStack, vertexConsumer, renderState.packedLight, OverlayTexture.NO_OVERLAY, tintColor)
+            }
         }
 
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
 
         poseStack.popPose()
     }
-
 
 }

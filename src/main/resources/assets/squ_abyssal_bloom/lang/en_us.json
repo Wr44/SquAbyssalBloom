@@ -63,6 +63,7 @@
   "enchantment.squ_abyssal_bloom.pressure_seal": "Pressure Seal",
   "enchantment.squ_abyssal_bloom.tidal_immunity": "Tidal Immunity",
   "enchantment.squ_abyssal_bloom.murk_veil": "Murk Veil",
+  "enchantment.squ_abyssal_bloom.splatter": "Splatter",
 
   "entity.squ_abyssal_bloom.barnacle": "Barnacle",
   "entity.squ_abyssal_bloom.ghost_chimaera": "Ghost Chimera",
@@ -89,6 +90,7 @@
   "item.squ_abyssal_bloom.barbed_nautilus_scale_display": "You don't suppose to see this item, do you ?",
   "item.squ_abyssal_bloom.barbed_nautilus_scale": "Barbed Nautilus Scale",
   "item.squ_abyssal_bloom.bubble_spitter": "Bubble Spitter",
+  "item.squ_abyssal_bloom.bubble_spitter.splatter_effects": "Splatter Effects:",
   "item.squ_abyssal_bloom.lifeline_bubble": "Lifeline Bubble",
   "item.squ_abyssal_bloom.respiration_bubble": "Respiration Bubble",
   "item.squ_abyssal_bloom.mobile_conduit": "Mobile Conduit",
