@@ -6,7 +6,7 @@ object ModServerConfig {
     private val SPEC_BUILDER = ModConfigSpec.Builder()
 
     val STRICT_BARNACLE_SPAWNING: ModConfigSpec.BooleanValue = SPEC_BUILDER
-        .comment("If true, barnacles only spawn on valid underwater surfaces.")
+        .comment("If true, mobs with \"barnacle\" in their name will be unable to spawn")
         .define("strictBarnacleSpawning", true)
 
     val SPEC: ModConfigSpec = SPEC_BUILDER.build()
