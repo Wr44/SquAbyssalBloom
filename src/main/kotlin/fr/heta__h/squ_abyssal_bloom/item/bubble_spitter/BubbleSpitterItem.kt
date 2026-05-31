@@ -60,6 +60,7 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         return true
     }
 
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun appendHoverText(
         stack: ItemStack,
         context: TooltipContext,

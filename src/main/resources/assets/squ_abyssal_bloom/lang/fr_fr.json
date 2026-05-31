@@ -51,6 +51,11 @@
   "config.squ_abyssal_bloom.conduitBoundaryRingPoints": "Points de l'anneau de frontière",
   "config.squ_abyssal_bloom.conduitBoundaryParticleInterval": "Intervalle de particules",
   "config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled": "Particules de frontière",
+  "config.squ_abyssal_bloom.server": "Paramètres Serveur",
+  "config.squ_abyssal_bloom.server.tooltip": "Ces paramètres sont synchronisés avec le serveur et nécessitent des permissions opérateur pour être modifiés.",
+  "config.squ_abyssal_bloom.group.server_gameplay": "Gameplay",
+  "config.squ_abyssal_bloom.visual.tooltip": "Paramètres visuels et de rendu, appliqués localement.",
+  "config.squ_abyssal_bloom.server.no_permission": "Vous n'avez pas la permission de modifier cette partie de la config",
 
   "effect.squ_abyssal_bloom.guardian_s_redistribution": "Redistribution du Gardien",
   "effect.squ_abyssal_bloom.pressure": "Pression Sous-Marine",

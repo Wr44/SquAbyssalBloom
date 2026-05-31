@@ -9,10 +9,12 @@ import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
+import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.neoforged.fml.loading.FMLPaths
+import net.neoforged.neoforge.client.network.ClientPacketDistributor
 import java.io.File
 
 object ModConfig {
@@ -24,7 +26,6 @@ object ModConfig {
     var abyssDepthStart: Double = 30.0
     var abyssMaxDepth: Double = 80.0
     var maxMarinSnowParticles: Int = 75
-    var strictBarnacleSpawning: Boolean = true
     var fogDarknessIntensity: Double = 1.0
     var shaderCompatModeOverride: Boolean = false
     var nautilusLampInfluence: Double = 0.5
@@ -52,7 +53,6 @@ object ModConfig {
             abyssDepthStart = json.get("abyssDepthStart")?.asDouble ?: 30.0
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
             maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
-            strictBarnacleSpawning = json.get("strictBarnacleSpawning")?.asBoolean ?: true
             fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
             shaderCompatModeOverride = json.get("shaderCompatModeOverride")?.asBoolean ?: false
             nautilusLampInfluence = json.get("nautilusLampInfluence")?.asDouble ?: 0.5
@@ -83,7 +83,6 @@ object ModConfig {
                 addProperty("abyssDepthStart", abyssDepthStart)
                 addProperty("abyssMaxDepth", abyssMaxDepth)
                 addProperty("maxMarinSnowParticles", maxMarinSnowParticles)
-                addProperty("strictBarnacleSpawning", strictBarnacleSpawning)
                 addProperty("fogDarknessIntensity", fogDarknessIntensity)
                 addProperty("shaderCompatModeOverride", shaderCompatModeOverride)
                 addProperty("nautilusLampInfluence", nautilusLampInfluence)
@@ -111,9 +110,27 @@ object ModConfig {
     }
 
     fun createConfigScreen(parent: Screen): Screen {
+        if (ServerConfigCache.isSingleplayer()) {
+            ServerConfigCache.update(ServerConfigData(
+                strictBarnacleSpawning = ModServerConfig.STRICT_BARNACLE_SPAWNING.get(),
+            ))
+        }
+
         return YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
-            .save(this::saveConfig)
+            .save {
+                saveConfig()
+                if (ServerConfigCache.isSingleplayer()) {
+                    ModServerConfig.STRICT_BARNACLE_SPAWNING.set(ServerConfigCache.strictBarnacleSpawning)
+                    ModServerConfig.SPEC.save()
+                } else {
+                    ClientPacketDistributor.sendToServer(
+                        C2SServerConfigPacket(ServerConfigData(
+                            strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
+                        ))
+                    )
+                }
+            }
 
             .category(ConfigCategory.createBuilder()
                 .name(Component.translatable("config.squ_abyssal_bloom.visual"))
@@ -255,7 +272,9 @@ object ModConfig {
                 .build())
 
             .category(ConfigCategory.createBuilder()
-                .name(Component.translatable("config.squ_abyssal_bloom.entity"))
+                .name(Component.translatable("config.squ_abyssal_bloom.server")
+                    .withStyle(ChatFormatting.BOLD, ChatFormatting.GOLD))
+                .tooltip(Component.translatable("config.squ_abyssal_bloom.server.tooltip"))
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("entity.squ_abyssal_bloom.barnacle").withStyle(ChatFormatting.LIGHT_PURPLE))
@@ -273,7 +292,11 @@ object ModConfig {
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.strictBarnacleSpawning"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.strictBarnacleSpawning.tooltip")))
-                        .binding(Binding.generic(true, { strictBarnacleSpawning }, { strictBarnacleSpawning = it }))
+                        .binding(Binding.generic(
+                            true,
+                            { ServerConfigCache.strictBarnacleSpawning },
+                            { ServerConfigCache.strictBarnacleSpawning = it }
+                        ))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
                     .build())

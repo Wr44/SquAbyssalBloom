@@ -51,6 +51,11 @@
   "config.squ_abyssal_bloom.conduitBoundaryRingPoints": "Boundary Ring Points",
   "config.squ_abyssal_bloom.conduitBoundaryParticleInterval": "Particle Interval",
   "config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled": "Boundary Particles",
+  "config.squ_abyssal_bloom.server": "Server Settings",
+  "config.squ_abyssal_bloom.server.tooltip": "These settings are synchronized with the server and require operator permissions to modify.",
+  "config.squ_abyssal_bloom.group.server_gameplay": "Gameplay",
+  "config.squ_abyssal_bloom.visual.tooltip": "Visual and rendering settings, applied locally.",
+  "config.squ_abyssal_bloom.server.no_permission": "You don't have permission to edit this part of the config",
 
   "effect.squ_abyssal_bloom.guardian_s_redistribution": "Guardian's Redistribution",
   "effect.squ_abyssal_bloom.pressure": "Underwater Pressure",

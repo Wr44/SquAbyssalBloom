@@ -10,7 +10,9 @@ import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
 import net.neoforged.bus.api.SubscribeEvent
+import net.neoforged.fml.ModLoadingContext
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
@@ -20,6 +22,7 @@ import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import thedarkcolour.kotlinforforge.neoforge.forge.LOADING_CONTEXT
 import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
 import thedarkcolour.kotlinforforge.neoforge.forge.runForDist
 
@@ -42,6 +45,8 @@ object SquAbyssalBloom {
         ModCreativeModeTabs.register(MOD_BUS)
         ModParticles.register(MOD_BUS)
         ModDataComponents.register(MOD_BUS)
+
+        LOADING_CONTEXT.activeContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, ModServerConfig.SPEC)
 
         runForDist(
             clientTarget = { },

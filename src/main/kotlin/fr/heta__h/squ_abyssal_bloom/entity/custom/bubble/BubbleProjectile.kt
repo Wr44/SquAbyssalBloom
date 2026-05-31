@@ -484,16 +484,16 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
                 if (target.controllingPassenger is ServerPlayer)
                     (target.controllingPassenger as ServerPlayer).connection.send(ClientboundSetEntityMotionPacket(target))
-                if (target is ServerPlayer)
-                    target.connection.send(ClientboundSetEntityMotionPacket(target))
-            }
+                if (target is ServerPlayer) target.connection.send(ClientboundSetEntityMotionPacket(target))
 
-            if (hasSplatter()) {
-                targets.forEach { target ->
+                if (hasSplatter()) {
                     for (entry in splatterEntries) {
                         target.addEffect(MobEffectInstance(entry.effect, entry.duration / 2, entry.amplifier))
                     }
                 }
+            }
+
+            if (hasSplatter()) {
                 spawnLingeringCloud(lvl)
             }
         }
@@ -520,7 +520,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         }
 
         for (entry in splatterEntries) {
-            cloud.addEffect(MobEffectInstance(entry.effect, entry.duration, entry.amplifier))
+            cloud.addEffect(MobEffectInstance(entry.effect, entry.duration / 4, entry.amplifier))
         }
 
         cloud.owner = player ?: owner?.getEntity(level, Entity::class.java) as? LivingEntity

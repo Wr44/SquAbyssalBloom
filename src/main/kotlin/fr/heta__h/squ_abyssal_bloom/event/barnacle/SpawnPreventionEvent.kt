@@ -2,6 +2,8 @@ package fr.heta__h.squ_abyssal_bloom.event.barnacle
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import net.minecraft.world.entity.LivingEntity
 import net.neoforged.api.distmarker.Dist
@@ -18,7 +20,7 @@ object SpawnPreventionEvent {
 
     @SubscribeEvent
     fun onPositionCheck(event: MobSpawnEvent.PositionCheck) {
-        if (!ModConfig.strictBarnacleSpawning) return
+        if (!ServerConfigCache.effectiveStrictBarnacleSpawning) return
 
         val entity = event.entity
         val entityName = entity.type.description.string
@@ -40,7 +42,7 @@ object SpawnPreventionEvent {
 
     @SubscribeEvent
     fun onEntityTick(event: EntityTickEvent.Pre) {
-        if (!ModConfig.strictBarnacleSpawning) return
+        if (!ServerConfigCache.effectiveStrictBarnacleSpawning) return
 
         val entity = event.entity
 
