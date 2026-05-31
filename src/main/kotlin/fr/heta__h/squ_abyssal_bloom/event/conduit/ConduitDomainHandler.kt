@@ -31,6 +31,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
+import net.neoforged.neoforge.event.level.BlockDropsEvent
 import net.neoforged.neoforge.event.level.BlockEvent
 import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.level.LevelEvent
@@ -116,19 +117,6 @@ object ConduitDomainHandler {
     fun onBlockPlace(event: BlockEvent.EntityPlaceEvent) {
         val level = event.level as? Level ?: return
         if (event.placedBlock.block == Blocks.CONDUIT) getConduits(level).add(event.pos)
-    }
-
-    @SubscribeEvent
-    fun onBlockBreak(event: BlockEvent.BreakEvent) {
-        val level = event.level as? Level ?: return
-        if (event.state.block == Blocks.CONDUIT) {
-            getConduits(level).remove(event.pos)
-            playerAttachment.values.removeIf { it is ConduitTarget.Block && it.pos == event.pos }
-
-            if (level is ServerLevel) {
-                deactivateAstralBlocks(level, event.pos)
-            }
-        }
     }
 
     @SubscribeEvent

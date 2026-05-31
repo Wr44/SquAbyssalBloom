@@ -3,7 +3,6 @@ package fr.heta__h.squ_abyssal_bloom.network.nautilus_chest
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusMouseHelper
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
-import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerScreenAccessor
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.inventory.NautilusInventoryScreen
 import net.minecraft.network.RegistryFriendlyByteBuf
@@ -42,7 +41,7 @@ data class SyncNautilusExtraSlotPayload(val entityId: Int, val stack: ItemStack)
             val hasChestNow = stack.`is`(Items.CHEST)
 
             if (hadChest != hasChestNow) {
-                val oldTopPos = (screen as? AbstractContainerScreenAccessor)?.getTopPos() ?: 0
+                val oldTopPos = screen?.getTopPos() ?: 0
                 NautilusMouseHelper.save(mc.mouseHandler, oldTopPos)
             }
 

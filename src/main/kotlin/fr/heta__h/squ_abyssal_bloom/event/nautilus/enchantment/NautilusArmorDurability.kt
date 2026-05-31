@@ -15,7 +15,7 @@ object NautilusArmorDurability {
         val nautilus = event.entity as? AbstractNautilus ?: return
         if (nautilus.level().isClientSide) return
 
-        val damage = event.newDamage
+        val damage = event.healthDamage
         if (damage <= 0) return
 
         val bodyStack = nautilus.getItemBySlot(EquipmentSlot.BODY)
