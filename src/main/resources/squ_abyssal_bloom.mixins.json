@@ -28,8 +28,6 @@
 
     "entity.nautilus.NautilusScreenMixin",
 
-    "enable.AbstractContainerScreenAccessor",
-
     "render.LivingEntityRenderStateMixin",
     "render.LivingEntityRendererMixin",
     "render.LevelRendererSkyMixin"

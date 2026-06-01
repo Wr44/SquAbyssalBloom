@@ -36,6 +36,11 @@ object ModAttachments {
             .build()
     }
 
+    // NAUTILUS SPIKE RECOIL
+    val NAUTILUS_RECOIL = ATTACHMENTS.register("nautilus_recoil") { ->
+        AttachmentType.builder { -> Vec3.ZERO }.build()
+    }
+
     fun register(bus: IEventBus) {
         ATTACHMENTS.register(bus)
     }

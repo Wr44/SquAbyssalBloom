@@ -1,8 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.mixin.enable.AbstractContainerScreenAccessor
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.inventory.AbstractMountInventoryScreen
 import net.minecraft.client.gui.screens.inventory.NautilusInventoryScreen
 import net.minecraft.client.renderer.RenderPipelines
@@ -15,16 +14,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 @Mixin(AbstractMountInventoryScreen::class)
 abstract class NautilusScreenMixin {
 
-    @Inject(method = ["renderBg"], at = [At("RETURN")])
+    @Inject(method = ["extractBackground"], at = [At("RETURN")])
     private fun drawExtraSlotBackground(
-        guiGraphics: GuiGraphics,
-        partialTick: Float,
+        guiGraphics: GuiGraphicsExtractor,
         mouseX: Int,
         mouseY: Int,
+        partialTick: Float,
         ci: CallbackInfo
     ) {
         val nautilusScreen = (this as Any) as? NautilusInventoryScreen ?: return
-        val accessor = nautilusScreen as AbstractContainerScreenAccessor
+        val accessor = nautilusScreen
 
         val renderX = accessor.getLeftPos() + 7
         val renderY = accessor.getTopPos() + 53

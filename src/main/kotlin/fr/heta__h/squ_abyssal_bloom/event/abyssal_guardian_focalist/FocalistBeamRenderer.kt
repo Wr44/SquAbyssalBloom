@@ -24,7 +24,7 @@ import kotlin.math.atan2
 @EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object FocalistBeamRenderer {
 
-    private val BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/guardian_beam.png")
+    private val BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/guardian/guardian_beam.png")
 
     private val playersShootingLastFrame = mutableSetOf<Int>()
 
@@ -33,7 +33,7 @@ object FocalistBeamRenderer {
     }
 
     @SubscribeEvent
-    fun onRenderLevel(event: RenderLevelStageEvent.AfterEntities) {
+    fun onRenderLevel(event: RenderLevelStageEvent.AfterOpaqueFeatures) {
         val mc = Minecraft.getInstance()
         val level = mc.level ?: return
 
@@ -104,7 +104,7 @@ object FocalistBeamRenderer {
             val f26 = f25 + f * 2.5f
 
             val bufferSource = mc.renderBuffers().bufferSource()
-            val consumer = bufferSource.getBuffer(RenderTypes.entityCutoutNoCull(BEAM_LOCATION))
+            val consumer = bufferSource.getBuffer(RenderTypes.entityCutout(BEAM_LOCATION))
             val pose = poseStack.last()
 
             vertex(consumer, pose, f15, f, f16, i, j, k, 0.4999f, f26)
@@ -122,6 +122,7 @@ object FocalistBeamRenderer {
             vertex(consumer, pose, f9, f, f10, i, j, k, 1.0f, f27 + 0.5f)
             vertex(consumer, pose, f13, f, f14, i, j, k, 1.0f, f27)
             vertex(consumer, pose, f11, f, f12, i, j, k, 0.5f, f27)
+
 
             poseStack.popPose()
 

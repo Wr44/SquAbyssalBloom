@@ -18,6 +18,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent
 import net.neoforged.neoforge.event.entity.player.AttackEntityEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
+import net.neoforged.neoforge.event.tick.ServerTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -107,5 +108,13 @@ object MurkVeil {
     @SubscribeEvent
     fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
         lastAttackTick.remove(event.entity.uuid)
+    }
+
+    @SubscribeEvent
+    fun onServerTick(event: ServerTickEvent.Post) {
+        if (event.server.tickCount % 6000 == 0) {
+            val now = event.server.overworld().gameTime
+            lastAttackTick.entries.removeIf { (_, tick) -> now - tick > 50L }
+        }
     }
 }

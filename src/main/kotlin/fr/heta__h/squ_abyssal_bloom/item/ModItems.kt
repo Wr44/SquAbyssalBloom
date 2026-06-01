@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
+import fr.heta__h.squ_abyssal_bloom.item.bubble_spitter.BubbleSpitterItem
 import fr.heta__h.squ_abyssal_bloom.item.respiration_bubble.RespirationBubbleItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
 import net.minecraft.world.item.Item
@@ -60,18 +61,22 @@ object ModItems {
     val BARBED_NAUTILUS_SCALE: DeferredItem<Item> = ITEMS.registerItem(
         "barbed_nautilus_scale"
     ) { properties -> Item(properties
-        .durability(200)
+        .durability(325)
         .enchantable(10)
         .repairable(PRISMARINE_SPIKE.get())
     ) }
 
     val BUBBLE_SPITTER = ITEMS.registerItem(
         "bubble_spitter"
-    ) { properties -> Item(properties
-        .durability(250)
-        .enchantable(10)
-        .repairable(BRINE_BUBBLES.get())
-    ) }
+    ) { properties ->
+        BubbleSpitterItem(
+            properties
+                .durability(375)
+                .enchantable(10)
+                .repairable(BRINE_BUBBLES.get())
+        )
+    }
+
 
     val MOBILE_CONDUIT = ITEMS.registerItem(
         "mobile_conduit"
@@ -83,7 +88,7 @@ object ModItems {
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
     ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
-        .durability(155)
+        .durability(215)
         .enchantable(15)
         .repairable(PRISMARINE_SPIKE.get())
     ) }

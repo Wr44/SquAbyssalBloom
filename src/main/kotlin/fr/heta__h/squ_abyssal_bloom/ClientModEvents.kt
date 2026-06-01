@@ -1,12 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.client
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
-import net.minecraft.client.renderer.ItemBlockRenderTypes
-import net.minecraft.client.renderer.chunk.ChunkSectionLayer
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -30,9 +27,6 @@ object ClientModEvents {
             }
         )
 
-        event.enqueueWork {
-            ItemBlockRenderTypes.setRenderLayer(ModBlocks.SPROUTING_SEAGRASS.get(), ChunkSectionLayer.CUTOUT)
-        }
     }
 
     @SubscribeEvent

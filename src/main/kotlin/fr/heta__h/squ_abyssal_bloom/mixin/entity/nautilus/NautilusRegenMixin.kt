@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 @Mixin(AbstractNautilus::class)
 abstract class NautilusRegenMixin {
 
-    val REGEN_INTERVAL = 200
+    val REGEN_INTERVAL = 600
     val REGEN_HEAL = 1f
 
     @Unique
@@ -20,7 +20,7 @@ abstract class NautilusRegenMixin {
     private fun onTick(ci: CallbackInfo) {
         val nautilus = this as AbstractNautilus
         if (nautilus.level().isClientSide) return
-        if (!nautilus.isAlive) return
+        if (!nautilus.isAlive || !nautilus.isTame) return
         if (nautilus.health >= nautilus.maxHealth) return
 
         regenTimer++

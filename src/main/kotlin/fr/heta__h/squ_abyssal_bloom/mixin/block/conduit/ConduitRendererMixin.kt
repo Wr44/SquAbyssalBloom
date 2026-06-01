@@ -12,6 +12,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 abstract class ConduitRendererMixin {
     @Inject(method = ["<init>"], at = [At("TAIL")])
     private fun captureMaterials(context: BlockEntityRendererProvider.Context, ci: CallbackInfo) {
-        ConduitMaterialHolder.materials = context.materials()
+        ConduitMaterialHolder.materials = context.sprites
     }
 }

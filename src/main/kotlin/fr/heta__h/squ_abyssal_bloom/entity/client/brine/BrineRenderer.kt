@@ -7,7 +7,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.MobRenderer
-import net.minecraft.client.renderer.state.CameraRenderState
+import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.resources.Identifier
 
 class BrineRenderer(context: EntityRendererProvider.Context) :
@@ -31,7 +31,7 @@ class BrineRenderer(context: EntityRendererProvider.Context) :
         cameraRenderState: CameraRenderState
     ) {
         poseStack.pushPose()
-        poseStack.scale(1.4f, 1.4f, 1.4f)
+        poseStack.scale(1f, 1f, 1f)
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
         poseStack.popPose()
     }

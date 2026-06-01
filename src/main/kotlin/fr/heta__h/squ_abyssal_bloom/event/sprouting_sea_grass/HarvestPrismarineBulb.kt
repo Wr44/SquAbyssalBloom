@@ -6,7 +6,9 @@ import fr.heta__h.squ_abyssal_bloom.block.sprouting_sea_grass.SproutingSeagrassB
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.world.InteractionHand
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
 import net.minecraft.world.level.block.Block
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -21,6 +23,10 @@ object HarvestPrismarineBulb {
         val pos = event.pos
         val state = level.getBlockState(pos)
         val player = event.entity
+        val heldItem = player.getItemInHand(event.hand)
+
+        if (heldItem.`is`(Items.BONE_MEAL)) return
+        if (event.hand == InteractionHand.OFF_HAND) return
 
         if (state.`is`(ModBlocks.SPROUTING_SEAGRASS.get()) && state.getValue(SproutingSeagrassBlock.HAS_BULB)) {
 

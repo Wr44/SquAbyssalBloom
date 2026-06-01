@@ -8,11 +8,15 @@ import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
+import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
+import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.neoforged.fml.loading.FMLPaths
+import net.neoforged.neoforge.client.network.ClientPacketDistributor
 import java.io.File
 
 object ModConfig {
@@ -24,9 +28,7 @@ object ModConfig {
     var abyssDepthStart: Double = 30.0
     var abyssMaxDepth: Double = 80.0
     var maxMarinSnowParticles: Int = 75
-    var strictBarnacleSpawning: Boolean = true
     var fogDarknessIntensity: Double = 1.0
-    var shaderCompatModeOverride: Boolean = false
     var nautilusLampInfluence: Double = 0.5
     var marineSnowDensity: Double = 0.5
     var marineSnowVisibilityRange: Int = 20
@@ -43,6 +45,13 @@ object ModConfig {
     var conduitBoundaryRingPoints: Int = 24
     var conduitBoundaryParticleInterval: Int = 3
     var conduitBoundaryParticlesEnabled: Boolean = true
+    var enableSurfaceOccluder: Boolean = true
+    var surfaceOccluderAlphaMin: Double = 0.05
+    var surfaceOccluderAlphaMax: Double = 0.70
+    var surfaceOccluderNumLayers: Int = 5
+    var surfaceOccluderFadeSpeed: Double = 2.5
+    var surfaceOccluderLodBandWidth: Int = 64
+    var surfaceOccluderTargetDepth: Double = 0.5
 
     fun loadConfig() {
         if (!configFile.exists()) { saveConfig(); return }
@@ -52,9 +61,7 @@ object ModConfig {
             abyssDepthStart = json.get("abyssDepthStart")?.asDouble ?: 30.0
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
             maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
-            strictBarnacleSpawning = json.get("strictBarnacleSpawning")?.asBoolean ?: true
             fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
-            shaderCompatModeOverride = json.get("shaderCompatModeOverride")?.asBoolean ?: false
             nautilusLampInfluence = json.get("nautilusLampInfluence")?.asDouble ?: 0.5
             marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 0.5
             marineSnowVisibilityRange = json.get("marineSnowVisibilityRange")?.asInt ?: 20
@@ -71,6 +78,13 @@ object ModConfig {
             conduitBoundaryRingPoints = json.get("conduitBoundaryRingPoints")?.asInt ?: 24
             conduitBoundaryParticleInterval = json.get("conduitBoundaryParticleInterval")?.asInt ?: 3
             conduitBoundaryParticlesEnabled = json.get("conduitBoundaryParticlesEnabled")?.asBoolean ?: true
+            enableSurfaceOccluder = json.get("enableSurfaceOccluder")?.asBoolean ?: true
+            surfaceOccluderAlphaMin = json.get("surfaceOccluderAlphaMin")?.asDouble ?: 0.05
+            surfaceOccluderAlphaMax = json.get("surfaceOccluderAlphaMax")?.asDouble ?: 0.70
+            surfaceOccluderNumLayers = json.get("surfaceOccluderNumLayers")?.asInt ?: 5
+            surfaceOccluderFadeSpeed = json.get("surfaceOccluderFadeSpeed")?.asDouble ?: 2.5
+            surfaceOccluderLodBandWidth = json.get("surfaceOccluderLodBandWidth")?.asInt ?: 64
+            surfaceOccluderTargetDepth = json.get("surfaceOccluderTargetDepth")?.asDouble ?: 0.5
         } catch (e: Exception) {
             println("Erreur config : ${e.message}")
         }
@@ -83,9 +97,7 @@ object ModConfig {
                 addProperty("abyssDepthStart", abyssDepthStart)
                 addProperty("abyssMaxDepth", abyssMaxDepth)
                 addProperty("maxMarinSnowParticles", maxMarinSnowParticles)
-                addProperty("strictBarnacleSpawning", strictBarnacleSpawning)
                 addProperty("fogDarknessIntensity", fogDarknessIntensity)
-                addProperty("shaderCompatModeOverride", shaderCompatModeOverride)
                 addProperty("nautilusLampInfluence", nautilusLampInfluence)
                 addProperty("marineSnowDensity", marineSnowDensity)
                 addProperty("marineSnowVisibilityRange", marineSnowVisibilityRange)
@@ -102,6 +114,13 @@ object ModConfig {
                 addProperty("conduitBoundaryRingPoints", conduitBoundaryRingPoints)
                 addProperty("conduitBoundaryParticleInterval", conduitBoundaryParticleInterval)
                 addProperty("conduitBoundaryParticlesEnabled", conduitBoundaryParticlesEnabled)
+                addProperty("enableSurfaceOccluder", enableSurfaceOccluder)
+                addProperty("surfaceOccluderAlphaMin", surfaceOccluderAlphaMin)
+                addProperty("surfaceOccluderAlphaMax", surfaceOccluderAlphaMax)
+                addProperty("surfaceOccluderNumLayers", surfaceOccluderNumLayers)
+                addProperty("surfaceOccluderFadeSpeed", surfaceOccluderFadeSpeed)
+                addProperty("surfaceOccluderLodBandWidth", surfaceOccluderLodBandWidth)
+                addProperty("surfaceOccluderTargetDepth", surfaceOccluderTargetDepth)
             }
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))
@@ -111,9 +130,32 @@ object ModConfig {
     }
 
     fun createConfigScreen(parent: Screen): Screen {
+        if (ServerConfigCache.isSingleplayer()) {
+            ServerConfigCache.update(ServerConfigData(
+                strictBarnacleSpawning = ModServerConfig.STRICT_BARNACLE_SPAWNING.get(),
+            ))
+        }
+
+        val initialServerConfig = ServerConfigData(
+            strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
+        )
+
         return YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
-            .save(this::saveConfig)
+            .save {
+                saveConfig()
+                if (ServerConfigCache.isSingleplayer()) {
+                    ModServerConfig.STRICT_BARNACLE_SPAWNING.set(ServerConfigCache.strictBarnacleSpawning)
+                    ModServerConfig.SPEC.save()
+                } else {
+                    val currentServerConfig = ServerConfigData(
+                        strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
+                    )
+                    if (currentServerConfig != initialServerConfig) {
+                        ClientPacketDistributor.sendToServer(C2SServerConfigPacket(currentServerConfig))
+                    }
+                }
+            }
 
             .category(ConfigCategory.createBuilder()
                 .name(Component.translatable("config.squ_abyssal_bloom.visual"))
@@ -126,16 +168,19 @@ object ModConfig {
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.enableAbyssFog"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableAbyssFog.tooltip")))
                         .binding(Binding.generic(true, { enableAbyssFog }, { enableAbyssFog = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart.tooltip")))
                         .binding(Binding.generic(30.0, { abyssDepthStart }, { abyssDepthStart = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth.tooltip")))
                         .binding(Binding.generic(80.0, { abyssMaxDepth }, { abyssMaxDepth = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(10.0, 200.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
                         .build())
@@ -147,15 +192,9 @@ object ModConfig {
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention.tooltip")))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention.desc")))
                         .binding(Binding.generic(0.15, { abyssColorRetention }, { abyssColorRetention = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
-                        .build())
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.shaderCompatModeOverride"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shaderCompatModeOverride.tooltip")))
-                        .binding(Binding.generic(false, { shaderCompatModeOverride }, { shaderCompatModeOverride = it }))
-                        .controller(TickBoxControllerBuilder::create)
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.nautilusLampInfluence"))
@@ -165,37 +204,44 @@ object ModConfig {
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier.tooltip")))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier.desc")))
                         .binding(Binding.generic(12.0, { lampNearPlaneMultiplier }, { lampNearPlaneMultiplier = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 50.0).step(1.0) }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier.tooltip")))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier.desc")))
                         .binding(Binding.generic(60.0, { lampFarPlaneMultiplier }, { lampFarPlaneMultiplier = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0) }
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.enableDepthVignette"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableDepthVignette.desc")))
                         .binding(Binding.generic(true, { enableDepthVignette }, { enableDepthVignette = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity.desc")))
                         .binding(Binding.generic(1.0, { vignetteIntensity }, { vignetteIntensity = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.lightDimmingStrength"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lightDimmingStrength.desc")))
                         .binding(Binding.generic(0.7, { lightDimmingStrength }, { lightDimmingStrength = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
                         .build())
                     .build())
 
                 .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("config.squ_abyssal_bloom.group.particles").withStyle(ChatFormatting.GOLD))
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.marine_snow").withStyle(ChatFormatting.GOLD))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.marine_snow.desc"))
+                        .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.maxMarinSnowParticles"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.maxMarinSnowParticles.tooltip")))
                         .binding(Binding.generic(100, { maxMarinSnowParticles }, { maxMarinSnowParticles = it }))
                         .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(0, 500).step(10).formatValue { v -> Component.literal("$v part.") } }
                         .build())
@@ -213,40 +259,99 @@ object ModConfig {
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.marineSnowSwayAmplitude"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowSwayAmplitude.desc")))
                         .binding(Binding.generic(1.0, { marineSnowSwayAmplitude }, { marineSnowSwayAmplitude = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.marineSnowSpawnHeightAbove"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowSpawnHeightAbove.desc")))
                         .binding(Binding.generic(2.0, { marineSnowSpawnHeightAbove }, { marineSnowSpawnHeightAbove = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 20.0).step(0.5) }
                         .build())
                     .build())
 
                 .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.surface_occluder").withStyle(ChatFormatting.DARK_BLUE))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.surface_occluder.desc"))
+                        .build())
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.enableSurfaceOccluder"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableSurfaceOccluder.desc")))
+                        .binding(Binding.generic(true, { enableSurfaceOccluder }, { enableSurfaceOccluder = it }))
+                        .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin.desc")))
+                        .binding(Binding.generic(0.05, { surfaceOccluderAlphaMin }, { surfaceOccluderAlphaMin = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 0.5).step(0.01) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax.desc")))
+                        .binding(Binding.generic(0.70, { surfaceOccluderAlphaMax }, { surfaceOccluderAlphaMax = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 1.0).step(0.01) }
+                        .build())
+                    .option(Option.createBuilder<Int>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers.desc")))
+                        .binding(Binding.generic(5, { surfaceOccluderNumLayers }, { surfaceOccluderNumLayers = it }))
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 10).step(1) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderFadeSpeed"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderFadeSpeed.desc")))
+                        .binding(Binding.generic(2.5, { surfaceOccluderFadeSpeed }, { surfaceOccluderFadeSpeed = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 10.0).step(0.5) }
+                        .build())
+                    .option(Option.createBuilder<Int>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderLodBandWidth"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderLodBandWidth.desc")))
+                        .binding(Binding.generic(64, { surfaceOccluderLodBandWidth }, { surfaceOccluderLodBandWidth = it }))
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(16, 256).step(16) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderTargetDepth"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderTargetDepth.desc")))
+                        .binding(Binding.generic(0.5, { surfaceOccluderTargetDepth }, { surfaceOccluderTargetDepth = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05).formatValue { v -> Component.literal(String.format("%.0f%%", v * 100)) } }
+                        .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
                     .name(Component.translatable("config.squ_abyssal_bloom.group.conduit").withStyle(ChatFormatting.DARK_AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.conduit.desc"))
+                        .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled.desc")))
                         .binding(Binding.generic(true, { conduitBoundaryParticlesEnabled }, { conduitBoundaryParticlesEnabled = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryTriggerDistance"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryTriggerDistance.desc")))
                         .binding(Binding.generic(5.0, { conduitBoundaryTriggerDistance }, { conduitBoundaryTriggerDistance = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(1.0, 20.0).step(0.5) }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingRadius"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingRadius.desc")))
                         .binding(Binding.generic(2.5, { conduitBoundaryRingRadius }, { conduitBoundaryRingRadius = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 10.0).step(0.5) }
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingPoints"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingPoints.desc")))
                         .binding(Binding.generic(24, { conduitBoundaryRingPoints }, { conduitBoundaryRingPoints = it }))
                         .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(4, 64).step(4) }
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticleInterval"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticleInterval.desc")))
                         .binding(Binding.generic(3, { conduitBoundaryParticleInterval }, { conduitBoundaryParticleInterval = it }))
                         .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 20).step(1) }
                         .build())
@@ -255,7 +360,9 @@ object ModConfig {
                 .build())
 
             .category(ConfigCategory.createBuilder()
-                .name(Component.translatable("config.squ_abyssal_bloom.entity"))
+                .name(Component.translatable("config.squ_abyssal_bloom.server")
+                    .withStyle(ChatFormatting.BOLD, ChatFormatting.GOLD))
+                .tooltip(Component.translatable("config.squ_abyssal_bloom.server.tooltip"))
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("entity.squ_abyssal_bloom.barnacle").withStyle(ChatFormatting.LIGHT_PURPLE))
@@ -273,11 +380,34 @@ object ModConfig {
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.strictBarnacleSpawning"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.strictBarnacleSpawning.tooltip")))
-                        .binding(Binding.generic(true, { strictBarnacleSpawning }, { strictBarnacleSpawning = it }))
+                        .binding(Binding.generic(
+                            true,
+                            { ServerConfigCache.strictBarnacleSpawning },
+                            { ServerConfigCache.strictBarnacleSpawning = it }
+                        ))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
                     .build())
-
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("entity.squ_abyssal_bloom.brine").withStyle(ChatFormatting.LIGHT_PURPLE))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.brine.desc"))
+                        .customImage(EntityConfigRenderer(entityType = ModEntities.BRINE.get()) { entity, tick ->
+                            if (entity is BrineEntity) {
+                                val durationTicks = (BrineAnimation.idle.lengthInSeconds * 20).toInt()
+                                val loopTick = tick % durationTicks
+                                if (loopTick == 0 || !entity.idleAnimationState.isStarted)
+                                    entity.idleAnimationState.start(tick)
+                            }
+                        })
+                        .build())
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.template"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.template")))
+                        .binding(Binding.generic(false, { false }, {}))
+                        .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .build())
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("entity.squ_abyssal_bloom.ghost_chimaera").withStyle(ChatFormatting.LIGHT_PURPLE))
                     .description(OptionDescription.createBuilder()

@@ -1,6 +1,10 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "squ_abyssal_bloom:item/bubble_spitter"
+    "model": "squ_abyssal_bloom:item/bubble_spitter",
+    "tints": [
+      { "type": "minecraft:constant", "value": -1 },
+      { "type": "squ_abyssal_bloom:splatter_tint" }
+    ]
   }
 }

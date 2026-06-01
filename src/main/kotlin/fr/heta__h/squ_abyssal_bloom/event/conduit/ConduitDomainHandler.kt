@@ -31,6 +31,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
+import net.neoforged.neoforge.event.level.BlockDropsEvent
 import net.neoforged.neoforge.event.level.BlockEvent
 import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.level.LevelEvent
@@ -119,19 +120,6 @@ object ConduitDomainHandler {
     }
 
     @SubscribeEvent
-    fun onBlockBreak(event: BlockEvent.BreakEvent) {
-        val level = event.level as? Level ?: return
-        if (event.state.block == Blocks.CONDUIT) {
-            getConduits(level).remove(event.pos)
-            playerAttachment.values.removeIf { it is ConduitTarget.Block && it.pos == event.pos }
-
-            if (level is ServerLevel) {
-                deactivateAstralBlocks(level, event.pos)
-            }
-        }
-    }
-
-    @SubscribeEvent
     fun onChunkLoad(event: ChunkEvent.Load) {
         val level = event.level as? Level ?: return
         event.chunk.blockEntities.keys
@@ -201,7 +189,7 @@ object ConduitDomainHandler {
         val player = event.entity
         if (!player.isUnderWater) return
         val effect = player.getEffect(MobEffects.CONDUIT_POWER) ?: return
-        val multiplier = if (effect.amplifier == 0) 1.5f else 2.25f
+        val multiplier = if (effect.amplifier == 0) 2f else 3f
         event.newSpeed = event.originalSpeed * multiplier
     }
 

@@ -16,7 +16,7 @@ import net.neoforged.neoforge.event.ModifyDefaultComponentsEvent
 object TridentRepairs {
     @SubscribeEvent
     fun onModifyComponents(event: ModifyDefaultComponentsEvent) {
-        event.modify(Items.TRIDENT) { builder ->
+        event.modify(Items.TRIDENT) { builder, _, _ ->
             builder.set(
                 DataComponents.REPAIRABLE,
                 Repairable(

@@ -3,8 +3,10 @@ package fr.heta__h.squ_abyssal_bloom.event.pressure
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
+import fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment.NautilusArmorDurability
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.EntityTypeTags
@@ -20,6 +22,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.tick.EntityTickEvent
+import net.neoforged.neoforge.event.tick.ServerTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -60,7 +63,7 @@ object PressureEffectEvent {
             return
         }
 
-        if (entity.type.`is`(EntityTypeTags.CAN_BREATHE_UNDER_WATER)) return
+        if (BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entity.type).`is`(EntityTypeTags.CAN_BREATHE_UNDER_WATER)) return
 
         val sealLevel = (entity.vehicle as? AbstractNautilus)?.let { nautilus ->
             ModUtilities.getEnchantLevel(nautilus.getItemBySlot(EquipmentSlot.BODY), serverLevel, "pressure_seal")
@@ -136,5 +139,13 @@ object PressureEffectEvent {
     @SubscribeEvent
     fun onEntityDeath(event: LivingDeathEvent) {
         lastDamageTick.remove(event.entity.uuid)
+    }
+
+    @SubscribeEvent
+    fun onServerTick(event: ServerTickEvent.Post) {
+        if (event.server.tickCount % 6000 == 0) {
+            val now = event.server.overworld().gameTime
+            lastDamageTick.entries.removeIf { (_, tick) -> now - tick > 1200L }
+        }
     }
 }
