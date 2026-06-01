@@ -4,13 +4,13 @@
   "weight": 2,
   "max_level": 1,
   "min_cost": {
-    "base": 10,
+    "base": 20,
     "per_level_above_first": 0
   },
   "max_cost": {
-    "base": 25,
+    "base": 50,
     "per_level_above_first": 0
   },
-  "anvil_cost": 2,
+  "anvil_cost": 4,
   "slots": ["body"]
 }
