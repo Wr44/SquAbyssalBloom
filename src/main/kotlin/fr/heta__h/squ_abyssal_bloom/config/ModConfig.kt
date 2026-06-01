@@ -13,6 +13,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import net.minecraft.ChatFormatting
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.neoforged.fml.loading.FMLPaths
@@ -151,7 +152,8 @@ object ModConfig {
                     val currentServerConfig = ServerConfigData(
                         strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
                     )
-                    if (currentServerConfig != initialServerConfig) {
+                    if (currentServerConfig != initialServerConfig
+                        && Minecraft.getInstance().connection != null) {
                         ClientPacketDistributor.sendToServer(C2SServerConfigPacket(currentServerConfig))
                     }
                 }
