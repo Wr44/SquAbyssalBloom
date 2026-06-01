@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.item.bubble_spitter
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterData
 import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterEntry
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.ChatFormatting
 import net.minecraft.core.component.DataComponents
@@ -40,7 +41,7 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         if (newEffects.isEmpty()) {
             slotStack.remove(ModDataComponents.SPLATTER_DATA.get())
             replaceWithBottle(carried, access, player)
-            player.level().playSound(player, player.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.PLAYERS, 0.5f, 1.4f)
+            player.level().playSound(player, player.blockPosition(), ModSounds.CLEAN_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.5f, 1.4f)
             return true
         }
 
@@ -56,7 +57,7 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
 
         slotStack.set(ModDataComponents.SPLATTER_DATA.get(), SplatterData(merged, avgColor))
         replaceWithBottle(carried, access, player)
-        player.level().playSound(player, player.blockPosition(), SoundEvents.BREWING_STAND_BREW, SoundSource.PLAYERS, 0.5f, 1.2f)
+        player.level().playSound(player, player.blockPosition(), ModSounds.POTION_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.5f, 1.2f)
         return true
     }
 

@@ -35,8 +35,8 @@ object NautilusArmorDurability {
         if (bodyStack.isEmpty || !bodyStack.isDamageableItem) return
 
         val now = nautilus.level().gameTime
-        val last = lastDamageTick.getOrDefault(nautilus.uuid, -5L)
-        if (now - last < 5L) return
+        val last = lastDamageTick.getOrDefault(nautilus.uuid, -10L)
+        if (now - last < 10L) return
 
         lastDamageTick[nautilus.uuid] = now
 

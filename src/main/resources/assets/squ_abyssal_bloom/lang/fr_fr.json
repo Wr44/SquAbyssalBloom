@@ -152,6 +152,8 @@
   "subtitles.squ_abyssal_bloom.respiration_bubble": "Respiration de bulle",
   "subtitles.squ_abyssal_bloom.conduit_entering": "Entrée dans le domaine du Conduit",
   "subtitles.squ_abyssal_bloom.conduit_leaving": "Sortie du domaine du Conduit",
+  "subtitles.squ_abyssal_bloom.clean_bubble_spitter": "Nettoyage d'un cracheur de bulles",
+  "subtitles.squ_abyssal_bloom.potion_bubble_spitter": "Potion versée dans un cracheur de bulles",
 
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Peut produire des Bulbes de Prismarine"
 }

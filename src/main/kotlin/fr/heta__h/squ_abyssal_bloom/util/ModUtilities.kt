@@ -4,7 +4,6 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
@@ -19,7 +18,6 @@ import net.minecraft.tags.FluidTags
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
-import net.minecraft.world.item.enchantment.EnchantmentHelper
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.levelgen.Heightmap

@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.pressure
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
+import fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment.NautilusArmorDurability
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.registries.BuiltInRegistries
@@ -21,6 +22,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.tick.EntityTickEvent
+import net.neoforged.neoforge.event.tick.ServerTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -137,5 +139,13 @@ object PressureEffectEvent {
     @SubscribeEvent
     fun onEntityDeath(event: LivingDeathEvent) {
         lastDamageTick.remove(event.entity.uuid)
+    }
+
+    @SubscribeEvent
+    fun onServerTick(event: ServerTickEvent.Post) {
+        if (event.server.tickCount % 6000 == 0) {
+            val now = event.server.overworld().gameTime
+            lastDamageTick.entries.removeIf { (_, tick) -> now - tick > 40L }
+        }
     }
 }

@@ -71,6 +71,14 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val CLEAN_BUBBLE_SPITTER = SOUNDS.register("clean_bubble_spitter") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val POTION_BUBBLE_SPITTER = SOUNDS.register("potion_bubble_spitter") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
     // Respiration Bubble
 
     val RESPIRATION_BUBBLE = SOUNDS.register("respiration_bubble") { id ->

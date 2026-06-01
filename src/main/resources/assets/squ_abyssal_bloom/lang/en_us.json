@@ -151,8 +151,10 @@
   "subtitles.squ_abyssal_bloom.bubble_projectile_launch": "Bubble launched",
   "subtitles.squ_abyssal_bloom.pressure_damage": "Pressure damage",
   "subtitles.squ_abyssal_bloom.respiration_bubble": "Bubble respiration",
-  "subtitles.squ_abyssal_bloom.conduit_entering": "Entring Conduit Domain",
-  "subtitles.squ_abyssal_bloom.conduit_leaving": "Leaving Conduit Domain",
+  "subtitles.squ_abyssal_bloom.conduit_entering": "Entring conduit domain",
+  "subtitles.squ_abyssal_bloom.conduit_leaving": "Leaving conduit domain",
+  "subtitles.squ_abyssal_bloom.clean_bubble_spitter": "Cleaning a bubble spitter",
+  "subtitles.squ_abyssal_bloom.potion_bubble_spitter": "Potion poured into a bubble spitter",
 
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Can produce Prismarine Bulbs"
 

@@ -56,6 +56,16 @@
     "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_launch" ]
   },
 
+  "clean_bubble_spitter": {
+    "subtitle": "subtitles.squ_abyssal_bloom.clean_bubble_spitter",
+    "sounds": [ "squ_abyssal_bloom:item/bubble_spitter/clean_bubble_spitter" ]
+  },
+
+  "potion_bubble_spitter": {
+    "subtitle": "subtitles.squ_abyssal_bloom.potion_bubble_spitter",
+    "sounds": [ "squ_abyssal_bloom:item/bubble_spitter/potion_bubble_spitter" ]
+  },
+
 
   "abyssal_guardian_focalist_ready": {
     "subtitle": "subtitles.squ_abyssal_bloom.abyssal_guardian_focalist_ready",
