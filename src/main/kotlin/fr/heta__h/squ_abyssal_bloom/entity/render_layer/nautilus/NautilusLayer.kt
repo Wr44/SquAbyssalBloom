@@ -18,12 +18,14 @@ import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.blockentity.ConduitRenderer
 import net.minecraft.client.renderer.entity.RenderLayerParent
 import net.minecraft.client.renderer.entity.layers.RenderLayer
+import net.minecraft.client.renderer.entity.state.EntityRenderState
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.client.renderer.item.ItemStackRenderState
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.core.component.DataComponents
 import net.minecraft.resources.Identifier
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemDisplayContext
 import net.minecraft.world.item.ItemStack
@@ -108,8 +110,10 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                 if (extraItem.hasFoil()) dummyRenderStack.set(DataComponents.ENCHANTMENT_GLINT_OVERRIDE, true)
 
                 val itemRenderState = ItemStackRenderState()
-
-                val localPlayer = Minecraft.getInstance().player ?: return
+                val localPlayer = Minecraft.getInstance().player
+                    ?: (state as? EntityRenderState)
+                        ?.let { Minecraft.getInstance().level?.getEntity((state as Any).hashCode()) as? LivingEntity }
+                    ?: return
 
                 Minecraft.getInstance().itemModelResolver.updateForNonLiving(itemRenderState, dummyRenderStack, ItemDisplayContext.FIXED, localPlayer)
 

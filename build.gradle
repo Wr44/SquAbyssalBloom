@@ -28,6 +28,10 @@ repositories {
         name = "FabricMC"
         url = "https://maven.fabricmc.net/"
     }
+    maven {
+        name = "TerraBlender"
+        url = "https://maven.blamejared.com"
+    }
     mavenCentral()
 }
 
@@ -103,6 +107,8 @@ dependencies {
     implementation 'thedarkcolour:kotlinforforge-neoforge:6.2.0'
     compileOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
     runtimeOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
+    compileOnly "com.github.glitchfiend:TerraBlender-neoforge:${project.terrablender_version}"
+    runtimeOnly "com.github.glitchfiend:TerraBlender-neoforge:${project.terrablender_version}"
     compileOnly("dev.lambdaurora.lambdynamiclights:lambdynamiclights-api:${project.lamb_dynamic_version}") {
         attributes {
             attribute(mappingsAttribute, "mojmap")
