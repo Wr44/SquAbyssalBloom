@@ -19,6 +19,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.minecraft.world.item.TooltipFlag
 import net.minecraft.world.item.component.TooltipDisplay
+import java.lang.Math.random
 import java.util.function.Consumer
 
 class BubbleSpitterItem(properties: Properties) : Item(properties) {
@@ -41,7 +42,7 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         if (newEffects.isEmpty()) {
             slotStack.remove(ModDataComponents.SPLATTER_DATA.get())
             replaceWithBottle(carried, access, player)
-            player.level().playSound(player, player.blockPosition(), ModSounds.CLEAN_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.5f, 1.4f)
+            player.level().playSound(player, player.blockPosition(), ModSounds.CLEAN_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.5f, 0.8f + 0.4f*random().toFloat())
             return true
         }
 
@@ -57,7 +58,7 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
 
         slotStack.set(ModDataComponents.SPLATTER_DATA.get(), SplatterData(merged, avgColor))
         replaceWithBottle(carried, access, player)
-        player.level().playSound(player, player.blockPosition(), ModSounds.POTION_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.5f, 1.2f)
+        player.level().playSound(player, player.blockPosition(), ModSounds.POTION_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.7f, 0.8f + 0.4f*random().toFloat())
         return true
     }
 

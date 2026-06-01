@@ -8,7 +8,9 @@ import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
+import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.screens.Screen
@@ -27,7 +29,6 @@ object ModConfig {
     var abyssMaxDepth: Double = 80.0
     var maxMarinSnowParticles: Int = 75
     var fogDarknessIntensity: Double = 1.0
-    var shaderCompatModeOverride: Boolean = false
     var nautilusLampInfluence: Double = 0.5
     var marineSnowDensity: Double = 0.5
     var marineSnowVisibilityRange: Int = 20
@@ -61,7 +62,6 @@ object ModConfig {
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
             maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
             fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
-            shaderCompatModeOverride = json.get("shaderCompatModeOverride")?.asBoolean ?: false
             nautilusLampInfluence = json.get("nautilusLampInfluence")?.asDouble ?: 0.5
             marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 0.5
             marineSnowVisibilityRange = json.get("marineSnowVisibilityRange")?.asInt ?: 20
@@ -98,7 +98,6 @@ object ModConfig {
                 addProperty("abyssMaxDepth", abyssMaxDepth)
                 addProperty("maxMarinSnowParticles", maxMarinSnowParticles)
                 addProperty("fogDarknessIntensity", fogDarknessIntensity)
-                addProperty("shaderCompatModeOverride", shaderCompatModeOverride)
                 addProperty("nautilusLampInfluence", nautilusLampInfluence)
                 addProperty("marineSnowDensity", marineSnowDensity)
                 addProperty("marineSnowVisibilityRange", marineSnowVisibilityRange)
@@ -196,12 +195,6 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention.desc")))
                         .binding(Binding.generic(0.15, { abyssColorRetention }, { abyssColorRetention = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
-                        .build())
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.shaderCompatModeOverride"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shaderCompatModeOverride.tooltip")))
-                        .binding(Binding.generic(false, { shaderCompatModeOverride }, { shaderCompatModeOverride = it }))
-                        .controller(TickBoxControllerBuilder::create)
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.nautilusLampInfluence"))
@@ -395,7 +388,26 @@ object ModConfig {
                         .controller(TickBoxControllerBuilder::create)
                         .build())
                     .build())
-
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("entity.squ_abyssal_bloom.brine").withStyle(ChatFormatting.LIGHT_PURPLE))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.brine.desc"))
+                        .customImage(EntityConfigRenderer(entityType = ModEntities.BRINE.get()) { entity, tick ->
+                            if (entity is BrineEntity) {
+                                val durationTicks = (BrineAnimation.idle.lengthInSeconds * 20).toInt()
+                                val loopTick = tick % durationTicks
+                                if (loopTick == 0 || !entity.idleAnimationState.isStarted)
+                                    entity.idleAnimationState.start(tick)
+                            }
+                        })
+                        .build())
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.template"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.template")))
+                        .binding(Binding.generic(false, { false }, {}))
+                        .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .build())
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("entity.squ_abyssal_bloom.ghost_chimaera").withStyle(ChatFormatting.LIGHT_PURPLE))
                     .description(OptionDescription.createBuilder()

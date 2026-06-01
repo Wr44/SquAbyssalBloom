@@ -61,7 +61,7 @@ object ModItems {
     val BARBED_NAUTILUS_SCALE: DeferredItem<Item> = ITEMS.registerItem(
         "barbed_nautilus_scale"
     ) { properties -> Item(properties
-        .durability(200)
+        .durability(325)
         .enchantable(10)
         .repairable(PRISMARINE_SPIKE.get())
     ) }
@@ -71,7 +71,7 @@ object ModItems {
     ) { properties ->
         BubbleSpitterItem(
             properties
-                .durability(250)
+                .durability(375)
                 .enchantable(10)
                 .repairable(BRINE_BUBBLES.get())
         )
@@ -88,7 +88,7 @@ object ModItems {
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(
         "abyssal_guardian_focalist"
     ) { properties -> AbyssalGuardianFocalistItem(properties.rarity(Rarity.RARE)
-        .durability(155)
+        .durability(215)
         .enchantable(15)
         .repairable(PRISMARINE_SPIKE.get())
     ) }
