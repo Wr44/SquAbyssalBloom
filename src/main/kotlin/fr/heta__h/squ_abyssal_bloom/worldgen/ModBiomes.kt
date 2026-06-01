@@ -1,0 +1,27 @@
+package fr.heta__h.squ_abyssal_bloom.worldgen
+
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.worldgen.region.AbyssalRegion
+import net.minecraft.core.registries.Registries
+import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceKey
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
+import terrablender.api.Regions
+
+object ModBiomes {
+    val ABYSSAL_PLAINS = ResourceKey.create(
+        Registries.BIOME,
+        Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "abyssal_plains")
+    )
+
+    fun registerRegions(event: FMLCommonSetupEvent) {
+        event.enqueueWork {
+            Regions.register(
+                AbyssalRegion(
+                    Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "abyssal_region"),
+                    2
+                )
+            )
+        }
+    }
+}
