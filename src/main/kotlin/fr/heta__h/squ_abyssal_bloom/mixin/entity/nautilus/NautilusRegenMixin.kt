@@ -20,7 +20,7 @@ abstract class NautilusRegenMixin {
     private fun onTick(ci: CallbackInfo) {
         val nautilus = this as AbstractNautilus
         if (nautilus.level().isClientSide) return
-        if (!nautilus.isAlive) return
+        if (!nautilus.isAlive || !nautilus.isTame) return
         if (nautilus.health >= nautilus.maxHealth) return
 
         regenTimer++

@@ -84,7 +84,7 @@ object ModEntities {
     val BRINE: DeferredHolder<EntityType<*>, EntityType<BrineEntity>> =
         ENTITY_TYPES.register("brine") { _: Identifier ->
             EntityType.Builder.of({ type, level -> BrineEntity(type, level) }, MobCategory.MONSTER)
-                .sized(1f, 1.8f)
+                .sized(0.7f, 1.4f)
                 .clientTrackingRange(8)
                 .updateInterval(3)
                 .build(BRINE_KEY)

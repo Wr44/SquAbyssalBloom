@@ -33,9 +33,10 @@ data class C2SServerConfigPacket(val data: ServerConfigData) : CustomPacketPaylo
 
                 if (!css.server.playerList.isOp(player.nameAndId())) {
                     player.sendSystemMessage(
-                        Component.translatable("config.squ_abyssal_bloom.server.no_permission").withStyle(ChatFormatting.RED)
+                        Component.translatable("config.squ_abyssal_bloom.server.no_permission")
+                            .withStyle(ChatFormatting.RED)
                     )
-                    PacketDistributor.sendToPlayer(player, S2CServerConfigPacket(ServerConfigData.fromSpec()))
+                    PacketDistributor.sendToPlayer(player, S2CServerConfigPacket(ServerConfigData.fromSpec(), forceClose = true))
                     return@enqueueWork
                 }
 

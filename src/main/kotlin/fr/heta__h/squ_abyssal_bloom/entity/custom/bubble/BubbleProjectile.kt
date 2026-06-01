@@ -147,6 +147,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     var releaseTick: Int = -1
     var player: Player? = null
 
+    private var cachedEffectColor: Int = 0
+
     var splatterEntries: List<SplatterEntry> = emptyList()
     private var isChildBubble = false
 
@@ -549,7 +551,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             -vel.z * TRAIL_PARTICLE_VELOCITY_DAMPEN,
         )
 
-        val col = effectColor
+        val col = cachedEffectColor
         if (col != 0 && random.nextFloat() < 0.35f) {
             level().addParticle(
                 ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, col),
@@ -692,6 +694,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
         super.onSyncedDataUpdated(key)
         if (key == BUBBLE_STAGE) refreshDimensions()
+        if (key == EFFECT_COLOR) cachedEffectColor = entityData.get(EFFECT_COLOR)
     }
 
     override fun remove(reason: RemovalReason) {

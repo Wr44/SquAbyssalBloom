@@ -31,7 +31,7 @@ class BrineRenderer(context: EntityRendererProvider.Context) :
         cameraRenderState: CameraRenderState
     ) {
         poseStack.pushPose()
-        poseStack.scale(1.4f, 1.4f, 1.4f)
+        poseStack.scale(1f, 1f, 1f)
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
         poseStack.popPose()
     }
