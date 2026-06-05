@@ -480,7 +480,8 @@ object ConduitDomainHandler {
         )
 
         allPositions.forEach { checkPos ->
-            val state = level.getBlockState(checkPos)
+            val chunk = level.getChunk(checkPos)
+            val state = chunk.getBlockState(checkPos)
             if (state.`is`(ModBlocks.ASTRAL_PRISMARINE) &&
                 state.getValue(AstralPrismarineBlock.ACTIVE)) {
                 level.setBlock(checkPos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)

@@ -1,14 +1,14 @@
 {
   "temperature": 0.5,
   "downfall": 0.5,
-  "has_precipitation": false,
+  "has_precipitation": true,
   "effects": {
-    "sky_color": 0,
-    "fog_color": 329011,
-    "water_color": 332585,
-    "water_fog_color": 67085,
+    "sky_color": 8103167,
+    "fog_color": 12638463,
+    "water_color": 4159204,
+    "water_fog_color": 329011,
     "mood_sound": {
-      "sound": "minecraft:ambient.cave",
+      "sound": "minecraft:ambient.underwater.loop",
       "tick_delay": 6000,
       "block_search_extent": 8,
       "offset": 2.0

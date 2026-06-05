@@ -47,13 +47,14 @@ object SquAbyssalBloom {
         ModParticles.register(MOD_BUS)
         ModDataComponents.register(MOD_BUS)
 
+        MOD_BUS.addListener(ModBiomes::registerRegions)
+
         LOADING_CONTEXT.activeContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, ModServerConfig.SPEC)
 
         runForDist(
             clientTarget = { },
             serverTarget = {
                 MOD_BUS.addListener(::onServerSetup)
-                MOD_BUS.addListener(ModBiomes::registerRegions)
             }
         )
     }

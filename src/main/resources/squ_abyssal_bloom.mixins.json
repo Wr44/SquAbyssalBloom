@@ -21,7 +21,10 @@
     "enable.AbstractContainerMenuAccessor",
     "enable.AbstractNautilusAccessor",
     "enable.LivingEntityFluidAccessor",
-    "enable.ConduitBlockEntityAccessor"
+    "enable.ConduitBlockEntityAccessor",
+
+    "worldgen.AbyssalNoiseChunkMixin",
+    "worldgen.AbyssalCarverFillMixin"
   ],
   "client": [
     "block.conduit.ConduitRendererMixin",

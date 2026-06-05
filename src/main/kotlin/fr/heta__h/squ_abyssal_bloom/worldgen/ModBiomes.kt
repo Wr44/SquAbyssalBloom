@@ -9,6 +9,11 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import terrablender.api.Regions
 
 object ModBiomes {
+    val ABYSSAL_OCEAN = ResourceKey.create(
+        Registries.BIOME,
+        Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "abyssal_ocean")
+    )
+
     val ABYSSAL_PLAINS = ResourceKey.create(
         Registries.BIOME,
         Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "abyssal_plains")
@@ -16,12 +21,14 @@ object ModBiomes {
 
     fun registerRegions(event: FMLCommonSetupEvent) {
         event.enqueueWork {
+            SquAbyssalBloom.LOGGER.info("Registering AbyssalRegion...")
             Regions.register(
                 AbyssalRegion(
                     Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "abyssal_region"),
-                    2
+                    10
                 )
             )
+            SquAbyssalBloom.LOGGER.info("AbyssalRegion registered!")
         }
     }
 }
