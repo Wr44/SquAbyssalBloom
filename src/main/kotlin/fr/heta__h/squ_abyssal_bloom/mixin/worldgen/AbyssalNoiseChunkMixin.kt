@@ -26,9 +26,11 @@ private const val MUSHROOM_TRANSITION = 0.05
 
 private const val CONTINENTAL_FULL = -0.92
 
-private const val SHALLOW_FLOOR_Y = 40
-private const val DEEP_FLOOR_TARGET = 15
-private const val TARGET_FLOOR_Y = -55
+private const val TERRAIN_LEAD = 0.04
+
+private const val SHALLOW_FLOOR_Y = 35
+private const val DEEP_FLOOR_TARGET = 10
+private const val TARGET_FLOOR_Y = -50
 
 private const val TOPO_LARGE_SCALE = 0.003
 private const val TOPO_SCALE = 0.010
@@ -37,36 +39,37 @@ private const val WALL_SCALE = 0.050
 private const val DETAIL_SCALE = 0.120
 private const val MICRO_SCALE = 0.280
 
-private const val DEEP_WALL_AMP = 10.0
-private const val DEEP_DETAIL_AMP = 5.0
-private const val DEEP_MICRO_AMP = 3.0
-private const val DEEP_WEIRDNESS_AMP = 8.0
+private const val DEEP_WALL_AMP = 8.0
+private const val DEEP_DETAIL_AMP = 4.0
+private const val DEEP_MICRO_AMP = 2.0
+private const val DEEP_WEIRDNESS_AMP = 6.0
 
-private const val TOPO_LARGE_AMP = 65.0
-private const val TOPO_AMP = 30.0
-private const val TOPO_MID_AMP = 15.0
-private const val WALL_AMP = 20.0
-private const val DETAIL_AMP = 9.0
+private const val TOPO_LARGE_AMP = 42.0
+private const val TOPO_AMP = 20.0
+private const val TOPO_MID_AMP = 11.0
+private const val WALL_AMP = 14.0
+private const val DETAIL_AMP = 7.0
 private const val MICRO_AMP = 4.0
-private const val WEIRDNESS_AMP = 22.0
+private const val WEIRDNESS_AMP = 11.0
 
 @Mixin(NoiseChunk::class)
 abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
-    @Unique private var sab_floorGrid: IntArray? = null
-    @Unique private var sab_minX: Int = 0
-    @Unique private var sab_minZ: Int = 0
+    @Unique private var floorGrid: IntArray? = null
+    @Unique private var minX: Int = 0
+    @Unique private var minZ: Int = 0
+    @Unique private var cachedSeaLevel: Int = 63
 
     @Shadow abstract fun blockX(): Int
     @Shadow abstract fun blockY(): Int
     @Shadow abstract fun blockZ(): Int
 
-    override fun abyssalBloom_getFloorGrid(): IntArray? = sab_floorGrid
-    override fun abyssalBloom_setFloorGrid(grid: IntArray?) { sab_floorGrid = grid }
-    override fun abyssalBloom_getChunkMinX(): Int = sab_minX
-    override fun abyssalBloom_setChunkMinX(x: Int) { sab_minX = x }
-    override fun abyssalBloom_getChunkMinZ(): Int = sab_minZ
-    override fun abyssalBloom_setChunkMinZ(z: Int) { sab_minZ = z }
+    override fun abyssalBloom_getFloorGrid(): IntArray? = floorGrid
+    override fun abyssalBloom_setFloorGrid(grid: IntArray?) { floorGrid = grid }
+    override fun abyssalBloom_getChunkMinX(): Int = minX
+    override fun abyssalBloom_setChunkMinX(x: Int) { minX = x }
+    override fun abyssalBloom_getChunkMinZ(): Int = minZ
+    override fun abyssalBloom_setChunkMinZ(z: Int) { minZ = z }
 
     @Inject(
         method = ["<init>(ILnet/minecraft/world/level/levelgen/RandomState;IILnet/minecraft/world/level/levelgen/NoiseSettings;Lnet/minecraft/world/level/levelgen/DensityFunctions\$BeardifierOrMarker;Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/world/level/levelgen/Aquifer\$FluidPicker;Lnet/minecraft/world/level/levelgen/blending/Blender;)V"],
@@ -84,11 +87,15 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         blender: Blender,
         ci: CallbackInfo
     ) {
-        sab_minX = chunkMinBlockX
-        sab_minZ = chunkMinBlockZ
+        minX = chunkMinBlockX
+        minZ = chunkMinBlockZ
+        cachedSeaLevel = settings.seaLevel()
 
-        val continentalEdge = ServerConfigCache.effectiveShallowDeep
-        val deepAbyssalEdge = ServerConfigCache.effectiveDeepAbyssal
+        val configShallowDeep = ServerConfigCache.effectiveShallowDeep.toDouble()
+        val configDeepAbyssal = ServerConfigCache.effectiveDeepAbyssal.toDouble()
+
+        val terrainDeepStart = configShallowDeep + TERRAIN_LEAD
+        val terrainAbyssalStart = configDeepAbyssal + TERRAIN_LEAD
 
         val continentsDf = randomState.router().continents()
         val erosionDf = randomState.router().erosion()
@@ -108,7 +115,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
                 val cont = continentsDf.compute(ctx)
 
-                if (cont > continentalEdge) continue
+                if (cont > terrainDeepStart) continue
                 if (cont < MUSHROOM_MIN) continue
 
                 val wallVal = wallNoise.getValue(worldX * WALL_SCALE, 0.0, worldZ * WALL_SCALE)
@@ -116,13 +123,13 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 val microVal = detailNoise.getValue(worldX * MICRO_SCALE, 0.0, worldZ * MICRO_SCALE)
                 val erosion = erosionDf.compute(ctx)
                 val ridges = ridgesDf.compute(ctx)
-                val erosionFactor = (1.0 - erosion * 0.55).coerceIn(0.3, 1.7)
+                val erosionFactor = (1.0 - erosion * 0.50).coerceIn(0.32, 1.55)
 
                 val floorY: Int
 
-                if (cont > deepAbyssalEdge) {
-                    val rawT = ((cont - continentalEdge) / (deepAbyssalEdge - continentalEdge)).coerceIn(0.0, 1.0)
-                    val deepT = rawT * rawT * (3.0 - 2.0 * rawT)
+                if (cont > terrainAbyssalStart) {
+                    val rawT = ((cont - terrainDeepStart) / (terrainAbyssalStart - terrainDeepStart)).coerceIn(0.0, 1.0)
+                    val deepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
 
                     val base = SHALLOW_FLOOR_Y + deepT * (DEEP_FLOOR_TARGET - SHALLOW_FLOOR_Y)
 
@@ -133,22 +140,22 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                             + ridges * DEEP_WEIRDNESS_AMP * deepT
                             ).toInt().coerceAtLeast(hardLimit)
                 } else {
-                    val rawT = ((cont - deepAbyssalEdge) / (CONTINENTAL_FULL - deepAbyssalEdge)).coerceIn(0.0, 1.0)
-                    val smoothT = rawT * rawT * (3.0 - 2.0 * rawT)
+                    val rawT = ((cont - terrainAbyssalStart) / (CONTINENTAL_FULL - terrainAbyssalStart)).coerceIn(0.0, 1.0)
+                    val steepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
 
                     val mushroomProxT = ((cont - MUSHROOM_MIN) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
-                    val effectiveSmoothT = smoothT * mushroomProxT
+                    val effectiveSteepT = steepT * mushroomProxT
 
-                    val base = DEEP_FLOOR_TARGET + effectiveSmoothT * (TARGET_FLOOR_Y - DEEP_FLOOR_TARGET)
+                    val base = DEEP_FLOOR_TARGET + effectiveSteepT * (TARGET_FLOOR_Y - DEEP_FLOOR_TARGET)
 
                     val topoLarge = topoNoise.getValue(worldX * TOPO_LARGE_SCALE, 0.0, worldZ * TOPO_LARGE_SCALE)
                     val topo = topoNoise.getValue(worldX * TOPO_SCALE, 0.0, worldZ * TOPO_SCALE)
                     val topoMid = topoNoise.getValue(worldX * TOPO_MID_SCALE, 0.0, worldZ * TOPO_MID_SCALE)
 
-                    val topoVar = (topoLarge * TOPO_LARGE_AMP + topo * TOPO_AMP + topoMid * TOPO_MID_AMP) * effectiveSmoothT * erosionFactor
-                    val wallVar = wallVal * WALL_AMP * effectiveSmoothT * erosionFactor
-                    val detailVar = (detailVal * DETAIL_AMP + microVal * MICRO_AMP) * effectiveSmoothT
-                    val weirdnessVar = ridges * WEIRDNESS_AMP * effectiveSmoothT
+                    val topoVar = (topoLarge * TOPO_LARGE_AMP + topo * TOPO_AMP + topoMid * TOPO_MID_AMP) * effectiveSteepT * erosionFactor
+                    val wallVar = wallVal * WALL_AMP * effectiveSteepT * erosionFactor
+                    val detailVar = (detailVal * DETAIL_AMP + microVal * MICRO_AMP) * effectiveSteepT
+                    val weirdnessVar = ridges * WEIRDNESS_AMP * effectiveSteepT
 
                     floorY = (base + topoVar + wallVar + detailVar + weirdnessVar).toInt().coerceAtLeast(hardLimit)
                 }
@@ -158,7 +165,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
             }
         }
 
-        sab_floorGrid = if (anyModified) grid else null
+        floorGrid = if (anyModified) grid else null
     }
 
     @Inject(
@@ -167,15 +174,17 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         cancellable = true
     )
     private fun onGetInterpolatedState(cir: CallbackInfoReturnable<BlockState?>) {
-        val grid = sab_floorGrid ?: return
-        val localX = blockX() - sab_minX
-        val localZ = blockZ() - sab_minZ
+        val grid = floorGrid ?: return
+        if (blockY() >= cachedSeaLevel) return
+        val localX = blockX() - minX
+        val localZ = blockZ() - minZ
         if (localX < 0 || localX > 15 || localZ < 0 || localZ > 15) return
         val floorY = grid[localX + localZ * 16]
         if (floorY == Int.MIN_VALUE) return
+        if (blockY() <= floorY) return
+
         val current = cir.returnValue
-        if ((current == null || current.blocksMotion()) && blockY() > floorY) {
-            cir.returnValue = Blocks.WATER.defaultBlockState()
-        }
+        if (current != null && current.`is`(Blocks.WATER)) return
+        cir.returnValue = Blocks.WATER.defaultBlockState()
     }
 }

@@ -39,7 +39,7 @@ object OceanBiomeRegistry {
             if (OceanBiomeClassifier.isInTag(registry, key, ModTags.Biomes.IS_ABYSSAL)) continue
 
             val zone = OceanBiomeClassifier.classifyByContinentalness(key) ?: continue
-            addEntry(OceanBiomeClassifier.createEntry(zone, key))
+            registerEntry(registry, OceanBiomeClassifier.createEntry(zone, key))
         }
 
         seedVanillaDefaults(registry)
@@ -82,6 +82,36 @@ object OceanBiomeRegistry {
         return OceanBiomeClassifier.createEntry(zone, key)
     }
 
+    private val oceanTags = listOf(
+        ModTags.Biomes.IS_ABYSSAL,
+        BiomeTags.IS_DEEP_OCEAN,
+        ModTags.Biomes.IS_DEEP_OCEAN,
+        BiomeTags.IS_OCEAN
+    )
+
+    private fun registerEntry(registry: Registry<Biome>, entry: OceanBiomeEntry?) {
+        if (entry == null) return
+        addEntry(entry)
+        captureHolder(registry, entry.key)
+    }
+
+    private fun captureHolder(registry: Registry<Biome>, key: ResourceKey<Biome>) {
+        if (holderByKey.containsKey(key)) return
+
+        for (tag in oceanTags) {
+            for (holder in registry.getTagOrEmpty(tag)) {
+                if (holder.unwrapKey().orElse(null) == key) {
+                    holderByKey[key] = holder
+                    return
+                }
+            }
+        }
+
+        if (registry.containsKey(key)) {
+            holderByKey[key] = registry.getOrThrow(key)
+        }
+    }
+
     private fun addEntry(entry: OceanBiomeEntry?) {
         if (entry == null) return
 
@@ -118,18 +148,18 @@ object OceanBiomeRegistry {
     private fun seedVanillaDefaults(registry: Registry<Biome>) {
         AbyssalOceanBiomes.SHALLOW_OCEANS.forEachIndexed { band, key ->
             if (shallowPools[band].isEmpty() && registry.containsKey(key)) {
-                addEntry(OceanBiomeClassifier.createEntry(OceanZone.SHALLOW, key))
+                registerEntry(registry, OceanBiomeClassifier.createEntry(OceanZone.SHALLOW, key))
             }
         }
 
         AbyssalOceanBiomes.DEEP_OCEANS.forEachIndexed { band, key ->
             if (deepPools[band].isEmpty() && registry.containsKey(key)) {
-                addEntry(OceanBiomeClassifier.createEntry(OceanZone.DEEP, key))
+                registerEntry(registry, OceanBiomeClassifier.createEntry(OceanZone.DEEP, key))
             }
         }
 
         if (abyssalEntries.isEmpty() && registry.containsKey(AbyssalOceanBiomes.ABYSSAL_OCEAN)) {
-            addEntry(OceanBiomeClassifier.createEntry(OceanZone.ABYSSAL, AbyssalOceanBiomes.ABYSSAL_OCEAN))
+            registerEntry(registry, OceanBiomeClassifier.createEntry(OceanZone.ABYSSAL, AbyssalOceanBiomes.ABYSSAL_OCEAN))
         }
     }
 }

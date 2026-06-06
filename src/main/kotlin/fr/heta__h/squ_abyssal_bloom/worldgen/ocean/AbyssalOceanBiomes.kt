@@ -65,7 +65,7 @@ object AbyssalOceanBiomes {
         val shallowDeep = shallowDeep()
 
         return when {
-            cont <= deepAbyssal -> if (depth >= 1.0f) null else OceanZone.ABYSSAL
+            cont <= deepAbyssal -> OceanZone.ABYSSAL
             cont <= shallowDeep -> if (depth >= 0.8f) null else OceanZone.DEEP
             else -> if (depth >= 0.8f) null else OceanZone.SHALLOW
         }

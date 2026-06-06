@@ -29,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 @EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object PressureEffectEvent {
 
-    private const val PRESSURE_BASE_THRESHOLD = 35
+    private const val PRESSURE_BASE_THRESHOLD = 45
     private const val PRESSURE_TIER_DEPTH = 15
     private const val PRESSURE_SEAL_BONUS = 15
     private const val PRESSURE_DURATION = 400
