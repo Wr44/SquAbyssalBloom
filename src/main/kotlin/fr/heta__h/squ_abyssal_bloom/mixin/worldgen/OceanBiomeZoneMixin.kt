@@ -1,7 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.worldgen.AbyssalOceanBiomes
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.AbyssalOceanBiomes
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanBiomeRegistry
 import net.minecraft.core.Holder
 import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome
@@ -29,9 +30,7 @@ abstract class OceanBiomeZoneMixin {
 
     @Unique
     private fun resolveBiome(key: ResourceKey<Biome>): Holder<Biome>? {
-        if (key == AbyssalOceanBiomes.ABYSSAL_OCEAN) {
-            AbyssalOceanBiomes.abyssalOceanHolder()?.let { return it }
-        }
+        OceanBiomeRegistry.getHolder(key)?.let { return it }
 
         val cache = biomeCache ?: buildMap {
             collectPossibleBiomes().forEach { holder ->
@@ -64,9 +63,8 @@ abstract class OceanBiomeZoneMixin {
 
         val actualTarget = sampler.sample(quartX, quartY, quartZ)
         val depth = Climate.unquantizeCoord(actualTarget.depth())
-        val temperature = Climate.unquantizeCoord(actualTarget.temperature())
 
-        val biomeKey = AbyssalOceanBiomes.resolveOceanBiomeKey(cont, depth, temperature) ?: return
+        val biomeKey = AbyssalOceanBiomes.resolveOceanBiomeKey(cont, depth, actualTarget) ?: return
 
         val holder = resolveBiome(biomeKey) ?: return
         cir.returnValue = holder

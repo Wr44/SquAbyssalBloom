@@ -1,7 +1,7 @@
-package fr.heta__h.squ_abyssal_bloom.worldgen
+package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
 
 import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
-import net.minecraft.core.Holder
+import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome
 import net.minecraft.world.level.biome.Biomes
@@ -37,15 +37,6 @@ object AbyssalOceanBiomes {
         Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.WARM_OCEAN
     )
 
-    @Volatile
-    private var abyssalOceanHolder: Holder<Biome>? = null
-
-    fun registerAbyssalOceanHolder(holder: Holder<Biome>) {
-        abyssalOceanHolder = holder
-    }
-
-    fun abyssalOceanHolder(): Holder<Biome>? = abyssalOceanHolder
-
     fun shallowDeep(): Float = ServerConfigCache.effectiveShallowDeep
 
     fun deepAbyssal(): Float = ServerConfigCache.effectiveDeepAbyssal
@@ -67,25 +58,21 @@ object AbyssalOceanBiomes {
         else -> 4
     }
 
-    fun resolveOceanBiomeKey(cont: Float, depth: Float, temperature: Float): ResourceKey<Biome>? {
+    fun resolveOceanZone(cont: Float, depth: Float): OceanZone? {
         if (cont > OCEAN_MAX_CONT || cont < OCEAN_MIN_CONT) return null
 
         val deepAbyssal = deepAbyssal()
         val shallowDeep = shallowDeep()
 
         return when {
-            cont <= deepAbyssal -> {
-                if (depth >= 1.0f) null
-                else ABYSSAL_OCEAN
-            }
-            cont <= shallowDeep -> {
-                if (depth >= 0.8f) null
-                else DEEP_OCEANS[temperatureIndex(temperature)]
-            }
-            else -> {
-                if (depth >= 0.8f) null
-                else SHALLOW_OCEANS[temperatureIndex(temperature)]
-            }
+            cont <= deepAbyssal -> if (depth >= 1.0f) null else OceanZone.ABYSSAL
+            cont <= shallowDeep -> if (depth >= 0.8f) null else OceanZone.DEEP
+            else -> if (depth >= 0.8f) null else OceanZone.SHALLOW
         }
+    }
+
+    fun resolveOceanBiomeKey(cont: Float, depth: Float, target: Climate.TargetPoint): ResourceKey<Biome>? {
+        val zone = resolveOceanZone(cont, depth) ?: return null
+        return OceanBiomeRegistry.pickBiome(zone, target)
     }
 }

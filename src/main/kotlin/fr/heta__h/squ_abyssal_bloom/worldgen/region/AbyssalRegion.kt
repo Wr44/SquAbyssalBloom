@@ -1,7 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.region
 
 import com.mojang.datafixers.util.Pair
-import fr.heta__h.squ_abyssal_bloom.worldgen.AbyssalOceanBiomes
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.AbyssalOceanBiomes
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanBiomeRegistry
 import net.minecraft.core.Registry
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
@@ -17,9 +18,7 @@ class AbyssalRegion(location: Identifier, weight: Int) : Region(location, Region
         registry: Registry<Biome>,
         mapper: Consumer<Pair<Climate.ParameterPoint, ResourceKey<Biome>>>
     ) {
-        if (registry.containsKey(AbyssalOceanBiomes.ABYSSAL_OCEAN)) {
-            AbyssalOceanBiomes.registerAbyssalOceanHolder(registry.getOrThrow(AbyssalOceanBiomes.ABYSSAL_OCEAN))
-        }
+        OceanBiomeRegistry.bootstrap(registry)
 
         val abyssalCont = AbyssalOceanBiomes.abyssalContinentalness()
         val deepCont = AbyssalOceanBiomes.deepContinentalness()
@@ -27,24 +26,34 @@ class AbyssalRegion(location: Identifier, weight: Int) : Region(location, Region
 
         listOf(AbyssalOceanBiomes.SURFACE_DEPTH, AbyssalOceanBiomes.FLOOR_DEPTH).forEach { targetDepth ->
 
-            addBiome(mapper,
-                AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                abyssalCont,
-                AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                targetDepth, 0.0f, AbyssalOceanBiomes.ABYSSAL_OCEAN)
+            OceanBiomeRegistry.abyssalEntries().forEach { entry ->
+                addBiome(
+                    mapper,
+                    AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
+                    abyssalCont,
+                    AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
+                    targetDepth, 0.0f, entry.key
+                )
+            }
 
-            AbyssalOceanBiomes.TEMPERATURES.forEachIndexed { i, temp ->
-                addBiome(mapper,
-                    temp, AbyssalOceanBiomes.FULL_RANGE,
+            OceanBiomeRegistry.deepEntries().forEach { entry ->
+                addBiome(
+                    mapper,
+                    AbyssalOceanBiomes.TEMPERATURES[entry.tempBand], AbyssalOceanBiomes.FULL_RANGE,
                     deepCont,
                     AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                    targetDepth, 0.0f, AbyssalOceanBiomes.DEEP_OCEANS[i])
+                    targetDepth, 0.0f, entry.key
+                )
+            }
 
-                addBiome(mapper,
-                    temp, AbyssalOceanBiomes.FULL_RANGE,
+            OceanBiomeRegistry.shallowEntries().forEach { entry ->
+                addBiome(
+                    mapper,
+                    AbyssalOceanBiomes.TEMPERATURES[entry.tempBand], AbyssalOceanBiomes.FULL_RANGE,
                     shallowCont,
                     AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                    targetDepth, 0.0f, AbyssalOceanBiomes.SHALLOW_OCEANS[i])
+                    targetDepth, 0.0f, entry.key
+                )
             }
         }
 

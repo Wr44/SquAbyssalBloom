@@ -12,5 +12,10 @@ object ModTags {
             Registries.BIOME,
             Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "is_abyssal")
         )
+
+        val IS_DEEP_OCEAN: TagKey<Biome> = TagKey.create(
+            Registries.BIOME,
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "is_deep_ocean")
+        )
     }
 }
