@@ -134,12 +134,17 @@ object ModConfig {
         if (ServerConfigCache.isSingleplayer()) {
             ServerConfigCache.update(ServerConfigData(
                 strictBarnacleSpawning = ModServerConfig.STRICT_BARNACLE_SPAWNING.get(),
+                shallowDeepBoundary = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get().toFloat(),
+                deepAbyssalBoundary = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get().toFloat(),
             ))
         }
 
         val initialServerConfig = ServerConfigData(
             strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
+            shallowDeepBoundary = ServerConfigCache.shallowDeepBoundary,
+            deepAbyssalBoundary = ServerConfigCache.deepAbyssalBoundary,
         )
+
 
         return YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
@@ -147,10 +152,14 @@ object ModConfig {
                 saveConfig()
                 if (ServerConfigCache.isSingleplayer()) {
                     ModServerConfig.STRICT_BARNACLE_SPAWNING.set(ServerConfigCache.strictBarnacleSpawning)
+                    ModServerConfig.SHALLOW_DEEP_BOUNDARY.set(ServerConfigCache.shallowDeepBoundary.toDouble())
+                    ModServerConfig.DEEP_ABYSSAL_BOUNDARY.set(ServerConfigCache.deepAbyssalBoundary.toDouble())
                     ModServerConfig.SPEC.save()
                 } else {
                     val currentServerConfig = ServerConfigData(
                         strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
+                        shallowDeepBoundary = ServerConfigCache.shallowDeepBoundary,
+                        deepAbyssalBoundary = ServerConfigCache.deepAbyssalBoundary,
                     )
                     if (currentServerConfig != initialServerConfig
                         && Minecraft.getInstance().connection != null) {
@@ -365,6 +374,43 @@ object ModConfig {
                 .name(Component.translatable("config.squ_abyssal_bloom.server")
                     .withStyle(ChatFormatting.BOLD, ChatFormatting.GOLD))
                 .tooltip(Component.translatable("config.squ_abyssal_bloom.server.tooltip"))
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones").withStyle(ChatFormatting.DARK_AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones.desc"))
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary.desc")))
+                        .binding(Binding.generic(
+                            -0.477,
+                            { ServerConfigCache.shallowDeepBoundary.toDouble() },
+                            { ServerConfigCache.shallowDeepBoundary = it.toFloat() }
+                        ))
+                        .controller { opt ->
+                            DoubleSliderControllerBuilder.create(opt)
+                                .range(-0.95, -0.21)
+                                .step(0.001)
+                                .formatValue { v -> Component.literal(String.format("%.3f", v)) }
+                        }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary.desc")))
+                        .binding(Binding.generic(
+                            -0.763,
+                            { ServerConfigCache.deepAbyssalBoundary.toDouble() },
+                            { ServerConfigCache.deepAbyssalBoundary = it.toFloat() }
+                        ))
+                        .controller { opt ->
+                            DoubleSliderControllerBuilder.create(opt)
+                                .range(-1.049, -0.30)
+                                .step(0.001)
+                                .formatValue { v -> Component.literal(String.format("%.3f", v)) }
+                        }
+                        .build())
+                    .build())
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("entity.squ_abyssal_bloom.barnacle").withStyle(ChatFormatting.LIGHT_PURPLE))

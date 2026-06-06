@@ -1,12 +1,12 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
-import fr.heta__h.squ_abyssal_bloom.tags.ModTags
+import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
 import net.minecraft.core.BlockPos
-import net.minecraft.core.QuartPos
 import net.minecraft.world.level.StructureManager
 import net.minecraft.world.level.biome.BiomeManager
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.chunk.ChunkAccess
+import net.minecraft.world.level.levelgen.DensityFunction
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator
 import net.minecraft.world.level.levelgen.RandomState
 import net.minecraft.server.level.WorldGenRegion
@@ -22,7 +22,7 @@ abstract class AbyssalCarverFillMixin {
     @Shadow abstract fun getSeaLevel(): Int
 
     @Inject(
-        method = ["applyCarvers"],
+        method = ["applyCarvers(Lnet/minecraft/server/level/WorldGenRegion;JLnet/minecraft/world/level/levelgen/RandomState;Lnet/minecraft/world/level/biome/BiomeManager;Lnet/minecraft/world/level/StructureManager;Lnet/minecraft/world/level/chunk/ChunkAccess;)V"],
         at = [At("RETURN")]
     )
     private fun onApplyCarversReturn(
@@ -38,15 +38,17 @@ abstract class AbyssalCarverFillMixin {
         val chunkPos = chunk.pos
         val water = Blocks.WATER.defaultBlockState()
         val mutable = BlockPos.MutableBlockPos()
+        val shallowDeep = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get().toFloat()
 
         for (localX in 0..15) {
             for (localZ in 0..15) {
-                val quartX = QuartPos.fromBlock(chunkPos.minBlockX + localX)
-                val quartZ = QuartPos.fromBlock(chunkPos.minBlockZ + localZ)
-                if (!chunk.getNoiseBiome(quartX, 10, quartZ).`is`(ModTags.Biomes.IS_ABYSSAL)) continue
-
                 val worldX = chunkPos.minBlockX + localX
                 val worldZ = chunkPos.minBlockZ + localZ
+                val cont = randomState.router().continents()
+                    .compute(DensityFunction.SinglePointContext(worldX, 64, worldZ))
+                    .toFloat()
+
+                if (cont > shallowDeep || cont < -1.05f) continue
 
                 for (y in chunk.minY until seaLevel) {
                     mutable.set(worldX, y, worldZ)

@@ -24,7 +24,8 @@
     "enable.ConduitBlockEntityAccessor",
 
     "worldgen.AbyssalNoiseChunkMixin",
-    "worldgen.AbyssalCarverFillMixin"
+    "worldgen.AbyssalCarverFillMixin",
+    "worldgen.OceanBiomeZoneMixin"
   ],
   "client": [
     "block.conduit.ConduitRendererMixin",
