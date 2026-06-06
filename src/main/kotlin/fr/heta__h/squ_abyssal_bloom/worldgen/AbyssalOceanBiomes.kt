@@ -1,12 +1,16 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen
 
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache // Import du cache
+import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
+import net.minecraft.core.Holder
 import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome
 import net.minecraft.world.level.biome.Biomes
 import net.minecraft.world.level.biome.Climate
 
 object AbyssalOceanBiomes {
+
+    const val OCEAN_MAX_CONT: Float = -0.19f
+    const val OCEAN_MIN_CONT: Float = -1.05f
 
     val ABYSSAL_OCEAN: ResourceKey<Biome> = ModBiomes.ABYSSAL_OCEAN
 
@@ -33,6 +37,55 @@ object AbyssalOceanBiomes {
         Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.WARM_OCEAN
     )
 
-    fun shallowDeep() = ServerConfigCache.effectiveShallowDeep
-    fun deepAbyssal() = ServerConfigCache.effectiveDeepAbyssal
+    @Volatile
+    private var abyssalOceanHolder: Holder<Biome>? = null
+
+    fun registerAbyssalOceanHolder(holder: Holder<Biome>) {
+        abyssalOceanHolder = holder
+    }
+
+    fun abyssalOceanHolder(): Holder<Biome>? = abyssalOceanHolder
+
+    fun shallowDeep(): Float = ServerConfigCache.effectiveShallowDeep
+
+    fun deepAbyssal(): Float = ServerConfigCache.effectiveDeepAbyssal
+
+    fun abyssalContinentalness(): Climate.Parameter =
+        Climate.Parameter.span(OCEAN_MIN_CONT, deepAbyssal())
+
+    fun deepContinentalness(): Climate.Parameter =
+        Climate.Parameter.span(deepAbyssal(), shallowDeep())
+
+    fun shallowContinentalness(): Climate.Parameter =
+        Climate.Parameter.span(shallowDeep(), OCEAN_MAX_CONT)
+
+    fun temperatureIndex(temp: Float): Int = when {
+        temp < -0.45f -> 0
+        temp < -0.15f -> 1
+        temp < 0.2f -> 2
+        temp < 0.55f -> 3
+        else -> 4
+    }
+
+    fun resolveOceanBiomeKey(cont: Float, depth: Float, temperature: Float): ResourceKey<Biome>? {
+        if (cont > OCEAN_MAX_CONT || cont < OCEAN_MIN_CONT) return null
+
+        val deepAbyssal = deepAbyssal()
+        val shallowDeep = shallowDeep()
+
+        return when {
+            cont <= deepAbyssal -> {
+                if (depth >= 1.0f) null
+                else ABYSSAL_OCEAN
+            }
+            cont <= shallowDeep -> {
+                if (depth >= 0.8f) null
+                else DEEP_OCEANS[temperatureIndex(temperature)]
+            }
+            else -> {
+                if (depth >= 0.8f) null
+                else SHALLOW_OCEANS[temperatureIndex(temperature)]
+            }
+        }
+    }
 }

@@ -17,12 +17,13 @@ class AbyssalRegion(location: Identifier, weight: Int) : Region(location, Region
         registry: Registry<Biome>,
         mapper: Consumer<Pair<Climate.ParameterPoint, ResourceKey<Biome>>>
     ) {
-        val shallowDeep = AbyssalOceanBiomes.shallowDeep()
-        val deepAbyssal = AbyssalOceanBiomes.deepAbyssal()
+        if (registry.containsKey(AbyssalOceanBiomes.ABYSSAL_OCEAN)) {
+            AbyssalOceanBiomes.registerAbyssalOceanHolder(registry.getOrThrow(AbyssalOceanBiomes.ABYSSAL_OCEAN))
+        }
 
-        val abyssalCont = Climate.Parameter.span(-1.05f, deepAbyssal)
-        val deepCont    = Climate.Parameter.span(deepAbyssal, shallowDeep)
-        val shallowCont = Climate.Parameter.span(shallowDeep, -0.19f)
+        val abyssalCont = AbyssalOceanBiomes.abyssalContinentalness()
+        val deepCont = AbyssalOceanBiomes.deepContinentalness()
+        val shallowCont = AbyssalOceanBiomes.shallowContinentalness()
 
         listOf(AbyssalOceanBiomes.SURFACE_DEPTH, AbyssalOceanBiomes.FLOOR_DEPTH).forEach { targetDepth ->
 

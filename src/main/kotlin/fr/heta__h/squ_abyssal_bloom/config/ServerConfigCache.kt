@@ -15,6 +15,10 @@ object ServerConfigCache {
         deepAbyssalBoundary = data.deepAbyssalBoundary
     }
 
+    fun syncFromSpec() {
+        update(ServerConfigData.fromSpec())
+    }
+
     fun isSingleplayer(): Boolean {
         return if (FMLEnvironment.getDist() == Dist.CLIENT) {
             Minecraft.getInstance().isLocalServer

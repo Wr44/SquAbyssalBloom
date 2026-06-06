@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
-import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.StructureManager
 import net.minecraft.world.level.biome.BiomeManager
@@ -38,7 +38,7 @@ abstract class AbyssalCarverFillMixin {
         val chunkPos = chunk.pos
         val water = Blocks.WATER.defaultBlockState()
         val mutable = BlockPos.MutableBlockPos()
-        val shallowDeep = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get().toFloat()
+        val shallowDeep = ServerConfigCache.effectiveShallowDeep
 
         for (localX in 0..15) {
             for (localZ in 0..15) {

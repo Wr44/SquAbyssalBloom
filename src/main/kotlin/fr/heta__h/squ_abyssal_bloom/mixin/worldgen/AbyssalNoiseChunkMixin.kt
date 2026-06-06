@@ -1,6 +1,5 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
-import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.util.accessor.IAbyssalNoiseChunk
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModNoises

@@ -11,6 +11,7 @@ import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.ModLoadingContext
@@ -18,6 +19,7 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
+import net.neoforged.fml.event.config.ModConfigEvent
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
@@ -60,7 +62,22 @@ object SquAbyssalBloom {
     }
 
     private fun onServerSetup(event: FMLDedicatedServerSetupEvent) {
+        ServerConfigCache.syncFromSpec()
         LOGGER.info("Server starting...")
+    }
+
+    @SubscribeEvent
+    fun onServerConfigLoad(event: ModConfigEvent.Loading) {
+        if (event.config.spec === ModServerConfig.SPEC) {
+            ServerConfigCache.syncFromSpec()
+        }
+    }
+
+    @SubscribeEvent
+    fun onServerConfigReload(event: ModConfigEvent.Reloading) {
+        if (event.config.spec === ModServerConfig.SPEC) {
+            ServerConfigCache.syncFromSpec()
+        }
     }
 
     @SubscribeEvent
