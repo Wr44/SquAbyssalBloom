@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
 import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.util.accessor.IAbyssalNoiseChunk
+import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssalChunkDataCache
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModNoises
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
@@ -25,12 +26,14 @@ private const val MUSHROOM_MIN = -1.05
 private const val MUSHROOM_TRANSITION = 0.05
 
 private const val CONTINENTAL_FULL = -0.92
+private const val TERRAIN_LEAD = 0.02
 
-private const val TERRAIN_LEAD = 0.04
+private const val SHALLOW_FLOOR_Y = 40
+private const val DEEP_FLOOR_TARGET = 25
+private const val TARGET_FLOOR_Y = -40
 
-private const val SHALLOW_FLOOR_Y = 35
-private const val DEEP_FLOOR_TARGET = 10
-private const val TARGET_FLOOR_Y = -50
+private const val GRID_STEP = 4
+private const val GRID_SIZE = 5
 
 private const val TOPO_LARGE_SCALE = 0.003
 private const val TOPO_SCALE = 0.010
@@ -52,7 +55,7 @@ private const val DETAIL_AMP = 7.0
 private const val MICRO_AMP = 4.0
 private const val WEIRDNESS_AMP = 11.0
 
-@Mixin(NoiseChunk::class)
+@Mixin(value = [NoiseChunk::class], priority = 1500)
 abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
     @Unique private var floorGrid: IntArray? = null
@@ -87,50 +90,48 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         blender: Blender,
         ci: CallbackInfo
     ) {
+        val continentsDf = randomState.router().continents()
+        if (continentsDf.minValue() == 0.0 && continentsDf.maxValue() == 0.0) return
+
         minX = chunkMinBlockX
         minZ = chunkMinBlockZ
         cachedSeaLevel = settings.seaLevel()
 
         val configShallowDeep = ServerConfigCache.effectiveShallowDeep.toDouble()
         val configDeepAbyssal = ServerConfigCache.effectiveDeepAbyssal.toDouble()
-
         val terrainDeepStart = configShallowDeep + TERRAIN_LEAD
         val terrainAbyssalStart = configDeepAbyssal + TERRAIN_LEAD
 
-        val continentsDf = randomState.router().continents()
         val erosionDf = randomState.router().erosion()
         val ridgesDf = randomState.router().ridges()
         val topoNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_TOPO)
         val wallNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_WALL)
         val detailNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_DETAIL)
         val hardLimit = noiseSettings.minY() + 5
-        val grid = IntArray(256) { Int.MIN_VALUE }
-        var anyModified = false
 
-        for (localX in 0..15) {
-            for (localZ in 0..15) {
-                val worldX = chunkMinBlockX + localX
-                val worldZ = chunkMinBlockZ + localZ
+        val controlFloor = IntArray(GRID_SIZE * GRID_SIZE) { SHALLOW_FLOOR_Y }
+
+        for (gx in 0 until GRID_SIZE) {
+            for (gz in 0 until GRID_SIZE) {
+                val worldX = chunkMinBlockX + gx * GRID_STEP
+                val worldZ = chunkMinBlockZ + gz * GRID_STEP
                 val ctx = DensityFunction.SinglePointContext(worldX, 0, worldZ)
-
                 val cont = continentsDf.compute(ctx)
 
-                if (cont > terrainDeepStart) continue
-                if (cont < MUSHROOM_MIN) continue
+                if (cont > terrainDeepStart || cont < MUSHROOM_MIN) continue
 
-                val wallVal = wallNoise.getValue(worldX * WALL_SCALE, 0.0, worldZ * WALL_SCALE)
-                val detailVal = detailNoise.getValue(worldX * DETAIL_SCALE, 0.0, worldZ * DETAIL_SCALE)
-                val microVal = detailNoise.getValue(worldX * MICRO_SCALE, 0.0, worldZ * MICRO_SCALE)
                 val erosion = erosionDf.compute(ctx)
                 val ridges = ridgesDf.compute(ctx)
                 val erosionFactor = (1.0 - erosion * 0.50).coerceIn(0.32, 1.55)
+                val wallVal = wallNoise.getValue(worldX * WALL_SCALE, 0.0, worldZ * WALL_SCALE)
+                val detailVal = detailNoise.getValue(worldX * DETAIL_SCALE, 0.0, worldZ * DETAIL_SCALE)
+                val microVal = detailNoise.getValue(worldX * MICRO_SCALE, 0.0, worldZ * MICRO_SCALE)
 
                 val floorY: Int
 
                 if (cont > terrainAbyssalStart) {
                     val rawT = ((cont - terrainDeepStart) / (terrainAbyssalStart - terrainDeepStart)).coerceIn(0.0, 1.0)
                     val deepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
-
                     val base = SHALLOW_FLOOR_Y + deepT * (DEEP_FLOOR_TARGET - SHALLOW_FLOOR_Y)
 
                     floorY = (base
@@ -142,10 +143,8 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 } else {
                     val rawT = ((cont - terrainAbyssalStart) / (CONTINENTAL_FULL - terrainAbyssalStart)).coerceIn(0.0, 1.0)
                     val steepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
-
                     val mushroomProxT = ((cont - MUSHROOM_MIN) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
                     val effectiveSteepT = steepT * mushroomProxT
-
                     val base = DEEP_FLOOR_TARGET + effectiveSteepT * (TARGET_FLOOR_Y - DEEP_FLOOR_TARGET)
 
                     val topoLarge = topoNoise.getValue(worldX * TOPO_LARGE_SCALE, 0.0, worldZ * TOPO_LARGE_SCALE)
@@ -160,12 +159,41 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                     floorY = (base + topoVar + wallVar + detailVar + weirdnessVar).toInt().coerceAtLeast(hardLimit)
                 }
 
-                grid[localX + localZ * 16] = floorY
-                anyModified = true
+                controlFloor[gx + gz * GRID_SIZE] = floorY
             }
         }
 
-        floorGrid = if (anyModified) grid else null
+        val grid = IntArray(256) { Int.MIN_VALUE }
+        val abyssalMask = BooleanArray(256)
+        var anyModified = false
+
+        for (localX in 0..15) {
+            for (localZ in 0..15) {
+                val gx = localX / GRID_STEP
+                val gz = localZ / GRID_STEP
+                val tx = (localX % GRID_STEP) / GRID_STEP.toDouble()
+                val tz = (localZ % GRID_STEP) / GRID_STEP.toDouble()
+
+                val f00 = controlFloor[gx + gz * GRID_SIZE].toDouble()
+                val f10 = controlFloor[(gx + 1) + gz * GRID_SIZE].toDouble()
+                val f01 = controlFloor[gx + (gz + 1) * GRID_SIZE].toDouble()
+                val f11 = controlFloor[(gx + 1) + (gz + 1) * GRID_SIZE].toDouble()
+
+                val interp = (f00 * (1 - tx) * (1 - tz) + f10 * tx * (1 - tz)
+                        + f01 * (1 - tx) * tz + f11 * tx * tz).toInt()
+
+                if (interp < SHALLOW_FLOOR_Y) {
+                    grid[localX + localZ * 16] = interp
+                    abyssalMask[localX + localZ * 16] = true
+                    anyModified = true
+                }
+            }
+        }
+
+        if (anyModified) {
+            floorGrid = grid
+            AbyssalChunkDataCache.store(chunkMinBlockX shr 4, chunkMinBlockZ shr 4, abyssalMask)
+        }
     }
 
     @Inject(
@@ -178,7 +206,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         if (blockY() >= cachedSeaLevel) return
         val localX = blockX() - minX
         val localZ = blockZ() - minZ
-        if (localX < 0 || localX > 15 || localZ < 0 || localZ > 15) return
+        if (localX !in 0..15 || localZ < 0 || localZ > 15) return
         val floorY = grid[localX + localZ * 16]
         if (floorY == Int.MIN_VALUE) return
         if (blockY() <= floorY) return

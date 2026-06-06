@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 import java.util.stream.Stream
 
-@Mixin(value = [MultiNoiseBiomeSource::class], priority = 500)
+@Mixin(value = [MultiNoiseBiomeSource::class], priority = 1500)
 abstract class OceanBiomeZoneMixin {
 
     @Shadow
