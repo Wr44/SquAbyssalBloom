@@ -1,11 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
 import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
-import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
+import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.worldgen.AbyssalOceanBiomes
 import net.minecraft.core.Holder
 import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome
-import net.minecraft.world.level.biome.Biomes
 import net.minecraft.world.level.biome.Climate
 import net.minecraft.world.level.biome.MultiNoiseBiomeSource
 import org.spongepowered.asm.mixin.Mixin
@@ -23,33 +23,15 @@ abstract class OceanBiomeZoneMixin {
     protected abstract fun collectPossibleBiomes(): Stream<Holder<Biome>>
 
     @Unique @Volatile
-    private var sab_cache: Map<ResourceKey<Biome>, Holder<Biome>>? = null
+    private var biomeCache: Map<ResourceKey<Biome>, Holder<Biome>>? = null
 
     @Unique
-    private fun sab_pickDeepOcean(temp: Float): ResourceKey<Biome> = when {
-        temp < -0.45f -> Biomes.DEEP_FROZEN_OCEAN
-        temp < -0.15f -> Biomes.DEEP_COLD_OCEAN
-        temp < 0.2f   -> Biomes.DEEP_OCEAN
-        temp < 0.55f  -> Biomes.DEEP_LUKEWARM_OCEAN
-        else          -> Biomes.WARM_OCEAN
-    }
-
-    @Unique
-    private fun sab_pickShallowOcean(temp: Float): ResourceKey<Biome> = when {
-        temp < -0.45f -> Biomes.FROZEN_OCEAN
-        temp < -0.15f -> Biomes.COLD_OCEAN
-        temp < 0.2f   -> Biomes.OCEAN
-        temp < 0.55f  -> Biomes.LUKEWARM_OCEAN
-        else          -> Biomes.WARM_OCEAN
-    }
-
-    @Unique
-    private fun sab_resolve(key: ResourceKey<Biome>): Holder<Biome>? {
-        val map = sab_cache ?: buildMap<ResourceKey<Biome>, Holder<Biome>> {
+    private fun resolveBiome(key: ResourceKey<Biome>): Holder<Biome>? {
+        val map = biomeCache ?: buildMap {
             collectPossibleBiomes().forEach { holder ->
                 holder.unwrapKey().ifPresent { put(it, holder) }
             }
-        }.also { sab_cache = it }
+        }.also { biomeCache = it }
         return map[key]
     }
 
@@ -58,31 +40,52 @@ abstract class OceanBiomeZoneMixin {
         at = [At("HEAD")],
         cancellable = true
     )
-    private fun sab_enforceOceanZones(
+    private fun enforceOceanZones(
         quartX: Int,
         quartY: Int,
         quartZ: Int,
         sampler: Climate.Sampler,
         cir: CallbackInfoReturnable<Holder<Biome>>
     ) {
-        val target = sampler.sample(quartX, quartY, quartZ)
-        val cont = Climate.unquantizeCoord(target.continentalness())
+        val terrainTarget = sampler.sample(quartX, 0, quartZ)
+        val cont = Climate.unquantizeCoord(terrainTarget.continentalness())
 
         if (cont > -0.19f || cont < -1.05f) return
 
-        val depth = Climate.unquantizeCoord(target.depth())
-        if (depth in 0.2f..0.9f) return
+        val actualTarget = sampler.sample(quartX, quartY, quartZ)
+        val depth = Climate.unquantizeCoord(actualTarget.depth())
 
-        val shallowDeep = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get().toFloat()
-        val deepAbyssal = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get().toFloat()
-        val temp = Climate.unquantizeCoord(target.temperature())
+        val deepAbyssal = ServerConfigCache.effectiveDeepAbyssal
+        val shallowDeep = ServerConfigCache.effectiveShallowDeep
 
-        val key: ResourceKey<Biome> = when {
-            cont <= deepAbyssal -> ModBiomes.ABYSSAL_OCEAN
-            cont <= shallowDeep -> sab_pickDeepOcean(temp)
-            else                -> sab_pickShallowOcean(temp)
+        val finalKey: ResourceKey<Biome>
+
+        if (cont <= deepAbyssal) {
+            if (depth >= 1.0f) return
+            finalKey = AbyssalOceanBiomes.ABYSSAL_OCEAN
+
+        } else if (cont <= shallowDeep) {
+            if (depth >= 0.8f) return
+            val tempIdx = getTemperatureIndex(Climate.unquantizeCoord(actualTarget.temperature()))
+            finalKey = AbyssalOceanBiomes.DEEP_OCEANS[tempIdx]
+
+        } else {
+            if (depth >= 0.8f) return
+            val tempIdx = getTemperatureIndex(Climate.unquantizeCoord(actualTarget.temperature()))
+            finalKey = AbyssalOceanBiomes.SHALLOW_OCEANS[tempIdx]
         }
 
-        cir.returnValue = sab_resolve(key) ?: return
+        cir.returnValue = resolveBiome(finalKey) ?: return
+    }
+
+    @Unique
+    private fun getTemperatureIndex(temp: Float): Int {
+        return when {
+            temp < -0.45f -> 0
+            temp < -0.15f -> 1
+            temp < 0.2f -> 2
+            temp < 0.55f -> 3
+            else -> 4
+        }
     }
 }

@@ -14,7 +14,7 @@ import net.neoforged.neoforge.event.tick.EntityTickEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 
-@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.DEDICATED_SERVER])
+@EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object SpawnPreventionEvent {
     private val LOGGER: Logger = LogManager.getLogger(SquAbyssalBloom.ID)
 

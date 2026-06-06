@@ -134,8 +134,8 @@ object ModConfig {
         if (ServerConfigCache.isSingleplayer()) {
             ServerConfigCache.update(ServerConfigData(
                 strictBarnacleSpawning = ModServerConfig.STRICT_BARNACLE_SPAWNING.get(),
-                shallowDeepBoundary = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get().toFloat(),
-                deepAbyssalBoundary = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get().toFloat(),
+                shallowDeepBoundary = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get(),
+                deepAbyssalBoundary = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get(),
             ))
         }
 
@@ -152,8 +152,8 @@ object ModConfig {
                 saveConfig()
                 if (ServerConfigCache.isSingleplayer()) {
                     ModServerConfig.STRICT_BARNACLE_SPAWNING.set(ServerConfigCache.strictBarnacleSpawning)
-                    ModServerConfig.SHALLOW_DEEP_BOUNDARY.set(ServerConfigCache.shallowDeepBoundary.toDouble())
-                    ModServerConfig.DEEP_ABYSSAL_BOUNDARY.set(ServerConfigCache.deepAbyssalBoundary.toDouble())
+                    ModServerConfig.SHALLOW_DEEP_BOUNDARY.set(ServerConfigCache.shallowDeepBoundary)
+                    ModServerConfig.DEEP_ABYSSAL_BOUNDARY.set(ServerConfigCache.deepAbyssalBoundary)
                     ModServerConfig.SPEC.save()
                 } else {
                     val currentServerConfig = ServerConfigData(
@@ -385,8 +385,8 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary.desc")))
                         .binding(Binding.generic(
                             -0.477,
-                            { ServerConfigCache.shallowDeepBoundary.toDouble() },
-                            { ServerConfigCache.shallowDeepBoundary = it.toFloat() }
+                            { ServerConfigCache.shallowDeepBoundary },
+                            { ServerConfigCache.shallowDeepBoundary = it }
                         ))
                         .controller { opt ->
                             DoubleSliderControllerBuilder.create(opt)
@@ -400,8 +400,8 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary.desc")))
                         .binding(Binding.generic(
                             -0.763,
-                            { ServerConfigCache.deepAbyssalBoundary.toDouble() },
-                            { ServerConfigCache.deepAbyssalBoundary = it.toFloat() }
+                            { ServerConfigCache.deepAbyssalBoundary },
+                            { ServerConfigCache.deepAbyssalBoundary = it }
                         ))
                         .controller { opt ->
                             DoubleSliderControllerBuilder.create(opt)
