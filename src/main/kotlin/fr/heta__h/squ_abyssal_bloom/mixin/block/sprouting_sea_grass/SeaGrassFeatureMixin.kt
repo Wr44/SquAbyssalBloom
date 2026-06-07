@@ -32,8 +32,7 @@ abstract class SeaGrassFeatureMixin {
             val random = level.random
 
             if (random.nextFloat() < 0.05f) {
-                val customState = ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState()
-                    .setValue(SproutingSeagrassBlock.HAS_BULB, false)
+                val customState = ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState().setValue(SproutingSeagrassBlock.HAS_BULB, false)
 
                 return level.setBlock(pos, customState, flags)
             }
