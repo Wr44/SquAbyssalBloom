@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.client
+package fr.heta__h.squ_abyssal_bloom
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
