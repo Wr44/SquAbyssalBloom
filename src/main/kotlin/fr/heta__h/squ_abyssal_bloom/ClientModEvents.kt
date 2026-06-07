@@ -1,6 +1,5 @@
 package fr.heta__h.squ_abyssal_bloom
 
-import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
