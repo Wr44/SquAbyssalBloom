@@ -188,7 +188,7 @@ object ModUtilities {
         mutPos.set(pos)
         var surfaceY = pos.y
         while (surfaceY < level.maxY) {
-            mutPos.setY(surfaceY + 1)
+            mutPos.y = surfaceY + 1
             if (!level.getFluidState(mutPos).`is`(FluidTags.WATER)) {
                 break
             }

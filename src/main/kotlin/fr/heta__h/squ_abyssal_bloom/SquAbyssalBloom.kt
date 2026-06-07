@@ -17,6 +17,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.ModLoadingContext
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
+import net.neoforged.fml.config.ModConfig
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent
 import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
 import net.neoforged.fml.event.config.ModConfigEvent
@@ -51,7 +52,7 @@ object SquAbyssalBloom {
 
         MOD_BUS.addListener(ModBiomes::registerRegions)
 
-        LOADING_CONTEXT.activeContainer.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, ModServerConfig.SPEC)
+        LOADING_CONTEXT.activeContainer.registerConfig(ModConfig.Type.COMMON, ModServerConfig.SPEC)
 
         runForDist(
             clientTarget = { },

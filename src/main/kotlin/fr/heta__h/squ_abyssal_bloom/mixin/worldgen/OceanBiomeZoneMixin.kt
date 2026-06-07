@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.Unique
 import org.spongepowered.asm.mixin.injection.At
 import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
+import java.util.concurrent.ConcurrentHashMap
 import java.util.stream.Stream
 
 @Mixin(value = [MultiNoiseBiomeSource::class], priority = 900)
@@ -26,7 +27,7 @@ abstract class OceanBiomeZoneMixin {
     private var biomeCache: Map<ResourceKey<Biome>, Holder<Biome>>? = null
 
     @Unique
-    private val warnedMissingKeys = mutableSetOf<ResourceKey<Biome>>()
+    private val warnedMissingKeys = ConcurrentHashMap.newKeySet<ResourceKey<Biome>>()
 
     @Unique
     private fun resolveBiome(key: ResourceKey<Biome>): Holder<Biome>? {
