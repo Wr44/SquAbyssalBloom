@@ -7,10 +7,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.levelgen.synth.NormalNoise
 
 object ModNoises {
-    val ABYSSAL_PRESENCE: ResourceKey<NormalNoise.NoiseParameters> = ResourceKey.create(
-        Registries.NOISE,
-        Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "abyssal_presence")
-    )
+
     val ABYSSAL_WALL: ResourceKey<NormalNoise.NoiseParameters> = ResourceKey.create(
         Registries.NOISE,
         Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "abyssal_wall")

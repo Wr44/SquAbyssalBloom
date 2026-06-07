@@ -12,6 +12,5 @@ object AbyssalChunkDataCache {
     fun consume(chunkX: Int, chunkZ: Int): BooleanArray? =
         cache.remove(pack(chunkX, chunkZ))
 
-    private fun pack(x: Int, z: Int): Long =
-        x.toLong().shl(32) or (z.toLong() and 0xFFFFFFFFL)
+    private fun pack(x: Int, z: Int): Long = x.toLong().shl(32) or (z.toLong() and 0xFFFFFFFFL)
 }
