@@ -86,7 +86,7 @@ object PressureEffectEvent {
         val current = entity.getEffect(ModEffects.PRESSURE)
 
         if (current == null || current.amplifier != amplifier || current.duration < PRESSURE_DURATION_THRESHOLD) {
-            entity.addEffect(MobEffectInstance(ModEffects.PRESSURE, PRESSURE_DURATION, amplifier, false, true, true))
+            entity.addEffect(MobEffectInstance(ModEffects.PRESSURE, PRESSURE_DURATION, amplifier, false, false, true))
         }
 
         val isDrowning = entity.airSupply <= 0

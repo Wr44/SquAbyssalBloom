@@ -384,7 +384,7 @@ object ModConfig {
                         .name(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary.desc")))
                         .binding(Binding.generic(
-                            -0.477,
+                            -0.45,
                             { ServerConfigCache.shallowDeepBoundary },
                             { ServerConfigCache.shallowDeepBoundary = it }
                         ))
@@ -399,7 +399,7 @@ object ModConfig {
                         .name(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary.desc")))
                         .binding(Binding.generic(
-                            -0.763,
+                            -0.70,
                             { ServerConfigCache.deepAbyssalBoundary },
                             { ServerConfigCache.deepAbyssalBoundary = it }
                         ))

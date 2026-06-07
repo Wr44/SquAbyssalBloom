@@ -6,8 +6,8 @@ import net.neoforged.api.distmarker.Dist
 
 object ServerConfigCache {
     var strictBarnacleSpawning: Boolean = true
-    var shallowDeepBoundary: Double = -0.477
-    var deepAbyssalBoundary: Double = -0.763
+    var shallowDeepBoundary: Double = -0.45
+    var deepAbyssalBoundary: Double = -0.70
 
     fun update(data: ServerConfigData) {
         strictBarnacleSpawning = data.strictBarnacleSpawning
@@ -21,7 +21,8 @@ object ServerConfigCache {
 
     fun isSingleplayer(): Boolean {
         return if (FMLEnvironment.getDist() == Dist.CLIENT) {
-            Minecraft.getInstance().isLocalServer
+            val mc = Minecraft.getInstance()
+            mc.isLocalServer || mc.connection == null
         } else {
             false
         }
@@ -30,7 +31,6 @@ object ServerConfigCache {
     val effectiveStrictBarnacleSpawning: Boolean
         get() = if (isSingleplayer()) ModServerConfig.STRICT_BARNACLE_SPAWNING.get() else strictBarnacleSpawning
 
-    // On convertit en Float uniquement au moment de la lecture pour le Mixin
     val effectiveShallowDeep: Float
         get() = (if (isSingleplayer()) ModServerConfig.SHALLOW_DEEP_BOUNDARY.get() else shallowDeepBoundary).toFloat()
 

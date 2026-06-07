@@ -31,7 +31,7 @@ object AbyssalOceanBiomes {
     )
 
     val DEEP_OCEANS: Array<ResourceKey<Biome>> = arrayOf(
-        Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.WARM_OCEAN
+        Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN
     )
 
     fun shallowDeep(): Float = ServerConfigCache.effectiveShallowDeep
@@ -68,7 +68,7 @@ object AbyssalOceanBiomes {
         SHALLOW_OCEANS.getOrElse(tempIndex) { Biomes.OCEAN }
 
     fun resolveOceanZone(cont: Float, depth: Float): OceanZone? {
-        if (cont > OCEAN_MAX_CONT || cont < OCEAN_MIN_CONT) return null
+        if (cont !in OCEAN_MIN_CONT..OCEAN_MAX_CONT) return null
 
         val deepAbyssal = deepAbyssal()
         val shallowDeep = shallowDeep()

@@ -138,19 +138,13 @@ object OceanBiomeRegistry {
     private fun pickFromDeepPools(target: Climate.TargetPoint, regionIndex: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
         return pickFromPool(deepPools[band], target)
-            ?: deepPools.indices
-                .filter { it != band }
-                .mapNotNull { pickFromPool(deepPools[it], target) }
-                .firstOrNull()
+            ?: deepPools.flatMap { it }.minByOrNull { it.fitness(target) }?.key
     }
 
     private fun pickFromShallowPools(target: Climate.TargetPoint, regionIndex: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
         return pickFromPool(shallowPools[band], target)
-            ?: shallowPools.indices
-                .filter { it != band }
-                .mapNotNull { pickFromPool(shallowPools[it], target) }
-                .firstOrNull()
+            ?: shallowPools.flatMap { it }.minByOrNull { it.fitness(target) }?.key
     }
 
     private fun fallbackDeep(target: Climate.TargetPoint): ResourceKey<Biome> {

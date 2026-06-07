@@ -24,7 +24,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 
 private const val MUSHROOM_MIN = -1.05
 private const val MUSHROOM_TRANSITION = 0.05
-private const val MUSHROOM_ABYSSAL_MARGIN = 0.02
 
 private const val CONTINENTAL_FULL = -0.92
 
@@ -33,6 +32,7 @@ private const val ABYSSAL_DEEP_MARGIN = 0.015
 private const val SHALLOW_FLOOR_Y = 35
 private const val DEEP_FLOOR_TARGET = 10
 private const val TARGET_FLOOR_Y = -40
+private const val VANILLA_BLEND_Y = 55
 
 private const val TOPO_LARGE_SCALE = 0.003
 private const val TOPO_SCALE = 0.010
@@ -148,27 +148,34 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 val floorY: Int
 
                 if (cont > abyssalDeepSplit) {
-                    val rawT = ((cont - shallowDeepEdge) / (effectiveAbyssalSplit - shallowDeepEdge)).coerceIn(0.0, 1.0)
-                    val deepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
-                    val base = SHALLOW_FLOOR_Y + deepT * (DEEP_FLOOR_TARGET - SHALLOW_FLOOR_Y)
+                    val descentFactor = 2.75
+
+                    val rawProgress = (cont - shallowDeepEdge) / (effectiveAbyssalSplit - shallowDeepEdge)
+                    val rawT = (rawProgress * descentFactor).coerceIn(0.0, 1.0)
+
+                    val deepT = rawT * rawT * (3.0 - 2.0 * rawT)
+
+                    val base = VANILLA_BLEND_Y + deepT * (DEEP_FLOOR_TARGET - VANILLA_BLEND_Y)
+
+                    val baseNoiseScale = maxOf(0.20, 1.0 - deepT)
+                    val noiseScale = baseNoiseScale * deepT
 
                     floorY = (base
-                            + tempDepthMod * deepT
-                            + wallVal * DEEP_WALL_AMP * deepT * erosionFactor * weirdnessWallMod
-                            + detailVal * DEEP_DETAIL_AMP * deepT * humidityDetailMod
-                            + microVal * DEEP_MICRO_AMP * deepT * humidityDetailMod
-                            + ridges * DEEP_WEIRDNESS_AMP * deepT
+                            + tempDepthMod * noiseScale
+                            + wallVal * DEEP_WALL_AMP * noiseScale * erosionFactor * weirdnessWallMod
+                            + detailVal * DEEP_DETAIL_AMP * noiseScale * humidityDetailMod
+                            + microVal * DEEP_MICRO_AMP * noiseScale * humidityDetailMod
+                            + ridges * DEEP_WEIRDNESS_AMP * noiseScale
                             ).toInt()
-                        .coerceAtMost(SHALLOW_FLOOR_Y - 1)
                         .coerceAtLeast(hardLimit)
                 } else {
                     val rawT = ((cont - effectiveAbyssalSplit) / (CONTINENTAL_FULL - effectiveAbyssalSplit)).coerceIn(0.0, 1.0)
                     val steepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
-                    val mushroomProxT = ((cont - (MUSHROOM_MIN + MUSHROOM_ABYSSAL_MARGIN)) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
+                    val mushroomProxT = ((cont - (MUSHROOM_MIN)) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
                     val effectiveSteepT = steepT * mushroomProxT
-                    if (effectiveSteepT < 0.001) continue
 
-                    val base = DEEP_FLOOR_TARGET + effectiveSteepT * (TARGET_FLOOR_Y - DEEP_FLOOR_TARGET)
+                    val shallowLift = (SHALLOW_FLOOR_Y - 1 - DEEP_FLOOR_TARGET) * (1.0 - mushroomProxT)
+                    val base = DEEP_FLOOR_TARGET + effectiveSteepT * (TARGET_FLOOR_Y - DEEP_FLOOR_TARGET) + shallowLift
 
                     val topoLarge = topoNoise.getValue(worldX * TOPO_LARGE_SCALE, 0.0, worldZ * TOPO_LARGE_SCALE)
                     val topo = topoNoise.getValue(worldX * TOPO_SCALE, 0.0, worldZ * TOPO_SCALE)
@@ -185,9 +192,11 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                         .coerceAtLeast(noiseSettings.minY() + 14)
                 }
 
-                if (floorY < SHALLOW_FLOOR_Y) {
+                if (floorY < cachedSeaLevel) {
                     grid[localX + localZ * 16] = floorY
-                    abyssalMask[localX + localZ * 16] = true
+                    if (floorY < SHALLOW_FLOOR_Y) {
+                        abyssalMask[localX + localZ * 16] = true
+                    }
                     anyModified = true
                 }
             }

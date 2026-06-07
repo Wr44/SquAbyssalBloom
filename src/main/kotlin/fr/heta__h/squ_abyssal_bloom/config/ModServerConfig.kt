@@ -11,11 +11,11 @@ object ModServerConfig {
 
     val SHALLOW_DEEP_BOUNDARY: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Continentalness boundary between shallow and deep ocean. Vanilla: -0.455")
-        .defineInRange("shallowDeepBoundary", -0.477, -1.0, -0.19)
+        .defineInRange("shallowDeepBoundary", -0.45, -1.0, -0.19)
 
     val DEEP_ABYSSAL_BOUNDARY: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Continentalness boundary between deep ocean and abyssal zone.")
-        .defineInRange("deepAbyssalBoundary", -0.763, -1.05, -0.19)
+        .defineInRange("deepAbyssalBoundary", -0.70, -1.05, -0.19)
 
     val SPEC: ModConfigSpec = SPEC_BUILDER.build()
 }

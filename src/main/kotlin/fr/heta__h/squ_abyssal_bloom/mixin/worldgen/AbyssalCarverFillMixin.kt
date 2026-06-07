@@ -46,7 +46,7 @@ abstract class AbyssalCarverFillMixin {
                 val worldX = chunk.pos.minBlockX + localX
                 val worldZ = chunk.pos.minBlockZ + localZ
 
-                for (y in floorY + 1 until seaLevel) {
+                for (y in chunk.minY until seaLevel) {
                     mutable.set(worldX, y, worldZ)
                     val state = chunk.getBlockState(mutable)
                     if (state.isAir || state.`is`(Blocks.LAVA)) {
