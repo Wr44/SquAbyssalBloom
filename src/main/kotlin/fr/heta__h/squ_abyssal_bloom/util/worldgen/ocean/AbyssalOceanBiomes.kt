@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
+package fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean
 
 import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
@@ -80,8 +80,8 @@ object AbyssalOceanBiomes {
         }
     }
 
-    fun resolveOceanBiomeKey(cont: Float, depth: Float, target: Climate.TargetPoint): ResourceKey<Biome>? {
+    fun resolveOceanBiomeKey(cont: Float, depth: Float, target: Climate.TargetPoint, regionIndex: Int = 0): ResourceKey<Biome>? {
         val zone = resolveOceanZone(cont, depth) ?: return null
-        return OceanBiomeRegistry.pickBiome(zone, target)
+        return OceanBiomeRegistry.pickBiome(zone, target, regionIndex)
     }
 }

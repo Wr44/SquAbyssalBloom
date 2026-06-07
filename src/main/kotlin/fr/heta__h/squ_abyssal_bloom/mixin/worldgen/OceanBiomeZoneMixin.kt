@@ -1,8 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.AbyssalOceanBiomes
-import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanBiomeRegistry
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.AbyssalOceanBiomes
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanBiomeRegistry
 import net.minecraft.core.Holder
 import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome

@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
+package fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean
 
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import net.minecraft.core.Holder
@@ -9,6 +9,7 @@ import net.minecraft.tags.TagKey
 import net.minecraft.world.level.biome.Biome
 import net.minecraft.world.level.biome.Climate
 import terrablender.worldgen.RegionUtils
+import kotlin.math.abs
 
 object OceanBiomeClassifier {
 
@@ -76,7 +77,7 @@ object OceanBiomeClassifier {
         return valueMin >= zoneMin && valueMax <= zoneMax
     }
 
-    private fun distance(a: Float, b: Float): Float = kotlin.math.abs(a - b)
+    private fun distance(a: Float, b: Float): Float = abs(a - b)
 
     private fun resolveTempBand(key: ResourceKey<Biome>, referencePoint: Climate.ParameterPoint?): Int {
         referencePoint?.let {

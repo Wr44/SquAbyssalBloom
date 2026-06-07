@@ -71,12 +71,12 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
     @Shadow abstract fun blockY(): Int
     @Shadow abstract fun blockZ(): Int
 
-    override fun abyssalBloom_getFloorGrid(): IntArray? = floorGrid
-    override fun abyssalBloom_setFloorGrid(grid: IntArray?) { floorGrid = grid }
-    override fun abyssalBloom_getChunkMinX(): Int = minX
-    override fun abyssalBloom_setChunkMinX(x: Int) { minX = x }
-    override fun abyssalBloom_getChunkMinZ(): Int = minZ
-    override fun abyssalBloom_setChunkMinZ(z: Int) { minZ = z }
+    override fun getFloorGrid(): IntArray? = floorGrid
+    override fun setFloorGrid(grid: IntArray?) { floorGrid = grid }
+    override fun getChunkMinX(): Int = minX
+    override fun setChunkMinX(x: Int) { minX = x }
+    override fun getChunkMinZ(): Int = minZ
+    override fun setChunkMinZ(z: Int) { minZ = z }
 
     @Inject(
         method = ["<init>(ILnet/minecraft/world/level/levelgen/RandomState;IILnet/minecraft/world/level/levelgen/NoiseSettings;Lnet/minecraft/world/level/levelgen/DensityFunctions\$BeardifierOrMarker;Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/world/level/levelgen/Aquifer\$FluidPicker;Lnet/minecraft/world/level/levelgen/blending/Blender;)V"],
@@ -195,7 +195,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
         if (anyModified) {
             floorGrid = grid
-            AbyssalChunkDataCache.store(chunkMinBlockX shr 4, chunkMinBlockZ shr 4, abyssalMask)
+            AbyssalChunkDataCache.store(chunkMinBlockX shr 4, chunkMinBlockZ shr 4, abyssalMask, grid)
         }
     }
 
@@ -219,4 +219,3 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         cir.returnValue = Blocks.WATER.defaultBlockState()
     }
 }
-

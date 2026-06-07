@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
+package fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean
 
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import net.minecraft.core.Holder
@@ -45,13 +45,13 @@ object OceanBiomeRegistry {
         seedVanillaDefaults(registry)
     }
 
-    fun pickBiome(zone: OceanZone, target: Climate.TargetPoint): ResourceKey<Biome>? {
+    fun pickBiome(zone: OceanZone, target: Climate.TargetPoint, regionIndex: Int = 0): ResourceKey<Biome>? {
         return when (zone) {
             OceanZone.ABYSSAL -> pickFromPool(abyssalEntries, target)
                 ?: AbyssalOceanBiomes.ABYSSAL_OCEAN
-            OceanZone.DEEP -> pickFromDeepPools(target)
+            OceanZone.DEEP -> pickFromDeepPools(target, regionIndex)
                 ?: fallbackDeep(target)
-            OceanZone.SHALLOW -> pickFromShallowPools(target)
+            OceanZone.SHALLOW -> pickFromShallowPools(target, regionIndex)
                 ?: fallbackShallow(target)
         }
     }
@@ -135,7 +135,7 @@ object OceanBiomeRegistry {
         return pool.minByOrNull { it.fitness(target) }?.key
     }
 
-    private fun pickFromDeepPools(target: Climate.TargetPoint): ResourceKey<Biome>? {
+    private fun pickFromDeepPools(target: Climate.TargetPoint, regionIndex: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
         return pickFromPool(deepPools[band], target)
             ?: deepPools.indices
@@ -144,7 +144,7 @@ object OceanBiomeRegistry {
                 .firstOrNull()
     }
 
-    private fun pickFromShallowPools(target: Climate.TargetPoint): ResourceKey<Biome>? {
+    private fun pickFromShallowPools(target: Climate.TargetPoint, regionIndex: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
         return pickFromPool(shallowPools[band], target)
             ?: shallowPools.indices
