@@ -479,7 +479,11 @@ object ConduitDomainHandler {
             pos.offset(-2, 2, 0), pos.offset(-2, -2, 0)
         )
 
+
         allPositions.forEach { checkPos ->
+
+            if (!level.isLoaded(checkPos)) return@forEach
+
             val chunk = level.getChunk(checkPos)
             val state = chunk.getBlockState(checkPos)
             if (state.`is`(ModBlocks.ASTRAL_PRISMARINE) &&
