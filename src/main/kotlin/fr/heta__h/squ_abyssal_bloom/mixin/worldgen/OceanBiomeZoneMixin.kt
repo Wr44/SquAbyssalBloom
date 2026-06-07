@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 import java.util.stream.Stream
 
-@Mixin(value = [MultiNoiseBiomeSource::class], priority = 1500)
+@Mixin(value = [MultiNoiseBiomeSource::class], priority = 900)
 abstract class OceanBiomeZoneMixin {
 
     @Shadow
@@ -49,7 +49,8 @@ abstract class OceanBiomeZoneMixin {
     @Inject(
         method = ["getNoiseBiome(IIILnet/minecraft/world/level/biome/Climate\$Sampler;)Lnet/minecraft/core/Holder;"],
         at = [At("HEAD")],
-        cancellable = true
+        cancellable = true,
+        remap = false,
     )
     private fun enforceOceanZones(
         quartX: Int,
@@ -58,14 +59,10 @@ abstract class OceanBiomeZoneMixin {
         sampler: Climate.Sampler,
         cir: CallbackInfoReturnable<Holder<Biome>>
     ) {
-        val terrainTarget = sampler.sample(quartX, 0, quartZ)
-        val cont = Climate.unquantizeCoord(terrainTarget.continentalness())
-
-        val actualTarget = sampler.sample(quartX, quartY, quartZ)
-        val depth = Climate.unquantizeCoord(actualTarget.depth())
-
-        val biomeKey = AbyssalOceanBiomes.resolveOceanBiomeKey(cont, depth, actualTarget) ?: return
-
+        val target = sampler.sample(quartX, quartY, quartZ)
+        val cont = Climate.unquantizeCoord(target.continentalness())
+        val depth = Climate.unquantizeCoord(target.depth())
+        val biomeKey = AbyssalOceanBiomes.resolveOceanBiomeKey(cont, depth, target) ?: return
         val holder = resolveBiome(biomeKey) ?: return
         cir.returnValue = holder
     }

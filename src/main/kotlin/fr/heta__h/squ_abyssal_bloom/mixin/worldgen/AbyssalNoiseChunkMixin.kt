@@ -26,7 +26,6 @@ private const val MUSHROOM_MIN = -1.05
 private const val MUSHROOM_TRANSITION = 0.05
 
 private const val CONTINENTAL_FULL = -0.92
-private const val TERRAIN_LEAD = 0.02
 
 private const val SHALLOW_FLOOR_Y = 40
 private const val DEEP_FLOOR_TARGET = 25
@@ -97,10 +96,8 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         minZ = chunkMinBlockZ
         cachedSeaLevel = settings.seaLevel()
 
-        val configShallowDeep = ServerConfigCache.effectiveShallowDeep.toDouble()
-        val configDeepAbyssal = ServerConfigCache.effectiveDeepAbyssal.toDouble()
-        val terrainDeepStart = configShallowDeep + TERRAIN_LEAD
-        val terrainAbyssalStart = configDeepAbyssal + TERRAIN_LEAD
+        val shallowDeepEdge = ServerConfigCache.effectiveShallowDeep.toDouble()
+        val deepAbyssalEdge = ServerConfigCache.effectiveDeepAbyssal.toDouble()
 
         val erosionDf = randomState.router().erosion()
         val ridgesDf = randomState.router().ridges()
@@ -118,7 +115,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 val ctx = DensityFunction.SinglePointContext(worldX, 0, worldZ)
                 val cont = continentsDf.compute(ctx)
 
-                if (cont > terrainDeepStart || cont < MUSHROOM_MIN) continue
+                if (cont > shallowDeepEdge || cont < MUSHROOM_MIN) continue
 
                 val erosion = erosionDf.compute(ctx)
                 val ridges = ridgesDf.compute(ctx)
@@ -129,8 +126,8 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
                 val floorY: Int
 
-                if (cont > terrainAbyssalStart) {
-                    val rawT = ((cont - terrainDeepStart) / (terrainAbyssalStart - terrainDeepStart)).coerceIn(0.0, 1.0)
+                if (cont > deepAbyssalEdge) {
+                    val rawT = ((cont - shallowDeepEdge) / (deepAbyssalEdge - shallowDeepEdge)).coerceIn(0.0, 1.0)
                     val deepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
                     val base = SHALLOW_FLOOR_Y + deepT * (DEEP_FLOOR_TARGET - SHALLOW_FLOOR_Y)
 
@@ -141,7 +138,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                             + ridges * DEEP_WEIRDNESS_AMP * deepT
                             ).toInt().coerceAtLeast(hardLimit)
                 } else {
-                    val rawT = ((cont - terrainAbyssalStart) / (CONTINENTAL_FULL - terrainAbyssalStart)).coerceIn(0.0, 1.0)
+                    val rawT = ((cont - deepAbyssalEdge) / (CONTINENTAL_FULL - deepAbyssalEdge)).coerceIn(0.0, 1.0)
                     val steepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
                     val mushroomProxT = ((cont - MUSHROOM_MIN) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
                     val effectiveSteepT = steepT * mushroomProxT
@@ -206,7 +203,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         if (blockY() >= cachedSeaLevel) return
         val localX = blockX() - minX
         val localZ = blockZ() - minZ
-        if (localX !in 0..15 || localZ < 0 || localZ > 15) return
+        if (localX !in 0..15 || localZ !in 0..15) return
         val floorY = grid[localX + localZ * 16]
         if (floorY == Int.MIN_VALUE) return
         if (blockY() <= floorY) return

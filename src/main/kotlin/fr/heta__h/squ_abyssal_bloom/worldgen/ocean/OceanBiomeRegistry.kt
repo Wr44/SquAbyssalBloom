@@ -49,9 +49,9 @@ object OceanBiomeRegistry {
         return when (zone) {
             OceanZone.ABYSSAL -> pickFromPool(abyssalEntries, target)
                 ?: AbyssalOceanBiomes.ABYSSAL_OCEAN
-            OceanZone.DEEP -> pickFromPool(deepPools.flatMap { it.toList() }, target)
+            OceanZone.DEEP -> pickFromDeepPools(target)
                 ?: fallbackDeep(target)
-            OceanZone.SHALLOW -> pickFromPool(shallowPools.flatMap { it.toList() }, target)
+            OceanZone.SHALLOW -> pickFromShallowPools(target)
                 ?: fallbackShallow(target)
         }
     }
@@ -135,14 +135,32 @@ object OceanBiomeRegistry {
         return pool.minByOrNull { it.fitness(target) }?.key
     }
 
+    private fun pickFromDeepPools(target: Climate.TargetPoint): ResourceKey<Biome>? {
+        val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
+        return pickFromPool(deepPools[band], target)
+            ?: deepPools.indices
+                .filter { it != band }
+                .mapNotNull { pickFromPool(deepPools[it], target) }
+                .firstOrNull()
+    }
+
+    private fun pickFromShallowPools(target: Climate.TargetPoint): ResourceKey<Biome>? {
+        val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
+        return pickFromPool(shallowPools[band], target)
+            ?: shallowPools.indices
+                .filter { it != band }
+                .mapNotNull { pickFromPool(shallowPools[it], target) }
+                .firstOrNull()
+    }
+
     private fun fallbackDeep(target: Climate.TargetPoint): ResourceKey<Biome> {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
-        return AbyssalOceanBiomes.DEEP_OCEANS[band]
+        return AbyssalOceanBiomes.fallbackDeepOcean(band)
     }
 
     private fun fallbackShallow(target: Climate.TargetPoint): ResourceKey<Biome> {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
-        return AbyssalOceanBiomes.SHALLOW_OCEANS[band]
+        return AbyssalOceanBiomes.fallbackShallowOcean(band)
     }
 
     private fun seedVanillaDefaults(registry: Registry<Biome>) {

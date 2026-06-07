@@ -18,9 +18,6 @@ object AbyssalOceanBiomes {
     val SURFACE_DEPTH: Climate.Parameter = Climate.Parameter.point(0.0f)
     val FLOOR_DEPTH: Climate.Parameter = Climate.Parameter.point(1.0f)
 
-    val VANILLA_DEEP_CONT: Climate.Parameter = Climate.Parameter.span(-1.05f, -0.455f)
-    val VANILLA_OCEAN_CONT: Climate.Parameter = Climate.Parameter.span(-0.455f, -0.19f)
-
     val TEMPERATURES: Array<Climate.Parameter> = arrayOf(
         Climate.Parameter.span(-1.0f, -0.45f),
         Climate.Parameter.span(-0.45f, -0.15f),
@@ -41,6 +38,12 @@ object AbyssalOceanBiomes {
 
     fun deepAbyssal(): Float = ServerConfigCache.effectiveDeepAbyssal
 
+    fun vanillaDeepCont(): Climate.Parameter =
+        Climate.Parameter.span(OCEAN_MIN_CONT, shallowDeep())
+
+    fun vanillaOceanCont(): Climate.Parameter =
+        Climate.Parameter.span(shallowDeep(), OCEAN_MAX_CONT)
+
     fun abyssalContinentalness(): Climate.Parameter =
         Climate.Parameter.span(OCEAN_MIN_CONT, deepAbyssal())
 
@@ -57,6 +60,12 @@ object AbyssalOceanBiomes {
         temp < 0.55f -> 3
         else -> 4
     }
+
+    fun fallbackDeepOcean(tempIndex: Int): ResourceKey<Biome> =
+        DEEP_OCEANS.getOrElse(tempIndex) { Biomes.DEEP_OCEAN }
+
+    fun fallbackShallowOcean(tempIndex: Int): ResourceKey<Biome> =
+        SHALLOW_OCEANS.getOrElse(tempIndex) { Biomes.OCEAN }
 
     fun resolveOceanZone(cont: Float, depth: Float): OceanZone? {
         if (cont > OCEAN_MAX_CONT || cont < OCEAN_MIN_CONT) return null

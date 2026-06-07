@@ -61,10 +61,10 @@ class AbyssalRegion(location: Identifier, weight: Int) : Region(location, Region
             AbyssalOceanBiomes.TEMPERATURES.forEach { temp ->
                 listOf(AbyssalOceanBiomes.SURFACE_DEPTH, AbyssalOceanBiomes.FLOOR_DEPTH).forEach { depth ->
                     builder.removeParameter(
-                        Climate.parameters(temp, AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.VANILLA_DEEP_CONT, AbyssalOceanBiomes.FULL_RANGE, depth, AbyssalOceanBiomes.FULL_RANGE, 0f)
+                        Climate.parameters(temp, AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.vanillaDeepCont() , AbyssalOceanBiomes.FULL_RANGE, depth, AbyssalOceanBiomes.FULL_RANGE, 0f)
                     )
                     builder.removeParameter(
-                        Climate.parameters(temp, AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.VANILLA_OCEAN_CONT, AbyssalOceanBiomes.FULL_RANGE, depth, AbyssalOceanBiomes.FULL_RANGE, 0f)
+                        Climate.parameters(temp, AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.vanillaOceanCont(), AbyssalOceanBiomes.FULL_RANGE, depth, AbyssalOceanBiomes.FULL_RANGE, 0f)
                     )
                 }
             }
