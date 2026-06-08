@@ -46,6 +46,8 @@ private const val DEEP_DETAIL_AMP = 4.0
 private const val DEEP_MICRO_AMP = 2.0
 private const val DEEP_WEIRDNESS_AMP = 6.0
 
+private const val DESCENT_FACTOR = 2.75
+
 private const val TOPO_LARGE_AMP = 42.0
 private const val TOPO_AMP = 20.0
 private const val TOPO_MID_AMP = 11.0
@@ -126,7 +128,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 val ctx = DensityFunction.SinglePointContext(worldX, 0, worldZ)
                 val cont = continentsDf.compute(ctx)
 
-                if (cont > shallowDeepEdge || cont < MUSHROOM_MIN) continue
+                if (cont !in MUSHROOM_MIN..shallowDeepEdge) continue
 
                 if (finalDensityDf.compute(DensityFunction.SinglePointContext(worldX, cachedSeaLevel + 6, worldZ)) > 0.0) continue
 
@@ -148,10 +150,9 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 val floorY: Int
 
                 if (cont > abyssalDeepSplit) {
-                    val descentFactor = 2.75
 
                     val rawProgress = (cont - shallowDeepEdge) / (effectiveAbyssalSplit - shallowDeepEdge)
-                    val rawT = (rawProgress * descentFactor).coerceIn(0.0, 1.0)
+                    val rawT = (rawProgress * DESCENT_FACTOR).coerceIn(0.0, 1.0)
 
                     val deepT = rawT * rawT * (3.0 - 2.0 * rawT)
 
