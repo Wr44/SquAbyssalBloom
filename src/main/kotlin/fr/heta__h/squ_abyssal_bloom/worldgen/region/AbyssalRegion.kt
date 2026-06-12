@@ -1,8 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.region
 
 import com.mojang.datafixers.util.Pair
-import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.AbyssalOceanBiomes
-import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanBiomeRegistry
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.AbyssalOceanBiomes
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanBiomeRegistry
 import net.minecraft.core.Registry
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey

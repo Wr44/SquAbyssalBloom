@@ -3,7 +3,10 @@ package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.util.accessor.IAbyssalNoiseChunk
 import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssalChunkDataCache
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalShapingContext
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnSample
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModNoises
+import fr.heta__h.squ_abyssal_bloom.worldgen.terrain.AbyssalFloorShaper
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.levelgen.Aquifer
@@ -21,45 +24,6 @@ import org.spongepowered.asm.mixin.injection.At
 import org.spongepowered.asm.mixin.injection.Inject
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
-
-private const val MUSHROOM_MIN = -1.05
-private const val MUSHROOM_TRANSITION = 0.05
-
-private const val CONTINENTAL_FULL = -0.92
-
-private const val ABYSSAL_DEEP_MARGIN = 0.015
-
-private const val SHALLOW_FLOOR_Y = 35
-private const val DEEP_FLOOR_TARGET = 10
-private const val TARGET_FLOOR_Y = -40
-private const val VANILLA_BLEND_Y = 55
-
-private const val TOPO_LARGE_SCALE = 0.003
-private const val TOPO_SCALE = 0.010
-private const val TOPO_MID_SCALE = 0.030
-private const val WALL_SCALE = 0.050
-private const val DETAIL_SCALE = 0.120
-private const val MICRO_SCALE = 0.280
-
-private const val DEEP_WALL_AMP = 8.0
-private const val DEEP_DETAIL_AMP = 4.0
-private const val DEEP_MICRO_AMP = 2.0
-private const val DEEP_WEIRDNESS_AMP = 6.0
-
-private const val DESCENT_FACTOR = 2.75
-
-private const val TOPO_LARGE_AMP = 42.0
-private const val TOPO_AMP = 20.0
-private const val TOPO_MID_AMP = 11.0
-private const val WALL_AMP = 14.0
-private const val DETAIL_AMP = 7.0
-private const val MICRO_AMP = 4.0
-private const val WEIRDNESS_AMP = 11.0
-
-private const val TRANSITION_WEIRDNESS_AMP = 0.025
-private const val TEMP_FLOOR_AMP = 3.5
-private const val HUMIDITY_DETAIL_FACTOR = 0.18
-private const val WEIRDNESS_WALL_FACTOR = 0.25
 
 @Mixin(value = [NoiseChunk::class], priority = 1500)
 abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
@@ -103,22 +67,26 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         minZ = chunkMinBlockZ
         cachedSeaLevel = settings.seaLevel()
 
-        val shallowDeepEdge = ServerConfigCache.effectiveShallowDeep.toDouble()
-        val deepAbyssalEdge = ServerConfigCache.effectiveDeepAbyssal.toDouble()
-        val abyssalDeepSplit = deepAbyssalEdge + ABYSSAL_DEEP_MARGIN
+        val shaping = AbyssalShapingContext(
+            topoNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_TOPO),
+            wallNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_WALL),
+            detailNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_DETAIL),
+            shallowDeepEdge = ServerConfigCache.effectiveShallowDeep.toDouble(),
+            deepAbyssalEdge = ServerConfigCache.effectiveDeepAbyssal.toDouble(),
+            seaLevel = cachedSeaLevel,
+            deepHardLimit = noiseSettings.minY() + 5,
+            abyssalHardLimit = noiseSettings.minY() + 14
+        )
 
         val finalDensityDf = randomState.router().finalDensity()
         val erosionDf = randomState.router().erosion()
         val ridgesDf = randomState.router().ridges()
         val temperatureDf = randomState.router().temperature()
         val vegetationDf = randomState.router().vegetation()
-        val topoNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_TOPO)
-        val wallNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_WALL)
-        val detailNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_DETAIL)
-        val hardLimit = noiseSettings.minY() + 5
 
         val grid = IntArray(256) { Int.MIN_VALUE }
         val abyssalMask = BooleanArray(256)
+        val carverMask = BooleanArray(256)
         var anyModified = false
 
         for (localX in 0..15) {
@@ -128,74 +96,25 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 val ctx = DensityFunction.SinglePointContext(worldX, 0, worldZ)
                 val cont = continentsDf.compute(ctx)
 
-                if (cont !in MUSHROOM_MIN..shallowDeepEdge) continue
-
+                if (!AbyssalFloorShaper.isWithinOceanBand(shaping, cont)) continue
                 if (finalDensityDf.compute(DensityFunction.SinglePointContext(worldX, cachedSeaLevel + 6, worldZ)) > 0.0) continue
 
-                val erosion = erosionDf.compute(ctx)
-                val ridges = ridgesDf.compute(ctx)
-                val temperature = temperatureDf.compute(ctx)
-                val vegetation = vegetationDf.compute(ctx)
+                val column = ColumnSample(
+                    worldX = worldX,
+                    worldZ = worldZ,
+                    cont = cont,
+                    erosion = erosionDf.compute(ctx),
+                    ridges = ridgesDf.compute(ctx),
+                    temperature = temperatureDf.compute(ctx),
+                    vegetation = vegetationDf.compute(ctx)
+                )
 
-                val erosionFactor = (1.0 - erosion * 0.50).coerceIn(0.32, 1.55)
-                val tempDepthMod = -temperature * TEMP_FLOOR_AMP
-                val humidityDetailMod = (1.0 + vegetation * HUMIDITY_DETAIL_FACTOR).coerceIn(0.75, 1.35)
-                val weirdnessWallMod = (1.0 + kotlin.math.abs(ridges) * WEIRDNESS_WALL_FACTOR).coerceIn(0.80, 1.50)
-                val effectiveAbyssalSplit = abyssalDeepSplit + ridges * TRANSITION_WEIRDNESS_AMP
-
-                val wallVal = wallNoise.getValue(worldX * WALL_SCALE, 0.0, worldZ * WALL_SCALE)
-                val detailVal = detailNoise.getValue(worldX * DETAIL_SCALE, 0.0, worldZ * DETAIL_SCALE)
-                val microVal = detailNoise.getValue(worldX * MICRO_SCALE, 0.0, worldZ * MICRO_SCALE)
-
-                val floorY: Int
-
-                if (cont > abyssalDeepSplit) {
-
-                    val rawProgress = (cont - shallowDeepEdge) / (effectiveAbyssalSplit - shallowDeepEdge)
-                    val rawT = (rawProgress * DESCENT_FACTOR).coerceIn(0.0, 1.0)
-
-                    val deepT = rawT * rawT * (3.0 - 2.0 * rawT)
-
-                    val base = VANILLA_BLEND_Y + deepT * (DEEP_FLOOR_TARGET - VANILLA_BLEND_Y)
-
-                    val baseNoiseScale = maxOf(0.20, 1.0 - deepT)
-                    val noiseScale = baseNoiseScale * deepT
-
-                    floorY = (base
-                            + tempDepthMod * noiseScale
-                            + wallVal * DEEP_WALL_AMP * noiseScale * erosionFactor * weirdnessWallMod
-                            + detailVal * DEEP_DETAIL_AMP * noiseScale * humidityDetailMod
-                            + microVal * DEEP_MICRO_AMP * noiseScale * humidityDetailMod
-                            + ridges * DEEP_WEIRDNESS_AMP * noiseScale
-                            ).toInt()
-                        .coerceAtLeast(hardLimit)
-                } else {
-                    val rawT = ((cont - effectiveAbyssalSplit) / (CONTINENTAL_FULL - effectiveAbyssalSplit)).coerceIn(0.0, 1.0)
-                    val steepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
-                    val mushroomProxT = ((cont - (MUSHROOM_MIN)) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
-                    val effectiveSteepT = steepT * mushroomProxT
-
-                    val shallowLift = (SHALLOW_FLOOR_Y - 1 - DEEP_FLOOR_TARGET) * (1.0 - mushroomProxT)
-                    val base = DEEP_FLOOR_TARGET + effectiveSteepT * (TARGET_FLOOR_Y - DEEP_FLOOR_TARGET) + shallowLift
-
-                    val topoLarge = topoNoise.getValue(worldX * TOPO_LARGE_SCALE, 0.0, worldZ * TOPO_LARGE_SCALE)
-                    val topo = topoNoise.getValue(worldX * TOPO_SCALE, 0.0, worldZ * TOPO_SCALE)
-                    val topoMid = topoNoise.getValue(worldX * TOPO_MID_SCALE, 0.0, worldZ * TOPO_MID_SCALE)
-
-                    val topoRaw = (topoLarge * TOPO_LARGE_AMP + topo * TOPO_AMP + topoMid * TOPO_MID_AMP) * effectiveSteepT * erosionFactor
-                    val topoVar = topoRaw.coerceAtLeast(-6.0 * effectiveSteepT)
-                    val wallVar = wallVal * WALL_AMP * effectiveSteepT * erosionFactor * weirdnessWallMod
-                    val detailVar = (detailVal * DETAIL_AMP + microVal * MICRO_AMP) * effectiveSteepT * humidityDetailMod
-                    val weirdnessVar = ridges * WEIRDNESS_AMP * effectiveSteepT
-                    val tempVar = tempDepthMod * effectiveSteepT
-
-                    floorY = (base + topoVar + wallVar + detailVar + weirdnessVar + tempVar).toInt()
-                        .coerceAtLeast(noiseSettings.minY() + 14)
-                }
+                val floorY = AbyssalFloorShaper.computeFloor(shaping, column, finalDensityDf)
 
                 if (floorY < cachedSeaLevel) {
                     grid[localX + localZ * 16] = floorY
-                    if (floorY < SHALLOW_FLOOR_Y) {
+                    carverMask[localX + localZ * 16] = true
+                    if (floorY < AbyssalFloorShaper.SHALLOW_FLOOR_Y) {
                         abyssalMask[localX + localZ * 16] = true
                     }
                     anyModified = true
@@ -205,7 +124,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
         if (anyModified) {
             floorGrid = grid
-            AbyssalChunkDataCache.store(chunkMinBlockX shr 4, chunkMinBlockZ shr 4, abyssalMask, grid)
+            AbyssalChunkDataCache.store(chunkMinBlockX shr 4, chunkMinBlockZ shr 4, abyssalMask, carverMask, grid)
         }
     }
 
@@ -222,9 +141,16 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         if (localX !in 0..15 || localZ !in 0..15) return
         val floorY = grid[localX + localZ * 16]
         if (floorY == Int.MIN_VALUE) return
-        if (blockY() <= floorY) return
 
         val current = cir.returnValue
+
+        if (blockY() <= floorY) {
+            if (current != null && current.`is`(Blocks.WATER)) {
+                cir.returnValue = Blocks.STONE.defaultBlockState()
+            }
+            return
+        }
+
         if (current != null && current.`is`(Blocks.WATER)) return
         cir.returnValue = Blocks.WATER.defaultBlockState()
     }

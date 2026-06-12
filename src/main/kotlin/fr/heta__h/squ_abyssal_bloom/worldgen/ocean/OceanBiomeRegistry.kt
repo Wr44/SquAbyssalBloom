@@ -1,6 +1,8 @@
-package fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean
+package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
 
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanBiomeEntry
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanZone
 import net.minecraft.core.Holder
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.Registries

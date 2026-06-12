@@ -1,14 +1,13 @@
 package fr.heta__h.squ_abyssal_bloom.util.cache
 
-import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.AbyssalChunkData
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalChunkData
 import java.util.concurrent.ConcurrentHashMap
-
 
 object AbyssalChunkDataCache {
     private val cache = ConcurrentHashMap<Long, AbyssalChunkData>()
 
-    fun store(chunkX: Int, chunkZ: Int, mask: BooleanArray, floorGrid: IntArray) {
-        cache[pack(chunkX, chunkZ)] = AbyssalChunkData(mask, floorGrid)
+    fun store(chunkX: Int, chunkZ: Int, abyssalMask: BooleanArray, carverMask: BooleanArray, floorGrid: IntArray) {
+        cache[pack(chunkX, chunkZ)] = AbyssalChunkData(abyssalMask, carverMask, floorGrid)
     }
 
     fun consume(chunkX: Int, chunkZ: Int): AbyssalChunkData? =

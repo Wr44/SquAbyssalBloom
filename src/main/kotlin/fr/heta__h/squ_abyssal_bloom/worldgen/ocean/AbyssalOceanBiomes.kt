@@ -1,6 +1,7 @@
-package fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean
+package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
 
 import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanZone
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome

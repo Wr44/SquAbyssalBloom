@@ -30,26 +30,33 @@ abstract class AbyssalCarverFillMixin {
         chunk: ChunkAccess,
         ci: CallbackInfo
     ) {
-        val (mask, floorGrid) = AbyssalChunkDataCache.consume(chunk.pos.x, chunk.pos.z) ?: return
+        val data = AbyssalChunkDataCache.consume(chunk.pos.x, chunk.pos.z) ?: return
 
         val seaLevel = region.seaLevel
         val water = Blocks.WATER.defaultBlockState()
+        val stone = Blocks.STONE.defaultBlockState()
         val mutable = BlockPos.MutableBlockPos()
 
         for (localX in 0..15) {
             for (localZ in 0..15) {
-                if (!mask[localX + localZ * 16]) continue
+                if (!data.carverMask[localX + localZ * 16]) continue
 
-                val floorY = floorGrid[localX + localZ * 16]
+                val floorY = data.floorGrid[localX + localZ * 16]
                 if (floorY == Int.MIN_VALUE) continue
 
                 val worldX = chunk.pos.minBlockX + localX
                 val worldZ = chunk.pos.minBlockZ + localZ
+                val crustBottom = floorY - 4
 
                 for (y in chunk.minY until seaLevel) {
                     mutable.set(worldX, y, worldZ)
                     val state = chunk.getBlockState(mutable)
-                    if (state.isAir || state.`is`(Blocks.LAVA)) {
+
+                    if (y in crustBottom..floorY) {
+                        if (state.isAir || state.`is`(Blocks.WATER) || state.`is`(Blocks.LAVA)) {
+                            chunk.setBlockState(mutable, stone)
+                        }
+                    } else if (state.isAir || state.`is`(Blocks.LAVA)) {
                         chunk.setBlockState(mutable, water)
                     }
                 }
