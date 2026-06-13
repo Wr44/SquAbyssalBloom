@@ -4,9 +4,14 @@ import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalShapingContext
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnMods
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnSample
 import net.minecraft.world.level.levelgen.DensityFunction
+import org.slf4j.LoggerFactory
 import kotlin.math.abs
 
 object AbyssalFloorShaper {
+
+    private val LOGGER = LoggerFactory.getLogger(AbyssalFloorShaper::class.java)
+    private var deepLogCounter = 0
+    private var shallowLogCounter = 0
 
     const val MUSHROOM_MIN = -1.05
     const val MUSHROOM_TRANSITION = 0.05
@@ -17,6 +22,7 @@ object AbyssalFloorShaper {
     const val SHALLOW_FLOOR_Y = 35
     const val DEEP_FLOOR_TARGET = 10
     const val TARGET_FLOOR_Y = -40
+    const val ABYSSAL_SOFT_ZONE = 15.0
     const val GUYOT_CLEARANCE = 12
     const val SHALLOW_CLEARANCE = 8
 
@@ -47,9 +53,9 @@ object AbyssalFloorShaper {
     const val SEAMOUNT_AMP = 70.0
 
     const val DEEP_LARGE_SCALE = 0.0015
-    const val DEEP_LARGE_AMP = 16.0
+    const val DEEP_LARGE_AMP = 6.0
     const val DEEP_TOPO_SCALE = 0.003
-    const val DEEP_TOPO_AMP = 10.0
+    const val DEEP_TOPO_AMP = 14.0
     const val DEEP_MID_SCALE = 0.008
     const val DEEP_MID_AMP = 6.0
     const val DEEP_RIDGE_SCALE = 0.007
@@ -57,13 +63,11 @@ object AbyssalFloorShaper {
     const val DEEP_DETAIL_AMP = 4.0
     const val DEEP_MICRO_AMP = 2.5
 
-    const val SHALLOW_COAST_FADE = -0.35
-    const val SHALLOW_DRIFT_SCALE = 0.0004
-    const val SHALLOW_DRIFT_AMP = 12.0
+    const val SHALLOW_COAST_FADE = -0.26
     const val SHALLOW_LARGE_SCALE = 0.001
-    const val SHALLOW_LARGE_AMP = 22.0
+    const val SHALLOW_LARGE_AMP = 12.0
     const val SHALLOW_TOPO_SCALE = 0.003
-    const val SHALLOW_TOPO_AMP = 14.0
+    const val SHALLOW_TOPO_AMP = 18.0
     const val SHALLOW_MID_SCALE = 0.009
     const val SHALLOW_MID_AMP = 9.0
     const val SHALLOW_RIDGE_SCALE = 0.005
@@ -140,23 +144,32 @@ object AbyssalFloorShaper {
     }
 
     private fun shallowComputedFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods): Int {
-        val drift = shaping.topoNoise.getValue(mods.warpX * SHALLOW_DRIFT_SCALE, 1200.0, mods.warpZ * SHALLOW_DRIFT_SCALE) * SHALLOW_DRIFT_AMP
-        val shallowLarge = shaping.topoNoise.getValue(mods.warpX * SHALLOW_LARGE_SCALE, 800.0, mods.warpZ * SHALLOW_LARGE_SCALE)
-        val shallowTopo = shaping.topoNoise.getValue(mods.warpX * SHALLOW_TOPO_SCALE, 850.0, mods.warpZ * SHALLOW_TOPO_SCALE)
-        val shallowMid = shaping.topoNoise.getValue(mods.warpX * SHALLOW_MID_SCALE, 1000.0, mods.warpZ * SHALLOW_MID_SCALE)
-        val shallowRidge = shaping.wallNoise.getValue(mods.warpX * SHALLOW_RIDGE_SCALE, 1100.0, mods.warpZ * SHALLOW_RIDGE_SCALE)
+        val shallowLarge = shaping.topoNoise.getValue(mods.warpX * SHALLOW_LARGE_SCALE, 8000.0, mods.warpZ * SHALLOW_LARGE_SCALE)
+        val shallowTopo = shaping.topoNoise.getValue(mods.warpX * SHALLOW_TOPO_SCALE, 8500.0, mods.warpZ * SHALLOW_TOPO_SCALE)
+        val shallowMid = shaping.topoNoise.getValue(mods.warpX * SHALLOW_MID_SCALE, 10000.0, mods.warpZ * SHALLOW_MID_SCALE)
+        val shallowRidge = shaping.wallNoise.getValue(mods.warpX * SHALLOW_RIDGE_SCALE, 11000.0, mods.warpZ * SHALLOW_RIDGE_SCALE)
 
-        val terrain = (shallowLarge * SHALLOW_LARGE_AMP
-                + shallowTopo * SHALLOW_TOPO_AMP
-                + shallowMid * SHALLOW_MID_AMP
-                + shallowRidge * SHALLOW_RIDGE_AMP * mods.weirdnessWallMod
-                ) * mods.erosionFactor
-
+        val rawTerrain = shallowLarge * SHALLOW_LARGE_AMP + shallowTopo * SHALLOW_TOPO_AMP + shallowMid * SHALLOW_MID_AMP + shallowRidge * SHALLOW_RIDGE_AMP * mods.weirdnessWallMod
+        val terrain = rawTerrain * mods.erosionFactor
         val detail = (mods.detailVal * SHALLOW_DETAIL_AMP + mods.microVal * SHALLOW_MICRO_AMP) * mods.humidityDetailMod
 
-        return (SHALLOW_FLOOR_Y + drift + terrain + detail + mods.tempDepthMod).toInt()
+        val uncoerced = SHALLOW_FLOOR_Y + terrain + detail + mods.tempDepthMod
+        val result = uncoerced.toInt()
             .coerceAtMost(shaping.seaLevel - SHALLOW_CLEARANCE)
             .coerceAtLeast(shaping.deepHardLimit)
+
+        shallowLogCounter++
+        if (shallowLogCounter % 2000 == 0) {
+            LOGGER.info(
+                "[ABF-Shallow] erosion=%.2f temp=%.2f | rawTerrain=%.2f terrain=%.2f detail=%.2f | base=%d uncoerced=%.1f hardLimit=%d seaLimit=%d result=%d".format(
+                    mods.erosionFactor, mods.tempDepthMod,
+                    rawTerrain, terrain, detail,
+                    SHALLOW_FLOOR_Y, uncoerced, shaping.deepHardLimit, shaping.seaLevel - SHALLOW_CLEARANCE, result
+                )
+            )
+        }
+
+        return result
     }
 
     private fun shallowFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods, finalDensityDf: DensityFunction): Int {
@@ -169,21 +182,30 @@ object AbyssalFloorShaper {
     }
 
     private fun deepFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods): Int {
-        val deepLarge = shaping.topoNoise.getValue(mods.warpX * DEEP_LARGE_SCALE, 600.0, mods.warpZ * DEEP_LARGE_SCALE)
-        val deepTopo = shaping.topoNoise.getValue(mods.warpX * DEEP_TOPO_SCALE, 300.0, mods.warpZ * DEEP_TOPO_SCALE)
-        val deepMid = shaping.topoNoise.getValue(mods.warpX * DEEP_MID_SCALE, 700.0, mods.warpZ * DEEP_MID_SCALE)
-        val deepRidge = shaping.wallNoise.getValue(mods.warpX * DEEP_RIDGE_SCALE, 400.0, mods.warpZ * DEEP_RIDGE_SCALE)
+        val deepLarge = shaping.topoNoise.getValue(mods.warpX * DEEP_LARGE_SCALE, 2400.0, mods.warpZ * DEEP_LARGE_SCALE)
+        val deepTopo = shaping.topoNoise.getValue(mods.warpX * DEEP_TOPO_SCALE, 1200.0, mods.warpZ * DEEP_TOPO_SCALE)
+        val deepMid = shaping.topoNoise.getValue(mods.warpX * DEEP_MID_SCALE, 2800.0, mods.warpZ * DEEP_MID_SCALE)
+        val deepRidge = shaping.wallNoise.getValue(mods.warpX * DEEP_RIDGE_SCALE, 1600.0, mods.warpZ * DEEP_RIDGE_SCALE)
 
-        val terrain = (deepLarge * DEEP_LARGE_AMP
-                + deepTopo * DEEP_TOPO_AMP
-                + deepMid * DEEP_MID_AMP
-                + deepRidge * DEEP_RIDGE_AMP * mods.weirdnessWallMod
-                ) * mods.erosionFactor
-
+        val rawTerrain = deepLarge * DEEP_LARGE_AMP + deepTopo * DEEP_TOPO_AMP + deepMid * DEEP_MID_AMP + deepRidge * DEEP_RIDGE_AMP * mods.weirdnessWallMod
+        val terrain = rawTerrain * mods.erosionFactor
         val detail = (mods.detailVal * DEEP_DETAIL_AMP + mods.microVal * DEEP_MICRO_AMP) * mods.humidityDetailMod
 
-        return (DEEP_FLOOR_TARGET + terrain + detail + mods.tempDepthMod).toInt()
-            .coerceAtLeast(shaping.deepHardLimit)
+        val uncoerced = DEEP_FLOOR_TARGET + terrain + detail + mods.tempDepthMod  // DEEP_CALIBRATION_OFFSET supprimé
+        val result = uncoerced.toInt().coerceAtLeast(shaping.deepHardLimit)
+
+        deepLogCounter++
+        if (deepLogCounter % 2000 == 0) {
+            LOGGER.info(
+                "[ABF-Deep] erosion=%.2f temp=%.2f weird=%.2f | rawTerrain=%.2f terrain=%.2f detail=%.2f | base=%.1f uncoerced=%.1f hardLimit=%d result=%d".format(
+                    mods.erosionFactor, mods.tempDepthMod, mods.weirdnessWallMod,
+                    rawTerrain, terrain, detail,
+                    DEEP_FLOOR_TARGET.toDouble(), uncoerced, shaping.deepHardLimit, result
+                )
+            )
+        }
+
+        return result
     }
 
     private fun blendShallowDeep(
@@ -231,35 +253,44 @@ object AbyssalFloorShaper {
             .coerceAtLeast(shaping.abyssalHardLimit)
     }
 
+    private fun softClampAbyssalFloor(value: Double, hardLimit: Int): Double {
+        val limit = hardLimit.toDouble()
+        val softStart = limit + ABYSSAL_SOFT_ZONE
+        if (value >= softStart) return value
+        val t = ((value - limit) / ABYSSAL_SOFT_ZONE).coerceIn(0.0, 1.0)
+        return limit + ABYSSAL_SOFT_ZONE * t * t * (3.0 - 2.0 * t)
+    }
+
     private fun abyssalFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods): Int {
         val rawT = ((column.cont - mods.effectiveAbyssalSplit) / (CONTINENTAL_FULL - mods.effectiveAbyssalSplit)).coerceIn(0.0, 1.0)
         val steepT = 1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)
         val mushroomProxT = ((column.cont - MUSHROOM_MIN) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
         val effectiveSteepT = steepT * mushroomProxT
 
-        val shallowLift = (SHALLOW_FLOOR_Y - 1 - DEEP_FLOOR_TARGET) * (1.0 - mushroomProxT)
-        val base = DEEP_FLOOR_TARGET + effectiveSteepT * (TARGET_FLOOR_Y - DEEP_FLOOR_TARGET) + shallowLift
+        val localDeepY = deepFloor(shaping, column, mods).toDouble()
+        val shallowLift = (SHALLOW_FLOOR_Y - 1 - localDeepY) * (1.0 - mushroomProxT)
+        val base = localDeepY + effectiveSteepT * (TARGET_FLOOR_Y - localDeepY) + shallowLift
 
         val topoLarge = shaping.topoNoise.getValue(mods.warpX * TOPO_LARGE_SCALE, 0.0, mods.warpZ * TOPO_LARGE_SCALE)
         val topo = shaping.topoNoise.getValue(mods.warpX * TOPO_SCALE, 0.0, mods.warpZ * TOPO_SCALE)
         val topoMid = shaping.topoNoise.getValue(mods.warpX * TOPO_MID_SCALE, 0.0, mods.warpZ * TOPO_MID_SCALE)
 
         val topoRaw = (topoLarge * TOPO_LARGE_AMP + topo * TOPO_AMP + topoMid * TOPO_MID_AMP) * effectiveSteepT * mods.erosionFactor
-        val topoVar = topoRaw.coerceAtLeast(-6.0 * effectiveSteepT)
-        val wallVar = mods.wallVal * WALL_AMP * effectiveSteepT * mods.erosionFactor * mods.weirdnessWallMod
+        val topoVar = topoRaw.coerceAtLeast(0.0)
+        val wallVar = (mods.wallVal * WALL_AMP * effectiveSteepT * mods.erosionFactor * mods.weirdnessWallMod).coerceAtLeast(0.0)
         val detailVar = (mods.detailVal * DETAIL_AMP + mods.microVal * MICRO_AMP) * effectiveSteepT * mods.humidityDetailMod
         val weirdnessVar = column.ridges * WEIRDNESS_AMP * effectiveSteepT
         val tempVar = mods.tempDepthMod * effectiveSteepT
 
-        val terrainBase = (base + topoVar + wallVar + detailVar + weirdnessVar + tempVar)
+        val terrainBase = base + topoVar + wallVar + detailVar + weirdnessVar + tempVar
 
         val trenchT = trenchFactor(shaping, mods)
         val trenchBudget = (terrainBase - shaping.abyssalHardLimit).coerceAtLeast(0.0)
         val trenchVar = -trenchT * trenchT * TRENCH_DEPTH_AMP * effectiveSteepT * (trenchBudget / TRENCH_DEPTH_AMP).coerceIn(0.0, 1.0)
         val seamountVar = seamountHeight(shaping, column, effectiveSteepT) * (1.0 - trenchT)
 
-        return (terrainBase + trenchVar + seamountVar).toInt()
-            .coerceAtLeast(shaping.abyssalHardLimit)
+        val finalY = terrainBase + trenchVar + seamountVar
+        return softClampAbyssalFloor(finalY, shaping.abyssalHardLimit).toInt()
             .coerceAtMost(shaping.seaLevel - GUYOT_CLEARANCE)
     }
 
