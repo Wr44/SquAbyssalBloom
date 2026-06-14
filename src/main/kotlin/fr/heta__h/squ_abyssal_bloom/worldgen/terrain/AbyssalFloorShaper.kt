@@ -10,18 +10,14 @@ import kotlin.math.floor
 
 object AbyssalFloorShaper {
 
-    private val LOGGER = LoggerFactory.getLogger(AbyssalFloorShaper::class.java)
-    private var deepLogCounter = 0
-    private var shallowLogCounter = 0
-
     const val MUSHROOM_MIN = -1.05
     const val MUSHROOM_TRANSITION = 0.05
     const val CONTINENTAL_FULL = -0.92
     const val ABYSSAL_DEEP_MARGIN = 0.015
     const val OCEAN_MAX_CONT = -0.19
 
-    const val SHALLOW_FLOOR_Y = 35
-    const val DEEP_FLOOR_TARGET = 10
+    const val SHALLOW_FLOOR_Y = 37
+    const val DEEP_FLOOR_TARGET = 8
     const val TARGET_FLOOR_Y = -40
     const val ABYSSAL_SOFT_ZONE = 15.0
     const val GUYOT_CLEARANCE = 12
@@ -242,17 +238,6 @@ object AbyssalFloorShaper {
             .coerceAtMost(shaping.seaLevel - SHALLOW_CLEARANCE)
             .coerceAtLeast(shaping.deepHardLimit)
 
-        shallowLogCounter++
-        if (shallowLogCounter % 2000 == 0) {
-            LOGGER.info(
-                "[ABF-Shallow] erosion=%.2f temp=%.2f | rawTerrain=%.2f terrain=%.2f detail=%.2f | base=%d uncoerced=%.1f hardLimit=%d seaLimit=%d result=%d".format(
-                    mods.erosionFactor, mods.tempDepthMod,
-                    rawTerrain, terrain, detail,
-                    SHALLOW_FLOOR_Y, uncoerced, shaping.deepHardLimit, shaping.seaLevel - SHALLOW_CLEARANCE, result
-                )
-            )
-        }
-
         return result
     }
 
@@ -288,17 +273,6 @@ object AbyssalFloorShaper {
 
         val uncoerced = DEEP_FLOOR_TARGET + terrain + detail + swell + aniso + mods.tempDepthMod
         val result = uncoerced.toInt().coerceAtLeast(shaping.deepHardLimit)
-
-        deepLogCounter++
-        if (deepLogCounter % 2000 == 0) {
-            LOGGER.info(
-                "[ABF-Deep] | cLarge=%.2f cTopo=%.2f cMid=%.2f cRidge=%.2f | rawTerrain=%.2f terrain=%.2f swell=%.2f aniso=%.2f detail=%.2f temp=%.2f | uncoerced=%.1f result=%d".format(
-                    cLarge, cTopo, cMid, cRidge,
-                    rawTerrain, terrain, swell, aniso, detail, mods.tempDepthMod,
-                    uncoerced, result
-                )
-            )
-        }
 
         return result
     }

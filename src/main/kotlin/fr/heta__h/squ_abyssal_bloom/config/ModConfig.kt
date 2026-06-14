@@ -145,6 +145,90 @@ object ModConfig {
             deepAbyssalBoundary = ServerConfigCache.deepAbyssalBoundary,
         )
 
+        val depthStartOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart.tooltip")))
+            .binding(Binding.generic(30.0, { abyssDepthStart }, { abyssDepthStart = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
+            .build()
+
+        val depthMaxOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth.tooltip")))
+            .binding(Binding.generic(80.0, { abyssMaxDepth }, { abyssMaxDepth = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(10.0, 200.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
+            .build()
+
+        depthStartOpt.addListener { _, newStart ->
+            if (depthMaxOpt.pendingValue() <= newStart) {
+                depthMaxOpt.requestSet(newStart + 1.0)
+            }
+        }
+        depthMaxOpt.addListener { _, newMax ->
+            if (depthStartOpt.pendingValue() >= newMax) {
+                depthStartOpt.requestSet(newMax - 1.0)
+            }
+        }
+
+        val alphaMinOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin.desc")))
+            .binding(Binding.generic(0.05, { surfaceOccluderAlphaMin }, { surfaceOccluderAlphaMin = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 0.5).step(0.01) }
+            .build()
+
+        val alphaMaxOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax.desc")))
+            .binding(Binding.generic(0.70, { surfaceOccluderAlphaMax }, { surfaceOccluderAlphaMax = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 1.0).step(0.01) }
+            .build()
+
+        alphaMinOpt.addListener { _, newMin ->
+            if (alphaMaxOpt.pendingValue() <= newMin) {
+                alphaMaxOpt.requestSet(newMin + 0.01)
+            }
+        }
+        alphaMaxOpt.addListener { _, newMax ->
+            if (alphaMinOpt.pendingValue() >= newMax) {
+                alphaMinOpt.requestSet(newMax - 0.01)
+            }
+        }
+
+        val shallowDeepOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary.desc")))
+            .binding(Binding.generic(-0.45, { ServerConfigCache.shallowDeepBoundary }, { ServerConfigCache.shallowDeepBoundary = it }))
+            .controller { opt ->
+                DoubleSliderControllerBuilder.create(opt)
+                    .range(-0.95, -0.21)
+                    .step(0.001)
+                    .formatValue { v -> Component.literal(String.format("%.3f", v)) }
+            }
+            .build()
+
+        val deepAbyssalOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary.desc")))
+            .binding(Binding.generic(-0.70, { ServerConfigCache.deepAbyssalBoundary }, { ServerConfigCache.deepAbyssalBoundary = it }))
+            .controller { opt ->
+                DoubleSliderControllerBuilder.create(opt)
+                    .range(-1.049, -0.30)
+                    .step(0.001)
+                    .formatValue { v -> Component.literal(String.format("%.3f", v)) }
+            }
+            .build()
+
+        shallowDeepOpt.addListener { _, newShallow ->
+            if (deepAbyssalOpt.pendingValue() >= newShallow) {
+                deepAbyssalOpt.requestSet(newShallow - 0.001)
+            }
+        }
+        deepAbyssalOpt.addListener { _, newDeep ->
+            if (shallowDeepOpt.pendingValue() <= newDeep) {
+                shallowDeepOpt.requestSet(newDeep + 0.001)
+            }
+        }
 
         return YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
@@ -183,18 +267,8 @@ object ModConfig {
                         .binding(Binding.generic(true, { enableAbyssFog }, { enableAbyssFog = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart.tooltip")))
-                        .binding(Binding.generic(30.0, { abyssDepthStart }, { abyssDepthStart = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth.tooltip")))
-                        .binding(Binding.generic(80.0, { abyssMaxDepth }, { abyssMaxDepth = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(10.0, 200.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
-                        .build())
+                    .option(depthStartOpt)
+                    .option(depthMaxOpt)
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.fogDarknessIntensity"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogDarknessIntensity.tooltip")))
@@ -293,18 +367,8 @@ object ModConfig {
                         .binding(Binding.generic(true, { enableSurfaceOccluder }, { enableSurfaceOccluder = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin.desc")))
-                        .binding(Binding.generic(0.05, { surfaceOccluderAlphaMin }, { surfaceOccluderAlphaMin = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 0.5).step(0.01) }
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax.desc")))
-                        .binding(Binding.generic(0.70, { surfaceOccluderAlphaMax }, { surfaceOccluderAlphaMax = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 1.0).step(0.01) }
-                        .build())
+                    .option(alphaMinOpt)
+                    .option(alphaMaxOpt)
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers.desc")))
@@ -380,36 +444,8 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones.desc"))
                         .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowDeepBoundary.desc")))
-                        .binding(Binding.generic(
-                            -0.45,
-                            { ServerConfigCache.shallowDeepBoundary },
-                            { ServerConfigCache.shallowDeepBoundary = it }
-                        ))
-                        .controller { opt ->
-                            DoubleSliderControllerBuilder.create(opt)
-                                .range(-0.95, -0.21)
-                                .step(0.001)
-                                .formatValue { v -> Component.literal(String.format("%.3f", v)) }
-                        }
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.deepAbyssalBoundary.desc")))
-                        .binding(Binding.generic(
-                            -0.70,
-                            { ServerConfigCache.deepAbyssalBoundary },
-                            { ServerConfigCache.deepAbyssalBoundary = it }
-                        ))
-                        .controller { opt ->
-                            DoubleSliderControllerBuilder.create(opt)
-                                .range(-1.049, -0.30)
-                                .step(0.001)
-                                .formatValue { v -> Component.literal(String.format("%.3f", v)) }
-                        }
-                        .build())
+                    .option(shallowDeepOpt)
+                    .option(deepAbyssalOpt)
                     .build())
 
                 .group(OptionGroup.createBuilder()
