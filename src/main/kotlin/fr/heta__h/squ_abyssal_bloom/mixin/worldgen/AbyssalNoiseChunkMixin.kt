@@ -75,7 +75,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
             deepAbyssalEdge = ServerConfigCache.effectiveDeepAbyssal.toDouble(),
             seaLevel = cachedSeaLevel,
             deepHardLimit = noiseSettings.minY() + 5,
-            abyssalHardLimit = noiseSettings.minY() + 14
+            abyssalHardLimit = noiseSettings.minY() + 5
         )
 
         val finalDensityDf = randomState.router().finalDensity()

@@ -1,8 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.resources.Identifier
@@ -19,6 +17,9 @@ import java.util.concurrent.ConcurrentHashMap
 object NautilusBubbleSlowHandler {
 
     private val MODIFIER_ID = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_slowdown")
+
+    // NOTE: Il est fortement recommandé de déplacer cette logique dans un Attachment
+    // plutôt que de garder un Set en mémoire vive pour éviter les pertes d'état au redémarrage.
     private val nautilusWithHeldBubble = ConcurrentHashMap.newKeySet<UUID>()
 
     fun onBubbleHeld(nautilusUUID: UUID) {
@@ -33,10 +34,16 @@ object NautilusBubbleSlowHandler {
     fun onEntityTickPost(event: EntityTickEvent.Post) {
         val nautilus = event.entity as? AbstractNautilus ?: return
 
+        if (nautilus.level().isClientSide) return
+
         val speedAttribute = nautilus.getAttribute(Attributes.MOVEMENT_SPEED) ?: return
 
-        if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayerItems.BUBBLE) {
-            if (speedAttribute.getModifier(MODIFIER_ID) != null) speedAttribute.removeModifier(MODIFIER_ID)
+        val equippedItem = nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item
+
+        if (equippedItem != NautilusLayerItems.BUBBLE) {
+            if (speedAttribute.getModifier(MODIFIER_ID) != null) {
+                speedAttribute.removeModifier(MODIFIER_ID)
+            }
             return
         }
 
@@ -47,7 +54,9 @@ object NautilusBubbleSlowHandler {
                 )
             }
         } else {
-            if (speedAttribute.getModifier(MODIFIER_ID) != null) speedAttribute.removeModifier(MODIFIER_ID)
+            if (speedAttribute.getModifier(MODIFIER_ID) != null) {
+                speedAttribute.removeModifier(MODIFIER_ID)
+            }
         }
     }
 }
