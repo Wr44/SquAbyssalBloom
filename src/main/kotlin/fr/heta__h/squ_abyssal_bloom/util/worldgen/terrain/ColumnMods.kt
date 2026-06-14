@@ -10,5 +10,7 @@ class ColumnMods(
     val detailVal: Double,
     val microVal: Double,
     val warpX: Double,
-    val warpZ: Double
+    val warpZ: Double,
+    val warp1X: Double,
+    val warp1Z: Double,
 )
