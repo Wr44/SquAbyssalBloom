@@ -132,18 +132,10 @@ object ModConfig {
 
     fun createConfigScreen(parent: Screen): Screen {
         if (ServerConfigCache.isSingleplayer()) {
-            ServerConfigCache.update(ServerConfigData(
-                strictBarnacleSpawning = ModServerConfig.STRICT_BARNACLE_SPAWNING.get(),
-                shallowDeepBoundary = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get(),
-                deepAbyssalBoundary = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get(),
-            ))
+            ServerConfigCache.update(ServerConfigData.fromSpec())
         }
 
-        val initialServerConfig = ServerConfigData(
-            strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
-            shallowDeepBoundary = ServerConfigCache.shallowDeepBoundary,
-            deepAbyssalBoundary = ServerConfigCache.deepAbyssalBoundary,
-        )
+        val initialServerConfig = ServerConfigCache.toData()
 
         val depthStartOpt = Option.createBuilder<Double>()
             .name(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart"))
@@ -160,14 +152,10 @@ object ModConfig {
             .build()
 
         depthStartOpt.addListener { _, newStart ->
-            if (depthMaxOpt.pendingValue() <= newStart) {
-                depthMaxOpt.requestSet(newStart + 1.0)
-            }
+            if (depthMaxOpt.pendingValue() <= newStart) depthMaxOpt.requestSet(newStart + 1.0)
         }
         depthMaxOpt.addListener { _, newMax ->
-            if (depthStartOpt.pendingValue() >= newMax) {
-                depthStartOpt.requestSet(newMax - 1.0)
-            }
+            if (depthStartOpt.pendingValue() >= newMax) depthStartOpt.requestSet(newMax - 1.0)
         }
 
         val alphaMinOpt = Option.createBuilder<Double>()
@@ -185,14 +173,10 @@ object ModConfig {
             .build()
 
         alphaMinOpt.addListener { _, newMin ->
-            if (alphaMaxOpt.pendingValue() <= newMin) {
-                alphaMaxOpt.requestSet(newMin + 0.01)
-            }
+            if (alphaMaxOpt.pendingValue() <= newMin) alphaMaxOpt.requestSet(newMin + 0.01)
         }
         alphaMaxOpt.addListener { _, newMax ->
-            if (alphaMinOpt.pendingValue() >= newMax) {
-                alphaMinOpt.requestSet(newMax - 0.01)
-            }
+            if (alphaMinOpt.pendingValue() >= newMax) alphaMinOpt.requestSet(newMax - 0.01)
         }
 
         val shallowDeepOpt = Option.createBuilder<Double>()
@@ -220,14 +204,42 @@ object ModConfig {
             .build()
 
         shallowDeepOpt.addListener { _, newShallow ->
-            if (deepAbyssalOpt.pendingValue() >= newShallow) {
-                deepAbyssalOpt.requestSet(newShallow - 0.001)
-            }
+            if (deepAbyssalOpt.pendingValue() >= newShallow) deepAbyssalOpt.requestSet(newShallow - 0.001)
         }
         deepAbyssalOpt.addListener { _, newDeep ->
-            if (shallowDeepOpt.pendingValue() <= newDeep) {
-                shallowDeepOpt.requestSet(newDeep + 0.001)
-            }
+            if (shallowDeepOpt.pendingValue() <= newDeep) shallowDeepOpt.requestSet(newDeep + 0.001)
+        }
+
+        val shallowFloorOpt = Option.createBuilder<Int>()
+            .name(Component.translatable("config.squ_abyssal_bloom.shallowFloorY"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowFloorY.desc")))
+            .binding(Binding.generic(32, { ServerConfigCache.shallowFloorY }, { ServerConfigCache.shallowFloorY = it }))
+            .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(-60, 60).step(1).formatValue { v -> Component.literal("Y=$v") } }
+            .build()
+
+        val deepFloorOpt = Option.createBuilder<Int>()
+            .name(Component.translatable("config.squ_abyssal_bloom.deepFloorTarget"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.deepFloorTarget.desc")))
+            .binding(Binding.generic(11, { ServerConfigCache.deepFloorTarget }, { ServerConfigCache.deepFloorTarget = it }))
+            .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(-60, 60).step(1).formatValue { v -> Component.literal("Y=$v") } }
+            .build()
+
+        val abyssalFloorOpt = Option.createBuilder<Int>()
+            .name(Component.translatable("config.squ_abyssal_bloom.targetFloorY"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.targetFloorY.desc")))
+            .binding(Binding.generic(-35, { ServerConfigCache.targetFloorY }, { ServerConfigCache.targetFloorY = it }))
+            .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(-64, 20).step(1).formatValue { v -> Component.literal("Y=$v") } }
+            .build()
+
+        shallowFloorOpt.addListener { _, newShallow ->
+            if (deepFloorOpt.pendingValue() >= newShallow) deepFloorOpt.requestSet(newShallow - 1)
+        }
+        deepFloorOpt.addListener { _, newDeep ->
+            if (shallowFloorOpt.pendingValue() <= newDeep) shallowFloorOpt.requestSet(newDeep + 1)
+            if (abyssalFloorOpt.pendingValue() >= newDeep) abyssalFloorOpt.requestSet(newDeep - 1)
+        }
+        abyssalFloorOpt.addListener { _, newAbyssal ->
+            if (deepFloorOpt.pendingValue() <= newAbyssal) deepFloorOpt.requestSet(newAbyssal + 1)
         }
 
         return YetAnotherConfigLib.createBuilder()
@@ -235,18 +247,10 @@ object ModConfig {
             .save {
                 saveConfig()
                 if (ServerConfigCache.isSingleplayer()) {
-                    ModServerConfig.STRICT_BARNACLE_SPAWNING.set(ServerConfigCache.strictBarnacleSpawning)
-                    ModServerConfig.SHALLOW_DEEP_BOUNDARY.set(ServerConfigCache.shallowDeepBoundary)
-                    ModServerConfig.DEEP_ABYSSAL_BOUNDARY.set(ServerConfigCache.deepAbyssalBoundary)
-                    ModServerConfig.SPEC.save()
+                    ServerConfigCache.toData().applyToSpec()
                 } else {
-                    val currentServerConfig = ServerConfigData(
-                        strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
-                        shallowDeepBoundary = ServerConfigCache.shallowDeepBoundary,
-                        deepAbyssalBoundary = ServerConfigCache.deepAbyssalBoundary,
-                    )
-                    if (currentServerConfig != initialServerConfig
-                        && Minecraft.getInstance().connection != null) {
+                    val currentServerConfig = ServerConfigCache.toData()
+                    if (currentServerConfig != initialServerConfig && Minecraft.getInstance().connection != null) {
                         ClientPacketDistributor.sendToServer(C2SServerConfigPacket(currentServerConfig))
                     }
                 }
@@ -503,6 +507,184 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.template")))
                         .binding(Binding.generic(false, { false }, {}))
                         .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .build())
+
+                .build())
+
+            .category(ConfigCategory.createBuilder()
+                .name(Component.translatable("config.squ_abyssal_bloom.worldgen")
+                    .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GREEN))
+                .tooltip(Component.translatable("config.squ_abyssal_bloom.worldgen.tooltip"))
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.terrain_zones").withStyle(ChatFormatting.GREEN))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.terrain_zones.desc"))
+                        .build())
+                    .option(shallowFloorOpt)
+                    .option(deepFloorOpt)
+                    .option(abyssalFloorOpt)
+                    .option(Option.createBuilder<Int>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.shallowClearance"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowClearance.desc")))
+                        .binding(Binding.generic(8, { ServerConfigCache.shallowClearance }, { ServerConfigCache.shallowClearance = it }))
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 30).step(1) }
+                        .build())
+                    .option(Option.createBuilder<Int>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.guyotClearance"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.guyotClearance.desc")))
+                        .binding(Binding.generic(5, { ServerConfigCache.guyotClearance }, { ServerConfigCache.guyotClearance = it }))
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 30).step(1) }
+                        .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.topo").withStyle(ChatFormatting.AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.topo.desc"))
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.warpAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.warpAmp.desc")))
+                        .binding(Binding.generic(60.0, { ServerConfigCache.warpAmp }, { ServerConfigCache.warpAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.warp2Amp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.warp2Amp.desc")))
+                        .binding(Binding.generic(26.0, { ServerConfigCache.warp2Amp }, { ServerConfigCache.warp2Amp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(2.0) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.topoLargeAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.topoLargeAmp.desc")))
+                        .binding(Binding.generic(55.0, { ServerConfigCache.topoLargeAmp }, { ServerConfigCache.topoLargeAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 150.0).step(5.0) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.topoAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.topoAmp.desc")))
+                        .binding(Binding.generic(24.0, { ServerConfigCache.topoAmp }, { ServerConfigCache.topoAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(2.0) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.topoMidAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.topoMidAmp.desc")))
+                        .binding(Binding.generic(11.0, { ServerConfigCache.topoMidAmp }, { ServerConfigCache.topoMidAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 60.0).step(1.0) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.wallAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.wallAmp.desc")))
+                        .binding(Binding.generic(14.0, { ServerConfigCache.wallAmp }, { ServerConfigCache.wallAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 80.0).step(2.0) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.detailAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.detailAmp.desc")))
+                        .binding(Binding.generic(7.0, { ServerConfigCache.detailAmp }, { ServerConfigCache.detailAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 40.0).step(1.0) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.microAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.microAmp.desc")))
+                        .binding(Binding.generic(4.0, { ServerConfigCache.microAmp }, { ServerConfigCache.microAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 20.0).step(0.5) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.weirdnessAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.weirdnessAmp.desc")))
+                        .binding(Binding.generic(11.0, { ServerConfigCache.weirdnessAmp }, { ServerConfigCache.weirdnessAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 50.0).step(1.0) }
+                        .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.faults").withStyle(ChatFormatting.GOLD))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.faults.desc"))
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.faultThreshold"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.faultThreshold.desc")))
+                        .binding(Binding.generic(0.012, { ServerConfigCache.faultThreshold }, { ServerConfigCache.faultThreshold = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.001, 0.15).step(0.001).formatValue { v -> Component.literal(String.format("%.3f", v)) } }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.faultBlend"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.faultBlend.desc")))
+                        .binding(Binding.generic(0.045, { ServerConfigCache.faultBlend }, { ServerConfigCache.faultBlend = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.001, 0.2).step(0.001).formatValue { v -> Component.literal(String.format("%.3f", v)) } }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.faultOffsetAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.faultOffsetAmp.desc")))
+                        .binding(Binding.generic(16.0, { ServerConfigCache.faultOffsetAmp }, { ServerConfigCache.faultOffsetAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 80.0).step(1.0) }
+                        .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.trenches").withStyle(ChatFormatting.DARK_RED))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.trenches.desc"))
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.trenchThreshold"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.trenchThreshold.desc")))
+                        .binding(Binding.generic(0.88, { ServerConfigCache.trenchThreshold }, { ServerConfigCache.trenchThreshold = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 0.99).step(0.01).formatValue { v -> Component.literal(String.format("%.2f", v)) } }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.trenchDepthAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.trenchDepthAmp.desc")))
+                        .binding(Binding.generic(45.0, { ServerConfigCache.trenchDepthAmp }, { ServerConfigCache.trenchDepthAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 120.0).step(5.0) }
+                        .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.seamounts").withStyle(ChatFormatting.DARK_GREEN))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.seamounts.desc"))
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.seamountThreshold"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.seamountThreshold.desc")))
+                        .binding(Binding.generic(0.62, { ServerConfigCache.seamountThreshold }, { ServerConfigCache.seamountThreshold = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.3, 0.99).step(0.01).formatValue { v -> Component.literal(String.format("%.2f", v)) } }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.seamountAmp"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.seamountAmp.desc")))
+                        .binding(Binding.generic(70.0, { ServerConfigCache.seamountAmp }, { ServerConfigCache.seamountAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0) }
+                        .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.terraces").withStyle(ChatFormatting.YELLOW))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.terraces.desc"))
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.terraceMaskThreshold"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.terraceMaskThreshold.desc")))
+                        .binding(Binding.generic(0.80, { ServerConfigCache.terraceMaskThreshold }, { ServerConfigCache.terraceMaskThreshold = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.3, 0.99).step(0.01).formatValue { v -> Component.literal(String.format("%.2f", v)) } }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.terraceLevels"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.terraceLevels.desc")))
+                        .binding(Binding.generic(3.0, { ServerConfigCache.terraceLevels }, { ServerConfigCache.terraceLevels = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(1.0, 8.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f", v)) } }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.terraceStep"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.terraceStep.desc")))
+                        .binding(Binding.generic(13.0, { ServerConfigCache.terraceStep }, { ServerConfigCache.terraceStep = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(2.0, 40.0).step(1.0) }
                         .build())
                     .build())
 

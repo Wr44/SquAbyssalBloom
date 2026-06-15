@@ -14,7 +14,6 @@ import fr.heta__h.squ_abyssal_bloom.config.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.fml.ModLoadingContext
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
 import net.neoforged.fml.config.ModConfig

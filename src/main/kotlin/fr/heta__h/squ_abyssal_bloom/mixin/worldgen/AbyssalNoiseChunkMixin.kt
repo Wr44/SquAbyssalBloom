@@ -114,7 +114,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 if (floorY < cachedSeaLevel) {
                     grid[localX + localZ * 16] = floorY
                     carverMask[localX + localZ * 16] = true
-                    if (floorY < AbyssalFloorShaper.SHALLOW_FLOOR_Y) {
+                    if (floorY < ServerConfigCache.effectiveShallowFloorY) {
                         abyssalMask[localX + localZ * 16] = true
                     }
                     anyModified = true
