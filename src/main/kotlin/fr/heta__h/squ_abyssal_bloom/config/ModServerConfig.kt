@@ -99,8 +99,8 @@ object ModServerConfig {
 
     // Seamount
     val SEAMOUNT_THRESHOLD: ModConfigSpec.DoubleValue = SPEC_BUILDER
-        .comment("Noise threshold above which a seamount forms (0–1).")
-        .defineInRange("seamountThreshold", 0.62, 0.3, 0.99)
+        .comment("Noise threshold above which a seamount forms (0.2–1.2, remapped noise).")
+        .defineInRange("seamountThreshold", 0.90, 0.20, 0.99)
 
     val SEAMOUNT_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Maximum height of seamounts above abyssal floor (blocks).")

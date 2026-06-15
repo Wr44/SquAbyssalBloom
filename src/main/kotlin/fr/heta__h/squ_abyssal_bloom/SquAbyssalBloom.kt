@@ -85,7 +85,6 @@ object SquAbyssalBloom {
         LOGGER.info("Hello! This is working!")
     }
 
-
     @SubscribeEvent
     fun onRegisterAttributes(event: EntityAttributeCreationEvent) {
         ModEntities.onRegisterAttributes(event)

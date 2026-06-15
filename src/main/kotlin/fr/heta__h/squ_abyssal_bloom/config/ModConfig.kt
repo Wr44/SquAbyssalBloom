@@ -652,8 +652,8 @@ object ModConfig {
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.seamountThreshold"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.seamountThreshold.desc")))
-                        .binding(Binding.generic(0.62, { ServerConfigCache.seamountThreshold }, { ServerConfigCache.seamountThreshold = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.3, 0.99).step(0.01).formatValue { v -> Component.literal(String.format("%.2f", v)) } }
+                        .binding(Binding.generic(0.9, { ServerConfigCache.seamountThreshold }, { ServerConfigCache.seamountThreshold = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.25, 0.99).step(0.01).formatValue { v -> Component.literal(String.format("%.2f", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.seamountAmp"))

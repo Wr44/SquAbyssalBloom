@@ -27,7 +27,7 @@ object ServerConfigCache {
     var faultOffsetAmp: Double = 10.0
     var trenchThreshold: Double = 0.88
     var trenchDepthAmp: Double = 10.0
-    var seamountThreshold: Double = 0.62
+    var seamountThreshold: Double = 0.9
     var seamountAmp: Double = 70.0
     var terraceStep: Double = 13.0
     var terraceMaskThreshold: Double = 0.80

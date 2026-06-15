@@ -11,6 +11,8 @@ import kotlin.math.pow
 
 object AbyssalFloorShaper {
 
+    private var seamountCallCounter = 0
+
     const val MUSHROOM_MIN = -1.05
     const val MUSHROOM_TRANSITION = 0.05
     const val CONTINENTAL_FULL = -0.8
@@ -31,6 +33,10 @@ object AbyssalFloorShaper {
 
     const val TRENCH_SCALE = 0.006
     const val SEAMOUNT_SCALE = 0.0015
+    const val SEAMOUNT_SCALE2 = 0.005
+    const val SEAMOUNT_AMP = 0.25
+    const val SEAMOUNT_AMP2 = 0.25
+    const val SEAMOUNT_NOISE_OFFSET = 0.70
 
     const val ANISO_SCALE_X = 0.0014
     const val ANISO_SCALE_Z = 0.0052
@@ -368,9 +374,17 @@ object AbyssalFloorShaper {
     }
 
     private fun seamountHeight(shaping: AbyssalShapingContext, column: ColumnSample, steepT: Double): Double {
-        val raw = shaping.topoNoise.getValue(column.worldX * SEAMOUNT_SCALE, 900.0, column.worldZ * SEAMOUNT_SCALE)
+        val rawCoarse = shaping.topoNoise.getValue(column.worldX * SEAMOUNT_SCALE, 900.0, column.worldZ * SEAMOUNT_SCALE)
+        val rawFine = shaping.topoNoise.getValue(column.worldX * SEAMOUNT_SCALE2, 920.0, column.worldZ * SEAMOUNT_SCALE2)
+        val raw = rawCoarse * SEAMOUNT_AMP + rawFine * SEAMOUNT_AMP2 + SEAMOUNT_NOISE_OFFSET
         val seamountThreshold = ServerConfigCache.effectiveSeamountThreshold
         val t = ((raw - seamountThreshold) / (1.0 - seamountThreshold)).coerceIn(0.0, 1.0)
+
+        seamountCallCounter++
+        if (seamountCallCounter % 1000 == 0) {
+            println("[Seamount] #$seamountCallCounter | x=${column.worldX} z=${column.worldZ} | raw=${"%.4f".format(raw)} threshold=${"%.2f".format(seamountThreshold)} t=${"%.4f".format(t)} height=${"%.1f".format(t * t * (3.0 - 2.0 * t) * ServerConfigCache.effectiveSeamountAmp * steepT)}")
+        }
+
         return t * t * (3.0 - 2.0 * t) * ServerConfigCache.effectiveSeamountAmp * steepT
     }
 }
