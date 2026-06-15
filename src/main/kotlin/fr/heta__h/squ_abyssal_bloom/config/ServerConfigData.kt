@@ -28,7 +28,6 @@ data class ServerConfigData(
     val trenchDepthAmp: Double,
     val seamountThreshold: Double,
     val seamountAmp: Double,
-    val terraceLevels: Double,
     val terraceStep: Double,
     val terraceMaskThreshold: Double,
 ) {
@@ -59,7 +58,6 @@ data class ServerConfigData(
                 buf.writeDouble(v.trenchDepthAmp)
                 buf.writeDouble(v.seamountThreshold)
                 buf.writeDouble(v.seamountAmp)
-                buf.writeDouble(v.terraceLevels)
                 buf.writeDouble(v.terraceStep)
                 buf.writeDouble(v.terraceMaskThreshold)
             },
@@ -89,7 +87,6 @@ data class ServerConfigData(
                     trenchDepthAmp = buf.readDouble(),
                     seamountThreshold = buf.readDouble(),
                     seamountAmp = buf.readDouble(),
-                    terraceLevels = buf.readDouble(),
                     terraceStep = buf.readDouble(),
                     terraceMaskThreshold = buf.readDouble(),
                 )
@@ -121,7 +118,6 @@ data class ServerConfigData(
             trenchDepthAmp = ModServerConfig.TRENCH_DEPTH_AMP.get(),
             seamountThreshold = ModServerConfig.SEAMOUNT_THRESHOLD.get(),
             seamountAmp = ModServerConfig.SEAMOUNT_AMP.get(),
-            terraceLevels = ModServerConfig.TERRACE_LEVELS.get(),
             terraceStep = ModServerConfig.TERRACE_STEP.get(),
             terraceMaskThreshold = ModServerConfig.TERRACE_MASK_THRESHOLD.get(),
         )
@@ -152,7 +148,6 @@ data class ServerConfigData(
         ModServerConfig.TRENCH_DEPTH_AMP.set(trenchDepthAmp)
         ModServerConfig.SEAMOUNT_THRESHOLD.set(seamountThreshold)
         ModServerConfig.SEAMOUNT_AMP.set(seamountAmp)
-        ModServerConfig.TERRACE_LEVELS.set(terraceLevels)
         ModServerConfig.TERRACE_STEP.set(terraceStep)
         ModServerConfig.TERRACE_MASK_THRESHOLD.set(terraceMaskThreshold)
         ModServerConfig.SPEC.save()

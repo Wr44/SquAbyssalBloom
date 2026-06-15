@@ -347,7 +347,7 @@ object AbyssalFloorShaper {
 
         val trenchT = trenchFactor(shaping, mods)
         val trenchDepthAmp = ServerConfigCache.effectiveTrenchDepthAmp
-        val trenchBudget = (finalTerrainBase - (-64)).coerceAtLeast(0.0)
+        val trenchBudget = (finalTerrainBase - shaping.abyssalHardLimit).coerceAtLeast(0.0)
         val trenchVar = -trenchT * trenchT * trenchDepthAmp * effectiveSteepT * (trenchBudget / trenchDepthAmp).coerceIn(0.0, 1.0)
         val seamountVar = seamountHeight(shaping, column, effectiveSteepT) * (1.0 - trenchT)
 

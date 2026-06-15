@@ -85,8 +85,8 @@ object ModServerConfig {
         .defineInRange("faultBlend", 0.045, 0.001, 0.2)
 
     val FAULT_OFFSET_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
-        .comment("Maximum vertical offset caused by fault lines (blocks).")
-        .defineInRange("faultOffsetAmp", 16.0, 0.0, 80.0)
+        .comment("Maximum vertical offset caused by fault lines (blocks). Note: downward faults are constrained by the abyssal hard limit (~15 blocks above bedrock).")
+        .defineInRange("faultOffsetAmp", 10.0, 0.0, 22.0)
 
     // Trench
     val TRENCH_THRESHOLD: ModConfigSpec.DoubleValue = SPEC_BUILDER
@@ -95,7 +95,7 @@ object ModServerConfig {
 
     val TRENCH_DEPTH_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Maximum depth of trenches (blocks).")
-        .defineInRange("trenchDepthAmp", 45.0, 0.0, 120.0)
+        .defineInRange("trenchDepthAmp", 10.0, 0.0, 22.0)
 
     // Seamount
     val SEAMOUNT_THRESHOLD: ModConfigSpec.DoubleValue = SPEC_BUILDER
@@ -107,16 +107,12 @@ object ModServerConfig {
         .defineInRange("seamountAmp", 70.0, 0.0, 200.0)
 
     // Terrace
-    val TERRACE_LEVELS: ModConfigSpec.DoubleValue = SPEC_BUILDER
-        .comment("Number of terrace levels on abyssal slopes.")
-        .defineInRange("terraceLevels", 3.0, 1.0, 8.0)
-
     val TERRACE_STEP: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Vertical height of each terrace step (blocks).")
         .defineInRange("terraceStep", 13.0, 2.0, 40.0)
 
     val TERRACE_MASK_THRESHOLD: ModConfigSpec.DoubleValue = SPEC_BUILDER
-        .comment("Noise threshold above which terraces appear (0–1).")
+        .comment("Noise threshold above which terraces appear (0.2–1.2).")
         .defineInRange("terraceMaskThreshold", 0.80, 0.3, 0.99)
 
     val SPEC: ModConfigSpec = SPEC_BUILDER.build()

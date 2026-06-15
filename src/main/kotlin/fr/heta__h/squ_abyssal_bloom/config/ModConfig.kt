@@ -620,8 +620,8 @@ object ModConfig {
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.faultOffsetAmp"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.faultOffsetAmp.desc")))
-                        .binding(Binding.generic(16.0, { ServerConfigCache.faultOffsetAmp }, { ServerConfigCache.faultOffsetAmp = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 80.0).step(1.0) }
+                        .binding(Binding.generic(10.0, { ServerConfigCache.faultOffsetAmp }, { ServerConfigCache.faultOffsetAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 22.0).step(1.0) }
                         .build())
                     .build())
 
@@ -639,8 +639,8 @@ object ModConfig {
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.trenchDepthAmp"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.trenchDepthAmp.desc")))
-                        .binding(Binding.generic(45.0, { ServerConfigCache.trenchDepthAmp }, { ServerConfigCache.trenchDepthAmp = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 120.0).step(5.0) }
+                        .binding(Binding.generic(10.0, { ServerConfigCache.trenchDepthAmp }, { ServerConfigCache.trenchDepthAmp = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 22.0).step(1.0) }
                         .build())
                     .build())
 
@@ -673,12 +673,6 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.terraceMaskThreshold.desc")))
                         .binding(Binding.generic(0.80, { ServerConfigCache.terraceMaskThreshold }, { ServerConfigCache.terraceMaskThreshold = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.3, 0.99).step(0.01).formatValue { v -> Component.literal(String.format("%.2f", v)) } }
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.terraceLevels"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.terraceLevels.desc")))
-                        .binding(Binding.generic(3.0, { ServerConfigCache.terraceLevels }, { ServerConfigCache.terraceLevels = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(1.0, 8.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.terraceStep"))

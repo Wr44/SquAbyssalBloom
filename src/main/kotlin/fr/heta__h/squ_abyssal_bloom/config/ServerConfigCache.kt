@@ -24,12 +24,11 @@ object ServerConfigCache {
     var weirdnessAmp: Double = 11.0
     var faultThreshold: Double = 0.012
     var faultBlend: Double = 0.045
-    var faultOffsetAmp: Double = 16.0
+    var faultOffsetAmp: Double = 10.0
     var trenchThreshold: Double = 0.88
-    var trenchDepthAmp: Double = 45.0
+    var trenchDepthAmp: Double = 10.0
     var seamountThreshold: Double = 0.62
     var seamountAmp: Double = 70.0
-    var terraceLevels: Double = 3.0
     var terraceStep: Double = 13.0
     var terraceMaskThreshold: Double = 0.80
 
@@ -58,7 +57,6 @@ object ServerConfigCache {
         trenchDepthAmp = data.trenchDepthAmp
         seamountThreshold = data.seamountThreshold
         seamountAmp = data.seamountAmp
-        terraceLevels = data.terraceLevels
         terraceStep = data.terraceStep
         terraceMaskThreshold = data.terraceMaskThreshold
     }
@@ -101,7 +99,6 @@ object ServerConfigCache {
         trenchDepthAmp = trenchDepthAmp,
         seamountThreshold = seamountThreshold,
         seamountAmp = seamountAmp,
-        terraceLevels = terraceLevels,
         terraceStep = terraceStep,
         terraceMaskThreshold = terraceMaskThreshold,
     )
@@ -177,9 +174,6 @@ object ServerConfigCache {
 
     val effectiveSeamountAmp: Double
         get() = if (isSingleplayer()) ModServerConfig.SEAMOUNT_AMP.get() else seamountAmp
-
-    val effectiveTerraceLevels: Double
-        get() = if (isSingleplayer()) ModServerConfig.TERRACE_LEVELS.get() else terraceLevels
 
     val effectiveTerraceStep: Double
         get() = if (isSingleplayer()) ModServerConfig.TERRACE_STEP.get() else terraceStep
