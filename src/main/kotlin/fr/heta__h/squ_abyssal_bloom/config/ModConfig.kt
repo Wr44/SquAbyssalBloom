@@ -213,21 +213,21 @@ object ModConfig {
         val shallowFloorOpt = Option.createBuilder<Int>()
             .name(Component.translatable("config.squ_abyssal_bloom.shallowFloorY"))
             .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.shallowFloorY.desc")))
-            .binding(Binding.generic(32, { ServerConfigCache.shallowFloorY }, { ServerConfigCache.shallowFloorY = it }))
+            .binding(Binding.generic(36, { ServerConfigCache.shallowFloorY }, { ServerConfigCache.shallowFloorY = it }))
             .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(-60, 60).step(1).formatValue { v -> Component.literal("Y=$v") } }
             .build()
 
         val deepFloorOpt = Option.createBuilder<Int>()
             .name(Component.translatable("config.squ_abyssal_bloom.deepFloorTarget"))
             .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.deepFloorTarget.desc")))
-            .binding(Binding.generic(11, { ServerConfigCache.deepFloorTarget }, { ServerConfigCache.deepFloorTarget = it }))
+            .binding(Binding.generic(18, { ServerConfigCache.deepFloorTarget }, { ServerConfigCache.deepFloorTarget = it }))
             .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(-60, 60).step(1).formatValue { v -> Component.literal("Y=$v") } }
             .build()
 
         val abyssalFloorOpt = Option.createBuilder<Int>()
             .name(Component.translatable("config.squ_abyssal_bloom.targetFloorY"))
             .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.targetFloorY.desc")))
-            .binding(Binding.generic(-35, { ServerConfigCache.targetFloorY }, { ServerConfigCache.targetFloorY = it }))
+            .binding(Binding.generic(-40, { ServerConfigCache.targetFloorY }, { ServerConfigCache.targetFloorY = it }))
             .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(-64, 20).step(1).formatValue { v -> Component.literal("Y=$v") } }
             .build()
 

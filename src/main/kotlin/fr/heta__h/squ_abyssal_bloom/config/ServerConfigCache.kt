@@ -8,9 +8,9 @@ object ServerConfigCache {
     var strictBarnacleSpawning: Boolean = true
     var shallowDeepBoundary: Double = -0.45
     var deepAbyssalBoundary: Double = -0.70
-    var shallowFloorY: Int = 32
-    var deepFloorTarget: Int = 11
-    var targetFloorY: Int = -35
+    var shallowFloorY: Int = 36
+    var deepFloorTarget: Int = 18
+    var targetFloorY: Int = -40
     var shallowClearance: Int = 8
     var warpAmp: Double = 60.0
     var warp2Amp: Double = 26.0

@@ -13,7 +13,7 @@ object AbyssalFloorShaper {
 
     const val MUSHROOM_MIN = -1.05
     const val MUSHROOM_TRANSITION = 0.05
-    const val CONTINENTAL_FULL = -0.81
+    const val CONTINENTAL_FULL = -0.8
     const val ABYSSAL_DEEP_MARGIN = 0.015
     const val OCEAN_MAX_CONT = -0.19
 
@@ -40,11 +40,12 @@ object AbyssalFloorShaper {
     const val SLOPE_ROUGHNESS_MAX = 2.1
 
     const val TERRACE_STEEP_CUTOFF = 0.72
-    const val TERRACE_MASK_SCALE = 0.009
-    const val TERRACE_MASK2_SCALE = 0.024
-    const val TERRACE_MASK_AMP = 0.80
-    const val TERRACE_MASK2_AMP = 0.80
-    const val TERRACE_MASK_OFFSET = 0.71
+    const val TERRACE_MASK_SCALE = 0.003
+    const val TERRACE_MASK2_SCALE = 0.012
+    const val TERRACE_MASK_AMP = 0.25
+    const val TERRACE_MASK2_AMP = 0.25
+    const val TERRACE_MASK_OFFSET = 0.70
+
     const val FAULT_SCALE = 0.0009
 
     const val DEEP_LARGE_SCALE = 0.0015
@@ -60,7 +61,6 @@ object AbyssalFloorShaper {
     const val DEEP_SWELL_SCALE = 0.0006
     const val DEEP_SWELL_AMP = 8.0
     const val DEEP_ANISO_AMP = 2.5
-    const val DEEP_OFFSET = -1
 
     const val SHALLOW_COAST_FADE = -0.30
     const val SHALLOW_LARGE_SCALE = 0.001
@@ -73,7 +73,6 @@ object AbyssalFloorShaper {
     const val SHALLOW_RIDGE_AMP = 7.0
     const val SHALLOW_DETAIL_AMP = 5.0
     const val SHALLOW_MICRO_AMP = 3.0
-    const val SHALLOW_OFFSET = 3
 
     const val TRANSITION_WEIRDNESS_AMP = 0.025
     const val TEMP_FLOOR_AMP = 3.5
@@ -107,7 +106,7 @@ object AbyssalFloorShaper {
         val abyssalBlendHi = shaping.abyssalDeepSplit + ABYSSAL_BLEND_WIDTH
 
         val baseFloor = when {
-            effectiveCont > shallowBlendHi -> shallowFloor(shaping, column, mods, finalDensityDf)
+            effectiveCont > shallowBlendHi -> shallowFloor(shaping, column, mods, finalDensityDf, effectiveCont)
             effectiveCont > shallowBlendLo -> blendShallowDeep(shaping, column, mods, finalDensityDf, effectiveCont, shallowBlendLo, shallowBlendHi)
             effectiveCont > abyssalBlendHi -> deepFloor(shaping, column, mods)
             effectiveCont > shaping.abyssalDeepSplit -> blendDeepAbyssal(shaping, column, mods, finalDensityDf, effectiveCont, shaping.abyssalDeepSplit, abyssalBlendHi)
@@ -123,20 +122,31 @@ object AbyssalFloorShaper {
         val faultBlend = ServerConfigCache.effectiveFaultBlend
         val line = shaping.wallNoise.getValue(column.worldX * FAULT_SCALE, 7700.0, column.worldZ * FAULT_SCALE)
         val dist = abs(line)
+
         if (dist > faultThreshold + faultBlend) return 0.0
-        val side = if (line >= 0.0) 1.0 else -1.0
+
+        val centerSmoothWidth = 0.08
+        val rawSide = line / centerSmoothWidth
+        val clampedSide = rawSide.coerceIn(-1.0, 1.0)
+        val side = clampedSide * clampedSide * (3.0 - 2.0 * abs(clampedSide)) * (if (line >= 0) 1.0 else -1.0)
+
         val t = ((faultThreshold + faultBlend - dist) / faultBlend).coerceIn(0.0, 1.0)
         val smooth = t * t * (3.0 - 2.0 * t)
+
         return side * ServerConfigCache.effectiveFaultOffsetAmp * smooth
     }
 
     private fun scanVanillaFloor(shaping: AbyssalShapingContext, column: ColumnSample, finalDensityDf: DensityFunction, downTo: Int): Int {
         for (y in shaping.seaLevel - 1 downTo downTo step 2) {
             if (finalDensityDf.compute(DensityFunction.SinglePointContext(column.worldX, y, column.worldZ)) > 0.0) {
-                return y
+                return if (finalDensityDf.compute(DensityFunction.SinglePointContext(column.worldX, y + 1, column.worldZ)) > 0.0) {
+                    y + 1
+                } else {
+                    y
+                }
             }
         }
-        return shaping.seaLevel
+        return downTo
     }
 
     private fun columnMods(shaping: AbyssalShapingContext, column: ColumnSample): ColumnMods {
@@ -203,14 +213,15 @@ object AbyssalFloorShaper {
         return result
     }
 
-    private fun shallowFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods, finalDensityDf: DensityFunction): Int {
-        val rawT = ((column.cont - OCEAN_MAX_CONT) / (SHALLOW_COAST_FADE - OCEAN_MAX_CONT)).coerceIn(0.0, 1.0)
+    private fun shallowFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods, finalDensityDf: DensityFunction, effectiveCont: Double): Int {
+        val rawT = ((effectiveCont - OCEAN_MAX_CONT) / (SHALLOW_COAST_FADE - OCEAN_MAX_CONT)).coerceIn(0.0, 1.0)
         val smoothT = rawT * rawT * (3.0 - 2.0 * rawT)
         val computed = shallowComputedFloor(shaping, column, mods)
+
         if (smoothT >= 1.0) return computed
 
-        val vanillaFloor = scanVanillaFloor(shaping, column, finalDensityDf, ServerConfigCache.effectiveShallowFloorY - 5)
-        return (vanillaFloor + (computed - vanillaFloor) * smoothT).toInt() + SHALLOW_OFFSET
+        val vanillaFloor = scanVanillaFloor(shaping, column, finalDensityDf, shaping.deepHardLimit)
+        return (vanillaFloor + (computed - vanillaFloor) * smoothT).toInt()
     }
 
     private fun deepFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods): Int {
@@ -236,7 +247,7 @@ object AbyssalFloorShaper {
         val uncoerced = ServerConfigCache.effectiveDeepFloorTarget + terrain + detail + swell + aniso + mods.tempDepthMod
         val result = uncoerced.toInt().coerceAtLeast(shaping.deepHardLimit)
 
-        return result + DEEP_OFFSET
+        return result
     }
 
     private fun blendShallowDeep(
@@ -248,7 +259,7 @@ object AbyssalFloorShaper {
         blendLo: Double,
         blendHi: Double
     ): Int {
-        val shallowY = shallowFloor(shaping, column, mods, finalDensityDf)
+        val shallowY = shallowFloor(shaping, column, mods, finalDensityDf, effectiveCont)
         val deepY = deepFloor(shaping, column, mods)
 
         val slopeVar = shaping.wallNoise.getValue(mods.warp1X * SLOPE_PERTURB_SCALE, 1600.0, mods.warp1Z * SLOPE_PERTURB_SCALE) * SLOPE_PERTURB_AMP
@@ -322,22 +333,26 @@ object AbyssalFloorShaper {
         val topoCoarseRaw = cLargeAbyss * effectiveSteepT * mods.erosionFactor
         val topoFineRaw = (cTopoAbyss + cMidAbyss) * effectiveSteepT * mods.erosionFactor
 
-        val wallVar = (mods.wallVal * ServerConfigCache.effectiveWallAmp * effectiveSteepT * mods.erosionFactor * mods.weirdnessWallMod).coerceAtLeast(0.0)
+        val rawWall = mods.wallVal * ServerConfigCache.effectiveWallAmp * effectiveSteepT * mods.erosionFactor * mods.weirdnessWallMod
+        val wallExpectedAverage = (ServerConfigCache.effectiveWallAmp * effectiveSteepT * mods.erosionFactor) * 0.35
+        val wallVar = rawWall.coerceAtLeast(0.0) - wallExpectedAverage
+
         val roughness = slopeRoughness(shaping, mods.warpX, mods.warpZ)
         val detailVar = (mods.detailVal * ServerConfigCache.effectiveDetailAmp + mods.microVal * ServerConfigCache.effectiveMicroAmp) * effectiveSteepT * mods.humidityDetailMod * roughness
         val weirdnessVar = column.ridges * ServerConfigCache.effectiveWeirdnessAmp * effectiveSteepT
         val tempVar = mods.tempDepthMod * effectiveSteepT
         val anisoVar = anisotropyVar(shaping, mods, effectiveSteepT)
 
+        val interpolationCompensation = -12.0 * effectiveSteepT
+
         val terrainCoarse = base + topoCoarseRaw
-        val terrainFine = topoFineRaw + wallVar + detailVar + weirdnessVar + tempVar + anisoVar
+        val terrainFine = topoFineRaw + wallVar + detailVar + weirdnessVar + tempVar + anisoVar + interpolationCompensation
         val terrainBase = terrainCoarse + terrainFine
 
         val terraceMaskThreshold = ServerConfigCache.effectiveTerraceMaskThreshold
         val maskCoarse = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK_SCALE, 6100.0, mods.warpZ * TERRACE_MASK_SCALE)
         val maskFine = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK2_SCALE, 6150.0, mods.warpZ * TERRACE_MASK2_SCALE)
         val terraceMask = maskCoarse * TERRACE_MASK_AMP + maskFine * TERRACE_MASK2_AMP + TERRACE_MASK_OFFSET
-
         val terraceActive = terraceMask > terraceMaskThreshold && effectiveSteepT < TERRACE_STEEP_CUTOFF
 
         val terraceStep = ServerConfigCache.effectiveTerraceStep
@@ -355,7 +370,6 @@ object AbyssalFloorShaper {
         } else {
             softClampAbyssalFloor(finalTerrainBase , shaping.abyssalHardLimit)
         }
-
 
         return softClampAbyssalFloor(finalY, shaping.abyssalHardLimit).toInt()
             .coerceAtMost(shaping.seaLevel)
