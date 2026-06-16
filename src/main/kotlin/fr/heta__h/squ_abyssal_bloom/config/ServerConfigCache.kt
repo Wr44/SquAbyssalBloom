@@ -12,10 +12,9 @@ object ServerConfigCache {
     var deepFloorTarget: Int = 11
     var targetFloorY: Int = -35
     var shallowClearance: Int = 8
-    var guyotClearance: Int = 5
     var warpAmp: Double = 60.0
     var warp2Amp: Double = 26.0
-    var topoLargeAmp: Double = 55.0
+    var topoLargeAmp: Double = 30.0
     var topoAmp: Double = 24.0
     var topoMidAmp: Double = 11.0
     var wallAmp: Double = 14.0
@@ -27,8 +26,6 @@ object ServerConfigCache {
     var faultOffsetAmp: Double = 10.0
     var trenchThreshold: Double = 0.88
     var trenchDepthAmp: Double = 10.0
-    var seamountThreshold: Double = 0.9
-    var seamountAmp: Double = 70.0
     var terraceStep: Double = 13.0
     var terraceMaskThreshold: Double = 0.80
 
@@ -40,7 +37,6 @@ object ServerConfigCache {
         deepFloorTarget = data.deepFloorTarget
         targetFloorY = data.targetFloorY
         shallowClearance = data.shallowClearance
-        guyotClearance = data.guyotClearance
         warpAmp = data.warpAmp
         warp2Amp = data.warp2Amp
         topoLargeAmp = data.topoLargeAmp
@@ -55,8 +51,6 @@ object ServerConfigCache {
         faultOffsetAmp = data.faultOffsetAmp
         trenchThreshold = data.trenchThreshold
         trenchDepthAmp = data.trenchDepthAmp
-        seamountThreshold = data.seamountThreshold
-        seamountAmp = data.seamountAmp
         terraceStep = data.terraceStep
         terraceMaskThreshold = data.terraceMaskThreshold
     }
@@ -82,7 +76,6 @@ object ServerConfigCache {
         deepFloorTarget = deepFloorTarget,
         targetFloorY = targetFloorY,
         shallowClearance = shallowClearance,
-        guyotClearance = guyotClearance,
         warpAmp = warpAmp,
         warp2Amp = warp2Amp,
         topoLargeAmp = topoLargeAmp,
@@ -97,8 +90,6 @@ object ServerConfigCache {
         faultOffsetAmp = faultOffsetAmp,
         trenchThreshold = trenchThreshold,
         trenchDepthAmp = trenchDepthAmp,
-        seamountThreshold = seamountThreshold,
-        seamountAmp = seamountAmp,
         terraceStep = terraceStep,
         terraceMaskThreshold = terraceMaskThreshold,
     )
@@ -123,9 +114,6 @@ object ServerConfigCache {
 
     val effectiveShallowClearance: Int
         get() = if (isSingleplayer()) ModServerConfig.SHALLOW_CLEARANCE.get() else shallowClearance
-
-    val effectiveGuyotClearance: Int
-        get() = if (isSingleplayer()) ModServerConfig.GUYOT_CLEARANCE.get() else guyotClearance
 
     val effectiveWarpAmp: Double
         get() = if (isSingleplayer()) ModServerConfig.WARP_AMP.get() else warpAmp
@@ -168,12 +156,6 @@ object ServerConfigCache {
 
     val effectiveTrenchDepthAmp: Double
         get() = if (isSingleplayer()) ModServerConfig.TRENCH_DEPTH_AMP.get() else trenchDepthAmp
-
-    val effectiveSeamountThreshold: Double
-        get() = if (isSingleplayer()) ModServerConfig.SEAMOUNT_THRESHOLD.get() else seamountThreshold
-
-    val effectiveSeamountAmp: Double
-        get() = if (isSingleplayer()) ModServerConfig.SEAMOUNT_AMP.get() else seamountAmp
 
     val effectiveTerraceStep: Double
         get() = if (isSingleplayer()) ModServerConfig.TERRACE_STEP.get() else terraceStep

@@ -34,10 +34,6 @@ object ModServerConfig {
         .comment("Minimum blocks of water above shallow floor (below sea level).")
         .defineInRange("shallowClearance", 8, 1, 30)
 
-    val GUYOT_CLEARANCE: ModConfigSpec.IntValue = SPEC_BUILDER
-        .comment("Minimum blocks of water above seamount peaks (below sea level).")
-        .defineInRange("guyotClearance", 5, 1, 30)
-
     // Topography
     val WARP_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Amplitude of primary domain warp (blocks).")
@@ -49,7 +45,7 @@ object ModServerConfig {
 
     val TOPO_LARGE_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Amplitude of large-scale abyssal topography (blocks).")
-        .defineInRange("topoLargeAmp", 55.0, 0.0, 150.0)
+        .defineInRange("topoLargeAmp", 30.0, 0.0, 150.0)
 
     val TOPO_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Amplitude of mid-scale abyssal topography (blocks).")
@@ -96,15 +92,6 @@ object ModServerConfig {
     val TRENCH_DEPTH_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
         .comment("Maximum depth of trenches (blocks).")
         .defineInRange("trenchDepthAmp", 10.0, 0.0, 22.0)
-
-    // Seamount
-    val SEAMOUNT_THRESHOLD: ModConfigSpec.DoubleValue = SPEC_BUILDER
-        .comment("Noise threshold above which a seamount forms (0.2–1.2, remapped noise).")
-        .defineInRange("seamountThreshold", 0.90, 0.20, 0.99)
-
-    val SEAMOUNT_AMP: ModConfigSpec.DoubleValue = SPEC_BUILDER
-        .comment("Maximum height of seamounts above abyssal floor (blocks).")
-        .defineInRange("seamountAmp", 70.0, 0.0, 200.0)
 
     // Terrace
     val TERRACE_STEP: ModConfigSpec.DoubleValue = SPEC_BUILDER

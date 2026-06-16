@@ -11,7 +11,6 @@ data class ServerConfigData(
     val deepFloorTarget: Int,
     val targetFloorY: Int,
     val shallowClearance: Int,
-    val guyotClearance: Int,
     val warpAmp: Double,
     val warp2Amp: Double,
     val topoLargeAmp: Double,
@@ -26,8 +25,6 @@ data class ServerConfigData(
     val faultOffsetAmp: Double,
     val trenchThreshold: Double,
     val trenchDepthAmp: Double,
-    val seamountThreshold: Double,
-    val seamountAmp: Double,
     val terraceStep: Double,
     val terraceMaskThreshold: Double,
 ) {
@@ -41,7 +38,6 @@ data class ServerConfigData(
                 buf.writeVarInt(v.deepFloorTarget)
                 buf.writeVarInt(v.targetFloorY)
                 buf.writeVarInt(v.shallowClearance)
-                buf.writeVarInt(v.guyotClearance)
                 buf.writeDouble(v.warpAmp)
                 buf.writeDouble(v.warp2Amp)
                 buf.writeDouble(v.topoLargeAmp)
@@ -56,8 +52,6 @@ data class ServerConfigData(
                 buf.writeDouble(v.faultOffsetAmp)
                 buf.writeDouble(v.trenchThreshold)
                 buf.writeDouble(v.trenchDepthAmp)
-                buf.writeDouble(v.seamountThreshold)
-                buf.writeDouble(v.seamountAmp)
                 buf.writeDouble(v.terraceStep)
                 buf.writeDouble(v.terraceMaskThreshold)
             },
@@ -70,7 +64,6 @@ data class ServerConfigData(
                     deepFloorTarget = buf.readVarInt(),
                     targetFloorY = buf.readVarInt(),
                     shallowClearance = buf.readVarInt(),
-                    guyotClearance = buf.readVarInt(),
                     warpAmp = buf.readDouble(),
                     warp2Amp = buf.readDouble(),
                     topoLargeAmp = buf.readDouble(),
@@ -85,8 +78,6 @@ data class ServerConfigData(
                     faultOffsetAmp = buf.readDouble(),
                     trenchThreshold = buf.readDouble(),
                     trenchDepthAmp = buf.readDouble(),
-                    seamountThreshold = buf.readDouble(),
-                    seamountAmp = buf.readDouble(),
                     terraceStep = buf.readDouble(),
                     terraceMaskThreshold = buf.readDouble(),
                 )
@@ -101,7 +92,6 @@ data class ServerConfigData(
             deepFloorTarget = ModServerConfig.DEEP_FLOOR_TARGET.get(),
             targetFloorY = ModServerConfig.TARGET_FLOOR_Y.get(),
             shallowClearance = ModServerConfig.SHALLOW_CLEARANCE.get(),
-            guyotClearance = ModServerConfig.GUYOT_CLEARANCE.get(),
             warpAmp = ModServerConfig.WARP_AMP.get(),
             warp2Amp = ModServerConfig.WARP2_AMP.get(),
             topoLargeAmp = ModServerConfig.TOPO_LARGE_AMP.get(),
@@ -116,8 +106,6 @@ data class ServerConfigData(
             faultOffsetAmp = ModServerConfig.FAULT_OFFSET_AMP.get(),
             trenchThreshold = ModServerConfig.TRENCH_THRESHOLD.get(),
             trenchDepthAmp = ModServerConfig.TRENCH_DEPTH_AMP.get(),
-            seamountThreshold = ModServerConfig.SEAMOUNT_THRESHOLD.get(),
-            seamountAmp = ModServerConfig.SEAMOUNT_AMP.get(),
             terraceStep = ModServerConfig.TERRACE_STEP.get(),
             terraceMaskThreshold = ModServerConfig.TERRACE_MASK_THRESHOLD.get(),
         )
@@ -131,7 +119,6 @@ data class ServerConfigData(
         ModServerConfig.DEEP_FLOOR_TARGET.set(deepFloorTarget)
         ModServerConfig.TARGET_FLOOR_Y.set(targetFloorY)
         ModServerConfig.SHALLOW_CLEARANCE.set(shallowClearance)
-        ModServerConfig.GUYOT_CLEARANCE.set(guyotClearance)
         ModServerConfig.WARP_AMP.set(warpAmp)
         ModServerConfig.WARP2_AMP.set(warp2Amp)
         ModServerConfig.TOPO_LARGE_AMP.set(topoLargeAmp)
@@ -146,8 +133,6 @@ data class ServerConfigData(
         ModServerConfig.FAULT_OFFSET_AMP.set(faultOffsetAmp)
         ModServerConfig.TRENCH_THRESHOLD.set(trenchThreshold)
         ModServerConfig.TRENCH_DEPTH_AMP.set(trenchDepthAmp)
-        ModServerConfig.SEAMOUNT_THRESHOLD.set(seamountThreshold)
-        ModServerConfig.SEAMOUNT_AMP.set(seamountAmp)
         ModServerConfig.TERRACE_STEP.set(terraceStep)
         ModServerConfig.TERRACE_MASK_THRESHOLD.set(terraceMaskThreshold)
         ModServerConfig.SPEC.save()

@@ -11,11 +11,9 @@ import kotlin.math.pow
 
 object AbyssalFloorShaper {
 
-    private var seamountCallCounter = 0
-
     const val MUSHROOM_MIN = -1.05
     const val MUSHROOM_TRANSITION = 0.05
-    const val CONTINENTAL_FULL = -0.8
+    const val CONTINENTAL_FULL = -0.81
     const val ABYSSAL_DEEP_MARGIN = 0.015
     const val OCEAN_MAX_CONT = -0.19
 
@@ -32,11 +30,6 @@ object AbyssalFloorShaper {
     const val MICRO_SCALE = 0.280
 
     const val TRENCH_SCALE = 0.006
-    const val SEAMOUNT_SCALE = 0.0015
-    const val SEAMOUNT_SCALE2 = 0.005
-    const val SEAMOUNT_AMP = 0.25
-    const val SEAMOUNT_AMP2 = 0.25
-    const val SEAMOUNT_NOISE_OFFSET = 0.70
 
     const val ANISO_SCALE_X = 0.0014
     const val ANISO_SCALE_Z = 0.0052
@@ -47,12 +40,11 @@ object AbyssalFloorShaper {
     const val SLOPE_ROUGHNESS_MAX = 2.1
 
     const val TERRACE_STEEP_CUTOFF = 0.72
-    const val TERRACE_MASK_SCALE = 0.003
-    const val TERRACE_MASK2_SCALE = 0.012
-    const val TERRACE_MASK_AMP = 0.25
-    const val TERRACE_MASK2_AMP = 0.25
-    const val TERRACE_MASK_OFFSET = 0.70
-
+    const val TERRACE_MASK_SCALE = 0.009
+    const val TERRACE_MASK2_SCALE = 0.024
+    const val TERRACE_MASK_AMP = 0.80
+    const val TERRACE_MASK2_AMP = 0.80
+    const val TERRACE_MASK_OFFSET = 0.71
     const val FAULT_SCALE = 0.0009
 
     const val DEEP_LARGE_SCALE = 0.0015
@@ -68,6 +60,7 @@ object AbyssalFloorShaper {
     const val DEEP_SWELL_SCALE = 0.0006
     const val DEEP_SWELL_AMP = 8.0
     const val DEEP_ANISO_AMP = 2.5
+    const val DEEP_OFFSET = -1
 
     const val SHALLOW_COAST_FADE = -0.30
     const val SHALLOW_LARGE_SCALE = 0.001
@@ -80,6 +73,7 @@ object AbyssalFloorShaper {
     const val SHALLOW_RIDGE_AMP = 7.0
     const val SHALLOW_DETAIL_AMP = 5.0
     const val SHALLOW_MICRO_AMP = 3.0
+    const val SHALLOW_OFFSET = 3
 
     const val TRANSITION_WEIRDNESS_AMP = 0.025
     const val TEMP_FLOOR_AMP = 3.5
@@ -216,7 +210,7 @@ object AbyssalFloorShaper {
         if (smoothT >= 1.0) return computed
 
         val vanillaFloor = scanVanillaFloor(shaping, column, finalDensityDf, ServerConfigCache.effectiveShallowFloorY - 5)
-        return (vanillaFloor + (computed - vanillaFloor) * smoothT).toInt()
+        return (vanillaFloor + (computed - vanillaFloor) * smoothT).toInt() + SHALLOW_OFFSET
     }
 
     private fun deepFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods): Int {
@@ -242,7 +236,7 @@ object AbyssalFloorShaper {
         val uncoerced = ServerConfigCache.effectiveDeepFloorTarget + terrain + detail + swell + aniso + mods.tempDepthMod
         val result = uncoerced.toInt().coerceAtLeast(shaping.deepHardLimit)
 
-        return result
+        return result + DEEP_OFFSET
     }
 
     private fun blendShallowDeep(
@@ -343,8 +337,8 @@ object AbyssalFloorShaper {
         val maskCoarse = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK_SCALE, 6100.0, mods.warpZ * TERRACE_MASK_SCALE)
         val maskFine = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK2_SCALE, 6150.0, mods.warpZ * TERRACE_MASK2_SCALE)
         val terraceMask = maskCoarse * TERRACE_MASK_AMP + maskFine * TERRACE_MASK2_AMP + TERRACE_MASK_OFFSET
-        val terraceActive = terraceMask > terraceMaskThreshold && effectiveSteepT < TERRACE_STEEP_CUTOFF
 
+        val terraceActive = terraceMask > terraceMaskThreshold && effectiveSteepT < TERRACE_STEEP_CUTOFF
 
         val terraceStep = ServerConfigCache.effectiveTerraceStep
         val rawQuantized = floor(terrainCoarse / terraceStep) * terraceStep
@@ -355,36 +349,21 @@ object AbyssalFloorShaper {
         val trenchDepthAmp = ServerConfigCache.effectiveTrenchDepthAmp
         val trenchBudget = (finalTerrainBase - shaping.abyssalHardLimit).coerceAtLeast(0.0)
         val trenchVar = -trenchT * trenchT * trenchDepthAmp * effectiveSteepT * (trenchBudget / trenchDepthAmp).coerceIn(0.0, 1.0)
-        val seamountVar = seamountHeight(shaping, column, effectiveSteepT) * (1.0 - trenchT)
 
         val finalY = if (trenchT > 0.0) {
-            finalTerrainBase + trenchVar + seamountVar
+            finalTerrainBase + trenchVar
         } else {
-            softClampAbyssalFloor(finalTerrainBase + seamountVar, shaping.abyssalHardLimit)
+            softClampAbyssalFloor(finalTerrainBase , shaping.abyssalHardLimit)
         }
 
+
         return softClampAbyssalFloor(finalY, shaping.abyssalHardLimit).toInt()
-            .coerceAtMost(shaping.seaLevel - ServerConfigCache.effectiveGuyotClearance)
+            .coerceAtMost(shaping.seaLevel)
     }
 
     private fun trenchFactor(shaping: AbyssalShapingContext, mods: ColumnMods): Double {
         val raw = 1.0 - abs(shaping.wallNoise.getValue(mods.warpX * TRENCH_SCALE, 500.0, mods.warpZ * TRENCH_SCALE))
         val trenchThreshold = ServerConfigCache.effectiveTrenchThreshold
         return ((raw - trenchThreshold) / (1.0 - trenchThreshold)).coerceIn(0.0, 1.0)
-    }
-
-    private fun seamountHeight(shaping: AbyssalShapingContext, column: ColumnSample, steepT: Double): Double {
-        val rawCoarse = shaping.topoNoise.getValue(column.worldX * SEAMOUNT_SCALE, 900.0, column.worldZ * SEAMOUNT_SCALE)
-        val rawFine = shaping.topoNoise.getValue(column.worldX * SEAMOUNT_SCALE2, 920.0, column.worldZ * SEAMOUNT_SCALE2)
-        val raw = rawCoarse * SEAMOUNT_AMP + rawFine * SEAMOUNT_AMP2 + SEAMOUNT_NOISE_OFFSET
-        val seamountThreshold = ServerConfigCache.effectiveSeamountThreshold
-        val t = ((raw - seamountThreshold) / (1.0 - seamountThreshold)).coerceIn(0.0, 1.0)
-
-        seamountCallCounter++
-        if (seamountCallCounter % 1000 == 0) {
-            println("[Seamount] #$seamountCallCounter | x=${column.worldX} z=${column.worldZ} | raw=${"%.4f".format(raw)} threshold=${"%.2f".format(seamountThreshold)} t=${"%.4f".format(t)} height=${"%.1f".format(t * t * (3.0 - 2.0 * t) * ServerConfigCache.effectiveSeamountAmp * steepT)}")
-        }
-
-        return t * t * (3.0 - 2.0 * t) * ServerConfigCache.effectiveSeamountAmp * steepT
     }
 }
