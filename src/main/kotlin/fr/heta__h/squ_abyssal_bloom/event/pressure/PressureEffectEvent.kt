@@ -33,8 +33,8 @@ object PressureEffectEvent {
     private const val PRESSURE_BASE_THRESHOLD = 45
     private const val PRESSURE_TIER_DEPTH = 15
     private const val PRESSURE_SEAL_BONUS = 15
-    private const val PRESSURE_DURATION = 400
-    private const val PRESSURE_DURATION_THRESHOLD = 300
+    private const val PRESSURE_DURATION = 500
+    private const val PRESSURE_DURATION_THRESHOLD = 400
 
     private const val INTERVAL_TIER_0 = 60L
     private const val INTERVAL_TIER_1 = 40L
