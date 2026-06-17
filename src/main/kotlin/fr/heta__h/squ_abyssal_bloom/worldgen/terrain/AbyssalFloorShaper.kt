@@ -29,6 +29,14 @@ object AbyssalFloorShaper {
     const val DETAIL_SCALE = 0.120
     const val MICRO_SCALE = 0.280
 
+    const val FLOOR_CLAMP_FADE = 2.0
+    const val FLOOR_CLAMP_BUMP_SCALE = 0.08
+    const val FLOOR_CLAMP_BUMP_AMP = 5.0
+    const val FLOOR_CLAMP_MID_SCALE = 0.20
+    const val FLOOR_CLAMP_MID_AMP = 7.0
+    const val FLOOR_CLAMP_FINE_SCALE = 0.34
+    const val FLOOR_CLAMP_FINE_AMP = 10.0
+
     const val TRENCH_SCALE = 0.006
 
     const val ANISO_SCALE_X = 0.0014
@@ -371,8 +379,18 @@ object AbyssalFloorShaper {
             softClampAbyssalFloor(finalTerrainBase , shaping.abyssalHardLimit)
         }
 
-        return softClampAbyssalFloor(finalY, shaping.abyssalHardLimit).toInt()
-            .coerceAtMost(shaping.seaLevel)
+        val softClamped = softClampAbyssalFloor(finalY, shaping.abyssalHardLimit)
+        val clampProx = ((shaping.abyssalHardLimit + FLOOR_CLAMP_FADE - softClamped) / FLOOR_CLAMP_FADE).coerceIn(0.0, 1.0)
+
+        val bumpBase = abs(shaping.detailNoise.getValue(mods.warpX * FLOOR_CLAMP_BUMP_SCALE, 9900.0, mods.warpZ * FLOOR_CLAMP_BUMP_SCALE)) * FLOOR_CLAMP_BUMP_AMP
+        val bumpMid = abs(shaping.topoNoise.getValue(mods.warpX * FLOOR_CLAMP_MID_SCALE, 9920.0, mods.warpZ * FLOOR_CLAMP_MID_SCALE) * FLOOR_CLAMP_MID_AMP)
+        val bumpFine = shaping.detailNoise.getValue(mods.warpX * FLOOR_CLAMP_FINE_SCALE, 9960.0, mods.warpZ * FLOOR_CLAMP_FINE_SCALE) * FLOOR_CLAMP_FINE_AMP
+
+        val floorBump = (bumpBase + bumpMid + bumpFine) * clampProx
+
+        return (softClamped + floorBump).toInt()
+            .coerceAtLeast(shaping.abyssalHardLimit)
+            .coerceAtMost(shaping.seaLevel - ServerConfigCache.effectiveShallowClearance)
     }
 
     private fun trenchFactor(shaping: AbyssalShapingContext, mods: ColumnMods): Double {
