@@ -30,33 +30,47 @@ abstract class AbyssalCarverFillMixin {
         chunk: ChunkAccess,
         ci: CallbackInfo
     ) {
-        val data = AbyssalChunkDataCache.consume(chunk.pos.x, chunk.pos.z) ?: return
-
         val seaLevel = region.seaLevel
         val water = Blocks.WATER.defaultBlockState()
         val stone = Blocks.STONE.defaultBlockState()
         val mutable = BlockPos.MutableBlockPos()
 
-        for (localX in 0..15) {
-            for (localZ in 0..15) {
-                if (!data.carverMask[localX + localZ * 16]) continue
+        val data = AbyssalChunkDataCache.consume(chunk.pos.x, chunk.pos.z)
+        if (data != null) {
+            for (localX in 0..15) {
+                for (localZ in 0..15) {
+                    if (!data.carverMask[localX + localZ * 16]) continue
 
-                val floorY = data.floorGrid[localX + localZ * 16]
-                if (floorY == Int.MIN_VALUE) continue
+                    val floorY = data.floorGrid[localX + localZ * 16]
+                    if (floorY == Int.MIN_VALUE) continue
 
-                val worldX = chunk.pos.minBlockX + localX
-                val worldZ = chunk.pos.minBlockZ + localZ
-                val crustBottom = floorY - 4
+                    val worldX = chunk.pos.minBlockX + localX
+                    val worldZ = chunk.pos.minBlockZ + localZ
+                    val crustBottom = floorY - 4
 
-                for (y in chunk.minY until seaLevel) {
-                    mutable.set(worldX, y, worldZ)
-                    val state = chunk.getBlockState(mutable)
-
-                    if (y in crustBottom..floorY) {
-                        if (state.isAir || state.`is`(Blocks.WATER) || state.`is`(Blocks.LAVA)) {
+                    for (y in crustBottom..floorY) {
+                        mutable.set(worldX, y, worldZ)
+                        val state = chunk.getBlockState(mutable)
+                        if (state.`is`(Blocks.WATER) || state.`is`(Blocks.LAVA)) {
                             chunk.setBlockState(mutable, stone)
                         }
-                    } else if (state.isAir || state.`is`(Blocks.LAVA)) {
+                    }
+                }
+            }
+        }
+
+        for (localX in 0..15) {
+            for (localZ in 0..15) {
+                val worldX = chunk.pos.minBlockX + localX
+                val worldZ = chunk.pos.minBlockZ + localZ
+
+                mutable.set(worldX, seaLevel - 1, worldZ)
+                if (!chunk.getBlockState(mutable).`is`(Blocks.WATER)) continue
+
+                for (y in seaLevel - 2 downTo chunk.minY) {
+                    mutable.set(worldX, y, worldZ)
+                    val state = chunk.getBlockState(mutable)
+                    if (state.isAir || state.`is`(Blocks.LAVA)) {
                         chunk.setBlockState(mutable, water)
                     }
                 }

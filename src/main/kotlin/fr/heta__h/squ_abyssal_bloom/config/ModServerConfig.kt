@@ -20,7 +20,7 @@ object ModServerConfig {
     // Zones
     val SHALLOW_FLOOR_Y: ModConfigSpec.IntValue = SPEC_BUILDER
         .comment("Base Y target for shallow ocean floor.")
-        .defineInRange("shallowFloorY", 36, -60, 60)
+        .defineInRange("shallowFloorY", 36, -60, 61)
 
     val DEEP_FLOOR_TARGET: ModConfigSpec.IntValue = SPEC_BUILDER
         .comment("Base Y target for deep ocean floor.")
@@ -28,7 +28,7 @@ object ModServerConfig {
 
     val TARGET_FLOOR_Y: ModConfigSpec.IntValue = SPEC_BUILDER
         .comment("Base Y target for abyssal floor.")
-        .defineInRange("targetFloorY", -40, -64, 0)
+        .defineInRange("targetFloorY", -40, -64, 20)
 
     val SHALLOW_CLEARANCE: ModConfigSpec.IntValue = SPEC_BUILDER
         .comment("Minimum blocks of water above shallow floor (below sea level).")
