@@ -3,12 +3,12 @@ package fr.heta__h.squ_abyssal_bloom.event.pressure
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
-import fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment.NautilusArmorDurability
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.tags.DamageTypeTags
 import net.minecraft.tags.EntityTypeTags
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
@@ -20,6 +20,7 @@ import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.tick.EntityTickEvent
 import net.neoforged.neoforge.event.tick.ServerTickEvent
@@ -39,19 +40,52 @@ object PressureEffectEvent {
     private const val INTERVAL_TIER_1 = 40L
     private const val INTERVAL_TIER_2 = 20L
 
-    private const val DROWNING_INTERVAL_TIER_0 = 20L
+    private const val DROWNING_INTERVAL_TIER_0 = 15L
     private const val DROWNING_INTERVAL_TIER_1 = 10L
-    private const val DROWNING_INTERVAL_TIER_2 = 7L
+    private const val DROWNING_INTERVAL_TIER_2 = 5L
 
     private val lastDamageTick = ConcurrentHashMap<UUID, Long>()
+    private val lastDrownTick = ConcurrentHashMap<UUID, Long>()
 
     @SubscribeEvent
     fun onEntityTick(event: EntityTickEvent.Post) {
         val entity = event.entity as? LivingEntity ?: return
         if (entity.level().isClientSide) return
-        if (entity.tickCount % 40 != 0) return
-
         val serverLevel = entity.level() as? ServerLevel ?: return
+
+        if (entity.airSupply < 0) {
+            val pressure = entity.getEffect(ModEffects.PRESSURE)
+            if (pressure != null
+                && entity.isInWater
+                && (entity as? Player)?.isCreative != true
+                && !entity.isSpectator
+                && !entity.isInvulnerable
+            ) {
+                entity.airSupply = 0
+
+                val last = lastDrownTick[entity.uuid] ?: 0L
+                val interval = when (pressure.amplifier) {
+                    0 -> DROWNING_INTERVAL_TIER_0
+                    1 -> DROWNING_INTERVAL_TIER_1
+                    else -> DROWNING_INTERVAL_TIER_2
+                }
+                if (serverLevel.gameTime - last >= interval) {
+                    lastDrownTick[entity.uuid] = serverLevel.gameTime
+                    entity.invulnerableTime = 0
+                    entity.hurtServer(
+                        serverLevel,
+                        DamageSource(
+                            serverLevel.registryAccess()
+                                .lookupOrThrow(Registries.DAMAGE_TYPE)
+                                .getOrThrow(ModDamagesTypes.PRESSURE)
+                        ),
+                        2f
+                    )
+                }
+            }
+        }
+
+        if (entity.tickCount % 40 != 0) return
 
         if (!entity.isInWater
             || entity.isSpectator
@@ -89,20 +123,8 @@ object PressureEffectEvent {
             entity.addEffect(MobEffectInstance(ModEffects.PRESSURE, PRESSURE_DURATION, amplifier, false, false, true))
         }
 
-        val isDrowning = entity.airSupply <= 0
-        val last = lastDamageTick[entity.uuid] ?: 0L
-
-        if (isDrowning) {
-            val drowningInterval = when (amplifier) {
-                0 -> DROWNING_INTERVAL_TIER_0
-                1 -> DROWNING_INTERVAL_TIER_1
-                else -> DROWNING_INTERVAL_TIER_2
-            }
-            if (serverLevel.gameTime - last >= drowningInterval) {
-                lastDamageTick[entity.uuid] = serverLevel.gameTime
-                entity.hurtServer(serverLevel, entity.damageSources().drown(), 2f)
-            }
-        } else {
+        if (entity.airSupply > 0) {
+            val last = lastDamageTick[entity.uuid] ?: 0L
             val interval = when (amplifier) {
                 0 -> INTERVAL_TIER_0
                 1 -> INTERVAL_TIER_1
@@ -132,13 +154,22 @@ object PressureEffectEvent {
     }
 
     @SubscribeEvent
+    fun onLivingIncomingDamage(event: LivingIncomingDamageEvent) {
+        if (!event.source.`is`(DamageTypeTags.IS_DROWNING)) return
+        if (event.entity.getEffect(ModEffects.PRESSURE) == null) return
+        event.isCanceled = true
+    }
+
+    @SubscribeEvent
     fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
         lastDamageTick.remove(event.entity.uuid)
+        lastDrownTick.remove(event.entity.uuid)
     }
 
     @SubscribeEvent
     fun onEntityDeath(event: LivingDeathEvent) {
         lastDamageTick.remove(event.entity.uuid)
+        lastDrownTick.remove(event.entity.uuid)
     }
 
     @SubscribeEvent
@@ -146,6 +177,7 @@ object PressureEffectEvent {
         if (event.server.tickCount % 6000 == 0) {
             val now = event.server.overworld().gameTime
             lastDamageTick.entries.removeIf { (_, tick) -> now - tick > 1200L }
+            lastDrownTick.entries.removeIf { (_, tick) -> now - tick > 1200L }
         }
     }
 }

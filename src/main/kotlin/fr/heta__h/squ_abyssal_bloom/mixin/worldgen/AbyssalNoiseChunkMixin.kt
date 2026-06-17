@@ -146,7 +146,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
         if (blockY() <= floorY) {
             if (current != null && current.`is`(Blocks.WATER)) {
-                cir.returnValue = Blocks.STONE.defaultBlockState()
+                cir.returnValue = if (blockY() < 0) Blocks.DEEPSLATE.defaultBlockState() else Blocks.STONE.defaultBlockState()
             }
             return
         }

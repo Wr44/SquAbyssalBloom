@@ -104,6 +104,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
         const val EFFECT_PARTICLE_CHANCE = 0.4f
 
+        const val TORPEDO_DECAY_BASE = 0.08
+
         val STAGES = arrayOf(
             BubbleStageData(
                 size = 0.5f, burstRadius = 1.0, burstDamage = 2.5f,
@@ -141,6 +143,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
         private val EFFECT_COLOR: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
+        private val TORPEDO_LEVEL: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
     }
 
     var releaseYaw: Float = 0f
@@ -158,6 +162,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         builder.define(HOLD_TICKS_SYNC, 0)
         builder.define(ATTACHED_PLAYER_ID, -1)
         builder.define(EFFECT_COLOR, 0)
+        builder.define(TORPEDO_LEVEL, 0)
     }
 
     var bubbleStage: Int
@@ -193,6 +198,12 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         get() = entityData.get(EFFECT_COLOR)
         set(value) { entityData.set(EFFECT_COLOR, value) }
 
+    var torpedoLevel: Int
+        get() = entityData.get(TORPEDO_LEVEL)
+        set(value) { entityData.set(TORPEDO_LEVEL, value) }
+
+    var torpedoFactor: Double = 0.0
+
     private val stageData get() = STAGES[bubbleStage]
 
     override fun getDimensions(pose: Pose): EntityDimensions {
@@ -224,9 +235,20 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 return
             }
         } else {
+            if (!isHeld && torpedoLevel > 0 && torpedoFactor > 0.001) {
+                torpedoFactor *= 1.0 - TORPEDO_DECAY_BASE * 0.5.pow((torpedoLevel - 1).toDouble())
+                if (torpedoFactor < 0.001) torpedoFactor = 0.0
+            }
+
+            val baseMultiplier = if (torpedoFactor > 0.0) 0.5.pow(torpedoLevel.toDouble()) else 1.0
+            val frictionMultiplier = baseMultiplier + (1.0 - baseMultiplier) * (1.0 - torpedoFactor)
+            val effectiveDragLateral = 1.0 - (1.0 - stageData.dragLateral) * frictionMultiplier
+            val effectiveDragVertical = 1.0 - (1.0 - stageData.dragVertical) * frictionMultiplier
+            val effectiveBuoyancy = stageData.buoyancy * (1.0 - torpedoFactor)
+
             deltaMovement = deltaMovement.multiply(
-                stageData.dragLateral, stageData.dragVertical, stageData.dragLateral
-            ).add(0.0, stageData.buoyancy, 0.0)
+                effectiveDragLateral, effectiveDragVertical, effectiveDragLateral
+            ).add(0.0, effectiveBuoyancy, 0.0)
         }
 
         if (!level().isClientSide && attachedPlayerId != -1) {
@@ -661,6 +683,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                     p_422546_.putString("SplatterEffect$i", key.toString())
                     p_422546_.putInt("SplatterDuration$i", entry.duration)
                     p_422546_.putInt("SplatterAmplifier$i", entry.amplifier)
+                    p_422546_.putInt("TorpedoLevel", torpedoLevel)
+                    p_422546_.putFloat("TorpedoFactor", torpedoFactor.toFloat())
                 }
             }
         }
@@ -684,8 +708,10 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 entries.add(SplatterEntry(
                     holder,
                     p_422548_.getIntOr("SplatterDuration$i", 600),
-                    p_422548_.getIntOr("SplatterAmplifier$i", 0)
+                    p_422548_.getIntOr("SplatterAmplifier$i", 0),
                 ))
+                torpedoLevel = p_422548_.getIntOr("TorpedoLevel", 0)
+                torpedoFactor = p_422548_.getFloatOr("TorpedoFactor", 0f).toDouble()
             }
             splatterEntries = entries
         }
@@ -695,6 +721,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         super.onSyncedDataUpdated(key)
         if (key == BUBBLE_STAGE) refreshDimensions()
         if (key == EFFECT_COLOR) cachedEffectColor = entityData.get(EFFECT_COLOR)
+        if (key == TORPEDO_LEVEL && entityData.get(TORPEDO_LEVEL) > 0) torpedoFactor = 1.0
     }
 
     override fun remove(reason: RemovalReason) {

@@ -54,7 +54,7 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         const val SYPHON_HEAL_FACTOR = 0.33f
         const val SYPHON_ABSORB_CAP = 4.0f
         const val SINGULARITY_PULL = 10.0
-        const val SINGULARITY_PULL_FACTOR = 0.25
+        const val SINGULARITY_PULL_FACTOR = 0.5
         const val SINGULARITY_STUN_DURATION = 100
 
         private val LOCK_DOT_THRESHOLD = cos(toRadians(MAX_LOCK_ANGLE))

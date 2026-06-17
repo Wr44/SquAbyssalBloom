@@ -52,7 +52,8 @@ abstract class AbyssalCarverFillMixin {
                         mutable.set(worldX, y, worldZ)
                         val state = chunk.getBlockState(mutable)
                         if (state.`is`(Blocks.WATER) || state.`is`(Blocks.LAVA)) {
-                            chunk.setBlockState(mutable, stone)
+                            val fill = if (y < 0) Blocks.DEEPSLATE.defaultBlockState() else Blocks.STONE.defaultBlockState()
+                            chunk.setBlockState(mutable, fill)
                         }
                     }
                 }
