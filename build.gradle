@@ -29,8 +29,8 @@ repositories {
         url = "https://maven.fabricmc.net/"
     }
     maven {
-        name = "TerraBlender"
-        url = "https://maven.blamejared.com"
+        name = "Forge Maven"
+        url = "https://maven.minecraftforge.net/"
     }
     mavenCentral()
 }
