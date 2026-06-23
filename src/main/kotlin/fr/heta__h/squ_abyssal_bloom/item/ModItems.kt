@@ -26,6 +26,10 @@ object ModItems {
         "brine_spawn_egg"
     ) { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.BRINE.get())) }
 
+    val SEA_BUNNY_SPAWN_EGG: DeferredItem<SpawnEggItem> = ITEMS.registerItem(
+        "sea_bunny_spawn_egg"
+    ) { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.SEA_BUNNY.get())) }
+
     val BARNACLE_TOOTH: DeferredItem<Item> = ITEMS.registerItem(
         "barnacle_tooth"
     ) { properties -> Item(properties) }

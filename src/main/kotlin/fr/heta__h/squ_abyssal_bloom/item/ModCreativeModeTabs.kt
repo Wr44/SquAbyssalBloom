@@ -40,6 +40,7 @@ object ModCreativeModeTabs {
 
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
                 output.accept(ModItems.BRINE_SPAWN_EGG.get())
+                output.accept(ModItems.SEA_BUNNY_SPAWN_EGG.get())
             }
             .build()
     }

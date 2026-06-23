@@ -11,11 +11,14 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage2Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage3Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.client.sea_bunny.SeaBunnyModel
+import fr.heta__h.squ_abyssal_bloom.entity.client.sea_bunny.SeaBunnyRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
+import fr.heta__h.squ_abyssal_bloom.entity.custom.sea_bunny.SeaBunnyEntity
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikesLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusBubbleSpitterModel
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusChestModel
@@ -101,12 +104,21 @@ object ModEntities {
             .build(BUBBLE_KEY)
     }
 
+    val SEA_BUNNY_KEY = ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "sea_bunny"))
+    val SEA_BUNNY : DeferredHolder<EntityType<*>, EntityType<SeaBunnyEntity>> =
+        ENTITY_TYPES.register( "sea_bunny") { _: Identifier ->
+            EntityType.Builder.of({ type, level -> SeaBunnyEntity(type, level) }, MobCategory.WATER_CREATURE)
+                .sized(1.0f, 1.0f )
+                .clientTrackingRange(8)
+                .build(SEA_BUNNY_KEY)
+        }
 
     fun registerEntityRenderers(event: EntityRenderersEvent.RegisterRenderers) {
         //Entity
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
         event.registerEntityRenderer(GHOST_CHIMAERA.get() as EntityType<out GhostChimaeraEntity>, ::GhostChimaeraRenderer)
         event.registerEntityRenderer(BRINE.get() as EntityType<out BrineEntity>, ::BrineRenderer)
+        event.registerEntityRenderer(SEA_BUNNY.get() as EntityType<out SeaBunnyEntity>, ::SeaBunnyRenderer)
 
         //Projectile
         event.registerEntityRenderer(BUBBLE.get() as EntityType<out BubbleProjectile>, ::BubbleRenderer)
@@ -127,6 +139,11 @@ object ModEntities {
         event.registerLayerDefinition(
             BrineModel.LAYER_LOCATION,
             BrineModel::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            SeaBunnyModel.LAYER_LOCATION,
+            SeaBunnyModel::createBodyLayer
         )
 
         event.registerLayerDefinition(
