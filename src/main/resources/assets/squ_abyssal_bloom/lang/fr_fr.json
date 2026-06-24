@@ -103,6 +103,7 @@
   "entity.squ_abyssal_bloom.ghost_chimaera": "Chimère fantôme",
   "entity.squ_abyssal_bloom.bubble_projectile": "Bulle",
   "entity.squ_abyssal_bloom.brine" : "Brine",
+  "entity.squ_abyssal_bloom.sea_bunny": "Lapin des mers",
 
   "death.attack.squ_abyssal_bloom.barnacle_swallow": "%1$s a été avalé par un %2$s",
   "death.attack.squ_abyssal_bloom.barnacle_swallow.player": "%1$s a été avalé par un %2$s lors d'un combat contre %3$s",
@@ -114,6 +115,7 @@
   "item.squ_abyssal_bloom.barnacle_spawn_egg": "Oeuf d'apparition de Barnacle",
   "item.squ_abyssal_bloom.ghost_chimaera_spawn_egg": "Oeuf d'apparition de Chimère fantôme",
   "item.squ_abyssal_bloom.brine_spawn_egg": "Oeuf d'apparition de Brine",
+  "item.squ_abyssal_bloom.sea_bunny_spawn_egg": "Oeuf d'apparition de Lapin des mers",
   "item.squ_abyssal_bloom.barnacle_tooth": "Dent de Barnacle",
   "item.squ_abyssal_bloom.guardian_eye": "Oeil de Gardien",
   "item.squ_abyssal_bloom.brine_bubbles": "Bulles de Brine",

@@ -8,18 +8,22 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.LivingEntityRenderer
 import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.resources.Identifier
+import org.joml.Vector3f
 
 class SeaBunnyRenderer(context: EntityRendererProvider.Context) : LivingEntityRenderer<SeaBunnyEntity, SeaBunnyRenderState, SeaBunnyModel>(
         context,
         SeaBunnyModel(context.bakeLayer(SeaBunnyModel.LAYER_LOCATION)),
-        0.5f
+        SHADOW
 ) {
 
     companion object {
         private val TEXTURE = Identifier.fromNamespaceAndPath(
             SquAbyssalBloom.ID,
-            "textures/entity/sea_bunny/sea_bunny.png"
+            "textures/entity/sea_bunny/sea_bunny_white_variant.png"
         )
+
+        private val size: Vector3f = Vector3f(0.25f, 0.25f, 0.25f)
+        private val SHADOW = 1 * size.y
     }
 
     override fun createRenderState(): SeaBunnyRenderState {
@@ -36,7 +40,10 @@ class SeaBunnyRenderer(context: EntityRendererProvider.Context) : LivingEntityRe
         submitNodeCollector: SubmitNodeCollector,
         cameraState: CameraRenderState
     ) {
+        poseStack.pushPose()
+        poseStack.scale( size.x, size.y, size.z )
         super.submit(state, poseStack, submitNodeCollector, cameraState)
+        poseStack.popPose()
     }
 
     override fun getTextureLocation(p0: SeaBunnyRenderState): Identifier = TEXTURE

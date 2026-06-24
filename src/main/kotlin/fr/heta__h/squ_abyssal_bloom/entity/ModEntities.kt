@@ -108,7 +108,7 @@ object ModEntities {
     val SEA_BUNNY : DeferredHolder<EntityType<*>, EntityType<SeaBunnyEntity>> =
         ENTITY_TYPES.register( "sea_bunny") { _: Identifier ->
             EntityType.Builder.of({ type, level -> SeaBunnyEntity(type, level) }, MobCategory.WATER_CREATURE)
-                .sized(1.0f, 1.0f )
+                .sized(0.3f, 0.25f )
                 .clientTrackingRange(8)
                 .build(SEA_BUNNY_KEY)
         }
@@ -188,6 +188,7 @@ object ModEntities {
         event.put(BARNACLE.get(), BarnacleEntity.createAttributes().build())
         event.put(GHOST_CHIMAERA.get(), GhostChimaeraEntity.createAttributes().build())
         event.put(BRINE.get(), BrineEntity.createAttributes().build())
+        event.put(SEA_BUNNY.get(), SeaBunnyEntity.createAttributes().build())
     }
 
     fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
