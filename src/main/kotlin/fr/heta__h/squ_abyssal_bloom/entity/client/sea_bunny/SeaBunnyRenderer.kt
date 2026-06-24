@@ -5,12 +5,12 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.sea_bunny.SeaBunnyEntity
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRendererProvider
-import net.minecraft.client.renderer.entity.LivingEntityRenderer
+import net.minecraft.client.renderer.entity.MobRenderer
 import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.resources.Identifier
 import org.joml.Vector3f
 
-class SeaBunnyRenderer(context: EntityRendererProvider.Context) : LivingEntityRenderer<SeaBunnyEntity, SeaBunnyRenderState, SeaBunnyModel>(
+class SeaBunnyRenderer(context: EntityRendererProvider.Context) : MobRenderer<SeaBunnyEntity, SeaBunnyRenderState, SeaBunnyModel>(
         context,
         SeaBunnyModel(context.bakeLayer(SeaBunnyModel.LAYER_LOCATION)),
         SHADOW
