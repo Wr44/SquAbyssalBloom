@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.config
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigData
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
 import fr.heta__h.squ_abyssal_bloom.network.config.S2CServerConfigPacket
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber

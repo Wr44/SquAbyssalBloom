@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.util.accessor.IAbyssalNoiseChunk
 import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssalChunkDataCache
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalShapingContext
@@ -71,8 +71,8 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
             topoNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_TOPO),
             wallNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_WALL),
             detailNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_DETAIL),
-            shallowDeepEdge = ServerConfigCache.effectiveShallowDeep.toDouble(),
-            deepAbyssalEdge = ServerConfigCache.effectiveDeepAbyssal.toDouble(),
+            shallowDeepEdge = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get(),
+            deepAbyssalEdge = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get(),
             seaLevel = cachedSeaLevel,
             deepHardLimit = noiseSettings.minY() + 5,
             abyssalHardLimit = noiseSettings.minY() + 5
@@ -114,7 +114,7 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
                 if (floorY < cachedSeaLevel) {
                     grid[localX + localZ * 16] = floorY
                     carverMask[localX + localZ * 16] = true
-                    if (floorY < ServerConfigCache.effectiveShallowFloorY) {
+                    if (floorY < ModServerConfig.SHALLOW_FLOOR_Y.get()) {
                         abyssalMask[localX + localZ * 16] = true
                     }
                     anyModified = true

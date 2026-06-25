@@ -22,7 +22,6 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-
 @EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object MurkVeil {
 
@@ -39,20 +38,25 @@ object MurkVeil {
         }.getOrNull()
     }
 
+    private fun isStealthActive(entity: LivingEntity, currentTime: Long): Boolean {
+        val nautilus = entity.vehicle as? AbstractNautilus ?: return false
+        val bodyStack = nautilus.getItemBySlot(EquipmentSlot.BODY)
+        if (getEnchantLevel(bodyStack, nautilus.level(), "murk_veil") == 0) return false
+
+        val lastAttack = lastAttackTick[entity.uuid] ?: 0L
+        return currentTime - lastAttack > STEALTH_BREAK_TICKS
+    }
+
     @SubscribeEvent
     fun onLivingChangeTarget(event: LivingChangeTargetEvent) {
         if (event.entity !is Enemy) return
 
         val target = event.newAboutToBeSetTarget as? ServerPlayer ?: return
-        val nautilus = target.vehicle as? AbstractNautilus ?: return
-        val bodyStack = nautilus.getItemBySlot(EquipmentSlot.BODY)
-        if (getEnchantLevel(bodyStack, nautilus.level(), "murk_veil") == 0) return
-
-        val lastAttack = lastAttackTick[target.uuid] ?: 0L
-        val inStealth = nautilus.level().gameTime - lastAttack > STEALTH_BREAK_TICKS
-        if (!inStealth || event.entity.distanceToSqr(nautilus) <= STEALTH_MIN_DETECTION_RADIUS_SQR) return
-
         val mob = event.entity as? Mob ?: return
+        val currentTime = mob.level().gameTime
+
+        if (!isStealthActive(target, currentTime) || event.entity.distanceToSqr(target.vehicle!!) <= STEALTH_MIN_DETECTION_RADIUS_SQR) return
+
         val followRange = mob.getAttributeValue(Attributes.FOLLOW_RANGE)
         val followRangeSqr = followRange * followRange
         val aabb = mob.boundingBox.inflate(followRange)
@@ -63,6 +67,7 @@ object MurkVeil {
                     candidate != target &&
                             candidate.isAlive &&
                             mob.distanceToSqr(candidate) <= followRangeSqr &&
+                            !isStealthActive(candidate, currentTime) && // <-- CORRECTION : Ignore les autres joueurs furtifs
                             when (candidate) {
                                 is Player -> (candidate.gameMode() == net.minecraft.world.level.GameType.SURVIVAL ||
                                         candidate.gameMode() == net.minecraft.world.level.GameType.ADVENTURE) &&
@@ -88,6 +93,7 @@ object MurkVeil {
                 mob.level().getEntitiesOfClass(LivingEntity::class.java, aabb) { candidate ->
                     candidate != target &&
                             candidate.isAlive &&
+                            !isStealthActive(candidate, currentTime) &&
                             targetTypes.any { it.isInstance(candidate) }
                 }
                     .map { it to mob.distanceToSqr(it) }

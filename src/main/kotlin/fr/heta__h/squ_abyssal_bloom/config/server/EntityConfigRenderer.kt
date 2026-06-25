@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.config
+package fr.heta__h.squ_abyssal_bloom.config.server
 
 import dev.isxander.yacl3.gui.image.ImageRenderer
 import net.minecraft.client.Minecraft

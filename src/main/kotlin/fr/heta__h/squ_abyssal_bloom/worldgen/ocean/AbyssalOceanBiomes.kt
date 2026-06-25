@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
 
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanZone
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import net.minecraft.resources.ResourceKey
@@ -35,9 +35,9 @@ object AbyssalOceanBiomes {
         Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN
     )
 
-    fun shallowDeep(): Float = ServerConfigCache.effectiveShallowDeep
+    fun shallowDeep(): Float = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get().toFloat()
 
-    fun deepAbyssal(): Float = ServerConfigCache.effectiveDeepAbyssal
+    fun deepAbyssal(): Float = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get().toFloat()
 
     fun vanillaDeepCont(): Climate.Parameter =
         Climate.Parameter.span(OCEAN_MIN_CONT, shallowDeep())

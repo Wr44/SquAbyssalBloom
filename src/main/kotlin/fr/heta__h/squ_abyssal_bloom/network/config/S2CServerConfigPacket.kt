@@ -1,8 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.network.config
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigData
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
 import net.minecraft.client.Minecraft
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.codec.ByteBufCodecs

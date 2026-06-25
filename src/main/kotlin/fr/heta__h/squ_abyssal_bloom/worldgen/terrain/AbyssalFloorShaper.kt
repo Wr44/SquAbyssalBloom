@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.terrain
 
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalShapingContext
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnMods
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnSample
@@ -127,8 +127,8 @@ object AbyssalFloorShaper {
     }
 
     private fun faultOffset(shaping: AbyssalShapingContext, column: ColumnSample): Double {
-        val faultThreshold = ServerConfigCache.effectiveFaultThreshold
-        val faultBlend = ServerConfigCache.effectiveFaultBlend
+        val faultThreshold = ModServerConfig.FAULT_THRESHOLD.get()
+        val faultBlend = ModServerConfig.FAULT_BLEND.get()
         val line = shaping.wallNoise.getValue(column.worldX * FAULT_SCALE, 7700.0, column.worldZ * FAULT_SCALE)
         val dist = abs(line)
 
@@ -142,7 +142,7 @@ object AbyssalFloorShaper {
         val t = ((faultThreshold + faultBlend - dist) / faultBlend).coerceIn(0.0, 1.0)
         val smooth = t * t * (3.0 - 2.0 * t)
 
-        return side * ServerConfigCache.effectiveFaultOffsetAmp * smooth
+        return side * ModServerConfig.FAULT_OFFSET_AMP.get() * smooth
     }
 
     private fun scanVanillaFloor(shaping: AbyssalShapingContext, column: ColumnSample, finalDensityDf: DensityFunction, downTo: Int): Int {
@@ -161,8 +161,8 @@ object AbyssalFloorShaper {
     private fun columnMods(shaping: AbyssalShapingContext, column: ColumnSample): ColumnMods {
         val x = column.worldX.toDouble()
         val z = column.worldZ.toDouble()
-        val warpAmp = ServerConfigCache.effectiveWarpAmp
-        val warp2Amp = ServerConfigCache.effectiveWarp2Amp
+        val warpAmp = ModServerConfig.WARP_AMP.get()
+        val warp2Amp = ModServerConfig.WARP2_AMP.get()
         val warp1X = x + shaping.topoNoise.getValue(x * WARP_SCALE, 100.0, z * WARP_SCALE) * warpAmp
         val warp1Z = z + shaping.topoNoise.getValue(x * WARP_SCALE, 200.0, z * WARP_SCALE) * warpAmp
         val warpX = warp1X + shaping.topoNoise.getValue(warp1X * WARP2_SCALE, 300.0, warp1Z * WARP2_SCALE) * warp2Amp
@@ -214,9 +214,9 @@ object AbyssalFloorShaper {
         val terrain = rawTerrain * mods.erosionFactor
         val detail = (mods.detailVal * SHALLOW_DETAIL_AMP + mods.microVal * SHALLOW_MICRO_AMP) * mods.humidityDetailMod
 
-        val uncoerced = ServerConfigCache.effectiveShallowFloorY + terrain + detail + mods.tempDepthMod
+        val uncoerced = ModServerConfig.SHALLOW_FLOOR_Y.get() + terrain + detail + mods.tempDepthMod
         val result = uncoerced.toInt()
-            .coerceAtMost(shaping.seaLevel - ServerConfigCache.effectiveShallowClearance)
+            .coerceAtMost(shaping.seaLevel - ModServerConfig.SHALLOW_CLEARANCE.get())
             .coerceAtLeast(shaping.deepHardLimit)
 
         return result
@@ -253,7 +253,7 @@ object AbyssalFloorShaper {
         val swell = shaping.topoNoise.getValue(wx * DEEP_SWELL_SCALE, 3900.0, wz * DEEP_SWELL_SCALE) * DEEP_SWELL_AMP
         val aniso = shaping.topoNoise.getValue(wx * ANISO_SCALE_X, 5500.0, wz * ANISO_SCALE_Z) * DEEP_ANISO_AMP
 
-        val uncoerced = ServerConfigCache.effectiveDeepFloorTarget + terrain + detail + swell + aniso + mods.tempDepthMod
+        val uncoerced = ModServerConfig.DEEP_FLOOR_TARGET.get() + terrain + detail + swell + aniso + mods.tempDepthMod
         val result = uncoerced.toInt().coerceAtLeast(shaping.deepHardLimit)
 
         return result
@@ -329,26 +329,27 @@ object AbyssalFloorShaper {
             0.0
         }
 
-        val base = localDeepY + effectiveSteepT * (ServerConfigCache.effectiveTargetFloorY.toDouble() - localDeepY) + shallowLift
+        val base = localDeepY + effectiveSteepT * (ModServerConfig.TARGET_FLOOR_Y.get().toDouble() - localDeepY) + shallowLift
 
         val topoLarge = shaping.topoNoise.getValue(mods.warpX * TOPO_LARGE_SCALE, 3700.0, mods.warpZ * TOPO_LARGE_SCALE)
         val topo = shaping.topoNoise.getValue(mods.warpX * TOPO_SCALE, 5202.0, mods.warpZ * TOPO_SCALE)
         val topoMid = shaping.topoNoise.getValue(mods.warpX * TOPO_MID_SCALE, 2800.0, mods.warpZ * TOPO_MID_SCALE)
 
-        val cLargeAbyss = topoLarge * ServerConfigCache.effectiveTopoLargeAmp
-        val cTopoAbyss = topo * ServerConfigCache.effectiveTopoAmp
-        val cMidAbyss = topoMid * ServerConfigCache.effectiveTopoMidAmp
+        val cLargeAbyss = topoLarge * ModServerConfig.TOPO_LARGE_AMP.get()
+        val cTopoAbyss = topo * ModServerConfig.TOPO_AMP.get()
+        val cMidAbyss = topoMid * ModServerConfig.TOPO_MID_AMP.get()
 
         val topoCoarseRaw = cLargeAbyss * effectiveSteepT * mods.erosionFactor
         val topoFineRaw = (cTopoAbyss + cMidAbyss) * effectiveSteepT * mods.erosionFactor
 
-        val rawWall = mods.wallVal * ServerConfigCache.effectiveWallAmp * effectiveSteepT * mods.erosionFactor * mods.weirdnessWallMod
-        val wallExpectedAverage = (ServerConfigCache.effectiveWallAmp * effectiveSteepT * mods.erosionFactor) * 0.25
+        val wallAmp = ModServerConfig.WALL_AMP.get()
+        val rawWall = mods.wallVal * wallAmp * effectiveSteepT * mods.erosionFactor * mods.weirdnessWallMod
+        val wallExpectedAverage = (wallAmp * effectiveSteepT * mods.erosionFactor) * 0.25
         val wallVar = rawWall.coerceAtLeast(0.0) - wallExpectedAverage
 
         val roughness = slopeRoughness(shaping, mods.warpX, mods.warpZ)
-        val detailVar = (mods.detailVal * ServerConfigCache.effectiveDetailAmp + mods.microVal * ServerConfigCache.effectiveMicroAmp) * effectiveSteepT * mods.humidityDetailMod * roughness
-        val weirdnessVar = column.ridges * ServerConfigCache.effectiveWeirdnessAmp * effectiveSteepT
+        val detailVar = (mods.detailVal * ModServerConfig.DETAIL_AMP.get() + mods.microVal * ModServerConfig.MICRO_AMP.get()) * effectiveSteepT * mods.humidityDetailMod * roughness
+        val weirdnessVar = column.ridges * ModServerConfig.WEIRDNESS_AMP.get() * effectiveSteepT
         val tempVar = mods.tempDepthMod * effectiveSteepT
         val anisoVar = anisotropyVar(shaping, mods, effectiveSteepT)
 
@@ -358,26 +359,26 @@ object AbyssalFloorShaper {
         val terrainFine = topoFineRaw + wallVar + detailVar + weirdnessVar + tempVar + anisoVar + interpolationCompensation
         val terrainBase = terrainCoarse + terrainFine
 
-        val terraceMaskThreshold = ServerConfigCache.effectiveTerraceMaskThreshold
+        val terraceMaskThreshold = ModServerConfig.TERRACE_MASK_THRESHOLD.get()
         val maskCoarse = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK_SCALE, 6100.0, mods.warpZ * TERRACE_MASK_SCALE)
         val maskFine = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK2_SCALE, 6150.0, mods.warpZ * TERRACE_MASK2_SCALE)
         val terraceMask = maskCoarse * TERRACE_MASK_AMP + maskFine * TERRACE_MASK2_AMP + TERRACE_MASK_OFFSET
         val terraceActive = terraceMask > terraceMaskThreshold && effectiveSteepT < TERRACE_STEEP_CUTOFF
 
-        val terraceStep = ServerConfigCache.effectiveTerraceStep
+        val terraceStep = ModServerConfig.TERRACE_STEP.get()
         val rawQuantized = floor(terrainCoarse / terraceStep) * terraceStep
         val coarseQuantized = rawQuantized.coerceAtLeast(shaping.abyssalHardLimit.toDouble())
         val finalTerrainBase = if (terraceActive) coarseQuantized + terrainFine else terrainBase
 
         val trenchT = trenchFactor(shaping, mods)
-        val trenchDepthAmp = ServerConfigCache.effectiveTrenchDepthAmp
+        val trenchDepthAmp = ModServerConfig.TRENCH_DEPTH_AMP.get()
         val trenchBudget = (finalTerrainBase - shaping.abyssalHardLimit).coerceAtLeast(0.0)
         val trenchVar = -trenchT * trenchT * trenchDepthAmp * effectiveSteepT * (trenchBudget / trenchDepthAmp).coerceIn(0.0, 1.0)
 
         val finalY = if (trenchT > 0.0) {
             finalTerrainBase + trenchVar
         } else {
-            softClampAbyssalFloor(finalTerrainBase , shaping.abyssalHardLimit)
+            softClampAbyssalFloor(finalTerrainBase, shaping.abyssalHardLimit)
         }
 
         val softClamped = softClampAbyssalFloor(finalY, shaping.abyssalHardLimit)
@@ -391,12 +392,12 @@ object AbyssalFloorShaper {
 
         return (softClamped + floorBump).toInt()
             .coerceAtLeast(shaping.abyssalHardLimit)
-            .coerceAtMost(shaping.seaLevel - ServerConfigCache.effectiveShallowClearance)
+            .coerceAtMost(shaping.seaLevel - ModServerConfig.SHALLOW_CLEARANCE.get())
     }
 
     private fun trenchFactor(shaping: AbyssalShapingContext, mods: ColumnMods): Double {
         val raw = 1.0 - abs(shaping.wallNoise.getValue(mods.warpX * TRENCH_SCALE, 500.0, mods.warpZ * TRENCH_SCALE))
-        val trenchThreshold = ServerConfigCache.effectiveTrenchThreshold
+        val trenchThreshold = ModServerConfig.TRENCH_THRESHOLD.get()
         return ((raw - trenchThreshold) / (1.0 - trenchThreshold)).coerceIn(0.0, 1.0)
     }
 }

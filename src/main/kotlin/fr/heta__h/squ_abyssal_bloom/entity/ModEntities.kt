@@ -11,11 +11,15 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage2Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage3Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.BabyRedSlobbererModel
+import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererModel
+import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikesLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusBubbleSpitterModel
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusChestModel
@@ -90,6 +94,17 @@ object ModEntities {
                 .build(BRINE_KEY)
         }
 
+    val RED_SLOBBERER_KEY: ResourceKey<EntityType<*>> =
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "red_slobberer"))
+
+    val RED_SLOBBERER: DeferredHolder<EntityType<*>, EntityType<RedSlobbererEntity>> =
+        ENTITY_TYPES.register("red_slobberer") { _: Identifier ->
+            EntityType.Builder.of({ type, level -> RedSlobbererEntity(type, level) }, MobCategory.WATER_CREATURE)
+                .sized(4.25f, 2.5f)
+                .clientTrackingRange(8)
+                .updateInterval(3)
+                .build(RED_SLOBBERER_KEY)
+    }
 
     val BUBBLE_KEY = ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_projectile"))
 
@@ -107,6 +122,7 @@ object ModEntities {
         event.registerEntityRenderer(BARNACLE.get() as EntityType<out BarnacleEntity>, ::BarnacleRenderer)
         event.registerEntityRenderer(GHOST_CHIMAERA.get() as EntityType<out GhostChimaeraEntity>, ::GhostChimaeraRenderer)
         event.registerEntityRenderer(BRINE.get() as EntityType<out BrineEntity>, ::BrineRenderer)
+        event.registerEntityRenderer(RED_SLOBBERER.get() as EntityType<out RedSlobbererEntity>, ::RedSlobbererRenderer)
 
         //Projectile
         event.registerEntityRenderer(BUBBLE.get() as EntityType<out BubbleProjectile>, ::BubbleRenderer)
@@ -144,6 +160,17 @@ object ModEntities {
             BubbleStage3Model::createBodyLayer
         )
 
+        event.registerLayerDefinition(
+            RedSlobbererModel.LAYER_LOCATION,
+            RedSlobbererModel::createBodyLayer
+        )
+
+        event.registerLayerDefinition(
+            BabyRedSlobbererModel.LAYER_LOCATION,
+            BabyRedSlobbererModel::createBodyLayer
+        )
+
+
         //Render layer
         event.registerLayerDefinition(
             GuardianSpikeModel.LAYER_LOCATION,
@@ -171,6 +198,7 @@ object ModEntities {
         event.put(BARNACLE.get(), BarnacleEntity.createAttributes().build())
         event.put(GHOST_CHIMAERA.get(), GhostChimaeraEntity.createAttributes().build())
         event.put(BRINE.get(), BrineEntity.createAttributes().build())
+        event.put(RED_SLOBBERER.get(), RedSlobbererEntity.createAttributes().build())
     }
 
     fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
