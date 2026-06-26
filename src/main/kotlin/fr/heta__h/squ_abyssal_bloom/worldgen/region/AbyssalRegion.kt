@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.region
 
 import com.mojang.datafixers.util.Pair
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanBiomeEntry
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.AbyssalOceanBiomes
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanBiomeRegistry
 import net.minecraft.core.Registry
@@ -24,50 +25,56 @@ class AbyssalRegion(location: Identifier, weight: Int) : Region(location, Region
         val deepCont = AbyssalOceanBiomes.deepContinentalness()
         val shallowCont = AbyssalOceanBiomes.shallowContinentalness()
 
-        listOf(AbyssalOceanBiomes.SURFACE_DEPTH, AbyssalOceanBiomes.FLOOR_DEPTH).forEach { targetDepth ->
+        OceanBiomeRegistry.abyssalEntries().forEach { entry ->
+            emit(mapper, entry, AbyssalOceanBiomes.FULL_RANGE, abyssalCont)
+        }
 
-            OceanBiomeRegistry.abyssalEntries().forEach { entry ->
-                addBiome(
-                    mapper,
-                    AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                    abyssalCont,
-                    AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                    targetDepth, 0.0f, entry.key
-                )
-            }
+        OceanBiomeRegistry.deepEntries().forEach { entry ->
+            emit(mapper, entry, AbyssalOceanBiomes.TEMPERATURES[entry.tempBand], deepCont)
+        }
 
-            OceanBiomeRegistry.deepEntries().forEach { entry ->
-                addBiome(
-                    mapper,
-                    AbyssalOceanBiomes.TEMPERATURES[entry.tempBand], AbyssalOceanBiomes.FULL_RANGE,
-                    deepCont,
-                    AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                    targetDepth, 0.0f, entry.key
-                )
-            }
-
-            OceanBiomeRegistry.shallowEntries().forEach { entry ->
-                addBiome(
-                    mapper,
-                    AbyssalOceanBiomes.TEMPERATURES[entry.tempBand], AbyssalOceanBiomes.FULL_RANGE,
-                    shallowCont,
-                    AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.FULL_RANGE,
-                    targetDepth, 0.0f, entry.key
-                )
-            }
+        OceanBiomeRegistry.shallowEntries().forEach { entry ->
+            emit(mapper, entry, AbyssalOceanBiomes.TEMPERATURES[entry.tempBand], shallowCont)
         }
 
         addModifiedVanillaOverworldBiomes(mapper) { builder ->
             AbyssalOceanBiomes.TEMPERATURES.forEach { temp ->
                 listOf(AbyssalOceanBiomes.SURFACE_DEPTH, AbyssalOceanBiomes.FLOOR_DEPTH).forEach { depth ->
                     builder.removeParameter(
-                        Climate.parameters(temp, AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.vanillaDeepCont() , AbyssalOceanBiomes.FULL_RANGE, depth, AbyssalOceanBiomes.FULL_RANGE, 0f)
+                        Climate.parameters(temp, AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.vanillaDeepCont(), AbyssalOceanBiomes.FULL_RANGE, depth, AbyssalOceanBiomes.FULL_RANGE, 0f)
                     )
                     builder.removeParameter(
                         Climate.parameters(temp, AbyssalOceanBiomes.FULL_RANGE, AbyssalOceanBiomes.vanillaOceanCont(), AbyssalOceanBiomes.FULL_RANGE, depth, AbyssalOceanBiomes.FULL_RANGE, 0f)
                     )
                 }
             }
+        }
+    }
+
+    private fun emit(
+        mapper: Consumer<Pair<Climate.ParameterPoint, ResourceKey<Biome>>>,
+        entry: OceanBiomeEntry,
+        defaultTemp: Climate.Parameter,
+        defaultCont: Climate.Parameter
+    ) {
+        val ov = AbyssalOceanBiomes.overrideFor(entry.key)
+        val depths = if (ov != null) {
+            listOf(AbyssalOceanBiomes.SURFACE_DEPTH)
+        } else {
+            listOf(AbyssalOceanBiomes.SURFACE_DEPTH, AbyssalOceanBiomes.FLOOR_DEPTH)
+        }
+        depths.forEach { depth ->
+            addBiome(
+                mapper,
+                ov?.temperature ?: defaultTemp,
+                ov?.humidity ?: AbyssalOceanBiomes.FULL_RANGE,
+                ov?.continentalness ?: defaultCont,
+                ov?.erosion ?: AbyssalOceanBiomes.FULL_RANGE,
+                ov?.weirdness ?: AbyssalOceanBiomes.FULL_RANGE,
+                ov?.depth ?: depth,
+                ov?.offset ?: 0.0f,
+                entry.key
+            )
         }
     }
 }

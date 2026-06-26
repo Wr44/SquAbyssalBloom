@@ -385,8 +385,8 @@ object AbyssalFloorShaper {
         val clampProx = ((shaping.abyssalHardLimit + FLOOR_CLAMP_FADE - softClamped) / FLOOR_CLAMP_FADE).coerceIn(0.0, 1.0)
 
         val bumpBase = abs(shaping.detailNoise.getValue(mods.warpX * FLOOR_CLAMP_BUMP_SCALE, 9900.0, mods.warpZ * FLOOR_CLAMP_BUMP_SCALE)) * FLOOR_CLAMP_BUMP_AMP
-        val bumpMid = abs(shaping.topoNoise.getValue(mods.warpX * FLOOR_CLAMP_MID_SCALE, 9920.0, mods.warpZ * FLOOR_CLAMP_MID_SCALE) * FLOOR_CLAMP_MID_AMP)
-        val bumpFine = shaping.detailNoise.getValue(mods.warpX * FLOOR_CLAMP_FINE_SCALE, 9960.0, mods.warpZ * FLOOR_CLAMP_FINE_SCALE) * FLOOR_CLAMP_FINE_AMP
+        val bumpMid = abs(shaping.topoNoise.getValue(mods.warpX * FLOOR_CLAMP_MID_SCALE, 9920.0, mods.warpZ * FLOOR_CLAMP_MID_SCALE)) * FLOOR_CLAMP_MID_AMP
+        val bumpFine = abs(shaping.detailNoise.getValue(mods.warpX * FLOOR_CLAMP_FINE_SCALE, 9960.0, mods.warpZ * FLOOR_CLAMP_FINE_SCALE)) * FLOOR_CLAMP_FINE_AMP
 
         val floorBump = (bumpBase + bumpMid + bumpFine) * clampProx
 

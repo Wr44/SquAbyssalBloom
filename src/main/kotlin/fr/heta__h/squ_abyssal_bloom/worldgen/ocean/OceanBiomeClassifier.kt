@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
 
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanBiomeEntry
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanZone
@@ -20,8 +21,8 @@ object OceanBiomeClassifier {
 
     fun isExcludedFromShallow(holder: Holder<Biome>): Boolean {
         return holder.`is`(BiomeTags.IS_DEEP_OCEAN)
-            || holder.`is`(ModTags.Biomes.IS_ABYSSAL)
-            || holder.`is`(ModTags.Biomes.IS_DEEP_OCEAN)
+                || holder.`is`(ModTags.Biomes.IS_ABYSSAL)
+                || holder.`is`(ModTags.Biomes.IS_DEEP_OCEAN)
     }
 
     fun isInTag(registry: Registry<Biome>, key: ResourceKey<Biome>, tag: TagKey<Biome>): Boolean {
@@ -51,7 +52,10 @@ object OceanBiomeClassifier {
         val points = if (vanillaPoints.isNotEmpty()) {
             vanillaPoints
         } else {
-            listOf(syntheticReferencePoint(zone, tempBand))
+            if (zone != OceanZone.ABYSSAL && AbyssalOceanBiomes.overrideFor(key) == null) {
+                SquAbyssalBloom.LOGGER.warn("Biome custom {} sans points vanilla ni BiomeOverride, retombe sur la bande 2", key.identifier())
+            }
+            listOf(syntheticReferencePoint(zone, tempBand, key))
         }
         return OceanBiomeEntry(zone, tempBand, key, points)
     }
@@ -82,6 +86,10 @@ object OceanBiomeClassifier {
     private fun distance(a: Float, b: Float): Float = abs(a - b)
 
     private fun resolveTempBand(key: ResourceKey<Biome>, referencePoint: Climate.ParameterPoint?): Int {
+        AbyssalOceanBiomes.overrideFor(key)?.temperature?.let {
+            return tempBandFromParameter(it)
+        }
+
         referencePoint?.let {
             return tempBandFromParameter(it.temperature())
         }
@@ -102,13 +110,14 @@ object OceanBiomeClassifier {
         return AbyssalOceanBiomes.temperatureIndex(center)
     }
 
-    private fun syntheticReferencePoint(zone: OceanZone, tempBand: Int): Climate.ParameterPoint {
+    private fun syntheticReferencePoint(zone: OceanZone, tempBand: Int, key: ResourceKey<Biome>): Climate.ParameterPoint {
         val continentalness = when (zone) {
             OceanZone.ABYSSAL -> AbyssalOceanBiomes.abyssalContinentalness()
             OceanZone.DEEP -> AbyssalOceanBiomes.deepContinentalness()
             OceanZone.SHALLOW -> AbyssalOceanBiomes.shallowContinentalness()
         }
-        val temperature = if (zone == OceanZone.ABYSSAL) {
+        val override = AbyssalOceanBiomes.overrideFor(key)
+        val temperature = override?.temperature ?: if (zone == OceanZone.ABYSSAL) {
             AbyssalOceanBiomes.FULL_RANGE
         } else {
             AbyssalOceanBiomes.TEMPERATURES[tempBand]
@@ -116,11 +125,11 @@ object OceanBiomeClassifier {
 
         return Climate.parameters(
             temperature,
-            AbyssalOceanBiomes.FULL_RANGE,
+            override?.humidity ?: AbyssalOceanBiomes.FULL_RANGE,
             continentalness,
-            AbyssalOceanBiomes.FULL_RANGE,
-            AbyssalOceanBiomes.SURFACE_DEPTH,
-            AbyssalOceanBiomes.FULL_RANGE,
+            override?.erosion ?: AbyssalOceanBiomes.FULL_RANGE,
+            override?.depth ?: AbyssalOceanBiomes.SURFACE_DEPTH,
+            override?.weirdness ?: AbyssalOceanBiomes.FULL_RANGE,
             0f
         )
     }

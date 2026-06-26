@@ -10,6 +10,25 @@ import net.minecraft.world.level.biome.Climate
 
 object AbyssalOceanBiomes {
 
+    data class BiomeOverride(
+        val temperature: Climate.Parameter? = null,
+        val humidity: Climate.Parameter? = null,
+        val continentalness: Climate.Parameter? = null,
+        val erosion: Climate.Parameter? = null,
+        val weirdness: Climate.Parameter? = null,
+        val depth: Climate.Parameter? = null,
+        val offset: Float = 0.0f
+    )
+
+    val BIOME_OVERRIDES: Map<ResourceKey<Biome>, BiomeOverride> = mapOf(
+        ModBiomes.BLOOD_VALLEY to BiomeOverride(
+            temperature = Climate.Parameter.span(0.2f, 0.9f),
+            humidity = Climate.Parameter.span(0.3f, 1.0f)
+        ),
+    )
+
+    fun overrideFor(key: ResourceKey<Biome>): BiomeOverride? = BIOME_OVERRIDES[key]
+
     const val OCEAN_MAX_CONT: Float = -0.19f
     const val OCEAN_MIN_CONT: Float = -1.05f
 

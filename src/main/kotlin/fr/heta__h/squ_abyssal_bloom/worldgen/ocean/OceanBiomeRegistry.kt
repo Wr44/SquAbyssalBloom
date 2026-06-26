@@ -60,9 +60,9 @@ object OceanBiomeRegistry {
 
     fun abyssalEntries(): List<OceanBiomeEntry> = abyssalEntries.toList()
 
-    fun deepEntries(): List<OceanBiomeEntry> = deepPools.flatMap { it.toList() }
+    fun deepEntries(): List<OceanBiomeEntry> = deepPools.flatMap { it }.distinctBy { it.key }
 
-    fun shallowEntries(): List<OceanBiomeEntry> = shallowPools.flatMap { it.toList() }
+    fun shallowEntries(): List<OceanBiomeEntry> = shallowPools.flatMap { it }.distinctBy { it.key }
 
     private fun reset() {
         abyssalEntries.clear()
@@ -116,37 +116,48 @@ object OceanBiomeRegistry {
 
     private fun addEntry(entry: OceanBiomeEntry?) {
         if (entry == null) return
-
-        val pool = when (entry.zone) {
-            OceanZone.ABYSSAL -> abyssalEntries
-            OceanZone.DEEP -> deepPools[entry.tempBand]
-            OceanZone.SHALLOW -> shallowPools[entry.tempBand]
+        when (entry.zone) {
+            OceanZone.ABYSSAL -> addToPool(abyssalEntries, entry)
+            OceanZone.DEEP -> bandsFor(entry).forEach { addToPool(deepPools[it], entry) }
+            OceanZone.SHALLOW -> bandsFor(entry).forEach { addToPool(shallowPools[it], entry) }
         }
+    }
 
+    private fun addToPool(pool: MutableList<OceanBiomeEntry>, entry: OceanBiomeEntry) {
         if (pool.any { it.key == entry.key }) return
-
         pool.add(entry)
         registeredKeys.add(entry.key)
     }
 
-    private fun pickFromPool(
-        pool: List<OceanBiomeEntry>,
-        target: Climate.TargetPoint
-    ): ResourceKey<Biome>? {
+    private fun bandsFor(entry: OceanBiomeEntry): Set<Int> {
+        val bands = mutableSetOf<Int>()
+        for (point in entry.referencePoints) {
+            val lo = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(point.temperature().min()))
+            val hi = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(point.temperature().max()))
+            for (band in lo..hi) bands.add(band)
+        }
+        if (bands.isEmpty()) bands.add(entry.tempBand)
+        return bands
+    }
+
+    private fun pickFromPool(pool: List<OceanBiomeEntry>, target: Climate.TargetPoint): ResourceKey<Biome>? {
         if (pool.isEmpty()) return null
-        return pool.minByOrNull { it.fitness(target) }?.key
+        return pool.minWithOrNull(
+            compareBy<OceanBiomeEntry> { it.fitness(target) }
+                .thenBy { if (AbyssalOceanBiomes.overrideFor(it.key) != null) 0 else 1 }
+        )?.key
     }
 
     private fun pickFromDeepPools(target: Climate.TargetPoint, regionIndex: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
         return pickFromPool(deepPools[band], target)
-            ?: deepPools.flatMap { it }.minByOrNull { it.fitness(target) }?.key
+            ?: pickFromPool(deepPools.flatMap { it }, target)
     }
 
     private fun pickFromShallowPools(target: Climate.TargetPoint, regionIndex: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
         return pickFromPool(shallowPools[band], target)
-            ?: shallowPools.flatMap { it }.minByOrNull { it.fitness(target) }?.key
+            ?: pickFromPool(shallowPools.flatMap { it }, target)
     }
 
     private fun fallbackDeep(target: Climate.TargetPoint): ResourceKey<Biome> {
@@ -162,13 +173,15 @@ object OceanBiomeRegistry {
     private fun seedVanillaDefaults(registry: Registry<Biome>) {
         AbyssalOceanBiomes.SHALLOW_OCEANS.forEachIndexed { band, key ->
             if (shallowPools[band].isEmpty() && registry.containsKey(key)) {
-                registerEntry(registry, OceanBiomeClassifier.createEntry(OceanZone.SHALLOW, key))
+                addToPool(shallowPools[band], OceanBiomeClassifier.createEntry(OceanZone.SHALLOW, key))
+                captureHolder(registry, key)
             }
         }
 
         AbyssalOceanBiomes.DEEP_OCEANS.forEachIndexed { band, key ->
             if (deepPools[band].isEmpty() && registry.containsKey(key)) {
-                registerEntry(registry, OceanBiomeClassifier.createEntry(OceanZone.DEEP, key))
+                addToPool(deepPools[band], OceanBiomeClassifier.createEntry(OceanZone.DEEP, key))
+                captureHolder(registry, key)
             }
         }
 
