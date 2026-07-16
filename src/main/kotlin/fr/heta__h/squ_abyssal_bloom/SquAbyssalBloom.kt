@@ -12,6 +12,7 @@ import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.feature.ModFeatures
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -43,6 +44,7 @@ object SquAbyssalBloom {
         ModBlocks.register(MOD_BUS)
         ModEffects.register(MOD_BUS)
         ModPotions.register(MOD_BUS)
+        ModFeatures.register(MOD_BUS)
         ModAttachments.register(MOD_BUS)
         ModSounds.register(MOD_BUS)
         ModCreativeModeTabs.register(MOD_BUS)

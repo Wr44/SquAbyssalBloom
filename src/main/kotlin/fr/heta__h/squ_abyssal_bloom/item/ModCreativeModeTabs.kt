@@ -38,6 +38,9 @@ object ModCreativeModeTabs {
 
                 output.accept(ModItems.ASTRAL_PRISMARINE.get())
 
+                output.accept(ModItems.BLOOD_SEAGRASS.get())
+                output.accept(ModItems.TALL_BLOOD_SEAGRASS.get())
+
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
                 output.accept(ModItems.BRINE_SPAWN_EGG.get())
                 output.accept(ModItems.RED_SLOBBERER_SPAWN_EGG.get())

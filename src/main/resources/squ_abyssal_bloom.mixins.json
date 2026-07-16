@@ -4,7 +4,7 @@
   "package": "fr.heta__h.squ_abyssal_bloom.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "block.sprouting_sea_grass.SeaGrassFeatureMixin",
+    "block.sprouting_seagrass.SeaGrassFeatureMixin",
     "block.conduit.PlayerConduitMixin",
     "block.conduit.ConduitBlockEntityMixin",
     "block.conduit.PlayerSwimPoseMixin",
@@ -22,6 +22,8 @@
     "enable.AbstractNautilusAccessor",
     "enable.LivingEntityFluidAccessor",
     "enable.ConduitBlockEntityAccessor",
+
+    "item.BoneMealItemMixin",
 
     "worldgen.AbyssalNoiseChunkMixin",
     "worldgen.AbyssalCarverFillMixin",

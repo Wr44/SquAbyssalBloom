@@ -32,13 +32,15 @@ class RedSlobbererEntity(type: EntityType<out AgeableWaterCreature>, level: Leve
 
     override fun aiStep() {
         super.aiStep()
-        if (isUnderWater) {
-            timeExposedInAir = 0
-            airSupply = maxAirSupply
-        } else {
-            timeExposedInAir++
-            if (timeExposedInAir >= MAX_AIR_TICKS) {
-                hurtServer(level() as ServerLevel, damageSources().drown(), 2.0f)
+        if (level() is ServerLevel) {
+            if (isUnderWater) {
+                timeExposedInAir = 0
+                airSupply = maxAirSupply
+            } else {
+                timeExposedInAir++
+                if (timeExposedInAir >= MAX_AIR_TICKS) {
+                    hurtServer(level() as ServerLevel, damageSources().drown(), 2.0f)
+                }
             }
         }
     }

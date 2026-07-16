@@ -1,7 +1,7 @@
-package fr.heta__h.squ_abyssal_bloom.mixin.block.sprouting_sea_grass
+package fr.heta__h.squ_abyssal_bloom.mixin.block.sprouting_seagrass
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
-import fr.heta__h.squ_abyssal_bloom.block.sprouting_sea_grass.SproutingSeagrassBlock
+import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.WorldGenLevel
 import net.minecraft.world.level.block.Blocks

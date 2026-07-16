@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.sprouting_sea_grass
+package fr.heta__h.squ_abyssal_bloom.event.sprouting_seagrass
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks

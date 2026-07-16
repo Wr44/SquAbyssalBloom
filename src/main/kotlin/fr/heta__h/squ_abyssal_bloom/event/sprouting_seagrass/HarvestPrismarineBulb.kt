@@ -1,8 +1,8 @@
-package fr.heta__h.squ_abyssal_bloom.event.sprouting_sea_grass
+package fr.heta__h.squ_abyssal_bloom.event.sprouting_seagrass
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
-import fr.heta__h.squ_abyssal_bloom.block.sprouting_sea_grass.SproutingSeagrassBlock
+import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource

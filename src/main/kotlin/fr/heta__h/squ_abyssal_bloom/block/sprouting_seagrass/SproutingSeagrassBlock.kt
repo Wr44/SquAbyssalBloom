@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.block.sprouting_sea_grass
+package fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass
 
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.item.ModItems

@@ -101,6 +101,10 @@ object ModItems {
     // Blocks
     val ASTRAL_PRISMARINE = ITEMS.registerSimpleBlockItem(ModBlocks.ASTRAL_PRISMARINE)
 
+    val BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.BLOOD_SEAGRASS)
+
+    val TALL_BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.TALL_BLOOD_SEAGRASS)
+
     // Fictive items for testing
     val BARBED_NAUTILUS_SCALE_DISPLAY: DeferredItem<Item> = ITEMS.registerItem(
         "barbed_nautilus_scale_display"
