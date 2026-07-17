@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.block
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBlock
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.BloodSeagrassBlock
+import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.TallBloodSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
 import net.minecraft.world.level.block.SeagrassBlock
 import net.minecraft.world.level.block.SoundType
@@ -41,11 +42,12 @@ object ModBlocks {
                 .sound(SoundType.WET_GRASS)
                 .pushReaction(PushReaction.DESTROY)
                 .noOcclusion()
+                .randomTicks()
         )
     }
 
     val TALL_BLOOD_SEAGRASS = REGISTRY.registerBlock("tall_blood_seagrass") { props ->
-        TallSeagrassBlock(
+        TallBloodSeagrassBlock(
             props.mapColor(MapColor.WATER)
                 .replaceable()
                 .noCollision()

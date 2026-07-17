@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.mixin.block.sprouting_seagrass
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
+import fr.heta__h.squ_abyssal_bloom.util.block.Sprouting
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.WorldGenLevel
 import net.minecraft.world.level.block.Blocks
@@ -13,7 +14,6 @@ import org.spongepowered.asm.mixin.injection.Redirect
 
 @Mixin(SeagrassFeature::class)
 abstract class SeaGrassFeatureMixin {
-
     @Redirect(
         method = ["place"],
         at = At(
@@ -31,7 +31,7 @@ abstract class SeaGrassFeatureMixin {
         if (state.`is`(Blocks.SEAGRASS)) {
             val random = level.random
 
-            if (random.nextFloat() < 0.05f) {
+            if (random.nextFloat() < Sprouting.SPROUTING_CHANCE) {
                 val customState = ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState().setValue(SproutingSeagrassBlock.HAS_BULB, false)
 
                 return level.setBlock(pos, customState, flags)

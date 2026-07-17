@@ -1,5 +1,8 @@
 {
   "variants": {
-    "": { "model": "squ_abyssal_bloom:block/blood_seagrass" }
+    "has_bulb=false,sprouting=false": { "model": "squ_abyssal_bloom:block/blood_seagrass" },
+    "has_bulb=false,sprouting=true": { "model": "squ_abyssal_bloom:block/blood_seagrass" },
+    "has_bulb=true,sprouting=false": { "model": "squ_abyssal_bloom:block/sprouting_blood_seagrass" },
+    "has_bulb=true,sprouting=true": { "model": "squ_abyssal_bloom:block/sprouting_blood_seagrass" }
   }
 }
