@@ -66,7 +66,7 @@ object ModBlocks {
             props.mapColor(MapColor.COLOR_CYAN)
                 .instrument(NoteBlockInstrument.BASEDRUM)
                 .requiresCorrectToolForDrops()
-                .strength(1.5f, 6.0f)
+                .strength(30.0f, 750.0f)
                 .sound(SoundType.STONE)
                 .lightLevel { state -> if (state.getValue(AstralPrismarineBlock.ACTIVE)) 14 else 4 }
         )
