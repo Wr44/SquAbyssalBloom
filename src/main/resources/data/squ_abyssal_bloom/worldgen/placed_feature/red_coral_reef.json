@@ -1,9 +1,9 @@
 {
-  "feature": "squ_abyssal_bloom:patch_red_algae",
+  "feature": "squ_abyssal_bloom:red_coral_reef",
   "placement": [
-    { "type": "minecraft:rarity_filter", "chance": 3 },
-    { "type": "minecraft:count", "count": 80 },
+    { "type": "minecraft:rarity_filter", "chance": 6 },
     { "type": "minecraft:in_square" },
+    { "type": "minecraft:count", "count": 5 },
     { "type": "minecraft:heightmap", "heightmap": "OCEAN_FLOOR_WG" },
     { "type": "minecraft:biome" }
   ]

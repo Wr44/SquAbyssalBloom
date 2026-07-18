@@ -27,7 +27,8 @@
 
     "worldgen.AbyssalNoiseChunkMixin",
     "worldgen.AbyssalCarverFillMixin",
-    "worldgen.OceanBiomeZoneMixin"
+    "worldgen.OceanBiomeZoneMixin",
+    "worldgen.SurfaceSystemMixin"
   ],
   "client": [
     "block.conduit.ConduitRendererMixin",

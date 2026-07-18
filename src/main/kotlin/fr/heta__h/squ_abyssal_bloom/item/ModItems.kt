@@ -101,6 +101,8 @@ object ModItems {
     // Blocks
     val ASTRAL_PRISMARINE = ITEMS.registerSimpleBlockItem(ModBlocks.ASTRAL_PRISMARINE)
 
+    val RHODOPHYTA = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA)
+
     val BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.BLOOD_SEAGRASS)
 
     val TALL_BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.TALL_BLOOD_SEAGRASS)

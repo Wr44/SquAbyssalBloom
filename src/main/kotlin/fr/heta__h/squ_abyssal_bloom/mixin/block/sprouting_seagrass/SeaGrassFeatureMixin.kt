@@ -6,38 +6,66 @@ import fr.heta__h.squ_abyssal_bloom.util.block.Sprouting
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.WorldGenLevel
 import net.minecraft.world.level.block.Blocks
-import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.block.TallSeagrassBlock
+import net.minecraft.world.level.block.state.properties.DoubleBlockHalf
+import net.minecraft.world.level.levelgen.Heightmap
+import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext
 import net.minecraft.world.level.levelgen.feature.SeagrassFeature
+import net.minecraft.world.level.levelgen.feature.configurations.ProbabilityFeatureConfiguration
 import org.spongepowered.asm.mixin.Mixin
 import org.spongepowered.asm.mixin.injection.At
-import org.spongepowered.asm.mixin.injection.Redirect
+import org.spongepowered.asm.mixin.injection.Inject
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 
 @Mixin(SeagrassFeature::class)
 abstract class SeaGrassFeatureMixin {
-    @Redirect(
-        method = ["place"],
-        at = At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/world/level/WorldGenLevel;setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;I)Z"
-        )
-    )
+
+    @Inject(method = ["place"], at = [At("HEAD")], cancellable = true)
     private fun replaceSeagrass(
-        level: WorldGenLevel,
-        pos: BlockPos,
-        state: BlockState,
-        flags: Int
-    ): Boolean
-    {
-        if (state.`is`(Blocks.SEAGRASS)) {
-            val random = level.random
+        context: FeaturePlaceContext<ProbabilityFeatureConfiguration>,
+        cir: CallbackInfoReturnable<Boolean>
+    ) {
+        val random = context.random()
+        val level: WorldGenLevel = context.level()
+        val origin = context.origin()
+        val config = context.config()
 
-            if (random.nextFloat() < Sprouting.SPROUTING_CHANCE) {
-                val customState = ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState().setValue(SproutingSeagrassBlock.HAS_BULB, false)
+        val x = random.nextInt(8) - random.nextInt(8)
+        val z = random.nextInt(8) - random.nextInt(8)
+        val y = level.getHeight(Heightmap.Types.OCEAN_FLOOR, origin.x + x, origin.z + z)
+        val grassPos = BlockPos(origin.x + x, y, origin.z + z)
 
-                return level.setBlock(pos, customState, flags)
-            }
+        if (!level.getBlockState(grassPos).`is`(Blocks.WATER)) {
+            cir.returnValue = false
+            return
         }
 
-        return level.setBlock(pos, state, flags)
+        val isTall = random.nextDouble() < config.probability
+
+        val baseState = if (isTall) {
+            Blocks.TALL_SEAGRASS.defaultBlockState()
+        } else if (random.nextFloat() < Sprouting.SPROUTING_CHANCE) {
+            ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState().setValue(SproutingSeagrassBlock.HAS_BULB, false)
+        } else {
+            Blocks.SEAGRASS.defaultBlockState()
+        }
+
+        if (!baseState.canSurvive(level, grassPos)) {
+            cir.returnValue = false
+            return
+        }
+
+        if (isTall) {
+            val upperState = baseState.setValue(TallSeagrassBlock.HALF, DoubleBlockHalf.UPPER)
+            val above = grassPos.above()
+            if (level.getBlockState(above).`is`(Blocks.WATER)) {
+                level.setBlock(grassPos, baseState, 2)
+                level.setBlock(above, upperState, 2)
+            }
+        } else {
+            level.setBlock(grassPos, baseState, 2)
+        }
+
+        cir.returnValue = true
     }
 }

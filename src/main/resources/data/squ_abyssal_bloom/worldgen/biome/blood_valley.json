@@ -96,9 +96,9 @@
       "minecraft:patch_pumpkin",
       "minecraft:patch_sugar_cane",
       "minecraft:patch_firefly_bush_near_water",
-      "minecraft:seagrass_deep_warm",
-      "minecraft:kelp_warm",
-      "squ_abyssal_bloom:patch_red_algae"
+      "squ_abyssal_bloom:red_coral_reef",
+      "squ_abyssal_bloom:patch_red_algae",
+      "squ_abyssal_bloom:rhodophyta_tower"
     ],
     [
       "minecraft:freeze_top_layer"

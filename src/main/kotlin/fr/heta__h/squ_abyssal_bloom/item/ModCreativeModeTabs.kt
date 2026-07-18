@@ -37,6 +37,7 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.MOBILE_CONDUIT.get())
 
                 output.accept(ModItems.ASTRAL_PRISMARINE.get())
+                output.accept(ModItems.RHODOPHYTA.get())
 
                 output.accept(ModItems.BLOOD_SEAGRASS.get())
                 output.accept(ModItems.TALL_BLOOD_SEAGRASS.get())

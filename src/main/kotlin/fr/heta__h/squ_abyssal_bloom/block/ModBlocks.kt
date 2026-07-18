@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBloc
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.BloodSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.TallBloodSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
+import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.SeagrassBlock
 import net.minecraft.world.level.block.SoundType
 import net.minecraft.world.level.block.TallSeagrassBlock
@@ -68,6 +69,15 @@ object ModBlocks {
                 .strength(1.5f, 6.0f)
                 .sound(SoundType.STONE)
                 .lightLevel { state -> if (state.getValue(AstralPrismarineBlock.ACTIVE)) 14 else 4 }
+        )
+    }
+
+    val RHODOPHYTA = REGISTRY.registerBlock("rhodophyta") { props ->
+        Block(
+            props.mapColor(MapColor.COLOR_RED)
+                .strength(0.6f, 3.0f)
+                .sound(SoundType.CORAL_BLOCK)
+
         )
     }
 
