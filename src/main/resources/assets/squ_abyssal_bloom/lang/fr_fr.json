@@ -98,6 +98,17 @@
   "config.squ_abyssal_bloom.ghost_chimaera.desc": "Les Chimères fantômes sont des mobs aquatiques éthérés qui apparaissent dans les zones sous-marines profondes. Ils sont neutres et n'attaqueront que s'ils sont provoqués. Les Chimères fantômes sont translucides et ont une apparence fantomatique, restant invisibles pendant la majeure partie de leur temps attendant patiemment leur prochaine proie.",
   "config.squ_abyssal_bloom.brine.desc": "Les Brines sont des amas de bulles denses errant au fond des océans. Ils attaquent soit en projetant des bulles directement sur leur cible, soit en créant un vortex au-dessus d’eux tout en bombardant leur environnement de bulles, soit en lançant leurs bulles directement sur le joueur. \n\nFragiles : toute exposition à l’air leur est fatale.",
 
+  "config.squ_abyssal_bloom.group.ocean_territories": "Territoires Océaniques",
+  "config.squ_abyssal_bloom.group.ocean_territories.desc": "Gère la compétition territoriale entre les mods pour la génération des biomes océaniques.",
+  "config.squ_abyssal_bloom.oceanTerritoryExtraZooms": "Zooms de Territoire",
+  "config.squ_abyssal_bloom.oceanTerritoryExtraZooms.desc": "Taille des territoires océaniques par mod. Plus la valeur est élevée, plus les territoires sont grands.",
+  "config.squ_abyssal_bloom.oceanTerritoryDefaultWeight": "Poids par Défaut",
+  "config.squ_abyssal_bloom.oceanTerritoryDefaultWeight.desc": "Poids par défaut attribué à un mod inconnu lors de la compétition territoriale.",
+  "config.squ_abyssal_bloom.oceanTerritoryOwnWeight": "Poids d'Abyssal Bloom",
+  "config.squ_abyssal_bloom.oceanTerritoryOwnWeight.desc": "Poids spécifique d'Abyssal Bloom dans la compétition par rapport aux autres mods.",
+  "config.squ_abyssal_bloom.oceanTerritoryIncludeVanilla": "Inclure Vanilla",
+  "config.squ_abyssal_bloom.oceanTerritoryIncludeVanilla.desc": "Si désactivé, les biomes océaniques Vanilla agissent comme une sécurité au lieu de concurrencer les mods pour le territoire.",
+
   "config.squ_abyssal_bloom.worldgen": "Génération du monde",
   "config.squ_abyssal_bloom.worldgen.tooltip": "Contrôle la forme du terrain océanique abyssal. Nécessite un nouveau monde pour prendre effet.",
 

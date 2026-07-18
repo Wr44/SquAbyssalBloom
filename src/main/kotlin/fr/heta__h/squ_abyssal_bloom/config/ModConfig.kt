@@ -422,6 +422,17 @@ object ModConfig {
                     .build())
 
                 .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.ocean_territories").withStyle(ChatFormatting.BLUE))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_territories.desc"))
+                        .build())
+                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS, step = 1))
+                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_DEFAULT_WEIGHT, step = 5))
+                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_OWN_WEIGHT, step = 5))
+                    .option(serverBool(ModServerConfig.OCEAN_TERRITORY_INCLUDE_VANILLA))
+                    .build())
+
+                .group(OptionGroup.createBuilder()
                     .name(Component.translatable("entity.squ_abyssal_bloom.barnacle").withStyle(ChatFormatting.LIGHT_PURPLE))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.barnacle.desc"))

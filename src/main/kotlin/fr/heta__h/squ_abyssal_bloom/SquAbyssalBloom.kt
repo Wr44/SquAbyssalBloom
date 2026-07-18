@@ -14,6 +14,7 @@ import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.feature.ModFeatures
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanTerritory
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
@@ -24,6 +25,7 @@ import net.neoforged.fml.event.config.ModConfigEvent
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import thedarkcolour.kotlinforforge.neoforge.forge.LOADING_CONTEXT
@@ -100,5 +102,10 @@ object SquAbyssalBloom {
     @SubscribeEvent
     fun registerBrewingRecipes(event: RegisterBrewingRecipesEvent) {
         ModPotions.registerBrewingRecipes(event)
+    }
+
+    @SubscribeEvent
+    fun onServerAboutToStart(event: ServerAboutToStartEvent) {
+        OceanTerritory.seed(event.server.worldGenSettings.options().seed(), ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS.get())
     }
 }

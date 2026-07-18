@@ -100,8 +100,8 @@ object AbyssalOceanBiomes {
         }
     }
 
-    fun resolveOceanBiomeKey(cont: Float, depth: Float, target: Climate.TargetPoint, regionIndex: Int = 0): ResourceKey<Biome>? {
+    fun resolveOceanBiomeKey(cont: Float, depth: Float, target: Climate.TargetPoint, x: Int, z: Int): ResourceKey<Biome>? {
         val zone = resolveOceanZone(cont, depth) ?: return null
-        return OceanBiomeRegistry.pickBiome(zone, target, regionIndex)
+        return OceanBiomeRegistry.pickBiome(zone, target, x, z)
     }
 }

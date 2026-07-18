@@ -98,6 +98,17 @@
   "config.squ_abyssal_bloom.ghost_chimaera.desc": "Ghost Chimaeras are ethereal aquatic mobs that spawn in deep underwater areas. They are neutral and will only attack if provoked. Ghost Chimaeras are translucent and have a ghostly appearance, remaining invisible for most of their time patiently waiting for their next prey.",
   "config.squ_abyssal_bloom.brine.desc": "Brines are dense clusters of bubbles wandering at the bottom of the oceans. They attack either by projecting bubbles directly at their target, creating a vortex above themselves while bombarding their surroundings with bubbles, or throwing their bubbles directly at the player. \n\nFragile: any exposure to air is fatal to them.",
 
+  "config.squ_abyssal_bloom.group.ocean_territories": "Ocean Territories",
+  "config.squ_abyssal_bloom.group.ocean_territories.desc": "Manage territorial competition between mods for ocean biome generation.",
+  "config.squ_abyssal_bloom.oceanTerritoryExtraZooms": "Territory Extra Zooms",
+  "config.squ_abyssal_bloom.oceanTerritoryExtraZooms.desc": "Size of ocean territories per mod. Higher value means larger territories.",
+  "config.squ_abyssal_bloom.oceanTerritoryDefaultWeight": "Default Weight",
+  "config.squ_abyssal_bloom.oceanTerritoryDefaultWeight.desc": "Default weight of an unknown namespace in territorial competition.",
+  "config.squ_abyssal_bloom.oceanTerritoryOwnWeight": "Abyssal Bloom Weight",
+  "config.squ_abyssal_bloom.oceanTerritoryOwnWeight.desc": "Weight of Abyssal Bloom in territorial competition relative to the default weight.",
+  "config.squ_abyssal_bloom.oceanTerritoryIncludeVanilla": "Include Vanilla",
+  "config.squ_abyssal_bloom.oceanTerritoryIncludeVanilla.desc": "If disabled, vanilla ocean biomes act as a safety net rather than competing with mods for territory.",
+
   "config.squ_abyssal_bloom.worldgen": "World Generation",
   "config.squ_abyssal_bloom.worldgen.tooltip": "Controls the shape of the abyssal ocean terrain. Requires a new world to take effect.",
 

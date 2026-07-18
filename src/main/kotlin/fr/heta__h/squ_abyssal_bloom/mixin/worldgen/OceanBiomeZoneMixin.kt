@@ -63,7 +63,7 @@ abstract class OceanBiomeZoneMixin {
         val target = sampler.sample(quartX, quartY, quartZ)
         val cont = Climate.unquantizeCoord(target.continentalness())
         val depth = Climate.unquantizeCoord(target.depth())
-        val biomeKey = AbyssalOceanBiomes.resolveOceanBiomeKey(cont, depth, target) ?: return
+        val biomeKey = AbyssalOceanBiomes.resolveOceanBiomeKey(cont, depth, target, quartX, quartZ) ?: return
         val holder = resolveBiome(biomeKey) ?: return
         cir.returnValue = holder
     }
