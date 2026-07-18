@@ -1,12 +1,13 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
 
-import java.util.concurrent.ConcurrentHashMap
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import kotlin.random.Random
 
 object OceanTerritory {
 
     private const val DEFAULT_EXTRA_ZOOMS = 6
-    private const val CACHE_LIMIT = 1 shl 16
+    private const val CACHE_LIMIT = 65536L
 
     @Volatile private var worldSeed = 0L
     @Volatile private var totalZooms = 1 + DEFAULT_EXTRA_ZOOMS
@@ -14,18 +15,21 @@ object OceanTerritory {
     @Volatile private var weights: Map<String, Int> = emptyMap()
 
     private data class CacheKey(val x: Int, val z: Int, val level: Int)
-    private val levelCache = ConcurrentHashMap<CacheKey, String>()
+
+    private val levelCache: Cache<CacheKey, String> = CacheBuilder.newBuilder()
+        .maximumSize(CACHE_LIMIT)
+        .build()
 
     fun setCandidates(namespaces: Set<String>, defaultWeight: Int = 10, namespaceWeights: Map<String, Int> = emptyMap()) {
         candidates = namespaces.toList().sorted()
         weights = candidates.associateWith { namespaceWeights.getOrDefault(it, defaultWeight) }
-        levelCache.clear()
+        levelCache.invalidateAll()
     }
 
     fun seed(worldSeed: Long, extraZooms: Int = DEFAULT_EXTRA_ZOOMS) {
         this.worldSeed = worldSeed
         this.totalZooms = 1 + extraZooms.coerceIn(0, 10)
-        levelCache.clear()
+        levelCache.invalidateAll()
     }
 
     fun ownerAt(x: Int, z: Int): String {
@@ -36,10 +40,10 @@ object OceanTerritory {
 
     private fun sample(x: Int, z: Int, level: Int): String {
         val key = CacheKey(x, z, level)
-        levelCache[key]?.let { return it }
+        levelCache.getIfPresent(key)?.let { return it }
 
         val value = compute(x, z, level)
-        if (levelCache.size < CACHE_LIMIT) levelCache[key] = value
+        levelCache.put(key, value)
         return value
     }
 

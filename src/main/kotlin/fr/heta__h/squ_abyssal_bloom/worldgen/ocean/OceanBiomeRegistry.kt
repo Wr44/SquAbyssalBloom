@@ -16,42 +16,49 @@ import net.minecraft.world.level.biome.Climate
 
 object OceanBiomeRegistry {
 
-    private val abyssalEntries = mutableListOf<OceanBiomeEntry>()
-    private val deepPools = Array(5) { mutableListOf<OceanBiomeEntry>() }
-    private val shallowPools = Array(5) { mutableListOf<OceanBiomeEntry>() }
-    private val abyssalByNamespace = mutableMapOf<String, MutableList<OceanBiomeEntry>>()
-    private val deepPoolsByNamespace = Array(5) { mutableMapOf<String, MutableList<OceanBiomeEntry>>() }
-    private val shallowPoolsByNamespace = Array(5) { mutableMapOf<String, MutableList<OceanBiomeEntry>>() }
-    private val holderByKey = mutableMapOf<ResourceKey<Biome>, Holder<Biome>>()
-    private val registeredKeys = mutableSetOf<ResourceKey<Biome>>()
+    private class RegistryState {
+        val abyssalEntries = mutableListOf<OceanBiomeEntry>()
+        val deepPools = Array(5) { mutableListOf<OceanBiomeEntry>() }
+        val shallowPools = Array(5) { mutableListOf<OceanBiomeEntry>() }
+        val abyssalByNamespace = mutableMapOf<String, MutableList<OceanBiomeEntry>>()
+        val deepPoolsByNamespace = Array(5) { mutableMapOf<String, MutableList<OceanBiomeEntry>>() }
+        val shallowPoolsByNamespace = Array(5) { mutableMapOf<String, MutableList<OceanBiomeEntry>>() }
+        val holderByKey = mutableMapOf<ResourceKey<Biome>, Holder<Biome>>()
+        val registeredKeys = mutableSetOf<ResourceKey<Biome>>()
+    }
 
-    fun getHolder(key: ResourceKey<Biome>): Holder<Biome>? = holderByKey[key]
+    @Volatile
+    private var state = RegistryState()
+
+    fun getHolder(key: ResourceKey<Biome>): Holder<Biome>? = state.holderByKey[key]
 
     fun bootstrap(registry: Registry<Biome>) {
-        reset()
+        val newState = RegistryState()
 
-        bootstrapFromTag(registry, ModTags.Biomes.IS_ABYSSAL, OceanZone.ABYSSAL)
-        bootstrapFromTag(registry, BiomeTags.IS_DEEP_OCEAN, OceanZone.DEEP)
-        bootstrapFromTag(registry, ModTags.Biomes.IS_DEEP_OCEAN, OceanZone.DEEP)
+        bootstrapFromTag(registry, ModTags.Biomes.IS_ABYSSAL, OceanZone.ABYSSAL, newState)
+        bootstrapFromTag(registry, BiomeTags.IS_DEEP_OCEAN, OceanZone.DEEP, newState)
+        bootstrapFromTag(registry, ModTags.Biomes.IS_DEEP_OCEAN, OceanZone.DEEP, newState)
 
         for (holder in registry.getTagOrEmpty(BiomeTags.IS_OCEAN)) {
             if (!OceanBiomeClassifier.isExcludedFromShallow(holder)) {
-                addEntry(createFromHolder(holder, OceanZone.SHALLOW))
+                addEntry(createFromHolder(holder, OceanZone.SHALLOW, newState), newState)
             }
         }
 
         for (id in registry.keySet()) {
             val key = ResourceKey.create(Registries.BIOME, id)
-            if (registeredKeys.contains(key)) continue
+            if (newState.registeredKeys.contains(key)) continue
             if (OceanBiomeClassifier.isInTag(registry, key, ModTags.Biomes.IS_ABYSSAL)) continue
 
             val zone = OceanBiomeClassifier.classifyByContinentalness(key) ?: continue
-            registerEntry(registry, OceanBiomeClassifier.createEntry(zone, key))
+            registerEntry(registry, OceanBiomeClassifier.createEntry(zone, key), newState)
         }
 
-        seedVanillaDefaults(registry)
+        seedVanillaDefaults(registry, newState)
 
-        val namespaces = registeredKeys.map { it.identifier().namespace }.toSet()
+        this.state = newState
+
+        val namespaces = newState.registeredKeys.map { it.identifier().namespace }.toSet()
         val territoryNamespaces = if (ModServerConfig.OCEAN_TERRITORY_INCLUDE_VANILLA.get()) namespaces else namespaces - "minecraft"
 
         OceanTerritory.setCandidates(
@@ -62,42 +69,32 @@ object OceanBiomeRegistry {
     }
 
     fun pickBiome(zone: OceanZone, target: Climate.TargetPoint, x: Int, z: Int): ResourceKey<Biome>? {
+        val currentState = this.state
         return when (zone) {
-            OceanZone.ABYSSAL -> pickFromPoolByTerritory(abyssalEntries, abyssalByNamespace, target, x, z)
+            OceanZone.ABYSSAL -> pickFromPoolByTerritory(currentState.abyssalEntries, currentState.abyssalByNamespace, target, x, z)
                 ?: AbyssalOceanBiomes.ABYSSAL_OCEAN
-            OceanZone.DEEP -> pickFromDeepPools(target, x, z)
+            OceanZone.DEEP -> pickFromDeepPools(currentState, target, x, z)
                 ?: fallbackDeep(target)
-            OceanZone.SHALLOW -> pickFromShallowPools(target, x, z)
+            OceanZone.SHALLOW -> pickFromShallowPools(currentState, target, x, z)
                 ?: fallbackShallow(target)
         }
     }
 
-    fun abyssalEntries(): List<OceanBiomeEntry> = abyssalEntries.toList()
+    fun abyssalEntries(): List<OceanBiomeEntry> = state.abyssalEntries.toList()
 
-    fun deepEntries(): List<OceanBiomeEntry> = deepPools.flatMap { it }.distinctBy { it.key }
+    fun deepEntries(): List<OceanBiomeEntry> = state.deepPools.flatMap { it }.distinctBy { it.key }
 
-    fun shallowEntries(): List<OceanBiomeEntry> = shallowPools.flatMap { it }.distinctBy { it.key }
+    fun shallowEntries(): List<OceanBiomeEntry> = state.shallowPools.flatMap { it }.distinctBy { it.key }
 
-    private fun reset() {
-        abyssalEntries.clear()
-        deepPools.forEach { it.clear() }
-        shallowPools.forEach { it.clear() }
-        abyssalByNamespace.clear()
-        deepPoolsByNamespace.forEach { it.clear() }
-        shallowPoolsByNamespace.forEach { it.clear() }
-        holderByKey.clear()
-        registeredKeys.clear()
-    }
-
-    private fun bootstrapFromTag(registry: Registry<Biome>, tag: TagKey<Biome>, zone: OceanZone) {
+    private fun bootstrapFromTag(registry: Registry<Biome>, tag: TagKey<Biome>, zone: OceanZone, newState: RegistryState) {
         for (holder in registry.getTagOrEmpty(tag)) {
-            addEntry(createFromHolder(holder, zone))
+            addEntry(createFromHolder(holder, zone, newState), newState)
         }
     }
 
-    private fun createFromHolder(holder: Holder<Biome>, zone: OceanZone): OceanBiomeEntry? {
+    private fun createFromHolder(holder: Holder<Biome>, zone: OceanZone, newState: RegistryState): OceanBiomeEntry? {
         val key = holder.unwrapKey().orElse(null) ?: return null
-        holderByKey[key] = holder
+        newState.holderByKey[key] = holder
         return OceanBiomeClassifier.createEntry(zone, key)
     }
 
@@ -108,44 +105,44 @@ object OceanBiomeRegistry {
         BiomeTags.IS_OCEAN
     )
 
-    private fun registerEntry(registry: Registry<Biome>, entry: OceanBiomeEntry?) {
+    private fun registerEntry(registry: Registry<Biome>, entry: OceanBiomeEntry?, newState: RegistryState) {
         if (entry == null) return
-        addEntry(entry)
-        captureHolder(registry, entry.key)
+        addEntry(entry, newState)
+        captureHolder(registry, entry.key, newState)
     }
 
-    private fun captureHolder(registry: Registry<Biome>, key: ResourceKey<Biome>) {
-        if (holderByKey.containsKey(key)) return
+    private fun captureHolder(registry: Registry<Biome>, key: ResourceKey<Biome>, newState: RegistryState) {
+        if (newState.holderByKey.containsKey(key)) return
 
         for (tag in oceanTags) {
             for (holder in registry.getTagOrEmpty(tag)) {
                 if (holder.unwrapKey().orElse(null) == key) {
-                    holderByKey[key] = holder
+                    newState.holderByKey[key] = holder
                     return
                 }
             }
         }
 
         if (registry.containsKey(key)) {
-            holderByKey[key] = registry.getOrThrow(key)
+            newState.holderByKey[key] = registry.getOrThrow(key)
         }
     }
 
-    private fun addEntry(entry: OceanBiomeEntry?) {
+    private fun addEntry(entry: OceanBiomeEntry?, newState: RegistryState) {
         if (entry == null) return
         val namespace = entry.key.identifier().namespace
         when (entry.zone) {
-            OceanZone.ABYSSAL -> addToPool(abyssalEntries, abyssalByNamespace, namespace, entry)
-            OceanZone.DEEP -> bandsFor(entry).forEach { addToPool(deepPools[it], deepPoolsByNamespace[it], namespace, entry) }
-            OceanZone.SHALLOW -> bandsFor(entry).forEach { addToPool(shallowPools[it], shallowPoolsByNamespace[it], namespace, entry) }
+            OceanZone.ABYSSAL -> addToPool(newState.abyssalEntries, newState.abyssalByNamespace, namespace, entry, newState)
+            OceanZone.DEEP -> bandsFor(entry).forEach { addToPool(newState.deepPools[it], newState.deepPoolsByNamespace[it], namespace, entry, newState) }
+            OceanZone.SHALLOW -> bandsFor(entry).forEach { addToPool(newState.shallowPools[it], newState.shallowPoolsByNamespace[it], namespace, entry, newState) }
         }
     }
 
-    private fun addToPool(pool: MutableList<OceanBiomeEntry>, byNamespace: MutableMap<String, MutableList<OceanBiomeEntry>>, namespace: String, entry: OceanBiomeEntry) {
+    private fun addToPool(pool: MutableList<OceanBiomeEntry>, byNamespace: MutableMap<String, MutableList<OceanBiomeEntry>>, namespace: String, entry: OceanBiomeEntry, newState: RegistryState) {
         if (pool.any { it.key == entry.key }) return
         pool.add(entry)
         byNamespace.getOrPut(namespace) { mutableListOf() }.add(entry)
-        registeredKeys.add(entry.key)
+        newState.registeredKeys.add(entry.key)
     }
 
     private fun bandsFor(entry: OceanBiomeEntry): Set<Int> {
@@ -181,16 +178,16 @@ object OceanBiomeRegistry {
         return pickFromPool(territoryPool, target)
     }
 
-    private fun pickFromDeepPools(target: Climate.TargetPoint, x: Int, z: Int): ResourceKey<Biome>? {
+    private fun pickFromDeepPools(currentState: RegistryState, target: Climate.TargetPoint, x: Int, z: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
-        return pickFromPoolByTerritory(deepPools[band], deepPoolsByNamespace[band], target, x, z)
-            ?: pickFromPool(deepPools.flatMap { it }, target)
+        return pickFromPoolByTerritory(currentState.deepPools[band], currentState.deepPoolsByNamespace[band], target, x, z)
+            ?: pickFromPool(currentState.deepPools.flatMap { it }, target)
     }
 
-    private fun pickFromShallowPools(target: Climate.TargetPoint, x: Int, z: Int): ResourceKey<Biome>? {
+    private fun pickFromShallowPools(currentState: RegistryState, target: Climate.TargetPoint, x: Int, z: Int): ResourceKey<Biome>? {
         val band = AbyssalOceanBiomes.temperatureIndex(Climate.unquantizeCoord(target.temperature()))
-        return pickFromPoolByTerritory(shallowPools[band], shallowPoolsByNamespace[band], target, x, z)
-            ?: pickFromPool(shallowPools.flatMap { it }, target)
+        return pickFromPoolByTerritory(currentState.shallowPools[band], currentState.shallowPoolsByNamespace[band], target, x, z)
+            ?: pickFromPool(currentState.shallowPools.flatMap { it }, target)
     }
 
     private fun fallbackDeep(target: Climate.TargetPoint): ResourceKey<Biome> {
@@ -203,23 +200,23 @@ object OceanBiomeRegistry {
         return AbyssalOceanBiomes.fallbackShallowOcean(band)
     }
 
-    private fun seedVanillaDefaults(registry: Registry<Biome>) {
+    private fun seedVanillaDefaults(registry: Registry<Biome>, newState: RegistryState) {
         AbyssalOceanBiomes.SHALLOW_OCEANS.forEachIndexed { band, key ->
-            if (shallowPools[band].isEmpty() && registry.containsKey(key)) {
-                addToPool(shallowPools[band], shallowPoolsByNamespace[band], key.identifier().namespace, OceanBiomeClassifier.createEntry(OceanZone.SHALLOW, key))
-                captureHolder(registry, key)
+            if (newState.shallowPools[band].isEmpty() && registry.containsKey(key)) {
+                addToPool(newState.shallowPools[band], newState.shallowPoolsByNamespace[band], key.identifier().namespace, OceanBiomeClassifier.createEntry(OceanZone.SHALLOW, key), newState)
+                captureHolder(registry, key, newState)
             }
         }
 
         AbyssalOceanBiomes.DEEP_OCEANS.forEachIndexed { band, key ->
-            if (deepPools[band].isEmpty() && registry.containsKey(key)) {
-                addToPool(deepPools[band], deepPoolsByNamespace[band], key.identifier().namespace, OceanBiomeClassifier.createEntry(OceanZone.DEEP, key))
-                captureHolder(registry, key)
+            if (newState.deepPools[band].isEmpty() && registry.containsKey(key)) {
+                addToPool(newState.deepPools[band], newState.deepPoolsByNamespace[band], key.identifier().namespace, OceanBiomeClassifier.createEntry(OceanZone.DEEP, key), newState)
+                captureHolder(registry, key, newState)
             }
         }
 
-        if (abyssalEntries.isEmpty() && registry.containsKey(AbyssalOceanBiomes.ABYSSAL_OCEAN)) {
-            registerEntry(registry, OceanBiomeClassifier.createEntry(OceanZone.ABYSSAL, AbyssalOceanBiomes.ABYSSAL_OCEAN))
+        if (newState.abyssalEntries.isEmpty() && registry.containsKey(AbyssalOceanBiomes.ABYSSAL_OCEAN)) {
+            registerEntry(registry, OceanBiomeClassifier.createEntry(OceanZone.ABYSSAL, AbyssalOceanBiomes.ABYSSAL_OCEAN), newState)
         }
     }
 }
