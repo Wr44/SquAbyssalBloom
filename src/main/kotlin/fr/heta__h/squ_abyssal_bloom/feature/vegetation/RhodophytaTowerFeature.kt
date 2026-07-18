@@ -26,6 +26,7 @@ private const val BRANCH_UP_BIAS = 0.35f
 private const val KNOT_CHANCE = 0.06f
 private const val BRANCH_SIDE_DECORATE_CHANCE = 0.35f
 private const val BRANCH_TOP_DECORATE_CHANCE = 0.2f
+private const val MAX_BRANCH_REACH = 15
 
 class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<NoneFeatureConfiguration>(codec) {
 
@@ -76,7 +77,7 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
                 }
 
                 for (branchDirection in chosenDirections) {
-                    placeBranch(level, random, mutPos, state, branchDirection, depth = 0, heightFactor = heightFactor)
+                    placeBranch(level, random, mutPos, state, branchDirection, depth = 0, origin = origin, heightFactor = heightFactor)
                 }
             }
 
@@ -91,7 +92,7 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
             topDirections.add(Plane.HORIZONTAL.getRandomDirection(random))
         }
         for (branchDirection in topDirections) {
-            placeBranch(level, random, mutPos, state, branchDirection, depth = 0, heightFactor = 1f)
+            placeBranch(level, random, mutPos, state, branchDirection, depth = 0, origin = origin, heightFactor = 1f)
         }
 
         return true
@@ -104,6 +105,7 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
         state: BlockState,
         direction: Direction,
         depth: Int,
+        origin: BlockPos,
         heightFactor: Float = 1f
     ) {
         val mutPos = start.mutable()
@@ -119,7 +121,7 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
 
         var lastPos: BlockPos? = null
         var j = 0
-        while (j < branchLength && placeAlgaeBlock(level, mutPos, state)) {
+        while (j < branchLength && withinReach(mutPos, origin) && placeAlgaeBlock(level, mutPos, state)) {
             val thicknessT = 1f - (j.toFloat() / branchLength)
             if (thicknessT > 0.35f) {
                 placeAlgaeBlock(level, mutPos.relative(perpendicular), state)
@@ -141,15 +143,21 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
                 segmentLength = 0
             }
 
-            if (depth < MAX_BRANCH_DEPTH && j > 0 && random.nextFloat() < subBranchChance) {
+            if (depth < MAX_BRANCH_DEPTH && j > 0 && withinReach(mutPos, origin) && random.nextFloat() < subBranchChance) {
                 val subDirection = if (random.nextBoolean()) direction.clockWise else direction.counterClockWise
-                placeBranch(level, random, mutPos, state, subDirection, depth = depth + 1, heightFactor = heightFactor)
+                placeBranch(level, random, mutPos, state, subDirection, depth = depth + 1, origin = origin, heightFactor = heightFactor)
             }
 
             j++
         }
 
         lastPos?.let { placeTuft(level, it, state) }
+    }
+
+    private fun withinReach(pos: BlockPos, origin: BlockPos): Boolean {
+        val dx = pos.x - origin.x
+        val dz = pos.z - origin.z
+        return dx * dx + dz * dz <= MAX_BRANCH_REACH * MAX_BRANCH_REACH
     }
 
     private fun placeTuft(level: LevelAccessor, center: BlockPos, state: BlockState) {

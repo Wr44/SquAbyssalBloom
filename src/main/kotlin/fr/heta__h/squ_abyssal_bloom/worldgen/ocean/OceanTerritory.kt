@@ -8,10 +8,10 @@ object OceanTerritory {
     private const val DEFAULT_EXTRA_ZOOMS = 6
     private const val CACHE_LIMIT = 1 shl 16
 
-    private var worldSeed = 0L
-    private var totalZooms = 1 + DEFAULT_EXTRA_ZOOMS
-    private var candidates: List<String> = emptyList()
-    private var weights: Map<String, Int> = emptyMap()
+    @Volatile private var worldSeed = 0L
+    @Volatile private var totalZooms = 1 + DEFAULT_EXTRA_ZOOMS
+    @Volatile private var candidates: List<String> = emptyList()
+    @Volatile private var weights: Map<String, Int> = emptyMap()
 
     private data class CacheKey(val x: Int, val z: Int, val level: Int)
     private val levelCache = ConcurrentHashMap<CacheKey, String>()
