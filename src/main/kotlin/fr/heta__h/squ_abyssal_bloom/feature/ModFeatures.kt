@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.feature
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.feature.vegetation.BloodSeagrassFeature
+import fr.heta__h.squ_abyssal_bloom.feature.vegetation.DeadRhodophytaFeature
 import fr.heta__h.squ_abyssal_bloom.feature.vegetation.RedCoralReefFeature
 import fr.heta__h.squ_abyssal_bloom.feature.vegetation.RhodophytaTowerFeature
 import net.minecraft.core.registries.Registries
@@ -26,6 +27,10 @@ object ModFeatures {
 
     val RHODOPHYTA_TOWER_FEATURE = REGISTRY.register("rhodophyta_tower", Supplier {
         RhodophytaTowerFeature(NoneFeatureConfiguration.CODEC)
+    })
+
+    val DEAD_RHODOPHYTA = REGISTRY.register("dead_rhodophyta", Supplier {
+        DeadRhodophytaFeature(NoneFeatureConfiguration.CODEC)
     })
 
     fun register(bus: IEventBus) {

@@ -1,0 +1,10 @@
+{
+  "feature": "squ_abyssal_bloom:dead_rhodophyta",
+  "placement": [
+    { "type": "minecraft:rarity_filter", "chance": 75 },
+    { "type": "minecraft:in_square" },
+    { "type": "minecraft:count", "count": 2 },
+    { "type": "minecraft:heightmap", "heightmap": "OCEAN_FLOOR_WG" },
+    { "type": "minecraft:biome" }
+  ]
+}

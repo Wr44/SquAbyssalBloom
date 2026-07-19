@@ -103,6 +103,8 @@ object ModItems {
 
     val RHODOPHYTA = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA)
 
+    val DEAD_RHODOPHYTA = ITEMS.registerSimpleBlockItem(ModBlocks.DEAD_RHODOPHYTA)
+
     val BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.BLOOD_SEAGRASS)
 
     val TALL_BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.TALL_BLOOD_SEAGRASS)

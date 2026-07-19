@@ -98,7 +98,8 @@
       "minecraft:patch_firefly_bush_near_water",
       "squ_abyssal_bloom:red_coral_reef",
       "squ_abyssal_bloom:patch_red_algae",
-      "squ_abyssal_bloom:rhodophyta_tower"
+      "squ_abyssal_bloom:rhodophyta_tower",
+      "squ_abyssal_bloom:dead_rhodophyta"
     ],
     [
       "minecraft:freeze_top_layer"

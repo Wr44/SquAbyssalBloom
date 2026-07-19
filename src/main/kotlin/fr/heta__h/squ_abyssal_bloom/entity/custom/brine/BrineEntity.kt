@@ -104,9 +104,9 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
         // Attack zones
         const val ATTACK_ENTER_RADIUS = 2.0
-        const val ATTACK_ENTER_RADIUS_SQR = ATTACK_ENTER_RADIUS * ATTACK_ENTER_RADIUS // Opti: Précalcul
+        const val ATTACK_ENTER_RADIUS_SQR = ATTACK_ENTER_RADIUS * ATTACK_ENTER_RADIUS
         const val ATTACK_EXIT_RADIUS = 5.0
-        const val ATTACK_EXIT_RADIUS_SQR = ATTACK_EXIT_RADIUS * ATTACK_EXIT_RADIUS // Opti: Précalcul
+        const val ATTACK_EXIT_RADIUS_SQR = ATTACK_EXIT_RADIUS * ATTACK_EXIT_RADIUS
         const val DIRECT_EXIT_GRACE_TICKS = 15
         const val DIRECT_Y_GRACE_TICKS = 15
 
@@ -274,6 +274,8 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
     fun placeOrUpdateBubbleColumn() {
         val serverLevel = level() as? ServerLevel ?: return
+        if (tickCount % 3 != 0) return
+
         val bx = blockPosition().x
         val bz = blockPosition().z
         val startY = ceil(boundingBox.maxY).toInt()
@@ -286,33 +288,40 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
             for (i in 0 until BUBBLE_COLUMN_HEIGHT) {
                 mutablePos.set(bx + dx, startY + i, bz + dz)
                 val current = serverLevel.getBlockState(mutablePos)
+
                 when {
-                    current.`is`(Blocks.BUBBLE_COLUMN) -> {
-                        nextColumnPositions.add(mutablePos.immutable())
-                    }
-                    current.`is`(Blocks.WATER) -> {
+                    current.`is`(Blocks.BUBBLE_COLUMN) -> nextColumnPositions.add(mutablePos.immutable())
+                    current.`is`(Blocks.WATER) && current.fluidState.isSource -> {
                         val immutable = mutablePos.immutable()
-                        // FIX BUG 1 : Utilisation de serverLevel.setBlock avec le flag 3
-                        serverLevel.setBlock(immutable, colState, 3)
+                        serverLevel.setBlock(immutable, colState, 66)
                         nextColumnPositions.add(immutable)
                     }
                     else -> break
                 }
             }
+
+            pruneOvergrowth(serverLevel, bx + dx, startY + BUBBLE_COLUMN_HEIGHT, bz + dz)
         }
 
-        val iterator = activeColumnPositions.iterator()
-        while (iterator.hasNext()) {
-            val pos = iterator.next()
-            if (!nextColumnPositions.contains(pos)) {
-                restoreToWater(pos, serverLevel)
-                iterator.remove()
-            }
+        for (pos in activeColumnPositions) {
+            if (pos !in nextColumnPositions) restoreToWater(pos, serverLevel)
         }
 
+        activeColumnPositions.clear()
         activeColumnPositions.addAll(nextColumnPositions)
 
-        if (!entityData.get(COLUMN_ACTIVE)) entityData.set(COLUMN_ACTIVE, true)
+        val active = nextColumnPositions.isNotEmpty()
+        if (entityData.get(COLUMN_ACTIVE) != active) entityData.set(COLUMN_ACTIVE, active)
+    }
+
+    private fun pruneOvergrowth(serverLevel: ServerLevel, x: Int, startY: Int, z: Int) {
+        val mutablePos = BlockPos.MutableBlockPos(x, startY, z)
+        var y = startY
+        while (serverLevel.getBlockState(mutablePos).`is`(Blocks.BUBBLE_COLUMN)) {
+            restoreToWater(mutablePos.immutable(), serverLevel)
+            y++
+            mutablePos.set(x, y, z)
+        }
     }
 
     fun clearBubbleColumn() {
