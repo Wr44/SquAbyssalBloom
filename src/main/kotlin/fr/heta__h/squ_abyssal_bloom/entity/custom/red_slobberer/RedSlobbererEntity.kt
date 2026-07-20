@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer
 
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import fr.heta__h.squ_abyssal_bloom.entity.ai.SmoothCrawlMoveControl
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.AgeableMob
@@ -35,6 +36,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     var timeExposedInAir = 0
 
     init {
+        this.moveControl = SmoothCrawlMoveControl(this)
         this.setPathfindingMalus(PathType.WATER, 0.0f)
     }
 

@@ -12,6 +12,8 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.levelgen.feature.Feature
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration
+import kotlin.math.cos
+import kotlin.math.sin
 
 private const val BASE_LEVELS = 4
 private const val BASE_RADIUS = 1.6
@@ -144,8 +146,8 @@ class DeadRhodophytaFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<No
         repeat(logCount) {
             val angle = random.nextFloat() * (Math.PI.toFloat() * 2f)
             val dist = random.nextInt(9) + 5
-            val dx = (Math.cos(angle.toDouble()) * dist).toInt()
-            val dz = (Math.sin(angle.toDouble()) * dist).toInt()
+            val dx = (cos(angle.toDouble()) * dist).toInt()
+            val dz = (sin(angle.toDouble()) * dist).toInt()
             val floorPos = origin.offset(dx, 0, dz).mutable()
 
             var tries = 0
@@ -188,8 +190,8 @@ class DeadRhodophytaFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<No
         repeat(debrisCount) {
             val angle = random.nextFloat() * (Math.PI.toFloat() * 2f)
             val dist = random.nextInt(6) + 3
-            val dx = (Math.cos(angle.toDouble()) * dist).toInt()
-            val dz = (Math.sin(angle.toDouble()) * dist).toInt()
+            val dx = (cos(angle.toDouble()) * dist).toInt()
+            val dz = (sin(angle.toDouble()) * dist).toInt()
             val debrisPos = origin.offset(dx, 0, dz)
 
             if (level.getBlockState(debrisPos).`is`(Blocks.WATER) && level.getBlockState(debrisPos.below()).isSolid) {

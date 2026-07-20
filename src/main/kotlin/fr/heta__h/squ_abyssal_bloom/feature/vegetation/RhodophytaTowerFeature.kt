@@ -27,6 +27,7 @@ private const val KNOT_CHANCE = 0.06f
 private const val BRANCH_SIDE_DECORATE_CHANCE = 0.35f
 private const val BRANCH_TOP_DECORATE_CHANCE = 0.2f
 private const val MAX_BRANCH_REACH = 15
+private const val MAX_TOTAL_BLOCKS = 600
 
 class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<NoneFeatureConfiguration>(codec) {
 
@@ -35,15 +36,15 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
         val random = context.random()
         val origin = context.origin()
         val state = ModBlocks.RHODOPHYTA.get().defaultBlockState()
+        val budget = intArrayOf(MAX_TOTAL_BLOCKS)
 
         val mutPos = origin.mutable()
         val trunkHeight = random.nextInt(15) + 10
         var reachedHeight = 0
 
         for (i in 0 until trunkHeight) {
-            if (!placeAlgaeBlock(level, mutPos, state)) {
-                break
-            }
+            if (budget[0] <= 0) break
+            if (!placeAlgaeBlock(level, mutPos, state, budget)) break
             reachedHeight = i + 1
 
             decorateSides(level, random, mutPos, reservedDirections = emptySet(), chance = BRANCH_SIDE_DECORATE_CHANCE)
@@ -51,20 +52,19 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
             if (i < BASE_LEVELS) {
                 val currentRadius = BASE_RADIUS * (1.0 - (i.toDouble() / BASE_LEVELS))
                 val radiusSq = currentRadius * currentRadius
-
                 if (radiusSq > 0) {
                     val bound = Math.ceil(currentRadius).toInt()
                     for (dx in -bound..bound) {
                         for (dz in -bound..bound) {
                             if (dx == 0 && dz == 0) continue
                             if ((dx * dx + dz * dz) <= radiusSq) {
-                                placeAlgaeBlock(level, mutPos.offset(dx, 0, dz), state)
+                                placeAlgaeBlock(level, mutPos.offset(dx, 0, dz), state, budget)
                             }
                         }
                     }
                 }
             } else if (random.nextFloat() < KNOT_CHANCE) {
-                placeTuft(level, mutPos, state)
+                placeTuft(level, mutPos, state, budget)
             }
 
             val heightFactor = (i.toFloat() / trunkHeight).coerceIn(0f, 1f)
@@ -75,9 +75,8 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
                 while (chosenDirections.size < nBranchesAtLevel) {
                     chosenDirections.add(Plane.HORIZONTAL.getRandomDirection(random))
                 }
-
                 for (branchDirection in chosenDirections) {
-                    placeBranch(level, random, mutPos, state, branchDirection, depth = 0, origin = origin, heightFactor = heightFactor)
+                    placeBranch(level, random, mutPos, state, branchDirection, depth = 0, origin = origin, heightFactor = heightFactor, budget = budget)
                 }
             }
 
@@ -92,7 +91,7 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
             topDirections.add(Plane.HORIZONTAL.getRandomDirection(random))
         }
         for (branchDirection in topDirections) {
-            placeBranch(level, random, mutPos, state, branchDirection, depth = 0, origin = origin, heightFactor = 1f)
+            placeBranch(level, random, mutPos, state, branchDirection, depth = 0, origin = origin, heightFactor = 1f, budget = budget)
         }
 
         return true
@@ -106,8 +105,11 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
         direction: Direction,
         depth: Int,
         origin: BlockPos,
-        heightFactor: Float = 1f
+        heightFactor: Float = 1f,
+        budget: IntArray
     ) {
+        if (budget[0] <= 0) return
+
         val mutPos = start.mutable()
         mutPos.move(direction)
 
@@ -116,15 +118,14 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
         val branchLength = random.nextInt((maxLen - minLen + 1).coerceAtLeast(1)) + minLen
         var segmentLength = 0
         val subBranchChance = BASE_SUB_BRANCH_CHANCE * DEPTH_DECAY.pow(depth)
-
         val perpendicular = if (direction == Direction.NORTH || direction == Direction.SOUTH) Direction.EAST else Direction.NORTH
 
         var lastPos: BlockPos? = null
         var j = 0
-        while (j < branchLength && withinReach(mutPos, origin) && placeAlgaeBlock(level, mutPos, state)) {
+        while (j < branchLength && budget[0] > 0 && withinReach(mutPos, origin) && placeAlgaeBlock(level, mutPos, state, budget)) {
             val thicknessT = 1f - (j.toFloat() / branchLength)
             if (thicknessT > 0.35f) {
-                placeAlgaeBlock(level, mutPos.relative(perpendicular), state)
+                placeAlgaeBlock(level, mutPos.relative(perpendicular), state, budget)
             }
 
             decorateSides(level, random, mutPos, reservedDirections = setOf(direction, direction.opposite), chance = BRANCH_SIDE_DECORATE_CHANCE)
@@ -143,15 +144,15 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
                 segmentLength = 0
             }
 
-            if (depth < MAX_BRANCH_DEPTH && j > 0 && withinReach(mutPos, origin) && random.nextFloat() < subBranchChance) {
+            if (depth < MAX_BRANCH_DEPTH && j > 0 && budget[0] > 0 && withinReach(mutPos, origin) && random.nextFloat() < subBranchChance) {
                 val subDirection = if (random.nextBoolean()) direction.clockWise else direction.counterClockWise
-                placeBranch(level, random, mutPos, state, subDirection, depth = depth + 1, origin = origin, heightFactor = heightFactor)
+                placeBranch(level, random, mutPos, state, subDirection, depth = depth + 1, origin = origin, heightFactor = heightFactor, budget = budget)
             }
 
             j++
         }
 
-        lastPos?.let { placeTuft(level, it, state) }
+        lastPos?.let { placeTuft(level, it, state, budget) }
     }
 
     private fun withinReach(pos: BlockPos, origin: BlockPos): Boolean {
@@ -160,18 +161,20 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
         return dx * dx + dz * dz <= MAX_BRANCH_REACH * MAX_BRANCH_REACH
     }
 
-    private fun placeTuft(level: LevelAccessor, center: BlockPos, state: BlockState) {
+    private fun placeTuft(level: LevelAccessor, center: BlockPos, state: BlockState, budget: IntArray) {
         for (direction in Direction.entries) {
-            placeAlgaeBlock(level, center.relative(direction), state)
+            if (budget[0] <= 0) return
+            placeAlgaeBlock(level, center.relative(direction), state, budget)
         }
     }
 
-    private fun placeAlgaeBlock(level: LevelAccessor, pos: BlockPos, state: BlockState): Boolean {
+    private fun placeAlgaeBlock(level: LevelAccessor, pos: BlockPos, state: BlockState, budget: IntArray): Boolean {
         val above = pos.above()
         val targetBlockState = level.getBlockState(pos)
 
         if ((targetBlockState.`is`(Blocks.WATER) || targetBlockState.`is`(state.block)) && level.getBlockState(above).`is`(Blocks.WATER)) {
             level.setBlock(pos, state, 3)
+            budget[0]--
             return true
         }
 
@@ -181,14 +184,12 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
     private fun decorateSides(level: LevelAccessor, random: RandomSource, pos: BlockPos, reservedDirections: Set<Direction>, chance: Float) {
         for (direction in Plane.HORIZONTAL) {
             if (direction in reservedDirections) continue
-
             if (random.nextFloat() < chance) {
                 val relativePos = pos.relative(direction)
                 if (level.getBlockState(relativePos).`is`(Blocks.WATER)) {
                     val coralFanState = Blocks.FIRE_CORAL_WALL_FAN.defaultBlockState()
                         .setValue(BaseCoralWallFanBlock.FACING, direction)
                         .setValue(BlockStateProperties.WATERLOGGED, true)
-
                     level.setBlock(relativePos, coralFanState, 2)
                 }
             }
