@@ -18,6 +18,7 @@ import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
 import net.minecraft.tags.FluidTags
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
@@ -28,6 +29,7 @@ import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.min
 
 object ModUtilities {
 
@@ -78,6 +80,35 @@ object ModUtilities {
         )
 
         return hit.type == HitResult.Type.MISS
+    }
+
+
+    fun hasCollisionFreeAquaticCorridor(
+        mob: Mob,
+        destination: Vec3,
+        maxProbeDistance: Double = 6.0,
+        sampleSpacing: Double = 0.75
+    ): Boolean {
+        val offset = destination.subtract(mob.position())
+        val totalDistance = offset.length()
+        if (totalDistance < 1.0e-4) return true
+
+        val direction = offset.scale(1.0 / totalDistance)
+        val probeDistance = min(totalDistance, maxProbeDistance)
+        var sampledDistance = min(sampleSpacing, probeDistance)
+
+        while (sampledDistance <= probeDistance + 1.0e-6) {
+            val displacement = direction.scale(sampledDistance)
+            if (!mob.level().noCollision(mob, mob.boundingBox.move(displacement))) return false
+
+            val samplePos = BlockPos.containing(mob.position().add(displacement))
+            if (!mob.level().getFluidState(samplePos).`is`(FluidTags.WATER)) return false
+
+            if (sampledDistance == probeDistance) break
+            sampledDistance = min(sampledDistance + sampleSpacing, probeDistance)
+        }
+
+        return true
     }
 
 

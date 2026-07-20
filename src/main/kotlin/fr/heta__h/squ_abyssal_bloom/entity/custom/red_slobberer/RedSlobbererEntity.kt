@@ -1,7 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer
 
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
-import fr.heta__h.squ_abyssal_bloom.entity.ai.SmoothCrawlMoveControl
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererBottomStrollGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererGoalPriorities
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.AgeableMob
@@ -16,9 +17,8 @@ import net.minecraft.world.entity.ai.goal.BreedGoal
 import net.minecraft.world.entity.ai.goal.FollowParentGoal
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal
-import net.minecraft.world.entity.ai.goal.RandomStrollGoal
 import net.minecraft.world.entity.ai.goal.TemptGoal
-import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
 import net.minecraft.world.entity.ai.navigation.PathNavigation
 import net.minecraft.world.entity.animal.Animal
 import net.minecraft.world.entity.player.Player
@@ -36,7 +36,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     var timeExposedInAir = 0
 
     init {
-        this.moveControl = SmoothCrawlMoveControl(this)
+        this.moveControl = RedSlobbererMoveControl(this)
         this.setPathfindingMalus(PathType.WATER, 0.0f)
     }
 
@@ -47,23 +47,35 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             return createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 50.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.25)
+                .add(Attributes.STEP_HEIGHT, 1.0)
                 .add(Attributes.TEMPT_RANGE, 10.0)
         }
     }
 
     override fun createNavigation(level: Level): PathNavigation {
-        return AmphibiousPathNavigation(this, level)
+        return GroundPathNavigation(this, level).apply {
+            setCanFloat(false)
+        }
     }
 
     override fun registerGoals() {
         super.registerGoals()
-        this.goalSelector.addGoal(1, BreedGoal(this, 1.0))
-        this.goalSelector.addGoal(2, TemptGoal(this, 1.25, Ingredient.of(ModItems.BLOOD_SEAGRASS.get()), false))
-        this.goalSelector.addGoal(3, FollowParentGoal(this, 1.1))
-        this.goalSelector.addGoal(4, RandomStrollGoal(this, 1.0))
-        this.goalSelector.addGoal(5, LookAtPlayerGoal(this, Player::class.java, 6.0f))
-        this.goalSelector.addGoal(6, RandomLookAroundGoal(this))
+        goalSelector.addGoal(RedSlobbererGoalPriorities.BREED, BreedGoal(this, 1.0))
+        goalSelector.addGoal(
+            RedSlobbererGoalPriorities.TEMPT,
+            TemptGoal(this, 1.25, Ingredient.of(ModItems.BLOOD_SEAGRASS.get()), false)
+        )
+        goalSelector.addGoal(RedSlobbererGoalPriorities.FOLLOW_PARENT, FollowParentGoal(this, 1.1))
+        goalSelector.addGoal(RedSlobbererGoalPriorities.STROLL, RedSlobbererBottomStrollGoal(this, 1.0))
+        goalSelector.addGoal(
+            RedSlobbererGoalPriorities.LOOK_AT_PLAYER,
+            LookAtPlayerGoal(this, Player::class.java, 6.0f)
+        )
+        goalSelector.addGoal(RedSlobbererGoalPriorities.RANDOM_LOOK, RandomLookAroundGoal(this))
     }
+
+    /** Red Slobberers step over seabed relief; they never perform a ballistic ground jump. */
+    override fun jumpFromGround() = Unit
 
     override fun tick() {
         super.tick()

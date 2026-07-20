@@ -2,9 +2,9 @@ package fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleTargeting
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
@@ -12,7 +12,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.monster.Enemy
-import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent
@@ -63,19 +62,9 @@ object MurkVeil {
 
         val nextTarget = when (mob) {
             is BarnacleEntity -> {
-                mob.level().getEntitiesOfClass(LivingEntity::class.java, aabb) { candidate ->
-                    candidate != target &&
-                            candidate.isAlive &&
-                            mob.distanceToSqr(candidate) <= followRangeSqr &&
-                            !isStealthActive(candidate, currentTime) && // <-- CORRECTION : Ignore les autres joueurs furtifs
-                            when (candidate) {
-                                is Player -> (candidate.gameMode() == net.minecraft.world.level.GameType.SURVIVAL ||
-                                        candidate.gameMode() == net.minecraft.world.level.GameType.ADVENTURE) &&
-                                        !candidate.hasEffect(MobEffects.INVISIBILITY)
-                                is net.minecraft.world.entity.monster.Guardian -> true
-                                else -> false
-                            }
-                }.minByOrNull { mob.distanceToSqr(it) }
+                BarnacleTargeting.findNearestTarget(mob, followRange, target) { candidate ->
+                    !isStealthActive(candidate, currentTime)
+                }
             }
             else -> {
                 val field = targetTypeField ?: return

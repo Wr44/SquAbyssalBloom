@@ -4,12 +4,11 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBlock
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.BloodSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.TallBloodSeagrassBlock
+import fr.heta__h.squ_abyssal_bloom.block.brine_bubble_column.BrineBubbleColumnBlock
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.CoralBlock
-import net.minecraft.world.level.block.SeagrassBlock
 import net.minecraft.world.level.block.SoundType
-import net.minecraft.world.level.block.TallSeagrassBlock
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
 import net.minecraft.world.level.material.MapColor
 import net.minecraft.world.level.material.PushReaction
@@ -61,6 +60,18 @@ object ModBlocks {
     }
 
     // Blocks
+    val BRINE_BUBBLE_COLUMN = REGISTRY.registerBlock("brine_bubble_column") { props ->
+        BrineBubbleColumnBlock(
+            props.mapColor(MapColor.WATER)
+                .replaceable()
+                .noCollision()
+                .noLootTable()
+                .pushReaction(PushReaction.DESTROY)
+                .liquid()
+                .sound(SoundType.EMPTY)
+        )
+    }
+
     @JvmField
     val ASTRAL_PRISMARINE = REGISTRY.registerBlock("astral_prismarine") { props ->
         AstralPrismarineBlock(

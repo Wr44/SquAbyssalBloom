@@ -4,6 +4,7 @@
   "package": "fr.heta__h.squ_abyssal_bloom.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "block.brine_bubble_column.BrineBubbleColumnBreathingMixin",
     "block.sprouting_seagrass.SeaGrassFeatureMixin",
     "block.conduit.PlayerConduitMixin",
     "block.conduit.ConduitBlockEntityMixin",
@@ -31,6 +32,7 @@
     "worldgen.SurfaceSystemMixin"
   ],
   "client": [
+    "block.brine_bubble_column.BrineBubbleColumnAmbientSoundMixin",
     "block.conduit.ConduitRendererMixin",
 
     "entity.nautilus.NautilusScreenMixin",
