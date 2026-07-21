@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
+package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control
 
 enum class BarnacleBehaviorState(val syncedId: Int) {
     FLEE(0),

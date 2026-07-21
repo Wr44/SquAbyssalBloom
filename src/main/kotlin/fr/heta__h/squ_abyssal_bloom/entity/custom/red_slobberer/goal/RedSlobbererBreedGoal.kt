@@ -8,6 +8,12 @@ class RedSlobbererBreedGoal(
     private val movementSpeed: Double
 ) : BreedGoal(redSlobberer, movementSpeed) {
 
+    private companion object {
+        const val COURTSHIP_DURATION_TICKS = 60
+        const val MAX_BREEDING_EDGE_GAP = 0.75
+        const val MAX_LOOK_TURN_DEGREES = 5.0f
+    }
+
     private var courtshipTicks = 0
     private var breedingCompleted = false
 
@@ -47,9 +53,4 @@ class RedSlobbererBreedGoal(
 
     override fun requiresUpdateEveryTick(): Boolean = true
 
-    private companion object {
-        const val COURTSHIP_DURATION_TICKS = 60
-        const val MAX_BREEDING_EDGE_GAP = 0.75
-        const val MAX_LOOK_TURN_DEGREES = 5.0f
-    }
 }

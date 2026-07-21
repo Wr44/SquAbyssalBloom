@@ -1,5 +1,6 @@
-package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
+package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control
 
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.LivingEntity

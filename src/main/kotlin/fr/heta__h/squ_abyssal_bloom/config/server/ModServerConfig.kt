@@ -32,7 +32,7 @@ object ModServerConfig {
     }
 
     val STRICT_BARNACLE_SPAWNING = bool("strictBarnacleSpawning", true, "If true, mobs from other mods with \"barnacle\" in their name will be unable to spawn.")
-    val BARNACLE_SPAWN_MAX_Y = int("barnacleSpawnMaxY", 24, -64, 63, "Highest Y level at which Barnacles may spawn naturally.")
+    val BARNACLE_SPAWN_MAX_Y = int("barnacleSpawnMaxY", -10, -64, 63, "Highest Y level at which Barnacles may spawn naturally.")
     val BARNACLE_DETECTION_RANGE = double("barnacleDetectionRange", 55.0, 4.0, 96.0, "Maximum range at which a Barnacle can acquire prey.")
     val BARNACLE_MOVEMENT_SPEED = double("barnacleMovementSpeed", 2.0, 0.1, 4.0, "Maximum rush speed used while pursuing prey.")
     val BARNACLE_OBSTACLE_AVOIDANCE_SPEED = double("barnacleObstacleAvoidanceSpeed", 1.0, 0.1, 2.0, "Maximum speed while following a path around obstacles.")
@@ -42,8 +42,7 @@ object ModServerConfig {
     val BARNACLE_CAPTURE_DISTANCE = double("barnacleCaptureDistance", 5.5, 1.0, 12.0, "Maximum distance at which the Barnacle capture sequence can begin.")
     val BARNACLE_HOLD_DISTANCE = double("barnacleHoldDistance", 1.5, 0.25, 6.0, "Distance at which captured prey is held in front of the Barnacle.")
 
-    val BRINE_NATURAL_SPAWNING = bool("brineNaturalSpawning", true, "Allows Brines to spawn naturally in ocean biomes.")
-    val BRINE_SPAWN_MAX_Y = int("brineSpawnMaxY", 24, -64, 63, "Highest Y level at which Brines may spawn naturally.")
+    val BRINE_NATURAL_SPAWNING = bool("brineNaturalSpawning", true, "Allows Brines to spawn naturally in deep ocean biomes.")
     val BRINE_DETECTION_RANGE = double("brineDetectionRange", 24.0, 4.0, 64.0, "Maximum range at which a Brine can detect players.")
     val BRINE_FOLLOW_SPEED = double("brineFollowSpeed", 0.20, 0.02, 1.0, "Horizontal speed used by a Brine while following a player.")
     val BRINE_ATTACK_SPEED = double("brineAttackSpeed", 0.10, 0.01, 0.5, "Horizontal speed used by a Brine while positioning for an attack.")

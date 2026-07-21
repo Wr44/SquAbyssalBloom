@@ -23,6 +23,7 @@ import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.LevelReader
 import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.AABB
@@ -58,6 +59,22 @@ object ModUtilities {
         }
 
         return (level.maxY - 1) - startY
+    }
+
+    fun findLocalWaterFloor(level: LevelReader, start: BlockPos): BlockPos? {
+        val cursor = start.mutable()
+
+        while (cursor.y > level.minY) {
+            if (!level.getFluidState(cursor).`is`(FluidTags.WATER)) return null
+
+            val supportPos = cursor.below()
+            val supportShape = level.getBlockState(supportPos).getCollisionShape(level, supportPos)
+            if (!supportShape.isEmpty) return cursor.immutable()
+
+            cursor.setY(cursor.y - 1)
+        }
+
+        return null
     }
 
 

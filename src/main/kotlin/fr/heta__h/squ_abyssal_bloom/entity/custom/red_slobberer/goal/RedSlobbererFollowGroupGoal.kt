@@ -9,6 +9,14 @@ class RedSlobbererFollowGroupGoal(
     private val speedModifier: Double
 ) : Goal() {
 
+    private companion object {
+        const val SEARCH_INTERVAL_TICKS = 40
+        const val PATH_RECALCULATION_INTERVAL_TICKS = 20
+        const val START_FOLLOW_DISTANCE_SQR = 144.0
+        const val STOP_FOLLOW_DISTANCE_SQR = 64.0
+        const val MAX_FOLLOW_DISTANCE_SQR = 1024.0
+    }
+
     private var leader: RedSlobbererEntity? = null
     private var pathRecalculationTicks = 0
     private var nextSearchTick = 0
@@ -66,11 +74,4 @@ class RedSlobbererFollowGroupGoal(
         leader?.let { redSlobberer.navigation.moveTo(it, speedModifier) }
     }
 
-    private companion object {
-        const val SEARCH_INTERVAL_TICKS = 40
-        const val PATH_RECALCULATION_INTERVAL_TICKS = 20
-        const val START_FOLLOW_DISTANCE_SQR = 144.0
-        const val STOP_FOLLOW_DISTANCE_SQR = 64.0
-        const val MAX_FOLLOW_DISTANCE_SQR = 1024.0
-    }
 }

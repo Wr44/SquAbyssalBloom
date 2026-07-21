@@ -1,6 +1,7 @@
-package fr.heta__h.squ_abyssal_bloom.entity.custom.brine
+package fr.heta__h.squ_abyssal_bloom.entity.custom.brine.control
 
 import fr.heta__h.squ_abyssal_bloom.entity.ai.navigation.PathRecalculationPolicy
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.hasCollisionFreeAquaticCorridor
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.LivingEntity

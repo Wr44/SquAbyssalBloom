@@ -15,6 +15,12 @@ class RedSlobbererGrazeBloodSeagrassGoal(
     speedModifier: Double
 ) : MoveToBlockGoal(redSlobberer, speedModifier, SEARCH_RADIUS, VERTICAL_SEARCH_RANGE) {
 
+    private companion object {
+        const val SEARCH_RADIUS = 12
+        const val VERTICAL_SEARCH_RANGE = 4
+        const val GRAZING_DURATION_TICKS = 40
+    }
+
     private var grazingTicks = 0
     private var consumedTarget = false
 
@@ -30,7 +36,7 @@ class RedSlobbererGrazeBloodSeagrassGoal(
 
     override fun tick() {
         super.tick()
-        if (!isReachedTarget()) {
+        if (!isReachedTarget) {
             grazingTicks = 0
             return
         }
@@ -79,9 +85,4 @@ class RedSlobbererGrazeBloodSeagrassGoal(
         return serverLevel.gameRules.get(GameRules.MOB_GRIEFING)
     }
 
-    private companion object {
-        const val SEARCH_RADIUS = 12
-        const val VERTICAL_SEARCH_RANGE = 4
-        const val GRAZING_DURATION_TICKS = 40
-    }
 }

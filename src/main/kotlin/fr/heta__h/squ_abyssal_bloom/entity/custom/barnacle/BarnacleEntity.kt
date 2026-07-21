@@ -2,6 +2,10 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleBehaviorState
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleMoveControl
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnaclePathController
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleTargeting
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnacleFleeBehaviorGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnacleGoalPriorities
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnacleGrabBehaviorGoal
@@ -33,6 +37,7 @@ import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.LevelReader
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
 import net.minecraft.world.phys.Vec3
@@ -233,6 +238,10 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         WaterBoundPathNavigation(this, level).apply {
             setRequiredPathLength(detectionRange.toFloat())
         }
+
+    override fun checkSpawnObstruction(level: LevelReader): Boolean {
+        return level.noCollision(this) && level.isUnobstructed(this)
+    }
 
     override fun tick() {
         super.tick()

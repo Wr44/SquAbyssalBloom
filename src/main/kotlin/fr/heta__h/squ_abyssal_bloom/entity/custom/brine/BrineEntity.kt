@@ -5,6 +5,8 @@ import fr.heta__h.squ_abyssal_bloom.block.brine_bubble_column.BrineBubbleColumnB
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.control.BrineMoveControl
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.control.BrinePathController
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineColumnAttackBehaviorGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineDirectAttackBehaviorGoal
@@ -21,8 +23,10 @@ import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
+import net.minecraft.tags.FluidTags
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.AnimationState
+import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
@@ -32,6 +36,8 @@ import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation
 import net.minecraft.world.entity.ai.navigation.PathNavigation
 import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.LevelAccessor
+import net.minecraft.world.level.LevelReader
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.BubbleColumnBlock
 import net.minecraft.world.level.block.Blocks
@@ -45,46 +51,6 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
-
-    val idleAnimationState = AnimationState()
-    val startAttackAnimationState = AnimationState()
-    val stopAttackAnimationState = AnimationState()
-    val loopAttackAnimationState = AnimationState()
-
-    private var ticksOutOfWater = 0
-    private val activeColumnPositions = mutableSetOf<BlockPos>()
-    private val nextColumnPositions = mutableSetOf<BlockPos>()
-    val behaviorPathController = BrinePathController(this)
-
-    // Timer
-    var knockbackTicks = 0
-    var climbingTicks = 0
-
-    // Animation state machine
-    private var clientAnimPhase = CANIM_IDLE
-    private var clientAnimTicks = 0
-
-    val followSpeed: Double
-        get() = ModServerConfig.BRINE_FOLLOW_SPEED.get()
-    val attackMoveSpeed: Double
-        get() = ModServerConfig.BRINE_ATTACK_SPEED.get()
-    val attackEnterRadius: Double
-        get() = ModServerConfig.BRINE_ATTACK_ENTER_RADIUS.get()
-    val attackEnterRadiusSqr: Double
-        get() = attackEnterRadius * attackEnterRadius
-    val attackExitRadius: Double
-        get() = ModServerConfig.BRINE_ATTACK_EXIT_RADIUS.get().coerceAtLeast(attackEnterRadius)
-    val attackExitRadiusSqr: Double
-        get() = attackExitRadius * attackExitRadius
-    val columnAttackCooldown: Int
-        get() = ModServerConfig.BRINE_COLUMN_ATTACK_COOLDOWN.get()
-    val directAttackCooldown: Int
-        get() = ModServerConfig.BRINE_DIRECT_ATTACK_COOLDOWN.get()
-
-    init {
-        moveControl = BrineMoveControl(this)
-    }
-
 
     companion object {
 
@@ -139,7 +105,6 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         // Attack thresholds
         const val COLUMN_VS_DIRECT_Y_THRESHOLD = 2.0
 
-        val CROSS_OFFSETS = listOf(0 to 0, 1 to 0, -1 to 0, 0 to 1, 0 to -1)
         const val BUBBLE_COLUMN_HEIGHT = 10
 
         const val BUBBLE_COLUMN_SPEED = 0.45
@@ -149,6 +114,8 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val PARTICLE_BUBBLE_COUNT = 3
         const val PARTICLE_BUBBLE_SPREAD = 0.5
         const val PARTICLE_BUBBLE_SPEED_Y = 0.08
+
+        val CROSS_OFFSETS = listOf(0 to 0, 1 to 0, -1 to 0, 0 to 1, 0 to -1)
 
         // Data parameters
         private val IS_MOVING: EntityDataAccessor<Boolean> =
@@ -164,6 +131,46 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0)
                 .add(Attributes.FOLLOW_RANGE, DEFAULT_FOLLOW_RANGE_ATTRIBUTE)
     }
+
+    val idleAnimationState = AnimationState()
+    val startAttackAnimationState = AnimationState()
+    val stopAttackAnimationState = AnimationState()
+    val loopAttackAnimationState = AnimationState()
+
+    private var ticksOutOfWater = 0
+    private val activeColumnPositions = mutableSetOf<BlockPos>()
+    private val nextColumnPositions = mutableSetOf<BlockPos>()
+    val behaviorPathController = BrinePathController(this)
+
+    // Timer
+    var knockbackTicks = 0
+    var climbingTicks = 0
+
+    // Animation state machine
+    private var clientAnimPhase = CANIM_IDLE
+    private var clientAnimTicks = 0
+
+    val followSpeed: Double
+        get() = ModServerConfig.BRINE_FOLLOW_SPEED.get()
+    val attackMoveSpeed: Double
+        get() = ModServerConfig.BRINE_ATTACK_SPEED.get()
+    val attackEnterRadius: Double
+        get() = ModServerConfig.BRINE_ATTACK_ENTER_RADIUS.get()
+    val attackEnterRadiusSqr: Double
+        get() = attackEnterRadius * attackEnterRadius
+    val attackExitRadius: Double
+        get() = ModServerConfig.BRINE_ATTACK_EXIT_RADIUS.get().coerceAtLeast(attackEnterRadius)
+    val attackExitRadiusSqr: Double
+        get() = attackExitRadius * attackExitRadius
+    val columnAttackCooldown: Int
+        get() = ModServerConfig.BRINE_COLUMN_ATTACK_COOLDOWN.get()
+    val directAttackCooldown: Int
+        get() = ModServerConfig.BRINE_DIRECT_ATTACK_COOLDOWN.get()
+
+    init {
+        moveControl = BrineMoveControl(this)
+    }
+
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         super.defineSynchedData(builder)
@@ -183,6 +190,36 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     }
 
     override fun createNavigation(level: Level): PathNavigation = AmphibiousPathNavigation(this, level)
+
+    override fun getWalkTargetValue(pos: BlockPos, level: LevelReader): Float {
+        return if (level.getFluidState(pos).`is`(FluidTags.WATER)) {
+            10.0f
+        } else {
+            super.getWalkTargetValue(pos, level)
+        }
+    }
+
+    override fun checkSpawnRules(level: LevelAccessor, spawnReason: EntitySpawnReason): Boolean {
+        if (spawnReason == EntitySpawnReason.NATURAL) {
+            val spawnPos = ModEntities.findBrineSpawnPosition(
+                level,
+                blockPosition(),
+                type
+            ) ?: return false
+
+            setPos(
+                spawnPos.x + 0.5,
+                spawnPos.y.toDouble(),
+                spawnPos.z + 0.5
+            )
+        }
+
+        return super.checkSpawnRules(level, spawnReason)
+    }
+
+    override fun checkSpawnObstruction(level: LevelReader): Boolean {
+        return level.noCollision(this) && level.isUnobstructed(this)
+    }
 
     override fun hurtServer(level: ServerLevel, source: DamageSource, amount: Float): Boolean {
         val projectile = source.directEntity

@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
-import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleTargeting
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleTargeting
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.world.entity.EquipmentSlot

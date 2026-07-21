@@ -16,8 +16,10 @@ import fr.heta__h.squ_abyssal_bloom.config.server.types.IntOption
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
 import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
+import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererAnimation
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
 import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import net.minecraft.ChatFormatting
 import net.minecraft.client.Minecraft
@@ -471,7 +473,6 @@ object ModConfig {
                         })
                         .build())
                     .option(serverBool(ModServerConfig.BRINE_NATURAL_SPAWNING))
-                    .option(serverInt(ModServerConfig.BRINE_SPAWN_MAX_Y))
                     .option(serverDouble(ModServerConfig.BRINE_DETECTION_RANGE, step = 1.0))
                     .option(serverDouble(ModServerConfig.BRINE_FOLLOW_SPEED, step = 0.01))
                     .option(serverDouble(ModServerConfig.BRINE_ATTACK_SPEED, step = 0.01))
@@ -485,7 +486,15 @@ object ModConfig {
                     .name(Component.translatable("entity.squ_abyssal_bloom.red_slobberer").withStyle(ChatFormatting.RED))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.red_slobberer.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.RED_SLOBBERER.get()))
+                        .customImage(EntityConfigRenderer(entityType = ModEntities.RED_SLOBBERER.get()) { entity, tick ->
+                            if (entity is RedSlobbererEntity) {
+                                val durationTicks = (RedSlobbererAnimation.idle.lengthInSeconds * 20).toInt()
+                                    .coerceAtLeast(1)
+                                val loopTick = tick % durationTicks
+                                if (loopTick == 0 || !entity.idleAnimationState.isStarted)
+                                    entity.idleAnimationState.start(tick)
+                            }
+                        })
                         .build())
                     .option(serverInt(ModServerConfig.RED_SLOBBERER_REEF_MATURITY_TICKS, step = 200))
                     .option(serverInt(ModServerConfig.RED_SLOBBERER_MAX_REEF_FISH))

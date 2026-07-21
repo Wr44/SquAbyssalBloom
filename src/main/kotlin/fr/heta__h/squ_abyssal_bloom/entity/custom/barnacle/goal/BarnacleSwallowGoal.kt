@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal
 
-import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleBehaviorState
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleBehaviorState
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.server.level.ServerLevel

@@ -11,6 +11,13 @@ class RedSlobbererBottomStrollGoal(
     speedModifier: Double
 ) : RandomStrollGoal(redSlobberer, speedModifier) {
 
+    private companion object {
+        const val POSITION_ATTEMPTS = 12
+        const val HORIZONTAL_RADIUS = 10
+        const val MAX_DESCENT = 3
+        const val MIN_DISTANCE_SQR = 4.0
+    }
+
     override fun getPosition(): Vec3? {
         val level = redSlobberer.level()
         val currentY = redSlobberer.blockY
@@ -48,10 +55,4 @@ class RedSlobbererBottomStrollGoal(
         return null
     }
 
-    private companion object {
-        const val POSITION_ATTEMPTS = 12
-        const val HORIZONTAL_RADIUS = 10
-        const val MAX_DESCENT = 3
-        const val MIN_DISTANCE_SQR = 4.0
-    }
 }

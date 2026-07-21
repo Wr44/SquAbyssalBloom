@@ -3,7 +3,7 @@
   "biomes": "squ_abyssal_bloom:blood_valley",
   "spawners": {
     "type": "squ_abyssal_bloom:red_slobberer",
-    "weight": 2,
+    "weight": 5,
     "minCount": 2,
     "maxCount": 4
   }

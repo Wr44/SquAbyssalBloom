@@ -384,8 +384,7 @@ class FishCollectiveManager private constructor(
             ) {
                 continue
             }
-            // Influence sources manage their own clearance; avoiding them would
-            // cancel the attraction they exert.
+
             if (state.influences.any { it.source === candidate }) continue
 
             val distanceSqr = fish.distanceToSqr(candidate)

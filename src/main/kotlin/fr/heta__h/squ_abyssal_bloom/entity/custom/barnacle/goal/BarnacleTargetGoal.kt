@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal
 
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
-import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleTargeting
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleTargeting
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.ai.goal.target.TargetGoal
 import java.util.EnumSet

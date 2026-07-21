@@ -1,7 +1,8 @@
-package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
+package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control
 
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ai.navigation.PathRecalculationPolicy
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.hasCollisionFreeAquaticCorridor
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.LivingEntity

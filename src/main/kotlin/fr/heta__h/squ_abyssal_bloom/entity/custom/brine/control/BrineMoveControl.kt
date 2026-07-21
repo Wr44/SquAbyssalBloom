@@ -1,5 +1,6 @@
-package fr.heta__h.squ_abyssal_bloom.entity.custom.brine
+package fr.heta__h.squ_abyssal_bloom.entity.custom.brine.control
 
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import net.minecraft.world.entity.ai.control.MoveControl
 import net.minecraft.world.phys.Vec3
 import kotlin.math.atan2

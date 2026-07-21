@@ -15,7 +15,6 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRe
 import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.BabyRedSlobbererModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererRenderer
-import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererSpawnPlacement
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
@@ -27,6 +26,8 @@ import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusBubbleS
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusChestModel
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
+import fr.heta__h.squ_abyssal_bloom.tags.ModTags
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findLocalWaterFloor
 import net.minecraft.client.Minecraft
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayers
@@ -37,15 +38,21 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.Identifier
+import net.minecraft.tags.BiomeTags
 import net.minecraft.tags.FluidTags
 import net.minecraft.util.RandomSource
+import net.minecraft.world.Difficulty
 import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.MobCategory
 import net.minecraft.world.entity.SpawnPlacementTypes
+import net.minecraft.world.entity.monster.Monster
 import net.minecraft.world.level.ServerLevelAccessor
+import net.minecraft.world.level.LevelReader
 import net.minecraft.world.level.levelgen.Heightmap
+import net.minecraft.world.phys.AABB
+import net.minecraft.world.phys.Vec3
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.client.event.EntityRenderersEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
@@ -54,6 +61,20 @@ import net.neoforged.neoforge.registries.DeferredHolder
 import net.neoforged.neoforge.registries.DeferredRegister
 
 object ModEntities {
+    private const val BARNACLE_NATURAL_SPAWN_ROLL = 80
+    private const val BARNACLE_LOCAL_DENSITY_RADIUS = 128.0
+    private const val BARNACLE_LOCAL_DENSITY_CAP = 1
+
+    // Drowned: weight 5 with a 1/40 roll; Brine: weight 1 with 1/56 gives a 7:1 target ratio.
+    private const val BRINE_NATURAL_SPAWN_ROLL = 56
+    private const val BRINE_MINIMUM_SPAWN_HEIGHT_ABOVE_FLOOR = 0
+    private const val BRINE_MAXIMUM_SPAWN_HEIGHT_ABOVE_FLOOR = 2
+    private const val BRINE_REQUIRED_WATER_BLOCKS = 2
+
+    private const val RED_SLOBBERER_MINIMUM_SPAWN_HEIGHT_ABOVE_FLOOR = 3
+    private const val RED_SLOBBERER_MAXIMUM_SPAWN_HEIGHT_ABOVE_FLOOR = 8
+    private const val RED_SLOBBERER_REQUIRED_WATER_BLOCKS = 3
+
     val ENTITY_TYPES: DeferredRegister<EntityType<*>> =
         DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, SquAbyssalBloom.ID)
 
@@ -257,7 +278,7 @@ object ModEntities {
         )
         event.register(
             RED_SLOBBERER.get(),
-            RedSlobbererSpawnPlacement,
+            SpawnPlacementTypes.IN_WATER,
             Heightmap.Types.OCEAN_FLOOR,
             ::checkRedSlobbererSpawn,
             RegisterSpawnPlacementsEvent.Operation.REPLACE
@@ -271,8 +292,24 @@ object ModEntities {
         pos: BlockPos,
         random: RandomSource
     ): Boolean {
-        return pos.y <= ModServerConfig.BARNACLE_SPAWN_MAX_Y.get() &&
-            level.getFluidState(pos).`is`(FluidTags.WATER)
+        if (
+            pos.y > ModServerConfig.BARNACLE_SPAWN_MAX_Y.get() ||
+            !level.getBiome(pos).`is`(ModTags.Biomes.IS_ABYSSAL) ||
+            !level.getFluidState(pos).`is`(FluidTags.WATER)
+        ) {
+            return false
+        }
+
+        if (reason != EntitySpawnReason.NATURAL) return true
+        if (random.nextInt(BARNACLE_NATURAL_SPAWN_ROLL) != 0) return false
+
+        return isBelowLocalSpawnCap(
+            level,
+            pos,
+            BarnacleEntity::class.java,
+            BARNACLE_LOCAL_DENSITY_RADIUS,
+            BARNACLE_LOCAL_DENSITY_CAP
+        )
     }
 
     private fun checkBrineSpawn(
@@ -282,9 +319,20 @@ object ModEntities {
         pos: BlockPos,
         random: RandomSource
     ): Boolean {
-        return ModServerConfig.BRINE_NATURAL_SPAWNING.get() &&
-            pos.y <= ModServerConfig.BRINE_SPAWN_MAX_Y.get() &&
-            level.getFluidState(pos).`is`(FluidTags.WATER)
+        if (
+            !ModServerConfig.BRINE_NATURAL_SPAWNING.get() ||
+            !level.getBiome(pos).`is`(BiomeTags.IS_DEEP_OCEAN) ||
+            !level.getFluidState(pos).`is`(FluidTags.WATER)
+        ) {
+            return false
+        }
+
+        if (reason != EntitySpawnReason.NATURAL) return true
+        if (level.difficulty == Difficulty.PEACEFUL) return false
+        if (!Monster.isDarkEnoughToSpawn(level, pos, random)) return false
+        if (random.nextInt(BRINE_NATURAL_SPAWN_ROLL) != 0) return false
+
+        return findBrineSpawnPosition(level, pos, entityType) != null
     }
 
     private fun checkRedSlobbererSpawn(
@@ -294,6 +342,80 @@ object ModEntities {
         pos: BlockPos,
         random: RandomSource
     ): Boolean {
-        return RedSlobbererSpawnPlacement.isSpawnPositionOk(level, pos, entityType)
+        return findRedSlobbererSpawnPosition(level, pos, entityType) != null
+    }
+
+    internal fun findRedSlobbererSpawnPosition(
+        level: LevelReader,
+        candidate: BlockPos,
+        entityType: EntityType<*>
+    ): BlockPos? = findWaterSpawnPositionAboveOceanFloor(
+        level,
+        candidate,
+        entityType,
+        RED_SLOBBERER_MINIMUM_SPAWN_HEIGHT_ABOVE_FLOOR..RED_SLOBBERER_MAXIMUM_SPAWN_HEIGHT_ABOVE_FLOOR,
+        RED_SLOBBERER_REQUIRED_WATER_BLOCKS
+    )
+
+    internal fun findBrineSpawnPosition(
+        level: LevelReader,
+        candidate: BlockPos,
+        entityType: EntityType<*>
+    ): BlockPos? = findWaterSpawnPositionAboveOceanFloor(
+        level,
+        candidate,
+        entityType,
+        BRINE_MINIMUM_SPAWN_HEIGHT_ABOVE_FLOOR..BRINE_MAXIMUM_SPAWN_HEIGHT_ABOVE_FLOOR,
+        BRINE_REQUIRED_WATER_BLOCKS
+    )
+
+    private fun findWaterSpawnPositionAboveOceanFloor(
+        level: LevelReader,
+        candidate: BlockPos,
+        entityType: EntityType<*>,
+        heightAboveFloor: IntRange,
+        requiredWaterBlocks: Int
+    ): BlockPos? {
+        if (!level.worldBorder.isWithinBounds(candidate)) return null
+        if (!level.getFluidState(candidate).`is`(FluidTags.WATER)) return null
+
+        val floorPos = findLocalWaterFloor(level, candidate) ?: return null
+
+        for (height in heightAboveFloor) {
+            val spawnPos = floorPos.above(height)
+            if (!level.worldBorder.isWithinBounds(spawnPos)) continue
+            if (
+                (0 until requiredWaterBlocks).any { verticalOffset ->
+                    !level.getFluidState(spawnPos.above(verticalOffset)).`is`(FluidTags.WATER)
+                }
+            ) {
+                continue
+            }
+
+            val spawnBox = entityType.getSpawnAABB(
+                spawnPos.x + 0.5,
+                spawnPos.y.toDouble(),
+                spawnPos.z + 0.5
+            )
+            if (level.noCollision(spawnBox)) return spawnPos
+        }
+
+        return null
+    }
+
+    private fun <T : LivingEntity> isBelowLocalSpawnCap(
+        level: ServerLevelAccessor,
+        pos: BlockPos,
+        entityClass: Class<T>,
+        radius: Double,
+        cap: Int
+    ): Boolean {
+        val searchBounds = AABB.ofSize(
+            Vec3.atCenterOf(pos),
+            radius * 2.0,
+            radius * 2.0,
+            radius * 2.0
+        )
+        return level.level.getEntitiesOfClass(entityClass, searchBounds) { it.isAlive }.size < cap
     }
 }

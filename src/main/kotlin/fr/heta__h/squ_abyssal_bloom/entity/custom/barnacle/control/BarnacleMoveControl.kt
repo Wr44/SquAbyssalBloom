@@ -1,6 +1,7 @@
-package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
+package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control
 
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import net.minecraft.world.entity.ai.control.MoveControl
 import net.minecraft.world.phys.Vec3
 import kotlin.math.PI
