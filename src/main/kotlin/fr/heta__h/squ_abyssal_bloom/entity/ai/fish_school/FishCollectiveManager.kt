@@ -29,8 +29,7 @@ class FishCollectiveManager private constructor(
         private const val SNAPSHOT_CELL_SIZE = 8
         private const val SNAPSHOT_CELL_HALF_SIZE = SNAPSHOT_CELL_SIZE * 0.5
         private const val BLOCKER_SEARCH_RADIUS = 7.0
-        private const val BLOCKER_SEARCH_RADIUS_SQR =
-            BLOCKER_SEARCH_RADIUS * BLOCKER_SEARCH_RADIUS
+        private const val BLOCKER_SEARCH_RADIUS_SQR = BLOCKER_SEARCH_RADIUS * BLOCKER_SEARCH_RADIUS
         private const val LARGE_ENTITY_MINIMUM_WIDTH = 1.0f
         private const val MAXIMUM_NEARBY_LARGE_ENTITIES = 8
         private const val AGGREGATION_LOCAL_DENSITY_LIMIT = 100
@@ -186,10 +185,10 @@ class FishCollectiveManager private constructor(
         state.completeNeighborhoodRefresh(gameTime, localNeighborCount, settings)
         populateAggregationNeighbor(state, snapshot.entities, settings)
         updateThreatSignal(state, snapshot.entities, settings, gameTime)
-        populateLargeEntities(state, snapshot.entities)
 
         state.influences.clear()
         FishSchoolInfluenceRegistry.collect(fish, snapshot.entities, state.influences)
+        populateLargeEntities(state, snapshot.entities)
     }
 
     private fun populateTopologicalNeighbors(
@@ -385,6 +384,9 @@ class FishCollectiveManager private constructor(
             ) {
                 continue
             }
+            // Influence sources manage their own clearance; avoiding them would
+            // cancel the attraction they exert.
+            if (state.influences.any { it.source === candidate }) continue
 
             val distanceSqr = fish.distanceToSqr(candidate)
             if (distanceSqr > BLOCKER_SEARCH_RADIUS_SQR) continue

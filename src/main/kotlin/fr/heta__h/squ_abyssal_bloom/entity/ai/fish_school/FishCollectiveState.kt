@@ -32,7 +32,10 @@ class FishCollectiveState(
     var aggregationNeighbor: AbstractFish? = null
 
     val isUnderCustomControl: Boolean
-        get() = collectiveActive || aggregationNeighbor != null
+        get() = collectiveActive || aggregationNeighbor != null || hasActiveInfluence
+
+    private val hasActiveInfluence: Boolean
+        get() = influences.any { !it.source.isRemoved && it.source.isAlive }
 
     var desiredVelocity: Vec3 = Vec3.ZERO
     var lastSteeringTick: Long = Long.MIN_VALUE

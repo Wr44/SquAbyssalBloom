@@ -51,24 +51,29 @@ class RedSlobbererFishInfluence(
         }
 
         val centerDistance = sqrt(centerDistanceSqr)
-        val distanceFalloff =
-            (1.0 - centerDistance / MAXIMUM_INFLUENCE_DISTANCE).coerceIn(0.0, 1.0)
-        val radialStrength = if (bodyDistance < MINIMUM_BODY_CLEARANCE) {
-            val proximity = 1.0 - bodyDistance / MINIMUM_BODY_CLEARANCE
-            STRONG_REPULSION * proximity * proximity
-        } else {
-            ((PREFERRED_BODY_DISTANCE - bodyDistance) / PREFERRED_BODY_DISTANCE)
-                .coerceIn(-1.0, 1.0) * RING_CORRECTION * distanceFalloff
+        val edgeTaper = ((MAXIMUM_INFLUENCE_DISTANCE - centerDistance) / EDGE_TAPER_WIDTH)
+            .coerceIn(0.0, 1.0)
+        val radialStrength = when {
+            bodyDistance < MINIMUM_BODY_CLEARANCE -> {
+                val proximity = 1.0 - bodyDistance / MINIMUM_BODY_CLEARANCE
+                STRONG_REPULSION * proximity * proximity
+            }
+            bodyDistance <= PREFERRED_BODY_DISTANCE ->
+                (PREFERRED_BODY_DISTANCE - bodyDistance) / PREFERRED_BODY_DISTANCE *
+                    RING_CORRECTION * edgeTaper
+            else ->
+                -((bodyDistance - PREFERRED_BODY_DISTANCE) / RECRUITMENT_RAMP)
+                    .coerceAtMost(1.0) * LONG_RANGE_ATTRACTION * edgeTaper
         }
 
         val panic = context.threatIntensity.coerceIn(0.0, 1.0)
         val attractionScale = 1.0 + panic * PANIC_REFUGE_INCREASE
         val tangentScale = (1.0 - panic * PANIC_TANGENT_REDUCTION).coerceAtLeast(0.25)
         val tangentSign = if (usesClockwiseOrbit(fish)) -1.0 else 1.0
-        val tangentStrength = TANGENTIAL_FLOW * distanceFalloff * tangentScale
+        val tangentStrength = TANGENTIAL_FLOW * edgeTaper * tangentScale
         val heightError = (redSlobberer.y + PREFERRED_HEIGHT_OFFSET - fish.y)
             .coerceIn(-MAXIMUM_HEIGHT_ERROR, MAXIMUM_HEIGHT_ERROR)
-        val verticalHold = heightError / MAXIMUM_HEIGHT_ERROR * VERTICAL_HOLD * distanceFalloff
+        val verticalHold = heightError / MAXIMUM_HEIGHT_ERROR * VERTICAL_HOLD * edgeTaper
 
         return Vec3(
             radialX * radialStrength * attractionScale - radialZ * tangentStrength * tangentSign,
@@ -94,8 +99,11 @@ class RedSlobbererFishInfluence(
             MAXIMUM_INFLUENCE_DISTANCE * MAXIMUM_INFLUENCE_DISTANCE
         const val MINIMUM_BODY_CLEARANCE = 1.15
         const val PREFERRED_BODY_DISTANCE = 5.5
+        const val EDGE_TAPER_WIDTH = 4.0
         const val STRONG_REPULSION = 2.4
         const val RING_CORRECTION = 0.38
+        const val LONG_RANGE_ATTRACTION = 1.1
+        const val RECRUITMENT_RAMP = 2.0
         const val TANGENTIAL_FLOW = 0.32
         const val PANIC_REFUGE_INCREASE = 0.25
         const val PANIC_TANGENT_REDUCTION = 0.6

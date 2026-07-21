@@ -34,6 +34,8 @@ object FishSchoolSteering {
     private const val MAXIMUM_LOCAL_VERTICAL_ERROR = 1.0
     private const val COHESION_FULL_STRENGTH_DISTANCE = 3.0
     private const val MAXIMUM_ENVIRONMENTAL_INFLUENCE = 2.0
+    private const val ENVIRONMENTAL_VERTICAL_FORCE_SCALE = 0.03
+    private const val MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED = 0.02
     private const val BASE_NOISE_WEIGHT = 0.14
     private const val MAXIMUM_SWIM_WIGGLE_ANGLE = PI / 8.0
     private const val NOISE_DENSITY_REDUCTION_PER_NEIGHBOR = 0.08
@@ -325,12 +327,16 @@ object FishSchoolSteering {
         val socialVertical = (separation.y * settings.separationWeight +
             alignment.y * alignmentWeight +
             cohesion.y * cohesionWeight +
-            environmentalInfluence.y + state.noiseDirection.y * noiseWeight) *
+            state.noiseDirection.y * noiseWeight) *
             SOCIAL_VERTICAL_FORCE_SCALE
         val socialVerticalVelocity = (socialVertical * settings.verticalMovementWeight)
             .coerceIn(-MAXIMUM_SOCIAL_VERTICAL_SPEED, MAXIMUM_SOCIAL_VERTICAL_SPEED)
+        val environmentalVerticalVelocity =
+            (environmentalInfluence.y * ENVIRONMENTAL_VERTICAL_FORCE_SCALE)
+                .coerceIn(-MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED, MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED)
         var desiredY = currentVelocity.y * VERTICAL_MOMENTUM_RETENTION +
             socialVerticalVelocity +
+            environmentalVerticalVelocity +
             calculateAmbientVerticalDrift(fish, level.gameTime) * settings.verticalDriftSpeed +
             obstacleAvoidance.y * settings.obstacleAvoidanceWeight
         desiredY = desiredY.coerceIn(-MAXIMUM_VERTICAL_SPEED, MAXIMUM_VERTICAL_SPEED)
