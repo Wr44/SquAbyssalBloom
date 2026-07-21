@@ -23,6 +23,42 @@ class FishCollectiveManager private constructor(
     private var nextDebugSummaryTick = 0L
     private var debugWasEnabled = false
 
+    companion object {
+        private val MANAGERS_BY_LEVEL = HashMap<ServerLevel, FishCollectiveManager>()
+
+        private const val SNAPSHOT_CELL_SIZE = 8
+        private const val SNAPSHOT_CELL_HALF_SIZE = SNAPSHOT_CELL_SIZE * 0.5
+        private const val BLOCKER_SEARCH_RADIUS = 7.0
+        private const val BLOCKER_SEARCH_RADIUS_SQR =
+            BLOCKER_SEARCH_RADIUS * BLOCKER_SEARCH_RADIUS
+        private const val LARGE_ENTITY_MINIMUM_WIDTH = 1.0f
+        private const val MAXIMUM_NEARBY_LARGE_ENTITIES = 8
+        private const val AGGREGATION_LOCAL_DENSITY_LIMIT = 100
+        private const val MINIMUM_DIRECT_THREAT_INTENSITY = 0.35
+        private const val MINIMUM_PROPAGATED_THREAT_INTENSITY = 0.01
+        private const val FISH_THREAT_PREDICTION_TICKS = 2.0
+        private const val THREAT_PREDICTION_TICKS = 5.0
+        private const val MINIMUM_ESCAPE_VECTOR_LENGTH = 1.0E-4
+        private const val MINIMUM_MOVING_THREAT_SPEED = 0.025
+        private const val MOVING_THREAT_LATERAL_SPLIT_WEIGHT = 0.65
+        private const val CLEANUP_INTERVAL_TICKS = 200L
+        private const val STATE_RETENTION_TICKS = 400L
+        private const val SETTINGS_REFRESH_INTERVAL_TICKS = 20L
+        private const val DEBUG_SUMMARY_INTERVAL_TICKS = 100L
+
+        fun forLevel(level: ServerLevel): FishCollectiveManager {
+            return MANAGERS_BY_LEVEL.getOrPut(level) { FishCollectiveManager(level) }
+        }
+
+        fun releaseLevel(level: ServerLevel) {
+            MANAGERS_BY_LEVEL.remove(level)
+        }
+
+        fun isSupportedFish(fish: AbstractFish): Boolean {
+            return fish.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_MEMBERS)
+        }
+    }
+
     fun shouldUseCollectiveMovement(fish: AbstractFish): Boolean {
         return updateState(fish, calculateSteering = false)?.isUnderCustomControl == true
     }
@@ -473,42 +509,6 @@ class FishCollectiveManager private constructor(
         }
         snapshotsByCell.entries.removeIf { (_, snapshot) ->
             snapshot.expiresAtTick <= gameTime
-        }
-    }
-
-    companion object {
-        private val MANAGERS_BY_LEVEL = HashMap<ServerLevel, FishCollectiveManager>()
-
-        private const val SNAPSHOT_CELL_SIZE = 8
-        private const val SNAPSHOT_CELL_HALF_SIZE = SNAPSHOT_CELL_SIZE * 0.5
-        private const val BLOCKER_SEARCH_RADIUS = 7.0
-        private const val BLOCKER_SEARCH_RADIUS_SQR =
-            BLOCKER_SEARCH_RADIUS * BLOCKER_SEARCH_RADIUS
-        private const val LARGE_ENTITY_MINIMUM_WIDTH = 1.0f
-        private const val MAXIMUM_NEARBY_LARGE_ENTITIES = 8
-        private const val AGGREGATION_LOCAL_DENSITY_LIMIT = 100
-        private const val MINIMUM_DIRECT_THREAT_INTENSITY = 0.35
-        private const val MINIMUM_PROPAGATED_THREAT_INTENSITY = 0.01
-        private const val FISH_THREAT_PREDICTION_TICKS = 2.0
-        private const val THREAT_PREDICTION_TICKS = 5.0
-        private const val MINIMUM_ESCAPE_VECTOR_LENGTH = 1.0E-4
-        private const val MINIMUM_MOVING_THREAT_SPEED = 0.025
-        private const val MOVING_THREAT_LATERAL_SPLIT_WEIGHT = 0.65
-        private const val CLEANUP_INTERVAL_TICKS = 200L
-        private const val STATE_RETENTION_TICKS = 400L
-        private const val SETTINGS_REFRESH_INTERVAL_TICKS = 20L
-        private const val DEBUG_SUMMARY_INTERVAL_TICKS = 100L
-
-        fun forLevel(level: ServerLevel): FishCollectiveManager {
-            return MANAGERS_BY_LEVEL.getOrPut(level) { FishCollectiveManager(level) }
-        }
-
-        fun releaseLevel(level: ServerLevel) {
-            MANAGERS_BY_LEVEL.remove(level)
-        }
-
-        fun isSupportedFish(fish: AbstractFish): Boolean {
-            return fish.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_MEMBERS)
         }
     }
 }

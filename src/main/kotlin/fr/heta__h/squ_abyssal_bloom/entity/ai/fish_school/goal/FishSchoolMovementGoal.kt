@@ -116,8 +116,6 @@ class FishSchoolMovementGoal(
             nextVelocity.z
         )
 
-        // FishMoveControl adds buoyancy later in the same tick. Compensating it here
-        // prevents a persistent upward drift while this goal owns movement.
         val pendingVanillaBuoyancy = if (fish.isEyeInFluid(FluidTags.WATER)) {
             VANILLA_FISH_BUOYANCY
         } else {

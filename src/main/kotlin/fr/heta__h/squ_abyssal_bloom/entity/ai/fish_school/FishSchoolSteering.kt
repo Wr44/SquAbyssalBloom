@@ -16,6 +16,70 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 object FishSchoolSteering {
+
+    private val HORIZONTAL_PROBE_DISTANCES = doubleArrayOf(0.7, 1.25, 1.85)
+    private val ALTERNATIVE_PROBE_ANGLES = doubleArrayOf(
+        PI / 7.2,
+        PI / 4.0,
+        PI / 2.4
+    )
+
+    private const val MINIMUM_DIRECTION_LENGTH_SQR = 1.0E-10
+    private const val COLLISION_PREDICTION_TICKS = 3.0
+    private const val ENTITY_COLLISION_PREDICTION_TICKS = 2.0
+    private const val SEPARATION_RADIUS_SQR = 5.0625
+    private const val MINIMUM_SEPARATION_DISTANCE_SQR = 0.09
+    private const val MAXIMUM_SEPARATION_FORCE = 2.4
+    private const val ALIGNMENT_VERTICAL_SCALE = 3.0
+    private const val MAXIMUM_LOCAL_VERTICAL_ERROR = 1.0
+    private const val COHESION_FULL_STRENGTH_DISTANCE = 3.0
+    private const val MAXIMUM_ENVIRONMENTAL_INFLUENCE = 2.0
+    private const val BASE_NOISE_WEIGHT = 0.14
+    private const val MAXIMUM_SWIM_WIGGLE_ANGLE = PI / 8.0
+    private const val NOISE_DENSITY_REDUCTION_PER_NEIGHBOR = 0.08
+    private const val MINIMUM_DENSITY_NOISE_FACTOR = 0.5
+    private const val AMBIENT_WANDER_WEIGHT = 0.16
+    private const val PANIC_AMBIENT_WANDER_REDUCTION = 0.9
+    private const val AMBIENT_WANDER_SPATIAL_FREQUENCY = 0.025
+    private const val AMBIENT_WANDER_X_TIME_FREQUENCY = 0.0023
+    private const val AMBIENT_WANDER_Z_TIME_FREQUENCY = 0.0017
+    private const val AMBIENT_WANDER_PHASE_OFFSET = PI / 3.0
+    private const val AMBIENT_VERTICAL_SPATIAL_FREQUENCY = 0.02
+    private const val AMBIENT_VERTICAL_TIME_FREQUENCY = 0.006
+    private const val AMBIENT_VERTICAL_PHASE_OFFSET = PI / 5.0
+    private const val AGGREGATION_COHESION_SCALE = 0.65
+    private const val PANIC_AGGREGATION_REDUCTION = 0.5
+    private const val MINIMUM_AGGREGATION_STRENGTH = 0.25
+    private const val MINIMUM_AGGREGATION_DISTANCE = 1.0E-4
+    private const val PANIC_NOISE_REDUCTION = 0.9
+    private const val PANIC_ALIGNMENT_INCREASE = 0.45
+    private const val HERD_COMPRESSION = 0.6
+    private const val AVOIDANCE_ALIGNMENT_REDUCTION = 0.75
+    private const val DIRECT_THREAT_ALIGNMENT_FACTOR = 0.45
+    private const val NORMAL_CRUISING_SPEED_FACTOR = 0.72
+    private const val OBSTACLE_SPEED_REDUCTION = 0.18
+    private const val SOCIAL_VERTICAL_FORCE_SCALE = 0.1
+    private const val MAXIMUM_SOCIAL_VERTICAL_SPEED = 0.012
+    private const val VERTICAL_MOMENTUM_RETENTION = 0.65
+    private const val MAXIMUM_VERTICAL_SPEED = 0.028
+    private const val LARGE_ENTITY_CLEARANCE = 0.8
+    private const val LARGE_ENTITY_ANTICIPATION_DISTANCE = 1.5
+    private const val MINIMUM_ENTITY_DISTANCE = 0.25
+    private const val MAXIMUM_ENTITY_AVOIDANCE = 1.8
+    private const val CURRENT_DIRECTION_PROBE_WEIGHT = 0.75
+    private const val INTENDED_DIRECTION_PROBE_WEIGHT = 0.25
+    private const val PROBE_TURN_PENALTY = 0.08
+    private const val BLOCKED_REVERSE_WEIGHT = 0.55
+    private const val VERTICAL_PROBE_FORWARD_DISTANCE = 0.65
+    private const val DOWNWARD_COLLISION_PROBE = 0.28
+    private const val UPWARD_COLLISION_PROBE = 0.35
+    private const val FLOOR_FLUID_PROBE_DISTANCE = 0.35
+    private const val SURFACE_FLUID_PROBE_DISTANCE = 0.55
+    private const val FLOOR_VERTICAL_CORRECTION = 0.055
+    private const val CEILING_VERTICAL_CORRECTION = 0.065
+    private const val SURFACE_VERTICAL_CORRECTION = 0.075
+    private const val MAXIMUM_VERTICAL_AVOIDANCE = 0.1
+
     fun calculateDesiredVelocity(
         level: ServerLevel,
         state: FishCollectiveState,
@@ -36,6 +100,8 @@ object FishSchoolSteering {
         var cohesionX = 0.0
         var cohesionY = 0.0
         var cohesionZ = 0.0
+
+
 
         val predictedFishX = fish.x + currentVelocity.x * COLLISION_PREDICTION_TICKS
         val predictedFishY = fish.y + currentVelocity.y * COLLISION_PREDICTION_TICKS
@@ -533,67 +599,4 @@ object FishSchoolSteering {
         if (lengthSqr <= maximumLength * maximumLength) return vector
         return vector.scale(maximumLength / sqrt(lengthSqr))
     }
-
-    private val HORIZONTAL_PROBE_DISTANCES = doubleArrayOf(0.7, 1.25, 1.85)
-    private val ALTERNATIVE_PROBE_ANGLES = doubleArrayOf(
-        PI / 7.2,
-        PI / 4.0,
-        PI / 2.4
-    )
-
-    private const val MINIMUM_DIRECTION_LENGTH_SQR = 1.0E-10
-    private const val COLLISION_PREDICTION_TICKS = 3.0
-    private const val ENTITY_COLLISION_PREDICTION_TICKS = 2.0
-    private const val SEPARATION_RADIUS_SQR = 5.0625
-    private const val MINIMUM_SEPARATION_DISTANCE_SQR = 0.09
-    private const val MAXIMUM_SEPARATION_FORCE = 2.4
-    private const val ALIGNMENT_VERTICAL_SCALE = 3.0
-    private const val MAXIMUM_LOCAL_VERTICAL_ERROR = 1.0
-    private const val COHESION_FULL_STRENGTH_DISTANCE = 3.0
-    private const val MAXIMUM_ENVIRONMENTAL_INFLUENCE = 2.0
-    private const val BASE_NOISE_WEIGHT = 0.14
-    private const val MAXIMUM_SWIM_WIGGLE_ANGLE = PI / 8.0
-    private const val NOISE_DENSITY_REDUCTION_PER_NEIGHBOR = 0.08
-    private const val MINIMUM_DENSITY_NOISE_FACTOR = 0.5
-    private const val AMBIENT_WANDER_WEIGHT = 0.16
-    private const val PANIC_AMBIENT_WANDER_REDUCTION = 0.9
-    private const val AMBIENT_WANDER_SPATIAL_FREQUENCY = 0.025
-    private const val AMBIENT_WANDER_X_TIME_FREQUENCY = 0.0023
-    private const val AMBIENT_WANDER_Z_TIME_FREQUENCY = 0.0017
-    private const val AMBIENT_WANDER_PHASE_OFFSET = PI / 3.0
-    private const val AMBIENT_VERTICAL_SPATIAL_FREQUENCY = 0.02
-    private const val AMBIENT_VERTICAL_TIME_FREQUENCY = 0.006
-    private const val AMBIENT_VERTICAL_PHASE_OFFSET = PI / 5.0
-    private const val AGGREGATION_COHESION_SCALE = 0.65
-    private const val PANIC_AGGREGATION_REDUCTION = 0.5
-    private const val MINIMUM_AGGREGATION_STRENGTH = 0.25
-    private const val MINIMUM_AGGREGATION_DISTANCE = 1.0E-4
-    private const val PANIC_NOISE_REDUCTION = 0.9
-    private const val PANIC_ALIGNMENT_INCREASE = 0.45
-    private const val HERD_COMPRESSION = 0.6
-    private const val AVOIDANCE_ALIGNMENT_REDUCTION = 0.75
-    private const val DIRECT_THREAT_ALIGNMENT_FACTOR = 0.45
-    private const val NORMAL_CRUISING_SPEED_FACTOR = 0.72
-    private const val OBSTACLE_SPEED_REDUCTION = 0.18
-    private const val SOCIAL_VERTICAL_FORCE_SCALE = 0.1
-    private const val MAXIMUM_SOCIAL_VERTICAL_SPEED = 0.012
-    private const val VERTICAL_MOMENTUM_RETENTION = 0.65
-    private const val MAXIMUM_VERTICAL_SPEED = 0.028
-    private const val LARGE_ENTITY_CLEARANCE = 0.8
-    private const val LARGE_ENTITY_ANTICIPATION_DISTANCE = 1.5
-    private const val MINIMUM_ENTITY_DISTANCE = 0.25
-    private const val MAXIMUM_ENTITY_AVOIDANCE = 1.8
-    private const val CURRENT_DIRECTION_PROBE_WEIGHT = 0.75
-    private const val INTENDED_DIRECTION_PROBE_WEIGHT = 0.25
-    private const val PROBE_TURN_PENALTY = 0.08
-    private const val BLOCKED_REVERSE_WEIGHT = 0.55
-    private const val VERTICAL_PROBE_FORWARD_DISTANCE = 0.65
-    private const val DOWNWARD_COLLISION_PROBE = 0.28
-    private const val UPWARD_COLLISION_PROBE = 0.35
-    private const val FLOOR_FLUID_PROBE_DISTANCE = 0.35
-    private const val SURFACE_FLUID_PROBE_DISTANCE = 0.55
-    private const val FLOOR_VERTICAL_CORRECTION = 0.055
-    private const val CEILING_VERTICAL_CORRECTION = 0.065
-    private const val SURFACE_VERTICAL_CORRECTION = 0.075
-    private const val MAXIMUM_VERTICAL_AVOIDANCE = 0.1
 }

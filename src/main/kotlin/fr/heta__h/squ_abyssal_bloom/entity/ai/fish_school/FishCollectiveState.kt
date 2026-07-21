@@ -12,6 +12,20 @@ import kotlin.math.sin
 class FishCollectiveState(
     val fish: AbstractFish
 ) {
+
+    companion object {
+        const val PHASE_MASK = 0xFFFFL
+        const val MINIMUM_DIRECTION_LENGTH_SQR = 1.0E-10
+        const val MINIMUM_THREAT_SIGNAL = 1.0E-3
+        const val MAXIMUM_NOISE_VERTICAL_COMPONENT = 0.14
+        const val MINIMUM_NOISE_LIFETIME_TICKS = 20
+        const val NOISE_LIFETIME_VARIATION_TICKS = 21
+        const val MAXIMUM_NOISE_TURN_PER_REFRESH = PI / 3.0
+        const val INDIVIDUAL_SPEED_VARIATION = 0.1
+        const val MINIMUM_WIGGLE_PERIOD_TICKS = 26.0
+        const val WIGGLE_PERIOD_VARIATION_TICKS = 8.0
+    }
+
     val neighbors: MutableList<AbstractFish> = ArrayList()
     val influences: MutableList<FishSchoolInfluence> = ArrayList()
     val nearbyLargeEntities: MutableList<LivingEntity> = ArrayList()
@@ -211,18 +225,5 @@ class FishCollectiveState(
         if (horizontalLengthSqr <= MINIMUM_DIRECTION_LENGTH_SQR) return Vec3.ZERO
         val inverseLength = 1.0 / kotlin.math.sqrt(horizontalLengthSqr)
         return Vec3(vector.x * inverseLength, 0.0, vector.z * inverseLength)
-    }
-
-    private companion object {
-        const val PHASE_MASK = 0xFFFFL
-        const val MINIMUM_DIRECTION_LENGTH_SQR = 1.0E-10
-        const val MINIMUM_THREAT_SIGNAL = 1.0E-3
-        const val MAXIMUM_NOISE_VERTICAL_COMPONENT = 0.14
-        const val MINIMUM_NOISE_LIFETIME_TICKS = 20
-        const val NOISE_LIFETIME_VARIATION_TICKS = 21
-        const val MAXIMUM_NOISE_TURN_PER_REFRESH = PI / 3.0
-        const val INDIVIDUAL_SPEED_VARIATION = 0.1
-        const val MINIMUM_WIGGLE_PERIOD_TICKS = 26.0
-        const val WIGGLE_PERIOD_VARIATION_TICKS = 8.0
     }
 }
