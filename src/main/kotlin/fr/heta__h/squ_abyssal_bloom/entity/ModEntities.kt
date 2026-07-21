@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineModel
@@ -14,6 +15,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRe
 import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.BabyRedSlobbererModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererRenderer
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererSpawnPlacement
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
@@ -246,6 +248,20 @@ object ModEntities {
             ::checkBarnacleSpawn,
             RegisterSpawnPlacementsEvent.Operation.REPLACE
         )
+        event.register(
+            BRINE.get(),
+            SpawnPlacementTypes.IN_WATER,
+            Heightmap.Types.OCEAN_FLOOR,
+            ::checkBrineSpawn,
+            RegisterSpawnPlacementsEvent.Operation.REPLACE
+        )
+        event.register(
+            RED_SLOBBERER.get(),
+            RedSlobbererSpawnPlacement,
+            Heightmap.Types.OCEAN_FLOOR,
+            ::checkRedSlobbererSpawn,
+            RegisterSpawnPlacementsEvent.Operation.REPLACE
+        )
     }
 
     private fun checkBarnacleSpawn(
@@ -255,6 +271,29 @@ object ModEntities {
         pos: BlockPos,
         random: RandomSource
     ): Boolean {
-        return pos.y <= 24 && level.getFluidState(pos).`is`(FluidTags.WATER)
+        return pos.y <= ModServerConfig.BARNACLE_SPAWN_MAX_Y.get() &&
+            level.getFluidState(pos).`is`(FluidTags.WATER)
+    }
+
+    private fun checkBrineSpawn(
+        entityType: EntityType<BrineEntity>,
+        level: ServerLevelAccessor,
+        reason: EntitySpawnReason,
+        pos: BlockPos,
+        random: RandomSource
+    ): Boolean {
+        return ModServerConfig.BRINE_NATURAL_SPAWNING.get() &&
+            pos.y <= ModServerConfig.BRINE_SPAWN_MAX_Y.get() &&
+            level.getFluidState(pos).`is`(FluidTags.WATER)
+    }
+
+    private fun checkRedSlobbererSpawn(
+        entityType: EntityType<RedSlobbererEntity>,
+        level: ServerLevelAccessor,
+        reason: EntitySpawnReason,
+        pos: BlockPos,
+        random: RandomSource
+    ): Boolean {
+        return RedSlobbererSpawnPlacement.isSpawnPositionOk(level, pos, entityType)
     }
 }

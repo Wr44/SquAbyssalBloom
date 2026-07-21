@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import net.minecraft.world.entity.ai.control.MoveControl
 import net.minecraft.world.phys.Vec3
 import kotlin.math.PI
@@ -72,7 +73,11 @@ class BarnacleMoveControl(private val barnacle: BarnacleEntity) : MoveControl(ba
             // turn is still sharp also prevents a smoothed heading from driving into it.
             val waypointSpeedLimit = requestedDirection.length() * WAYPOINT_APPROACH_FACTOR
             val turnAlignment = direction.dot(desiredDirection).coerceIn(0.0, 1.0)
-            appliedSpeed = minOf(requestedSpeed, MAX_PATH_SPEED, waypointSpeedLimit) * turnAlignment
+            appliedSpeed = minOf(
+                requestedSpeed,
+                ModServerConfig.BARNACLE_OBSTACLE_AVOIDANCE_SPEED.get(),
+                waypointSpeedLimit
+            ) * turnAlignment
         } else {
             direction = desiredDirection
             steeringDirection = direction
@@ -147,7 +152,6 @@ class BarnacleMoveControl(private val barnacle: BarnacleEntity) : MoveControl(ba
     }
 
     private companion object {
-        const val MAX_PATH_SPEED = 1.0
         const val WAYPOINT_APPROACH_FACTOR = 0.5
         val MAX_PATH_TURN_SPEED_RADIANS: Double = Math.toRadians(8.0)
         val PATH_TURN_ACCELERATION_RADIANS: Double = Math.toRadians(1.5)

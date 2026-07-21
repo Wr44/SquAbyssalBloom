@@ -14,30 +14,30 @@ class BrineColumnAttackBehaviorGoal(private val brine: BrineEntity) : Goal() {
     override fun canUse(): Boolean {
         val target = brine.target ?: return false
         return brine.isInWater &&
-            brine.xzDistToSqr(target) <= BrineEntity.ATTACK_ENTER_RADIUS_SQR &&
+            brine.xzDistToSqr(target) <= brine.attackEnterRadiusSqr &&
             target.y - brine.y > BrineEntity.COLUMN_VS_DIRECT_Y_THRESHOLD
     }
 
     override fun canContinueToUse(): Boolean {
         val target = brine.target ?: return false
         return brine.isInWater &&
-            brine.xzDistToSqr(target) <= BrineEntity.ATTACK_EXIT_RADIUS_SQR &&
+            brine.xzDistToSqr(target) <= brine.attackExitRadiusSqr &&
             target.y - brine.y > BrineEntity.COLUMN_VS_DIRECT_Y_THRESHOLD
     }
 
     override fun requiresUpdateEveryTick() = true
 
     override fun start() {
-        bubbleCooldown = BrineEntity.COLUMN_BUBBLE_COOLDOWN_TICKS
+        bubbleCooldown = brine.columnAttackCooldown
     }
 
     override fun tick() {
         if (bubbleCooldown > 0) bubbleCooldown--
         val target = brine.target ?: return
-        brine.moveToPlayerBlock(target, brine.xzDistTo(target), BrineEntity.ATTACK_MOVE_SPEED)
+        brine.moveToPlayerBlock(target, brine.xzDistTo(target), brine.attackMoveSpeed)
         brine.placeOrUpdateBubbleColumn()
         if (bubbleCooldown <= 0) {
-            bubbleCooldown = BrineEntity.COLUMN_BUBBLE_COOLDOWN_TICKS
+            bubbleCooldown = brine.columnAttackCooldown
             brine.fireColumnBubble()
         }
     }

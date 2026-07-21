@@ -16,14 +16,14 @@ class BrineDirectAttackBehaviorGoal(private val brine: BrineEntity) : Goal() {
     override fun canUse(): Boolean {
         val target = brine.target ?: return false
         return brine.isInWater &&
-            brine.xzDistToSqr(target) <= BrineEntity.ATTACK_ENTER_RADIUS_SQR &&
+            brine.xzDistToSqr(target) <= brine.attackEnterRadiusSqr &&
             target.y - brine.y <= BrineEntity.COLUMN_VS_DIRECT_Y_THRESHOLD
     }
 
     override fun canContinueToUse(): Boolean {
         val target = brine.target ?: return false
         if (!brine.isInWater) return false
-        if (brine.xzDistToSqr(target) > BrineEntity.ATTACK_EXIT_RADIUS_SQR &&
+        if (brine.xzDistToSqr(target) > brine.attackExitRadiusSqr &&
             exitTimer >= BrineEntity.DIRECT_EXIT_GRACE_TICKS
         ) return false
         if (target.y - brine.y > BrineEntity.COLUMN_VS_DIRECT_Y_THRESHOLD &&
@@ -35,7 +35,7 @@ class BrineDirectAttackBehaviorGoal(private val brine: BrineEntity) : Goal() {
     override fun requiresUpdateEveryTick() = true
 
     override fun start() {
-        bubbleCooldown = BrineEntity.DIRECT_BUBBLE_COOLDOWN_TICKS
+        bubbleCooldown = brine.directAttackCooldown
         exitTimer = 0
         verticalTransitionTimer = 0
     }
@@ -46,7 +46,7 @@ class BrineDirectAttackBehaviorGoal(private val brine: BrineEntity) : Goal() {
         val horizontalDistance = brine.xzDistTo(target)
         val verticalDistance = target.y - brine.y
 
-        if (horizontalDistance > BrineEntity.ATTACK_EXIT_RADIUS) {
+        if (horizontalDistance > brine.attackExitRadius) {
             exitTimer++
             verticalTransitionTimer = 0
             brine.behaviorPathController.stop()
@@ -61,9 +61,9 @@ class BrineDirectAttackBehaviorGoal(private val brine: BrineEntity) : Goal() {
         }
         verticalTransitionTimer = 0
 
-        brine.moveToPlayerBlock(target, horizontalDistance, BrineEntity.ATTACK_MOVE_SPEED)
+        brine.moveToPlayerBlock(target, horizontalDistance, brine.attackMoveSpeed)
         if (bubbleCooldown <= 0) {
-            bubbleCooldown = BrineEntity.DIRECT_BUBBLE_COOLDOWN_TICKS
+            bubbleCooldown = brine.directAttackCooldown
             brine.fireDirectBubble(target)
         }
     }

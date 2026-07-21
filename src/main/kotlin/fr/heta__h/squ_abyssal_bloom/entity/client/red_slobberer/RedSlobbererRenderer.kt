@@ -59,7 +59,7 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.setupRotations(state, poseStack, rotationYaw, partialTicks)
-        poseStack.mulPose(Axis.XP.rotationDegrees(-state.xRot))
+        poseStack.mulPose(Axis.XP.rotationDegrees(-state.climbPitch))
     }
 
     override fun extractRenderState(
@@ -70,6 +70,7 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
         super.extractRenderState(entity, state, partialTicks)
 
         state.isBaby = entity.isBaby
+        state.climbPitch = entity.getClimbVisualPitch(partialTicks)
 
         state.xRot = entity.getViewXRot(partialTicks)
         state.yRot = entity.getViewYRot(partialTicks)

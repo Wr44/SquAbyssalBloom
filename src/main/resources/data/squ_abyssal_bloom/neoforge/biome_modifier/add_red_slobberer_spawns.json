@@ -1,0 +1,10 @@
+{
+  "type": "neoforge:add_spawns",
+  "biomes": "squ_abyssal_bloom:blood_valley",
+  "spawners": {
+    "type": "squ_abyssal_bloom:red_slobberer",
+    "weight": 2,
+    "minCount": 2,
+    "maxCount": 4
+  }
+}

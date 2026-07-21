@@ -6,7 +6,6 @@ import net.minecraft.tags.FluidTags
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal
 import net.minecraft.world.phys.Vec3
 
-/** Selects nearby, collision-free water positions that are directly supported by terrain. */
 class RedSlobbererBottomStrollGoal(
     private val redSlobberer: RedSlobbererEntity,
     speedModifier: Double
@@ -26,7 +25,8 @@ class RedSlobbererBottomStrollGoal(
             candidate.set(targetX, currentY, targetZ)
             if (!level.isLoaded(candidate)) return@repeat
 
-            for (targetY in currentY + MAX_ASCENT downTo currentY - MAX_DESCENT) {
+            val maximumAscent = redSlobberer.maximumClimbHeight.toInt()
+            for (targetY in currentY + maximumAscent downTo currentY - MAX_DESCENT) {
                 candidate.setY(targetY)
                 if (!level.getFluidState(candidate).`is`(FluidTags.WATER)) continue
 
@@ -51,7 +51,6 @@ class RedSlobbererBottomStrollGoal(
     private companion object {
         const val POSITION_ATTEMPTS = 12
         const val HORIZONTAL_RADIUS = 10
-        const val MAX_ASCENT = 1
         const val MAX_DESCENT = 3
         const val MIN_DISTANCE_SQR = 4.0
     }

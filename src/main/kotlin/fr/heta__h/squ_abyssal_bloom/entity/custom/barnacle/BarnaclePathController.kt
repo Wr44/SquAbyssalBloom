@@ -1,9 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ai.navigation.PathRecalculationPolicy
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.hasCollisionFreeAquaticCorridor
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation
 import net.minecraft.world.phys.Vec3
 
 class BarnaclePathController(private val barnacle: BarnacleEntity) {
@@ -11,8 +13,10 @@ class BarnaclePathController(private val barnacle: BarnacleEntity) {
     private var pathing = false
     private var trackedTargetId = -1
     private var nextDirectCorridorCheckTick = Int.MIN_VALUE
+    private var appliedDetectionRange = Float.NaN
 
     fun moveToward(target: LivingEntity, speed: Double, fallbackDirection: Vec3) {
+        updateNavigationRangeIfNeeded()
         if (trackedTargetId != target.id) {
             trackedTargetId = target.id
             invalidatePath()
@@ -66,7 +70,7 @@ class BarnaclePathController(private val barnacle: BarnacleEntity) {
         if (
             pathing &&
             destinationLoaded &&
-            destinationDistanceSqr <= DIRECT_CORRIDOR_RELEASE_DISTANCE_SQR &&
+            destinationDistanceSqr <= directCorridorReleaseDistanceSqr() &&
             barnacle.tickCount >= nextDirectCorridorCheckTick
         ) {
             nextDirectCorridorCheckTick = barnacle.tickCount + DIRECT_CORRIDOR_CHECK_TICKS
@@ -107,6 +111,19 @@ class BarnaclePathController(private val barnacle: BarnacleEntity) {
     private val moveControl: BarnacleMoveControl
         get() = barnacle.moveControl as BarnacleMoveControl
 
+    private fun directCorridorReleaseDistanceSqr(): Double {
+        val distance = ModServerConfig.BARNACLE_DIRECT_CORRIDOR_DISTANCE.get()
+        return distance * distance
+    }
+
+    private fun updateNavigationRangeIfNeeded() {
+        val detectionRange = barnacle.detectionRange.toFloat()
+        if (detectionRange == appliedDetectionRange) return
+        (barnacle.navigation as? WaterBoundPathNavigation)?.setRequiredPathLength(detectionRange)
+        appliedDetectionRange = detectionRange
+        refreshPolicy.invalidate()
+    }
+
     private companion object {
         const val PATH_RECALCULATION_TICKS = 10
         const val TARGET_MOVE_THRESHOLD_SQR = 2.25
@@ -114,6 +131,5 @@ class BarnaclePathController(private val barnacle: BarnacleEntity) {
         const val IDLE_PATH_DISTANCE = 10.0
         const val NAVIGATION_SPEED = 1.0
         const val DIRECT_CORRIDOR_CHECK_TICKS = 3
-        const val DIRECT_CORRIDOR_RELEASE_DISTANCE_SQR = 36.0
     }
 }

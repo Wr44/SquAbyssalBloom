@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle
 
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnacleFleeBehaviorGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnacleGoalPriorities
@@ -60,9 +61,19 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     val behaviorPathController = BarnaclePathController(this)
 
     val myTarget: LivingEntity?
-        get() = targetWithin(DEFAULT_TARGET_RADIUS)
+        get() = targetWithin(captureDistance)
     val trackedTarget: LivingEntity?
-        get() = targetWithin(SWIM_TARGET_RADIUS)
+        get() = targetWithin(detectionRange)
+    val captureDistance: Double
+        get() = ModServerConfig.BARNACLE_CAPTURE_DISTANCE.get()
+    val detectionRange: Double
+        get() = ModServerConfig.BARNACLE_DETECTION_RANGE.get()
+    val holdDistance: Double
+        get() = ModServerConfig.BARNACLE_HOLD_DISTANCE.get()
+    val pursuitSpeed: Float
+        get() = ModServerConfig.BARNACLE_MOVEMENT_SPEED.get().toFloat()
+    val fleeSpeed: Float
+        get() = ModServerConfig.BARNACLE_FLEE_SPEED.get().toFloat()
     val isHoldingTarget: Boolean
         get() = entityData.get(MOUTH_OPEN) || entityData.get(IS_SWALLOWING)
     private val healthRatio: Float
@@ -86,14 +97,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     companion object {
         // BASE STATS
+        private const val DEFAULT_FOLLOW_RANGE_ATTRIBUTE = 55.0
         const val XP_REWARD = 15
         const val CRITICAL_HEALTH_RATIO = 0.25f
-        const val REGEN_COOLDOWN_TICKS = 100
         const val REGEN_HEAL_AMOUNT = 1.0f
         const val MAX_AIR_TICKS = 200
         const val DROWN_DAMAGE = 2.0f
         const val TARGET_SCAN_INTERVAL_TICKS = 5
-        const val DEFAULT_TARGET_RADIUS = 5.5
 
         // FLOP
         const val FLOP_DELAY_TICKS = 20
@@ -113,7 +123,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         // FLEE
         const val FLEE_ANIM_FPS = 20.0
         const val FLEE_RADIUS = 17.0
-        const val FLEE_MAX_SPEED = 3.0f
         const val FLEE_SPEED_K = 3.0f
         const val FLEE_JITTER_OFFSET = 0.15
         const val FLEE_JITTER_SCALE = 0.2
@@ -124,7 +133,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val SWALLOW_STOP_FPS = 21.0
         const val SWALLOW_FPS = 20.0
         const val ATTACK_START_DIST = 4.5
-        const val ATTACK_HOLD_DIST = 1.5
         const val SWALLOW_DAMAGE = 3f
         const val SPIT_ITEM_DELAY_TICKS = 3
         const val SPIT_OFFSET_FWD = 1.2
@@ -143,8 +151,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
         // SWIM
         const val SWIM_ANIM_FPS = 22.0
-        const val SWIM_TARGET_RADIUS = 55.0
-        const val SWIM_MAX_SPEED = 2.0f
         const val SWIM_SPEED_K = 2.5f
 
         // IDLE
@@ -195,7 +201,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
                 .add(Attributes.ATTACK_DAMAGE, SWALLOW_DAMAGE.toDouble())
                 .add(Attributes.MOVEMENT_SPEED, 0.25)
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0)
-                .add(Attributes.FOLLOW_RANGE, SWIM_TARGET_RADIUS)
+                .add(Attributes.FOLLOW_RANGE, DEFAULT_FOLLOW_RANGE_ATTRIBUTE)
     }
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
@@ -225,7 +231,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     override fun createNavigation(level: Level): PathNavigation =
         WaterBoundPathNavigation(this, level).apply {
-            setRequiredPathLength(SWIM_TARGET_RADIUS.toFloat())
+            setRequiredPathLength(detectionRange.toFloat())
         }
 
     override fun tick() {
@@ -407,10 +413,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             timeExposedInAir = 0
             airSupply = maxAirSupply
 
-            val notInCombat = lastHurtByMobTimestamp + REGEN_COOLDOWN_TICKS < tickCount
+            val regenCooldownTicks = ModServerConfig.BARNACLE_REGEN_COOLDOWN.get()
+            val notInCombat = lastHurtByMobTimestamp + regenCooldownTicks < tickCount
             if (notInCombat && health < maxHealth) {
                 regenCooldown++
-                if (regenCooldown >= REGEN_COOLDOWN_TICKS) {
+                if (regenCooldown >= regenCooldownTicks) {
                     heal(REGEN_HEAL_AMOUNT)
                     regenCooldown = 0
                 }
@@ -677,4 +684,5 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             stomach.addAll(items)
         }
     }
+
 }

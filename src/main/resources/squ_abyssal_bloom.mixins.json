@@ -11,6 +11,8 @@
     "block.conduit.PlayerSwimPoseMixin",
 
     "entity.guardian.GuardianMixin",
+    "entity.fish_school.AbstractFishSchoolMixin",
+    "entity.fish_school.FollowFlockLeaderGoalMixin",
     "entity.nautilus.NautilusMenuMixin",
 
     "entity.nautilus.NautilusMountMenuShiftClickMixin",

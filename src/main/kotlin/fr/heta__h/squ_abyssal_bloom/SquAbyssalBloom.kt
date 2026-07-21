@@ -1,20 +1,24 @@
 package fr.heta__h.squ_abyssal_bloom
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.effect.ModPotions
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
+import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.FishCollectiveManager
+import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceRegistry
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererFishInfluenceProvider
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
-import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
-import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
-import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.feature.ModFeatures
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanTerritory
+import net.minecraft.server.level.ServerLevel
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.fml.common.Mod
@@ -25,6 +29,7 @@ import net.neoforged.fml.event.config.ModConfigEvent
 import net.neoforged.neoforge.event.brewing.RegisterBrewingRecipesEvent
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
+import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -52,6 +57,7 @@ object SquAbyssalBloom {
         ModCreativeModeTabs.register(MOD_BUS)
         ModParticles.register(MOD_BUS)
         ModDataComponents.register(MOD_BUS)
+        FishSchoolInfluenceRegistry.register(RedSlobbererFishInfluenceProvider())
 
         MOD_BUS.addListener(ModBiomes::registerRegions)
 
@@ -107,5 +113,11 @@ object SquAbyssalBloom {
     @SubscribeEvent
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
         OceanTerritory.seed(event.server.worldGenSettings.options().seed(), ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS.get())
+    }
+
+    @SubscribeEvent
+    fun onLevelUnload(event: LevelEvent.Unload) {
+        val serverLevel = event.level as? ServerLevel ?: return
+        FishCollectiveManager.releaseLevel(serverLevel)
     }
 }

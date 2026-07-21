@@ -89,7 +89,7 @@ class BarnaclePursueGoal(private val barnacle: BarnacleEntity) : Goal() {
         val speed = barnacle.barnacleSpeed(
             elapsed.toFloat(),
             rushDuration.toFloat(),
-            BarnacleEntity.SWIM_MAX_SPEED,
+            barnacle.pursuitSpeed,
             BarnacleEntity.SWIM_SPEED_K
         )
 

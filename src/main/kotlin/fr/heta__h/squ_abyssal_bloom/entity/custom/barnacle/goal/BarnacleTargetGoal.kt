@@ -19,7 +19,7 @@ class BarnacleTargetGoal(private val barnacle: BarnacleEntity) : TargetGoal(barn
         if (!barnacle.isUnderWater || barnacle.tickCount < nextScanTick) return false
         nextScanTick = barnacle.tickCount + BarnacleEntity.TARGET_SCAN_INTERVAL_TICKS
 
-        targetMob = BarnacleTargeting.findNearestTarget(barnacle, BarnacleEntity.SWIM_TARGET_RADIUS)
+        targetMob = BarnacleTargeting.findNearestTarget(barnacle, barnacle.detectionRange)
         return targetMob != null
     }
 
@@ -32,7 +32,7 @@ class BarnacleTargetGoal(private val barnacle: BarnacleEntity) : TargetGoal(barn
 
     override fun canContinueToUse(): Boolean {
         var current = barnacle.target ?: targetMob ?: return false
-        if (!BarnacleTargeting.isEligibleTarget(barnacle, current, BarnacleEntity.SWIM_TARGET_RADIUS)) return false
+        if (!BarnacleTargeting.isEligibleTarget(barnacle, current, barnacle.detectionRange)) return false
 
         if (barnacle.sensing.hasLineOfSight(current)) {
             lastSeenTick = barnacle.tickCount
@@ -45,7 +45,7 @@ class BarnacleTargetGoal(private val barnacle: BarnacleEntity) : TargetGoal(barn
             if (!BarnacleTargeting.isPreferredBarnacle(
                     barnacle,
                     current,
-                    BarnacleEntity.SWIM_TARGET_RADIUS
+                    barnacle.detectionRange
                 )
             ) {
                 return false

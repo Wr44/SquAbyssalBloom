@@ -109,7 +109,7 @@ class BarnacleFleeBehaviorGoal(private val barnacle: BarnacleEntity) : Goal() {
         val speed = barnacle.barnacleSpeed(
             elapsed.toFloat(),
             moveRushDuration.toFloat(),
-            BarnacleEntity.FLEE_MAX_SPEED,
+            barnacle.fleeSpeed,
             BarnacleEntity.FLEE_SPEED_K
         )
         barnacle.behaviorPathController.moveAway(direction, speed.toDouble())

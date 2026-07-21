@@ -57,16 +57,16 @@ class BarnacleSwallowGoal(private val barnacle: BarnacleEntity) : Goal() {
                     target.captureDrops(mutableListOf())
                     capturingDrops = true
                 }
-                barnacle.holdTarget(target, BarnacleEntity.ATTACK_HOLD_DIST)
+                barnacle.holdTarget(target, barnacle.holdDistance)
             } else {
                 val progress = elapsed.toDouble() / startDuration
                 val distance = BarnacleEntity.ATTACK_START_DIST +
-                    (BarnacleEntity.ATTACK_HOLD_DIST - BarnacleEntity.ATTACK_START_DIST) * progress
+                    (barnacle.holdDistance - BarnacleEntity.ATTACK_START_DIST) * progress
                 barnacle.holdTarget(target, distance)
             }
         } else {
             barnacle.deltaMovement = Vec3.ZERO
-            barnacle.holdTarget(target, BarnacleEntity.ATTACK_HOLD_DIST)
+            barnacle.holdTarget(target, barnacle.holdDistance)
             if (elapsed % ceil(swallowDuration / 2.0).toInt() == 0) {
                 target.hurtServer(
                     barnacle.level() as ServerLevel,

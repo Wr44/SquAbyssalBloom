@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.brine
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.block.brine_bubble_column.BrineBubbleColumnBlock
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
@@ -11,6 +12,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineFollowBehavior
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineGoalPriorities
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineHoverBehaviorGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineIdleBehaviorGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrinePlayerTargetGoal
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
@@ -26,11 +28,9 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal
-import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal
 import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation
 import net.minecraft.world.entity.ai.navigation.PathNavigation
 import net.minecraft.world.entity.monster.Monster
-import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.BubbleColumnBlock
@@ -64,6 +64,23 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     private var clientAnimPhase = CANIM_IDLE
     private var clientAnimTicks = 0
 
+    val followSpeed: Double
+        get() = ModServerConfig.BRINE_FOLLOW_SPEED.get()
+    val attackMoveSpeed: Double
+        get() = ModServerConfig.BRINE_ATTACK_SPEED.get()
+    val attackEnterRadius: Double
+        get() = ModServerConfig.BRINE_ATTACK_ENTER_RADIUS.get()
+    val attackEnterRadiusSqr: Double
+        get() = attackEnterRadius * attackEnterRadius
+    val attackExitRadius: Double
+        get() = ModServerConfig.BRINE_ATTACK_EXIT_RADIUS.get().coerceAtLeast(attackEnterRadius)
+    val attackExitRadiusSqr: Double
+        get() = attackExitRadius * attackExitRadius
+    val columnAttackCooldown: Int
+        get() = ModServerConfig.BRINE_COLUMN_ATTACK_COOLDOWN.get()
+    val directAttackCooldown: Int
+        get() = ModServerConfig.BRINE_DIRECT_ATTACK_COOLDOWN.get()
+
     init {
         moveControl = BrineMoveControl(this)
     }
@@ -86,7 +103,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val MAX_HEALTH = 15.0
         const val ATTACK_DAMAGE = 4.0
         const val MOVEMENT_SPEED = 0.25
-        const val FOLLOW_RANGE = 24.0
+        private const val DEFAULT_FOLLOW_RANGE_ATTRIBUTE = 24.0
 
         // Float
         const val FLOAT_SPEED = 0.25
@@ -113,15 +130,9 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val ROTATION_MOVING_THRESHOLD = 0.01
 
         // Move
-        const val SHADOW_SPEED = 0.20
-        const val ATTACK_MOVE_SPEED = SHADOW_SPEED * 0.5
         const val SHADOW_STOP_DIST = 0.15
 
         // Attack zones
-        const val ATTACK_ENTER_RADIUS = 2.0
-        const val ATTACK_ENTER_RADIUS_SQR = ATTACK_ENTER_RADIUS * ATTACK_ENTER_RADIUS
-        const val ATTACK_EXIT_RADIUS = 5.0
-        const val ATTACK_EXIT_RADIUS_SQR = ATTACK_EXIT_RADIUS * ATTACK_EXIT_RADIUS
         const val DIRECT_EXIT_GRACE_TICKS = 15
         const val DIRECT_Y_GRACE_TICKS = 15
 
@@ -131,8 +142,6 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         val CROSS_OFFSETS = listOf(0 to 0, 1 to 0, -1 to 0, 0 to 1, 0 to -1)
         const val BUBBLE_COLUMN_HEIGHT = 10
 
-        const val COLUMN_BUBBLE_COOLDOWN_TICKS = 20
-        const val DIRECT_BUBBLE_COOLDOWN_TICKS = 30
         const val BUBBLE_COLUMN_SPEED = 0.45
         const val DIRECT_SHOT_SPEED = 0.55
         const val DIRECT_SHOT_FRONT_OFFSET = 0.6
@@ -153,7 +162,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
                 .add(Attributes.ATTACK_DAMAGE, ATTACK_DAMAGE)
                 .add(Attributes.MOVEMENT_SPEED, MOVEMENT_SPEED)
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0)
-                .add(Attributes.FOLLOW_RANGE, FOLLOW_RANGE)
+                .add(Attributes.FOLLOW_RANGE, DEFAULT_FOLLOW_RANGE_ATTRIBUTE)
     }
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
@@ -170,7 +179,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         goalSelector.addGoal(BrineGoalPriorities.IDLE, BrineIdleBehaviorGoal(this))
 
         targetSelector.addGoal(0, HurtByTargetGoal(this))
-        targetSelector.addGoal(1, NearestAttackableTargetGoal(this, Player::class.java, true))
+        targetSelector.addGoal(1, BrinePlayerTargetGoal(this))
     }
 
     override fun createNavigation(level: Level): PathNavigation = AmphibiousPathNavigation(this, level)
