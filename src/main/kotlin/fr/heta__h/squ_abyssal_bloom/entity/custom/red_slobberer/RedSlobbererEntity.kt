@@ -8,6 +8,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbere
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererGrazeBloodSeagrassGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererBodyRotationControl
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererMoveControl
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererTerrainAlignment
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererGroupController
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefController
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
@@ -19,6 +20,7 @@ import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.FluidTags
 import net.minecraft.util.Mth
+import net.minecraft.util.Mth.lerp
 import net.minecraft.world.DifficultyInstance
 import net.minecraft.world.entity.AgeableMob
 import net.minecraft.world.entity.AnimationState
@@ -47,6 +49,7 @@ import net.minecraft.world.level.ServerLevelAccessor
 import net.minecraft.world.level.pathfinder.PathType
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
+import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
 
 class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(type, level) {
@@ -83,11 +86,13 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     val groupController = RedSlobbererGroupController(this)
     private val reefController = RedSlobbererReefController(this, groupController)
+    private val terrainAlignment = RedSlobbererTerrainAlignment(this)
 
     private var climbVisualPitch = 0.0f
     private var previousClimbVisualPitch = 0.0f
     private var activeLocomotionAnimation: LocomotionAnimation? = null
     private var nextLocomotionAnimationBoundaryTick = 0
+    private var isPathfinding = false
 
     var timeExposedInAir = 0
 
@@ -117,6 +122,21 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             WATER_GRAVITY
         } else {
             super.getDefaultGravity()
+        }
+    }
+
+    override fun moveRelative(speed: Float, input: Vec3) {
+        val movementController = moveControl as? RedSlobbererMoveControl
+        val tangentMovement = if (movementController?.followsTerrainTangent == true) {
+            terrainAlignment.createTangentMovement(input, speed, yRot)
+        } else {
+            null
+        }
+
+        if (tangentMovement == null) {
+            super.moveRelative(speed, input)
+        } else {
+            deltaMovement = deltaMovement.add(tangentMovement)
         }
     }
 
@@ -160,12 +180,23 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     val maximumClimbHeight: Double
         get() = if (isBaby) BABY_MAXIMUM_CLIMB_HEIGHT else ADULT_MAXIMUM_CLIMB_HEIGHT
 
+    override fun onPathfindingStart() {
+        super.onPathfindingStart()
+        isPathfinding = true
+    }
+
+    override fun onPathfindingDone() {
+        isPathfinding = false
+        super.onPathfindingDone()
+    }
+
     override fun maxUpStep(): Float {
-        val movementController = moveControl as? RedSlobbererMoveControl
-        return if (movementController?.preventsNativeStep == true) {
-            0.0f
-        } else {
+        // The pathfinder needs the full climb height to create elevated nodes. Exposing it while
+        // moving would also let Entity's generic collision code step onto side blocks and entities.
+        return if (isPathfinding) {
             maximumClimbHeight.toFloat()
+        } else {
+            0.0f
         }
     }
 
@@ -176,7 +207,11 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     fun getClimbVisualPitch(partialTick: Float): Float {
-        return Mth.lerp(partialTick, previousClimbVisualPitch, climbVisualPitch)
+        return lerp(partialTick, previousClimbVisualPitch, climbVisualPitch)
+    }
+
+    fun getTerrainNormal(partialTick: Float): Vec3 {
+        return terrainAlignment.getInterpolatedNormal(partialTick)
     }
 
     override fun tick() {
@@ -239,6 +274,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     override fun aiStep() {
+        terrainAlignment.tick()
         super.aiStep()
         val serverLevel = level() as? ServerLevel ?: return
 
@@ -306,7 +342,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
                     spawnReason == EntitySpawnReason.CHUNK_GENERATION
                 )
         ) {
-            AgeableMob.AgeableMobGroupData(true, NATURAL_FOLLOWER_BABY_SPAWN_CHANCE)
+            AgeableMobGroupData(true, NATURAL_FOLLOWER_BABY_SPAWN_CHANCE)
         } else {
             groupData
         }

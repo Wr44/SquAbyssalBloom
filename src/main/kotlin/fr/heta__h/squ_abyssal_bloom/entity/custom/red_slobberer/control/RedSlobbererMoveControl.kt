@@ -4,6 +4,9 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEnti
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.control.MoveControl
+import net.minecraft.world.level.ClipContext
+import net.minecraft.world.phys.HitResult
+import net.minecraft.world.phys.Vec3
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
@@ -20,6 +23,9 @@ class RedSlobbererMoveControl(
         const val REVERSE_DIRECTION_DOT_THRESHOLD = -0.35
         const val MIN_CLIMB_NODE_OFFSET = 0.3
         const val FORWARD_COLLISION_PROBE_DISTANCE = 0.45
+        const val FORWARD_COLLISION_PROBE_HEIGHT = 0.1
+        const val FORWARD_COLLISION_PROBE_HALF_WIDTH_FACTOR = 0.12
+        const val MAX_FORWARD_COLLISION_PROBE_HALF_WIDTH = 0.5
         const val CLIMB_CLEARANCE_STEP = 0.125
     }
 
@@ -32,6 +38,9 @@ class RedSlobbererMoveControl(
 
     val preventsNativeStep: Boolean
         get() = climbController.preventsNativeStep
+
+    val followsTerrainTangent: Boolean
+        get() = climbController.phase == RedSlobbererClimbPhase.NONE
 
     override fun tick() {
         if (operation == Operation.STRAFE) {
@@ -151,7 +160,16 @@ class RedSlobbererMoveControl(
     }
 
     private fun isObstacleAhead(directionX: Double, directionZ: Double): Boolean {
-        return !hasForwardClearance(directionX, directionZ, 0.0)
+        // Probe only the creature's central path. Its 4.25-block-wide body may brush a block that
+        // is beside the route, but that contact must not be interpreted as a wall to climb.
+        val halfProbeWidth = minOf(
+            redSlobberer.bbWidth * FORWARD_COLLISION_PROBE_HALF_WIDTH_FACTOR,
+            MAX_FORWARD_COLLISION_PROBE_HALF_WIDTH
+        )
+
+        return doubleArrayOf(-halfProbeWidth, 0.0, halfProbeWidth).any { lateralOffset ->
+            hasBlockAhead(directionX, directionZ, lateralOffset)
+        }
     }
 
     private fun findCollisionClimbTargetY(directionX: Double, directionZ: Double): Double? {
@@ -163,7 +181,7 @@ class RedSlobbererMoveControl(
                 heightStep * CLIMB_CLEARANCE_STEP,
                 redSlobberer.maximumClimbHeight
             )
-            if (hasForwardClearance(directionX, directionZ, lift)) {
+            if (hasFullBodyForwardClearance(directionX, directionZ, lift)) {
                 return redSlobberer.y + lift
             }
         }
@@ -171,7 +189,52 @@ class RedSlobbererMoveControl(
         return null
     }
 
-    private fun hasForwardClearance(directionX: Double, directionZ: Double, lift: Double): Boolean {
+    private fun hasBlockAhead(directionX: Double, directionZ: Double, lateralOffset: Double): Boolean {
+        val lateralX = -directionZ * lateralOffset
+        val lateralZ = directionX * lateralOffset
+        val distanceToEdge = distanceToBoundingBoxEdge(directionX, directionZ, lateralX, lateralZ)
+        if (!distanceToEdge.isFinite()) return false
+
+        val probeDistance = distanceToEdge + FORWARD_COLLISION_PROBE_DISTANCE
+        val from = Vec3(
+            redSlobberer.x + lateralX,
+            redSlobberer.boundingBox.minY + FORWARD_COLLISION_PROBE_HEIGHT,
+            redSlobberer.z + lateralZ
+        )
+        val to = from.add(directionX * probeDistance, 0.0, directionZ * probeDistance)
+        val hitResult = redSlobberer.level().clip(
+            ClipContext(
+                from,
+                to,
+                ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE,
+                redSlobberer
+            )
+        )
+        return hitResult.type != HitResult.Type.MISS
+    }
+
+    private fun distanceToBoundingBoxEdge(
+        directionX: Double,
+        directionZ: Double,
+        offsetX: Double,
+        offsetZ: Double
+    ): Double {
+        val halfWidth = redSlobberer.bbWidth * 0.5
+        val distanceToXEdge = when {
+            directionX > 0.0 -> (halfWidth - offsetX) / directionX
+            directionX < 0.0 -> (-halfWidth - offsetX) / directionX
+            else -> Double.POSITIVE_INFINITY
+        }
+        val distanceToZEdge = when {
+            directionZ > 0.0 -> (halfWidth - offsetZ) / directionZ
+            directionZ < 0.0 -> (-halfWidth - offsetZ) / directionZ
+            else -> Double.POSITIVE_INFINITY
+        }
+        return minOf(distanceToXEdge, distanceToZEdge)
+    }
+
+    private fun hasFullBodyForwardClearance(directionX: Double, directionZ: Double, lift: Double): Boolean {
         val probeX = directionX * FORWARD_COLLISION_PROBE_DISTANCE
         val probeZ = directionZ * FORWARD_COLLISION_PROBE_DISTANCE
         return redSlobberer.level().noBlockCollision(

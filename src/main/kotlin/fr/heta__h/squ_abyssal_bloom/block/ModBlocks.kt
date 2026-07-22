@@ -98,6 +98,7 @@ object ModBlocks {
             props.mapColor(MapColor.COLOR_RED)
                 .strength(0.6f, 3.0f)
                 .sound(SoundType.CORAL_BLOCK)
+                .lightLevel { _ -> 4 }
         )
     }
 

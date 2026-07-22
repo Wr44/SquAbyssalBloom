@@ -10,6 +10,11 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.MobRenderer
 import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.resources.Identifier
+import kotlin.math.PI
+import kotlin.math.asin
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
 
 class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
     MobRenderer<RedSlobbererEntity, RedSlobbererRenderState, EntityModel<RedSlobbererRenderState>>(
@@ -59,7 +64,8 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.setupRotations(state, poseStack, rotationYaw, partialTicks)
-        poseStack.mulPose(Axis.XP.rotationDegrees(-state.climbPitch))
+        poseStack.mulPose(Axis.XP.rotationDegrees(state.terrainPitch - state.climbPitch))
+        poseStack.mulPose(Axis.ZP.rotationDegrees(state.terrainRoll))
     }
 
     override fun extractRenderState(
@@ -71,6 +77,15 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
 
         state.isBaby = entity.isBaby
         state.climbPitch = entity.getClimbVisualPitch(partialTicks)
+
+        val terrainNormal = entity.getTerrainNormal(partialTicks)
+        val renderYawRadians = (180.0 - state.bodyRot) * PI / 180.0
+        val yawCos = cos(renderYawRadians)
+        val yawSin = sin(renderYawRadians)
+        val localNormalX = yawCos * terrainNormal.x - yawSin * terrainNormal.z
+        val localNormalZ = yawSin * terrainNormal.x + yawCos * terrainNormal.z
+        state.terrainPitch = (atan2(localNormalZ, terrainNormal.y) * 180.0 / PI).toFloat()
+        state.terrainRoll = (-asin(localNormalX.coerceIn(-1.0, 1.0)) * 180.0 / PI).toFloat()
 
         state.xRot = entity.getViewXRot(partialTicks)
         state.yRot = entity.getViewYRot(partialTicks)
