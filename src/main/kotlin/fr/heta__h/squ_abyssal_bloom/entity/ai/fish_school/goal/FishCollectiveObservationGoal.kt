@@ -22,7 +22,6 @@ class FishCollectiveObservationGoal(
     private fun canObserve(): Boolean {
         return fish.level() is ServerLevel &&
             fish.isAlive &&
-            fish.isInWater &&
-            FishCollectiveManager.isSupportedFish(fish)
+            fish.isInWater
     }
 }

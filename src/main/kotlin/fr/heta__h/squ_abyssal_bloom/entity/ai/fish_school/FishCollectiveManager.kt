@@ -1,7 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceRegistry
-import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.LivingEntity
@@ -51,10 +50,6 @@ class FishCollectiveManager private constructor(
 
         fun releaseLevel(level: ServerLevel) {
             MANAGERS_BY_LEVEL.remove(level)
-        }
-
-        fun isSupportedFish(fish: AbstractFish): Boolean {
-            return fish.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_MEMBERS)
         }
     }
 
@@ -131,8 +126,7 @@ class FishCollectiveManager private constructor(
         if (
             fish.level() !== level ||
             !fish.isAlive ||
-            !fish.isInWater ||
-            !isSupportedFish(fish)
+            !fish.isInWater
         ) {
             return null
         }
@@ -205,8 +199,7 @@ class FishCollectiveManager private constructor(
             if (
                 candidate === fish ||
                 !candidate.isAlive ||
-                !candidate.isInWater ||
-                !isSupportedFish(candidate)
+                !candidate.isInWater
             ) {
                 continue
             }
@@ -247,7 +240,6 @@ class FishCollectiveManager private constructor(
                 candidate === fish ||
                 !candidate.isAlive ||
                 !candidate.isInWater ||
-                !isSupportedFish(candidate) ||
                 statesByFish[candidate.uuid]?.collectiveActive != true
             ) {
                 continue

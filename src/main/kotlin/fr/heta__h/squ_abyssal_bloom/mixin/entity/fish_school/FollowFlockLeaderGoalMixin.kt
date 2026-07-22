@@ -41,7 +41,6 @@ abstract class FollowFlockLeaderGoalMixin {
 
     private fun usesCollectiveMovement(): Boolean {
         val serverLevel = mob.level() as? ServerLevel ?: return false
-        if (!FishCollectiveManager.isSupportedFish(mob)) return false
         return FishCollectiveManager.forLevel(serverLevel)
             .shouldUseCollectiveMovement(mob)
     }

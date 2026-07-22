@@ -10,16 +10,10 @@ import net.minecraft.world.level.biome.Biome
 
 object ModTags {
     object EntityTypes {
-        val FISH_SCHOOL_MEMBERS: TagKey<EntityType<*>> = TagKey.create(
-            Registries.ENTITY_TYPE,
-            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "fish_school_members")
-        )
-
         val FISH_SCHOOL_FRIENDLY: TagKey<EntityType<*>> = TagKey.create(
             Registries.ENTITY_TYPE,
             Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "fish_school_friendly")
         )
-
     }
 
     object Items {

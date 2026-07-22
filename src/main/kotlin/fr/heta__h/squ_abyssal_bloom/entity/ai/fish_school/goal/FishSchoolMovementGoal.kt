@@ -67,7 +67,6 @@ class FishSchoolMovementGoal(
     private fun canCollectivelySwim(): Boolean {
         return fish.isAlive &&
             fish.isInWater &&
-            FishCollectiveManager.isSupportedFish(fish) &&
             !isDefensivePufferfish()
     }
 
