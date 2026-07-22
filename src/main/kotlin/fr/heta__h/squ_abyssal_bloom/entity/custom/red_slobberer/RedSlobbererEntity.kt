@@ -19,12 +19,14 @@ import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.FluidTags
 import net.minecraft.util.Mth
+import net.minecraft.world.DifficultyInstance
 import net.minecraft.world.entity.AgeableMob
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntityDimensions
 import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.Pose
+import net.minecraft.world.entity.SpawnGroupData
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.ai.control.BodyRotationControl
@@ -41,6 +43,7 @@ import net.minecraft.world.item.crafting.Ingredient
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.LevelAccessor
 import net.minecraft.world.level.LevelReader
+import net.minecraft.world.level.ServerLevelAccessor
 import net.minecraft.world.level.pathfinder.PathType
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
@@ -51,6 +54,9 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     companion object {
         const val MAX_AIR_TICKS = 200
 
+        private const val BABY_START_AGE_TICKS = -72_000
+        // The first member is always an adult; 30% of the remaining 1-3 members gives about 20% babies overall.
+        private const val NATURAL_FOLLOWER_BABY_SPAWN_CHANCE = 0.30f
         private const val ADULT_MAXIMUM_CLIMB_HEIGHT = 2.0
         private const val BABY_MAXIMUM_CLIMB_HEIGHT = 1.5
         private const val MINIMUM_VISIBLE_CLIMB_PITCH = 0.1f
@@ -287,6 +293,28 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     override fun checkSpawnObstruction(level: LevelReader): Boolean {
         return level.noCollision(this) && level.isUnobstructed(this)
     }
+
+    override fun finalizeSpawn(
+        level: ServerLevelAccessor,
+        difficulty: DifficultyInstance,
+        spawnReason: EntitySpawnReason,
+        groupData: SpawnGroupData?
+    ): SpawnGroupData? {
+        val redSlobbererGroupData = if (
+            groupData == null && (
+                spawnReason == EntitySpawnReason.NATURAL ||
+                    spawnReason == EntitySpawnReason.CHUNK_GENERATION
+                )
+        ) {
+            AgeableMob.AgeableMobGroupData(true, NATURAL_FOLLOWER_BABY_SPAWN_CHANCE)
+        } else {
+            groupData
+        }
+
+        return super.finalizeSpawn(level, difficulty, spawnReason, redSlobbererGroupData)
+    }
+
+    override fun getBabyStartAge(): Int = BABY_START_AGE_TICKS
 
     override fun isFood(food: ItemStack): Boolean {
         return food.typeHolder().`is`(ModTags.Items.RED_SLOBBERER_FOOD) ||
