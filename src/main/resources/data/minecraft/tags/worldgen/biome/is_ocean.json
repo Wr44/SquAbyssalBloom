@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "squ_abyssal_bloom:abyssal_ocean",
+    "squ_abyssal_bloom:abyssal_plains",
+    "squ_abyssal_bloom:blood_valley"
+  ]
+}
