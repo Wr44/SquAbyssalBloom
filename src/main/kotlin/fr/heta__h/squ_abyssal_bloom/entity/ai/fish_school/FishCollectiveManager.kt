@@ -69,6 +69,11 @@ class FishCollectiveManager private constructor(
         statesByFish[fish.uuid]?.movementControllerRunning = running
     }
 
+
+    fun forget(fish: AbstractFish) {
+        statesByFish.remove(fish.uuid)
+    }
+
     fun debugRecordNavigationSuppression(fish: AbstractFish) {
         if (!currentSettings().debugEnabled) return
         val state = statesByFish[fish.uuid] ?: return

@@ -18,8 +18,6 @@ object NautilusBubbleSlowHandler {
 
     private val MODIFIER_ID = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_slowdown")
 
-    // NOTE: Il est fortement recommandé de déplacer cette logique dans un Attachment
-    // plutôt que de garder un Set en mémoire vive pour éviter les pertes d'état au redémarrage.
     private val nautilusWithHeldBubble = ConcurrentHashMap.newKeySet<UUID>()
 
     fun onBubbleHeld(nautilusUUID: UUID) {

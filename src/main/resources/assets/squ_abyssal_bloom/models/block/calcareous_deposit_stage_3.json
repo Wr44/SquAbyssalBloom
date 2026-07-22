@@ -1,0 +1,23 @@
+{
+  "parent": "minecraft:block/block",
+  "ambientocclusion": true,
+  "textures": { "particle": "squ_abyssal_bloom:block/calcareous_deposit", "all": "squ_abyssal_bloom:block/calcareous_deposit" },
+  "elements": [
+    { "from": [1, 0, 3], "to": [10, 5, 13], "faces": {
+      "down": { "texture": "#all" }, "up": { "texture": "#all" }, "north": { "texture": "#all" },
+      "south": { "texture": "#all" }, "west": { "texture": "#all" }, "east": { "texture": "#all" }
+    } },
+    { "from": [7, 0, 1], "to": [15, 4, 10], "faces": {
+      "down": { "texture": "#all" }, "up": { "texture": "#all" }, "north": { "texture": "#all" },
+      "south": { "texture": "#all" }, "west": { "texture": "#all" }, "east": { "texture": "#all" }
+    } },
+    { "from": [8, 0, 8], "to": [14, 7, 15], "faces": {
+      "down": { "texture": "#all" }, "up": { "texture": "#all" }, "north": { "texture": "#all" },
+      "south": { "texture": "#all" }, "west": { "texture": "#all" }, "east": { "texture": "#all" }
+    } },
+    { "from": [3, 0, 10], "to": [8, 3, 15], "faces": {
+      "down": { "texture": "#all" }, "up": { "texture": "#all" }, "north": { "texture": "#all" },
+      "south": { "texture": "#all" }, "west": { "texture": "#all" }, "east": { "texture": "#all" }
+    } }
+  ]
+}

@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
+import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluence
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceContext
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
@@ -211,36 +212,59 @@ object FishSchoolSteering {
             Vec3(separationX, separationY, separationZ),
             MAXIMUM_SEPARATION_FORCE
         )
+        val threatIntensity = state.threatIntensity.coerceIn(0.0, 1.0)
+        val influenceContext = FishSchoolInfluenceContext(
+            gameTime = level.gameTime,
+            threatIntensity = threatIntensity
+        )
         val entityAvoidance = calculateEntityAvoidance(
             fish,
-            state.nearbyLargeEntities
+            state.nearbyLargeEntities,
+            state.influences,
+            influenceContext
         )
 
         var influenceX = 0.0
         var influenceY = 0.0
         var influenceZ = 0.0
-        val influenceContext = FishSchoolInfluenceContext(
-            gameTime = level.gameTime,
-            threatIntensity = state.threatIntensity
-        )
+        var threatEscapeSuppression = 0.0
+        var separationSuppression = 0.0
+        var additionalVerticalSpeed = 0.0
         for (influence in state.influences) {
             if (influence.source.isRemoved) continue
             val contribution = influence.computeInfluence(fish, influenceContext)
             influenceX += contribution.x
             influenceY += contribution.y
             influenceZ += contribution.z
+            threatEscapeSuppression = max(
+                threatEscapeSuppression,
+                influence.threatEscapeSuppression(fish, influenceContext)
+            )
+            separationSuppression = max(
+                separationSuppression,
+                influence.separationSuppression(fish, influenceContext)
+            )
+            additionalVerticalSpeed = max(
+                additionalVerticalSpeed,
+                influence.additionalVerticalSpeed(fish, influenceContext)
+            )
         }
         val environmentalInfluence = limitMagnitude(
             Vec3(influenceX, influenceY, influenceZ),
             MAXIMUM_ENVIRONMENTAL_INFLUENCE
         )
 
-        val threatIntensity = state.threatIntensity.coerceIn(0.0, 1.0)
+        val separationWeight = settings.separationWeight *
+            (1.0 - separationSuppression.coerceIn(0.0, 1.0))
         val aggregationInfluence = calculateAggregationInfluence(state, settings)
         val aggregationWeight = settings.cohesionWeight *
             AGGREGATION_COHESION_SCALE *
             (1.0 - threatIntensity * PANIC_AGGREGATION_REDUCTION)
-        val herdInfluence = calculateHerdInfluence(state, centroidDirection, threatIntensity)
+        val herdInfluence = calculateHerdInfluence(
+            state,
+            centroidDirection,
+            threatIntensity * (1.0 - threatEscapeSuppression.coerceIn(0.0, 1.0))
+        )
         val densityNoiseFactor = (
             1.0 / (1.0 + state.localCompatibleFishCount * NOISE_DENSITY_REDUCTION_PER_NEIGHBOR)
             ).coerceAtLeast(MINIMUM_DENSITY_NOISE_FACTOR)
@@ -251,7 +275,7 @@ object FishSchoolSteering {
         val ambientWanderWeight = AMBIENT_WANDER_WEIGHT *
             (1.0 - threatIntensity * PANIC_AMBIENT_WANDER_REDUCTION)
         val preliminary = Vec3(
-            separation.x * settings.separationWeight +
+            separation.x * separationWeight +
                 alignment.x * settings.alignmentWeight +
                 cohesion.x * settings.cohesionWeight +
                 entityAvoidance.x * settings.obstacleAvoidanceWeight +
@@ -261,7 +285,7 @@ object FishSchoolSteering {
                 ambientWander.x * ambientWanderWeight +
                 state.noiseDirection.x * noiseWeight,
             0.0,
-            separation.z * settings.separationWeight +
+            separation.z * separationWeight +
                 alignment.z * settings.alignmentWeight +
                 cohesion.z * settings.cohesionWeight +
                 entityAvoidance.z * settings.obstacleAvoidanceWeight +
@@ -296,7 +320,7 @@ object FishSchoolSteering {
             (if (state.directlyThreatened) DIRECT_THREAT_ALIGNMENT_FACTOR else 1.0)
         val cohesionWeight = settings.cohesionWeight
 
-        var desiredX = separation.x * settings.separationWeight +
+        var desiredX = separation.x * separationWeight +
             alignment.x * alignmentWeight +
             cohesion.x * cohesionWeight +
             (entityAvoidance.x + obstacleAvoidance.x) * settings.obstacleAvoidanceWeight +
@@ -305,7 +329,7 @@ object FishSchoolSteering {
             aggregationInfluence.x * aggregationWeight +
             ambientWander.x * ambientWanderWeight +
             state.noiseDirection.x * noiseWeight
-        var desiredZ = separation.z * settings.separationWeight +
+        var desiredZ = separation.z * separationWeight +
             alignment.z * alignmentWeight +
             cohesion.z * cohesionWeight +
             (entityAvoidance.z + obstacleAvoidance.z) * settings.obstacleAvoidanceWeight +
@@ -345,7 +369,7 @@ object FishSchoolSteering {
         )
         targetSpeed *= 1.0 - avoidanceUrgency * OBSTACLE_SPEED_REDUCTION
 
-        val socialVertical = (separation.y * settings.separationWeight +
+        val socialVertical = (separation.y * separationWeight +
             alignment.y * alignmentWeight +
             cohesion.y * cohesionWeight +
             state.noiseDirection.y * noiseWeight) *
@@ -354,13 +378,19 @@ object FishSchoolSteering {
             .coerceIn(-MAXIMUM_SOCIAL_VERTICAL_SPEED, MAXIMUM_SOCIAL_VERTICAL_SPEED)
         val environmentalVerticalVelocity =
             (environmentalInfluence.y * ENVIRONMENTAL_VERTICAL_FORCE_SCALE)
-                .coerceIn(-MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED, MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED)
+                .coerceIn(
+                    -MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED - additionalVerticalSpeed,
+                    MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED + additionalVerticalSpeed
+                )
         var desiredY = currentVelocity.y * VERTICAL_MOMENTUM_RETENTION +
             socialVerticalVelocity +
             environmentalVerticalVelocity +
             calculateAmbientVerticalDrift(fish, level.gameTime) * settings.verticalDriftSpeed +
             obstacleAvoidance.y * settings.obstacleAvoidanceWeight
-        desiredY = desiredY.coerceIn(-MAXIMUM_VERTICAL_SPEED, MAXIMUM_VERTICAL_SPEED)
+        desiredY = desiredY.coerceIn(
+            -MAXIMUM_VERTICAL_SPEED - additionalVerticalSpeed,
+            MAXIMUM_VERTICAL_SPEED + additionalVerticalSpeed
+        )
 
         val horizontalSpeed = sqrt(max(0.0, targetSpeed * targetSpeed - desiredY * desiredY))
         desiredX = desiredDirection.x * horizontalSpeed
@@ -370,7 +400,9 @@ object FishSchoolSteering {
 
     private fun calculateEntityAvoidance(
         fish: AbstractFish,
-        nearbyLargeEntities: List<LivingEntity>
+        nearbyLargeEntities: List<LivingEntity>,
+        influences: List<FishSchoolInfluence>,
+        context: FishSchoolInfluenceContext
     ): Vec3 {
         var avoidanceX = 0.0
         var avoidanceZ = 0.0
@@ -379,6 +411,14 @@ object FishSchoolSteering {
 
         for (entity in nearbyLargeEntities) {
             if (!entity.isAlive || entity.isRemoved) continue
+            val sourceAvoidanceSuppression = influences.asSequence()
+                .filter { influence -> influence.source === entity && !influence.source.isRemoved }
+                .maxOfOrNull { influence ->
+                    influence.sourceEntityAvoidanceSuppression(fish, context)
+                }
+                ?.coerceIn(0.0, 1.0)
+                ?: 0.0
+            if (sourceAvoidanceSuppression >= 1.0) continue
             val predictedEntityX = entity.x +
                 entity.deltaMovement.x * ENTITY_COLLISION_PREDICTION_TICKS
             val predictedEntityZ = entity.z +
@@ -392,7 +432,8 @@ object FishSchoolSteering {
             if (distance >= influenceDistance) continue
 
             val safeDistance = max(distance, MINIMUM_ENTITY_DISTANCE)
-            val strength = ((influenceDistance - distance) / influenceDistance).let { it * it }
+            val strength = ((influenceDistance - distance) / influenceDistance).let { it * it } *
+                (1.0 - sourceAvoidanceSuppression)
             avoidanceX += dx / safeDistance * strength
             avoidanceZ += dz / safeDistance * strength
         }

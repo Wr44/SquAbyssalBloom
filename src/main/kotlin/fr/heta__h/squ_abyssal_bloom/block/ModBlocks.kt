@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBloc
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.BloodSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.TallBloodSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.block.brine_bubble_column.BrineBubbleColumnBlock
+import fr.heta__h.squ_abyssal_bloom.block.calcareous_deposit.CalcareousDepositBlock
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.CoralBlock
@@ -69,6 +70,17 @@ object ModBlocks {
                 .pushReaction(PushReaction.DESTROY)
                 .liquid()
                 .sound(SoundType.EMPTY)
+        )
+    }
+
+    val CALCAREOUS_DEPOSIT = REGISTRY.registerBlock("calcareous_deposit") { props ->
+        CalcareousDepositBlock(
+            props.mapColor(MapColor.COLOR_LIGHT_GRAY)
+                .noCollision()
+                .noOcclusion()
+                .strength(0.45f)
+                .sound(SoundType.CALCITE)
+                .pushReaction(PushReaction.DESTROY)
         )
     }
 

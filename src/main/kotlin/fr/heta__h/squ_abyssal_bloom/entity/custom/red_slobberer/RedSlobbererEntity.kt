@@ -3,14 +3,17 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererBottomStrollGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererBreedGoal
-import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererFollowGroupGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererCollectiveCohesionGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererGoalPriorities
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererGrazeBloodSeagrassGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererReefResidenceGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererBodyRotationControl
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererMoveControl
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererTerrainAlignment
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererGroupController
-import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefController
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererFishRefugeStorage
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.LegacyRedSlobbererReefSnapshot
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefManager
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -42,6 +45,7 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation
 import net.minecraft.world.entity.animal.Animal
 import net.minecraft.world.entity.animal.fish.AbstractFish
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.crafting.Ingredient
 import net.minecraft.world.level.Level
@@ -70,6 +74,10 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private const val WATER_GRAVITY = 0.4
         private const val MIN_FISH_PUSH_DISTANCE = 0.01
         private const val FISH_PUSH_STRENGTH = 0.05
+        private const val LEGACY_TAG_HAS_REEF_ANCHOR = "RedSlobbererHasReefAnchor"
+        private const val LEGACY_TAG_REEF_ANCHOR = "RedSlobbererReefAnchor"
+        private const val LEGACY_TAG_RESIDENCE_TICKS = "RedSlobbererReefResidenceTicks"
+        private const val LEGACY_TAG_PLACED_DECORATIONS = "RedSlobbererReefDecorations"
 
         private val CLIMB_VISUAL_PITCH_TARGET: EntityDataAccessor<Float> = SynchedEntityData.defineId(
             RedSlobbererEntity::class.java,
@@ -89,14 +97,15 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     val moveAnimationState = AnimationState()
 
     val groupController = RedSlobbererGroupController(this)
-    private val reefController = RedSlobbererReefController(this, groupController)
     private val terrainAlignment = RedSlobbererTerrainAlignment(this)
+    private val fishRefugeStorage = RedSlobbererFishRefugeStorage(this)
 
     private var climbVisualPitch = 0.0f
     private var previousClimbVisualPitch = 0.0f
     private var activeLocomotionAnimation: LocomotionAnimation? = null
     private var nextLocomotionAnimationBoundaryTick = 0
     private var isPathfinding = false
+    private var legacyReefSnapshot: LegacyRedSlobbererReefSnapshot? = null
 
     var timeExposedInAir = 0
 
@@ -161,8 +170,12 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         )
         goalSelector.addGoal(RedSlobbererGoalPriorities.FOLLOW_PARENT, FollowParentGoal(this, 1.1))
         goalSelector.addGoal(
+            RedSlobbererGoalPriorities.REEF_RESIDENCE,
+            RedSlobbererReefResidenceGoal(this, 1.0)
+        )
+        goalSelector.addGoal(
             RedSlobbererGoalPriorities.FOLLOW_GROUP,
-            RedSlobbererFollowGroupGoal(this, 0.8)
+            RedSlobbererCollectiveCohesionGoal(this, 0.8)
         )
         goalSelector.addGoal(
             RedSlobbererGoalPriorities.GRAZE,
@@ -293,7 +306,40 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         }
 
         groupController.tick()
-        reefController.tick(serverLevel)
+        RedSlobbererReefManager.forLevel(serverLevel).observe(this)
+        fishRefugeStorage.tick(serverLevel)
+    }
+
+    val shelteredFishCount: Int
+        get() = fishRefugeStorage.size
+
+    fun canShelterFish(fish: AbstractFish): Boolean = fishRefugeStorage.canAccept(fish)
+
+    fun fishRefugeEntrance(fish: AbstractFish): Vec3 = fishRefugeStorage.entranceFor(fish)
+
+    fun tryShelterFish(
+        level: ServerLevel,
+        fish: AbstractFish,
+        panic: Double
+    ): Boolean = fishRefugeStorage.tryStore(level, fish, panic)
+
+    override fun hurtServer(
+        level: ServerLevel,
+        source: DamageSource,
+        amount: Float
+    ): Boolean {
+        val wasHurt = super.hurtServer(level, source, amount)
+        if (wasHurt && source.entity != null) {
+            fishRefugeStorage.invalidateAfterAttack(level)
+        }
+        return wasHurt
+    }
+
+    override fun remove(reason: Entity.RemovalReason) {
+        if (reason.shouldDestroy() && !isRemoved) {
+            (level() as? ServerLevel)?.let(fishRefugeStorage::releaseOnDestruction)
+        }
+        super.remove(reason)
     }
 
     @Deprecated("Minecraft still calls this hook for fluid-push immunity")
@@ -318,6 +364,13 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     private fun pushFishAwayWithoutRecoil(fish: AbstractFish) {
         if (isPassengerOfSameVehicle(fish) || noPhysics || fish.noPhysics) return
         if (fish.isVehicle || !fish.isPushable) return
+        val serverLevel = level() as? ServerLevel
+        if (
+            serverLevel != null &&
+            RedSlobbererReefManager.forLevel(serverLevel).isFishUsingRefuge(fish, this)
+        ) {
+            return
+        }
 
         var pushX = fish.x - x
         var pushZ = fish.z - z
@@ -400,14 +453,29 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         return ModEntities.RED_SLOBBERER.get().create(serverLevel, EntitySpawnReason.BREEDING)
     }
 
-    override fun addAdditionalSaveData(output: ValueOutput) {
-        super.addAdditionalSaveData(output)
-        reefController.addAdditionalSaveData(output)
-    }
-
     override fun readAdditionalSaveData(input: ValueInput) {
         super.readAdditionalSaveData(input)
-        reefController.readAdditionalSaveData(input)
+        fishRefugeStorage.load(input)
+        if (!input.getBooleanOr(LEGACY_TAG_HAS_REEF_ANCHOR, false)) return
+
+        val residenceTicks = input.getIntOr(LEGACY_TAG_RESIDENCE_TICKS, 0).coerceAtLeast(0)
+        if (residenceTicks <= 0) return
+        legacyReefSnapshot = LegacyRedSlobbererReefSnapshot(
+            anchor = BlockPos.of(input.getLongOr(LEGACY_TAG_REEF_ANCHOR, BlockPos.ZERO.asLong())),
+            residenceTicks = residenceTicks,
+            placedDecorations = input.getIntOr(LEGACY_TAG_PLACED_DECORATIONS, 0).coerceAtLeast(0)
+        )
+    }
+
+    override fun addAdditionalSaveData(output: ValueOutput) {
+        super.addAdditionalSaveData(output)
+        fishRefugeStorage.save(output)
+    }
+
+    fun consumeLegacyReefSnapshot(): LegacyRedSlobbererReefSnapshot? {
+        val snapshot = legacyReefSnapshot
+        legacyReefSnapshot = null
+        return snapshot
     }
 
     override fun getDefaultDimensions(pose: Pose): EntityDimensions {

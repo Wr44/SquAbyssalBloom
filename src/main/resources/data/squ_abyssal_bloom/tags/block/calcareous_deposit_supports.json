@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "#minecraft:base_stone_overworld",
+    "minecraft:calcite", "minecraft:dripstone_block",
+    "minecraft:basalt", "minecraft:smooth_basalt", "minecraft:blackstone",
+    "minecraft:gravel", "#minecraft:sand", "minecraft:clay",
+    "minecraft:prismarine", "minecraft:prismarine_bricks", "minecraft:dark_prismarine",
+    "#minecraft:coral_blocks",
+    "squ_abyssal_bloom:astral_prismarine",
+    "squ_abyssal_bloom:rhodophyta", "squ_abyssal_bloom:dead_rhodophyta"
+  ]
+}

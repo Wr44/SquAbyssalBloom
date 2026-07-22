@@ -4,9 +4,10 @@ object RedSlobbererGoalPriorities {
     const val BREED = 1
     const val TEMPT = 2
     const val FOLLOW_PARENT = 3
-    const val FOLLOW_GROUP = 4
-    const val GRAZE = 5
-    const val STROLL = 6
-    const val LOOK_AT_PLAYER = 7
-    const val RANDOM_LOOK = 8
+    const val REEF_RESIDENCE = 4
+    const val FOLLOW_GROUP = 5
+    const val GRAZE = 6
+    const val STROLL = 7
+    const val LOOK_AT_PLAYER = 8
+    const val RANDOM_LOOK = 9
 }

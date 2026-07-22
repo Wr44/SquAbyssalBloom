@@ -1,7 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefManager
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.ai.goal.MoveToBlockGoal
@@ -74,6 +76,18 @@ class RedSlobbererGrazeBloodSeagrassGoal(
     }
 
     override fun isValidTarget(level: LevelReader, pos: BlockPos): Boolean {
+        val serverLevel = redSlobberer.level() as? ServerLevel
+        val reefAnchor = serverLevel?.let { currentLevel ->
+            RedSlobbererReefManager.forLevel(currentLevel).activeReefAnchor(redSlobberer)
+        }
+        if (reefAnchor != null) {
+            val radius = ModServerConfig.RED_SLOBBERER_REEF_RESIDENCE_RADIUS.get()
+                .coerceAtLeast(2.0)
+            val dx = pos.x - reefAnchor.x
+            val dz = pos.z - reefAnchor.z
+            if (dx * dx + dz * dz > radius * radius) return false
+        }
+
         val state = level.getBlockState(pos)
         if (state.`is`(ModBlocks.BLOOD_SEAGRASS.get())) return true
         return state.`is`(ModBlocks.TALL_BLOOD_SEAGRASS.get()) &&

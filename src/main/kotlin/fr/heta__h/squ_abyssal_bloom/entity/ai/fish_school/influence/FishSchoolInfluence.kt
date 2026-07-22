@@ -11,4 +11,26 @@ interface FishSchoolInfluence {
         fish: AbstractFish,
         context: FishSchoolInfluenceContext
     ): Vec3
+
+
+    fun threatEscapeSuppression(
+        fish: AbstractFish,
+        context: FishSchoolInfluenceContext
+    ): Double = 0.0
+
+
+    fun sourceEntityAvoidanceSuppression(
+        fish: AbstractFish,
+        context: FishSchoolInfluenceContext
+    ): Double = 0.0
+
+    fun separationSuppression(
+        fish: AbstractFish,
+        context: FishSchoolInfluenceContext
+    ): Double = 0.0
+
+    fun additionalVerticalSpeed(
+        fish: AbstractFish,
+        context: FishSchoolInfluenceContext
+    ): Double = 0.0
 }

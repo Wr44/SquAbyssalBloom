@@ -16,6 +16,13 @@ object FishThreatClassifier {
         if (entity === observer || !entity.isAlive) return false
         if (entity is AbstractFish) return false
         if (observer.isAlliedTo(entity) || entity.isAlliedTo(observer)) return false
+        return isPotentialThreat(entity)
+    }
+
+
+    fun isPotentialThreat(entity: LivingEntity): Boolean {
+        if (!entity.isAlive) return false
+        if (entity is AbstractFish) return false
         if (entity.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_FRIENDLY)) return false
 
         if (entity is Player) {

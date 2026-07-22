@@ -27,6 +27,8 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.GUARDIAN_EYE.get())
                 output.accept(ModItems.PRISMARINE_BULB.get())
                 output.accept(ModItems.PRISMARINE_SPIKE.get())
+                output.accept(ModItems.CALCAREOUS_FRAGMENT.get())
+                output.accept(ModItems.MARINE_CEMENT.get())
                 output.accept(ModItems.BRINE_BUBBLES.get())
                 output.accept(ModItems.LIFELINE_BUBBLE.get())
                 output.accept(ModItems.RESPIRATION_BUBBLE.get())

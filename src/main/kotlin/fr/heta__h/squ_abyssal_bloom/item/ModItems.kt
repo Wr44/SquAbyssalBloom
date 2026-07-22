@@ -46,6 +46,14 @@ object ModItems {
         "prismarine_spike"
     ) { properties -> Item(properties) }
 
+    val CALCAREOUS_FRAGMENT: DeferredItem<Item> = ITEMS.registerItem(
+        "calcareous_fragment"
+    ) { properties -> Item(properties) }
+
+    val MARINE_CEMENT: DeferredItem<Item> = ITEMS.registerItem(
+        "marine_cement"
+    ) { properties -> Item(properties) }
+
     val BRINE_BUBBLES : DeferredItem<Item> = ITEMS.registerItem(
         "brine_bubbles"
     ) { properties -> Item(properties) }

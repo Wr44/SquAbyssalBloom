@@ -1,8 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal
 
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
-import net.minecraft.core.BlockPos
-import net.minecraft.tags.FluidTags
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefManager
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.ai.goal.RandomStrollGoal
 import net.minecraft.world.phys.Vec3
 
@@ -14,45 +15,28 @@ class RedSlobbererBottomStrollGoal(
     private companion object {
         const val POSITION_ATTEMPTS = 12
         const val HORIZONTAL_RADIUS = 10
-        const val MAX_DESCENT = 3
         const val MIN_DISTANCE_SQR = 4.0
     }
 
     override fun getPosition(): Vec3? {
         val level = redSlobberer.level()
-        val currentY = redSlobberer.blockY
-        val candidate = BlockPos.MutableBlockPos()
-
-        repeat(POSITION_ATTEMPTS) {
-            val targetX = redSlobberer.blockX +
-                redSlobberer.random.nextInt(-HORIZONTAL_RADIUS, HORIZONTAL_RADIUS + 1)
-            val targetZ = redSlobberer.blockZ +
-                redSlobberer.random.nextInt(-HORIZONTAL_RADIUS, HORIZONTAL_RADIUS + 1)
-
-            candidate.set(targetX, currentY, targetZ)
-            if (!level.isLoaded(candidate)) return@repeat
-
-            val maximumAscent = redSlobberer.maximumClimbHeight.toInt()
-            for (targetY in currentY + maximumAscent downTo currentY - MAX_DESCENT) {
-                candidate.setY(targetY)
-                if (!level.getFluidState(candidate).`is`(FluidTags.WATER)) continue
-
-                val supportPos = candidate.below()
-                if (level.getBlockState(supportPos).getCollisionShape(level, supportPos).isEmpty) continue
-
-                val target = Vec3.atBottomCenterOf(candidate)
-                val offsetX = target.x - redSlobberer.x
-                val offsetZ = target.z - redSlobberer.z
-                if (offsetX * offsetX + offsetZ * offsetZ < MIN_DISTANCE_SQR) continue
-
-                val displacement = target.subtract(redSlobberer.position())
-                if (!level.noCollision(redSlobberer, redSlobberer.boundingBox.move(displacement))) continue
-
-                return target
-            }
+        val serverLevel = level as? ServerLevel
+        val reefAnchor = serverLevel?.let { currentLevel ->
+            RedSlobbererReefManager.forLevel(currentLevel).activeReefAnchor(redSlobberer)
         }
-
-        return null
+        val center = reefAnchor?.let(Vec3::atBottomCenterOf) ?: redSlobberer.position()
+        val radius = if (reefAnchor == null) {
+            HORIZONTAL_RADIUS.toDouble()
+        } else {
+            ModServerConfig.RED_SLOBBERER_REEF_RESIDENCE_RADIUS.get().coerceAtLeast(2.0)
+        }
+        return RedSlobbererReefNavigation.findBottomTargetAround(
+            redSlobberer = redSlobberer,
+            center = center,
+            horizontalRadius = radius,
+            attempts = POSITION_ATTEMPTS,
+            minimumDistanceSqr = MIN_DISTANCE_SQR
+        )
     }
 
 }

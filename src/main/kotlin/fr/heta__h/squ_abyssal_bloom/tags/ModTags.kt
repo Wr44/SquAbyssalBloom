@@ -6,9 +6,17 @@ import net.minecraft.resources.Identifier
 import net.minecraft.tags.TagKey
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.item.Item
+import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.biome.Biome
 
 object ModTags {
+    object Blocks {
+        val CALCAREOUS_DEPOSIT_SUPPORTS: TagKey<Block> = TagKey.create(
+            Registries.BLOCK,
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "calcareous_deposit_supports")
+        )
+    }
+
     object EntityTypes {
         val FISH_SCHOOL_FRIENDLY: TagKey<EntityType<*>> = TagKey.create(
             Registries.ENTITY_TYPE,

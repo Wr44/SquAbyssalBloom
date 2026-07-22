@@ -58,12 +58,6 @@ class RedSlobbererGroupController(
         return cachedMembers
     }
 
-    fun leader(): RedSlobbererEntity {
-        return members().firstOrNull() ?: redSlobberer
-    }
-
-    fun isLeader(): Boolean = leader() === redSlobberer
-
     fun center(): Vec3 {
         return centerOf(members(), redSlobberer.position())
     }
