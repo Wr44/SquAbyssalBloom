@@ -33,6 +33,12 @@ object FishSchoolSteering {
     private const val ALIGNMENT_VERTICAL_SCALE = 3.0
     private const val MAXIMUM_LOCAL_VERTICAL_ERROR = 1.0
     private const val COHESION_FULL_STRENGTH_DISTANCE = 3.0
+    private const val LOCAL_COHESION_COMFORT_DISTANCE = 1.75
+    private const val LOCAL_COHESION_FULL_SPEED_ERROR = 4.0
+    private const val COHESION_SPEED_RESPONSE = 0.5
+    private const val AGGREGATION_SPEED_RESPONSE = 0.8
+    private const val PANIC_COHESION_SPEED_REDUCTION = 0.85
+    private const val MINIMUM_COHESION_CRUISING_SPEED_FACTOR = 0.5
     private const val MAXIMUM_ENVIRONMENTAL_INFLUENCE = 2.0
     private const val ENVIRONMENTAL_VERTICAL_FORCE_SCALE = 0.03
     private const val MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED = 0.02
@@ -159,6 +165,8 @@ object FishSchoolSteering {
         var alignment = Vec3.ZERO
         var cohesion = Vec3.ZERO
         var centroidDirection = Vec3.ZERO
+        var localCenterOffset = Vec3.ZERO
+        var localCohesionAffinity = 0.0
         if (state.neighbors.isNotEmpty()) {
             val inverseAlignmentSamples = if (horizontalAlignmentSamples > 0) {
                 1.0 / horizontalAlignmentSamples.toDouble()
@@ -168,6 +176,7 @@ object FishSchoolSteering {
             val inverseSocialNeighborWeight = 1.0 / socialNeighborWeight
             val averageSocialAffinity =
                 socialNeighborWeight / state.neighbors.size.toDouble()
+            localCohesionAffinity = averageSocialAffinity
             alignment = Vec3(
                 alignmentX * inverseAlignmentSamples,
                 (
@@ -176,7 +185,7 @@ object FishSchoolSteering {
                 alignmentZ * inverseAlignmentSamples
             )
 
-            val localCenterOffset = Vec3(
+            localCenterOffset = Vec3(
                 cohesionX * inverseSocialNeighborWeight - fish.x,
                 cohesionY * inverseSocialNeighborWeight - fish.y,
                 cohesionZ * inverseSocialNeighborWeight - fish.z
@@ -322,6 +331,18 @@ object FishSchoolSteering {
             state.individualSpeedFactor
         var targetSpeed = normalSpeed +
             (settings.panicFishSpeed - normalSpeed) * threatIntensity
+        targetSpeed += calculateCohesionSpeedAdjustment(
+            state,
+            settings,
+            localCenterOffset,
+            localCohesionAffinity,
+            desiredDirection,
+            threatIntensity
+        )
+        targetSpeed = targetSpeed.coerceIn(
+            normalSpeed * MINIMUM_COHESION_CRUISING_SPEED_FACTOR,
+            settings.panicFishSpeed
+        )
         targetSpeed *= 1.0 - avoidanceUrgency * OBSTACLE_SPEED_REDUCTION
 
         val socialVertical = (separation.y * settings.separationWeight +
@@ -569,14 +590,7 @@ object FishSchoolSteering {
             return Vec3.ZERO
         }
 
-        val aggregationSpan =
-            (settings.aggregationRadius - settings.neighborSearchRadius)
-                .coerceAtLeast(MINIMUM_AGGREGATION_DISTANCE)
-        val distanceProgress = (
-            (horizontalDistance - settings.neighborSearchRadius) / aggregationSpan
-            ).coerceIn(0.0, 1.0)
-        val strength = MINIMUM_AGGREGATION_STRENGTH +
-            (1.0 - MINIMUM_AGGREGATION_STRENGTH) * distanceProgress
+        val strength = calculateAggregationStrength(horizontalDistance, settings)
         val affinity = FishSchoolCompatibility.socialAffinity(
             fish,
             aggregationNeighbor,
@@ -587,6 +601,95 @@ object FishSchoolSteering {
             0.0,
             offsetZ / horizontalDistance * strength * affinity
         )
+    }
+
+    private fun calculateCohesionSpeedAdjustment(
+        state: FishCollectiveState,
+        settings: FishCollectiveSettings,
+        localCenterOffset: Vec3,
+        localCohesionAffinity: Double,
+        travelDirection: Vec3,
+        threatIntensity: Double
+    ): Double {
+        if (travelDirection.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR) return 0.0
+
+        var closingResponse = calculateLocalClosingResponse(
+            localCenterOffset,
+            travelDirection
+        ) * localCohesionAffinity
+
+        val fish = state.fish
+        val aggregationNeighbor = state.aggregationNeighbor
+        if (
+            aggregationNeighbor != null &&
+            aggregationNeighbor.isAlive &&
+            aggregationNeighbor.isInWater &&
+            aggregationNeighbor.level() === fish.level()
+        ) {
+            val offsetX = aggregationNeighbor.x - fish.x
+            val offsetZ = aggregationNeighbor.z - fish.z
+            val horizontalDistance = sqrt(offsetX * offsetX + offsetZ * offsetZ)
+            if (
+                horizontalDistance > settings.neighborSearchRadius &&
+                horizontalDistance <= settings.aggregationRadius
+            ) {
+                val axialDirection = (
+                    offsetX * travelDirection.x + offsetZ * travelDirection.z
+                    ) / horizontalDistance
+                val affinity = FishSchoolCompatibility.socialAffinity(
+                    fish,
+                    aggregationNeighbor,
+                    settings
+                )
+                closingResponse += axialDirection *
+                    calculateAggregationStrength(horizontalDistance, settings) *
+                    affinity *
+                    AGGREGATION_SPEED_RESPONSE
+            }
+        }
+
+        val cohesionConfigurationResponse = settings.cohesionWeight.coerceIn(0.0, 1.0)
+        val panicResponse = 1.0 - threatIntensity * PANIC_COHESION_SPEED_REDUCTION
+        return closingResponse.coerceIn(-1.0, 1.0) *
+            settings.maximumFishSpeed *
+            COHESION_SPEED_RESPONSE *
+            cohesionConfigurationResponse *
+            panicResponse
+    }
+
+    private fun calculateLocalClosingResponse(
+        localCenterOffset: Vec3,
+        travelDirection: Vec3
+    ): Double {
+        val horizontalDistance = sqrt(
+            localCenterOffset.x * localCenterOffset.x +
+                localCenterOffset.z * localCenterOffset.z
+        )
+        if (horizontalDistance <= LOCAL_COHESION_COMFORT_DISTANCE) return 0.0
+
+        val distanceResponse = (
+            (horizontalDistance - LOCAL_COHESION_COMFORT_DISTANCE) /
+                LOCAL_COHESION_FULL_SPEED_ERROR
+            ).coerceIn(0.0, 1.0)
+        val axialDirection = (
+            localCenterOffset.x * travelDirection.x +
+                localCenterOffset.z * travelDirection.z
+            ) / horizontalDistance
+        return axialDirection * distanceResponse
+    }
+
+    private fun calculateAggregationStrength(
+        horizontalDistance: Double,
+        settings: FishCollectiveSettings
+    ): Double {
+        val aggregationSpan =
+            (settings.aggregationRadius - settings.neighborSearchRadius)
+                .coerceAtLeast(MINIMUM_AGGREGATION_DISTANCE)
+        val distanceProgress = (
+            (horizontalDistance - settings.neighborSearchRadius) / aggregationSpan
+            ).coerceIn(0.0, 1.0)
+        return MINIMUM_AGGREGATION_STRENGTH +
+            (1.0 - MINIMUM_AGGREGATION_STRENGTH) * distanceProgress
     }
 
     private fun horizontalUnit(x: Double, z: Double): Vec3 {

@@ -123,7 +123,7 @@ object ModEntities {
     val RED_SLOBBERER: DeferredHolder<EntityType<*>, EntityType<RedSlobbererEntity>> =
         ENTITY_TYPES.register("red_slobberer") { _: Identifier ->
             EntityType.Builder.of({ type, level -> RedSlobbererEntity(type, level) }, MobCategory.WATER_CREATURE)
-                .sized(3.75f, 2.5f)
+                .sized(3f, 2.5f)
                 .clientTrackingRange(8)
                 .updateInterval(3)
                 .build(RED_SLOBBERER_KEY)

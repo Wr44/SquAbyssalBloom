@@ -8,6 +8,8 @@ import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 class RedSlobbererMoveControl(
@@ -22,6 +24,7 @@ class RedSlobbererMoveControl(
         const val MAX_PATH_TURN_DEGREES = 3.0f
         const val REVERSE_DIRECTION_DOT_THRESHOLD = -0.35
         const val MIN_CLIMB_NODE_OFFSET = 0.3
+        const val MIN_CLIMB_FACING_DOT = 0.94
         const val FORWARD_COLLISION_PROBE_DISTANCE = 0.45
         const val FORWARD_COLLISION_PROBE_HEIGHT = 0.1
         const val FORWARD_COLLISION_PROBE_HALF_WIDTH_FACTOR = 0.12
@@ -76,9 +79,15 @@ class RedSlobbererMoveControl(
         updateSmoothedHeading(dx, dz, horizontalDistanceSqr)
         rotateTowardSmoothedHeading()
 
-        val obstacleAhead = isObstacleAhead(smoothedDirectionX, smoothedDirectionZ)
+        val climbProbeDirection = getClimbProbeDirection(smoothedDirectionX, smoothedDirectionZ)
+        if (climbProbeDirection == null) {
+            applyMovementSpeed()
+            return
+        }
+
+        val obstacleAhead = isObstacleAhead(climbProbeDirection.x, climbProbeDirection.z)
         val collisionClimbTargetY = if (obstacleAhead && !elevatedPathNode) {
-            findCollisionClimbTargetY(smoothedDirectionX, smoothedDirectionZ)
+            findCollisionClimbTargetY(climbProbeDirection.x, climbProbeDirection.z)
         } else {
             null
         }
@@ -86,8 +95,8 @@ class RedSlobbererMoveControl(
         val climbTargetY = if (elevatedPathNode) wantedY else collisionClimbTargetY ?: wantedY
 
         if (climbRequested) {
-            lockedClimbDirectionX = smoothedDirectionX
-            lockedClimbDirectionZ = smoothedDirectionZ
+            lockedClimbDirectionX = climbProbeDirection.x
+            lockedClimbDirectionZ = climbProbeDirection.z
         }
 
         climbController.tick(climbRequested, obstacleAhead, climbTargetY)
@@ -159,8 +168,21 @@ class RedSlobbererMoveControl(
             ).toFloat()
     }
 
+    private fun getClimbProbeDirection(pathDirectionX: Double, pathDirectionZ: Double): Vec3? {
+        val bodyYawRadians = Math.toRadians(redSlobberer.yBodyRot.toDouble())
+        val bodyDirectionX = -sin(bodyYawRadians)
+        val bodyDirectionZ = cos(bodyYawRadians)
+        val pathFacingAlignment = bodyDirectionX * pathDirectionX + bodyDirectionZ * pathDirectionZ
+
+        // The path can turn before this very wide body has physically rotated. Until the model is
+        // facing the path, a block found in that direction is still beside the creature, not ahead.
+        if (pathFacingAlignment < MIN_CLIMB_FACING_DOT) return null
+
+        return Vec3(bodyDirectionX, 0.0, bodyDirectionZ)
+    }
+
     private fun isObstacleAhead(directionX: Double, directionZ: Double): Boolean {
-        // Probe only the creature's central path. Its 4.25-block-wide body may brush a block that
+        // Probe only the creature's central path. Its wide body may brush a block that
         // is beside the route, but that contact must not be interpreted as a wall to climb.
         val halfProbeWidth = minOf(
             redSlobberer.bbWidth * FORWARD_COLLISION_PROBE_HALF_WIDTH_FACTOR,

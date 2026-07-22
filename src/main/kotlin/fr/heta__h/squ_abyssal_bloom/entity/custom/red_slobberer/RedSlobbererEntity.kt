@@ -24,6 +24,7 @@ import net.minecraft.util.Mth.lerp
 import net.minecraft.world.DifficultyInstance
 import net.minecraft.world.entity.AgeableMob
 import net.minecraft.world.entity.AnimationState
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityDimensions
 import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
@@ -39,6 +40,7 @@ import net.minecraft.world.entity.ai.goal.TemptGoal
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation
 import net.minecraft.world.entity.ai.navigation.PathNavigation
 import net.minecraft.world.entity.animal.Animal
+import net.minecraft.world.entity.animal.fish.AbstractFish
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.crafting.Ingredient
@@ -51,6 +53,7 @@ import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
 import net.minecraft.world.phys.Vec3
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(type, level) {
 
@@ -58,7 +61,6 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         const val MAX_AIR_TICKS = 200
 
         private const val BABY_START_AGE_TICKS = -72_000
-        // The first member is always an adult; 30% of the remaining 1-3 members gives about 20% babies overall.
         private const val NATURAL_FOLLOWER_BABY_SPAWN_CHANCE = 0.30f
         private const val ADULT_MAXIMUM_CLIMB_HEIGHT = 2.0
         private const val BABY_MAXIMUM_CLIMB_HEIGHT = 1.5
@@ -66,6 +68,8 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private const val MODEL_PITCH_CHANGE_PER_TICK = 0.65f
         private const val LOCOMOTION_ANIMATION_LOOP_TICKS = 50
         private const val WATER_GRAVITY = 0.4
+        private const val MIN_FISH_PUSH_DISTANCE = 0.01
+        private const val FISH_PUSH_STRENGTH = 0.05
 
         private val CLIMB_VISUAL_PITCH_TARGET: EntityDataAccessor<Float> = SynchedEntityData.defineId(
             RedSlobbererEntity::class.java,
@@ -295,7 +299,41 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     @Deprecated("Minecraft still calls this hook for fluid-push immunity")
     override fun isPushedByFluid(): Boolean = false
 
-    override fun isPushable(): Boolean = false
+    override fun push(entity: Entity) {
+        if (entity is AbstractFish) {
+            pushFishAwayWithoutRecoil(entity)
+        } else {
+            super.push(entity)
+        }
+    }
+
+    override fun doPush(entity: Entity) {
+        if (entity is AbstractFish) {
+            pushFishAwayWithoutRecoil(entity)
+        } else {
+            super.doPush(entity)
+        }
+    }
+
+    private fun pushFishAwayWithoutRecoil(fish: AbstractFish) {
+        if (isPassengerOfSameVehicle(fish) || noPhysics || fish.noPhysics) return
+        if (fish.isVehicle || !fish.isPushable) return
+
+        var pushX = fish.x - x
+        var pushZ = fish.z - z
+        var maximumAxisDistance = Mth.absMax(pushX, pushZ)
+        if (maximumAxisDistance < MIN_FISH_PUSH_DISTANCE) return
+
+        maximumAxisDistance = sqrt(maximumAxisDistance)
+        pushX /= maximumAxisDistance
+        pushZ /= maximumAxisDistance
+        val proximityScale = (1.0 / maximumAxisDistance).coerceAtMost(1.0)
+        fish.push(
+            pushX * proximityScale * FISH_PUSH_STRENGTH,
+            0.0,
+            pushZ * proximityScale * FISH_PUSH_STRENGTH
+        )
+    }
 
     override fun getWalkTargetValue(pos: BlockPos, level: LevelReader): Float {
         return if (level.getFluidState(pos).`is`(FluidTags.WATER)) {
@@ -374,7 +412,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     override fun getDefaultDimensions(pose: Pose): EntityDimensions {
         return if (isBaby) {
-            EntityDimensions.scalable(0.75f, 0.5f)
+            EntityDimensions.scalable(0.4f, 0.5f)
         } else {
             super.getDefaultDimensions(pose)
         }

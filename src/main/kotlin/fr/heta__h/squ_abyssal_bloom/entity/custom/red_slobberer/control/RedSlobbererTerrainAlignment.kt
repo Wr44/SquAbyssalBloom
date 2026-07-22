@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEnti
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
+import java.util.ArrayDeque
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
@@ -23,10 +24,14 @@ class RedSlobbererTerrainAlignment(
         const val SAMPLE_DEPTH_BELOW_BODY = 2.5
         const val MAX_SURFACE_HEIGHT_ABOVE_BODY_BOTTOM = 0.025
         const val MAX_GROUND_CONTACT_GAP = 0.3
+        const val MAX_SUPPORT_STEP_HEIGHT = 0.6
+        const val MAX_SUPPORT_NEIGHBOR_DISTANCE_FACTOR = 1.05
+        const val MIN_SUPPORT_SPAN_FACTOR = 1.2
+        const val MIN_SPARSE_SUPPORT_TILT_FACTOR = 0.3
         const val MIN_GROUND_SAMPLE_COUNT = 4
         const val MIN_PLANE_DETERMINANT = 1.0E-6
         const val MAX_PLANE_RESIDUAL = 0.7
-        const val MAX_TERRAIN_TILT_DEGREES = 32.0
+        const val MAX_TERRAIN_TILT_DEGREES = 45.0
         const val NORMAL_RESPONSE = 0.16
         const val MAX_NORMAL_ROTATION_DEGREES_PER_TICK = 1.25
         const val MIN_NORMAL_ROTATION_DEGREES = 0.08
@@ -69,19 +74,27 @@ class RedSlobbererTerrainAlignment(
     var hasGroundContact: Boolean = false
         private set
 
+    private var hasStableSupport: Boolean = false
+
     fun tick() {
         previousNormal = currentNormal
 
         val samples = sampleGroundAcrossBody()
         val bodyBottom = redSlobberer.boundingBox.minY
         hasGroundContact = samples.any { bodyBottom - it.height <= MAX_GROUND_CONTACT_GAP }
+        val supportingSamples = findConnectedSupportingSamples(samples, bodyBottom)
+        hasStableSupport = supportingSamples.size >= MIN_GROUND_SAMPLE_COUNT &&
+            hasSupportAcrossBody(supportingSamples)
 
-        val targetNormal = if (hasGroundContact) {
-            calculateTerrainNormal(samples) ?: UP
+        val rawTerrainNormal = if (hasGroundContact) {
+            calculateTerrainNormal(samples, bodyBottom)
         } else {
-            UP
+            null
         }
-        currentNormal = smoothNormal(currentNormal, targetNormal)
+        val targetNormal = rawTerrainNormal?.let { normal ->
+            attenuateTiltForSupport(normal, calculateSupportCoverage(supportingSamples))
+        }
+        currentNormal = smoothNormal(currentNormal, targetNormal ?: UP)
     }
 
     fun getInterpolatedNormal(partialTick: Float): Vec3 {
@@ -91,7 +104,7 @@ class RedSlobbererTerrainAlignment(
     }
 
     fun createTangentMovement(input: Vec3, speed: Float, yawDegrees: Float): Vec3? {
-        if (!hasGroundContact) return null
+        if (!hasStableSupport) return null
 
         val inputLengthSqr = input.lengthSqr()
         if (inputLengthSqr < MIN_VECTOR_LENGTH_SQR) return Vec3.ZERO
@@ -150,14 +163,18 @@ class RedSlobbererTerrainAlignment(
         }
     }
 
-    private fun calculateTerrainNormal(samples: List<GroundSample>): Vec3? {
+    private fun calculateTerrainNormal(samples: List<GroundSample>, bodyBottom: Double): Vec3? {
         if (samples.size < MIN_GROUND_SAMPLE_COUNT) return null
 
         var plane = fitPlane(samples) ?: return null
         val filteredSamples = samples.filter { sample ->
-            abs(sample.height - plane.heightAt(sample.x, sample.z)) <= MAX_PLANE_RESIDUAL
+            val isActualContact = bodyBottom - sample.height <= MAX_GROUND_CONTACT_GAP
+            isActualContact || abs(sample.height - plane.heightAt(sample.x, sample.z)) <= MAX_PLANE_RESIDUAL
         }
-        if (filteredSamples.size >= MIN_GROUND_SAMPLE_COUNT && filteredSamples.size < samples.size) {
+        if (
+            filteredSamples.size >= MIN_GROUND_SAMPLE_COUNT &&
+            filteredSamples.size < samples.size
+        ) {
             plane = fitPlane(filteredSamples) ?: plane
         }
 
@@ -172,6 +189,70 @@ class RedSlobbererTerrainAlignment(
         }
 
         return Vec3(-gradientX, 1.0, -gradientZ).normalize()
+    }
+
+    private fun attenuateTiltForSupport(normal: Vec3, supportCoverage: Double): Vec3 {
+        val coverageResponse = supportCoverage * supportCoverage
+        val tiltFactor = MIN_SPARSE_SUPPORT_TILT_FACTOR +
+            (1.0 - MIN_SPARSE_SUPPORT_TILT_FACTOR) * coverageResponse
+        return UP.scale(1.0 - tiltFactor).add(normal.scale(tiltFactor)).normalize()
+    }
+
+    private fun findConnectedSupportingSamples(
+        samples: List<GroundSample>,
+        bodyBottom: Double
+    ): List<GroundSample> {
+        val connected = BooleanArray(samples.size)
+        val pending = ArrayDeque<Int>()
+
+        for (index in samples.indices) {
+            if (bodyBottom - samples[index].height <= MAX_GROUND_CONTACT_GAP) {
+                connected[index] = true
+                pending.addLast(index)
+            }
+        }
+
+        val maximumNeighborDistance = redSlobberer.bbWidth * SAMPLE_RADIUS_FACTOR *
+            MAX_SUPPORT_NEIGHBOR_DISTANCE_FACTOR
+        val maximumNeighborDistanceSqr = maximumNeighborDistance * maximumNeighborDistance
+
+        while (pending.isNotEmpty()) {
+            val supportingSample = samples[pending.removeFirst()]
+            for (candidateIndex in samples.indices) {
+                if (connected[candidateIndex]) continue
+
+                val candidate = samples[candidateIndex]
+                val dx = candidate.x - supportingSample.x
+                val dz = candidate.z - supportingSample.z
+                val isNeighbor = dx * dx + dz * dz <= maximumNeighborDistanceSqr
+                val hasContinuousHeight = abs(candidate.height - supportingSample.height) <=
+                    MAX_SUPPORT_STEP_HEIGHT
+                if (isNeighbor && hasContinuousHeight) {
+                    connected[candidateIndex] = true
+                    pending.addLast(candidateIndex)
+                }
+            }
+        }
+
+        return samples.filterIndexed { index, _ -> connected[index] }
+    }
+
+    private fun hasSupportAcrossBody(samples: List<GroundSample>): Boolean {
+        val requiredSpan = redSlobberer.bbWidth * SAMPLE_RADIUS_FACTOR * MIN_SUPPORT_SPAN_FACTOR
+        val spanX = samples.maxOf { it.x } - samples.minOf { it.x }
+        val spanZ = samples.maxOf { it.z } - samples.minOf { it.z }
+        return spanX >= requiredSpan && spanZ >= requiredSpan
+    }
+
+    private fun calculateSupportCoverage(samples: List<GroundSample>): Double {
+        if (samples.isEmpty()) return 0.0
+
+        val sampledDiameter = redSlobberer.bbWidth * SAMPLE_RADIUS_FACTOR * 2.0
+        val coverageX = ((samples.maxOf { it.x } - samples.minOf { it.x }) / sampledDiameter)
+            .coerceIn(0.0, 1.0)
+        val coverageZ = ((samples.maxOf { it.z } - samples.minOf { it.z }) / sampledDiameter)
+            .coerceIn(0.0, 1.0)
+        return min(coverageX, coverageZ)
     }
 
     private fun fitPlane(samples: List<GroundSample>): TerrainPlane? {
