@@ -33,6 +33,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.level.BlockDropsEvent
 import net.neoforged.neoforge.event.level.BlockEvent
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent
 import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
@@ -117,6 +118,19 @@ object ConduitDomainHandler {
     fun onBlockPlace(event: BlockEvent.EntityPlaceEvent) {
         val level = event.level as? Level ?: return
         if (event.placedBlock.block == Blocks.CONDUIT) getConduits(level).add(event.pos)
+    }
+
+    @SubscribeEvent
+    fun onConduitBreak(event: BreakBlockEvent) {
+        if (event.state.block != Blocks.CONDUIT) return
+        val level = event.level as? ServerLevel ?: return
+
+        val wasActive = (level.getBlockEntity(event.pos) as? ConduitBlockEntity)?.isActive == true
+        if (wasActive) {
+            level.playSound(event.player, event.pos, SoundEvents.CONDUIT_DEACTIVATE, SoundSource.BLOCKS, 1.0f, 1.0f)
+        }
+
+        deactivateAstralBlocks(level, event.pos)
     }
 
     @SubscribeEvent
