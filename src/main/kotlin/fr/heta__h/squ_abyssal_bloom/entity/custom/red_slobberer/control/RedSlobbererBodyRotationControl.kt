@@ -9,10 +9,7 @@ class RedSlobbererBodyRotationControl(
 ) : BodyRotationControl(redSlobberer) {
 
     private companion object {
-        const val MIN_ACTIVE_SPEED = 0.001f
-        const val BODY_TURN_DEGREES = 2.25f
         const val MAX_HEAD_OFFSET_DEGREES = 18.0f
-        const val MOVEMENT_EPSILON_SQR = 1.0E-5
     }
 
     private var initialized = false
@@ -24,18 +21,11 @@ class RedSlobbererBodyRotationControl(
             initialized = true
         }
 
-        val dx = redSlobberer.x - redSlobberer.xo
-        val dz = redSlobberer.z - redSlobberer.zo
-        val isCrawling = redSlobberer.isInLocomotionPropulsionPhase && (
-            dx * dx + dz * dz > MOVEMENT_EPSILON_SQR ||
-                redSlobberer.speed > MIN_ACTIVE_SPEED
-            )
-
-        if (isCrawling) {
+        if (redSlobberer.isInLocomotionChargePhase) {
             stableBodyYaw = Mth.approachDegrees(
                 stableBodyYaw,
                 redSlobberer.yRot,
-                BODY_TURN_DEGREES
+                RedSlobbererEntity.LOCOMOTION_CHARGE_TURN_DEGREES
             )
         }
 

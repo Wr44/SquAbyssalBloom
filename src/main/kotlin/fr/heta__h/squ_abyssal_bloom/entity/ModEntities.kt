@@ -40,6 +40,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.Identifier
 import net.minecraft.tags.BiomeTags
 import net.minecraft.tags.FluidTags
+import net.minecraft.util.Mth
 import net.minecraft.util.RandomSource
 import net.minecraft.world.Difficulty
 import net.minecraft.world.entity.EntitySpawnReason
@@ -71,9 +72,8 @@ object ModEntities {
     private const val BRINE_MAXIMUM_SPAWN_HEIGHT_ABOVE_FLOOR = 2
     private const val BRINE_REQUIRED_WATER_BLOCKS = 2
 
-    private const val RED_SLOBBERER_MINIMUM_SPAWN_HEIGHT_ABOVE_FLOOR = 3
-    private const val RED_SLOBBERER_MAXIMUM_SPAWN_HEIGHT_ABOVE_FLOOR = 8
-    private const val RED_SLOBBERER_REQUIRED_WATER_BLOCKS = 3
+    private const val RED_SLOBBERER_MAXIMUM_FLOOR_VARIATION = 2
+    private const val SPAWN_BOX_EDGE_EPSILON = 1.0E-7
 
     val ENTITY_TYPES: DeferredRegister<EntityType<*>> =
         DeferredRegister.create(BuiltInRegistries.ENTITY_TYPE, SquAbyssalBloom.ID)
@@ -349,13 +349,56 @@ object ModEntities {
         level: LevelReader,
         candidate: BlockPos,
         entityType: EntityType<*>
-    ): BlockPos? = findWaterSpawnPositionAboveOceanFloor(
-        level,
-        candidate,
-        entityType,
-        RED_SLOBBERER_MINIMUM_SPAWN_HEIGHT_ABOVE_FLOOR..RED_SLOBBERER_MAXIMUM_SPAWN_HEIGHT_ABOVE_FLOOR,
-        RED_SLOBBERER_REQUIRED_WATER_BLOCKS
-    )
+    ): BlockPos? {
+        if (!level.worldBorder.isWithinBounds(candidate)) return null
+        if (!level.getFluidState(candidate).`is`(FluidTags.WATER)) return null
+
+        val footprint = entityType.getSpawnAABB(
+            candidate.x + 0.5,
+            0.0,
+            candidate.z + 0.5
+        ).deflate(SPAWN_BOX_EDGE_EPSILON)
+
+        var minimumFloorY = Int.MAX_VALUE
+        var maximumFloorY = Int.MIN_VALUE
+        for (floorX in Mth.floor(footprint.minX)..Mth.floor(footprint.maxX)) {
+            for (floorZ in Mth.floor(footprint.minZ)..Mth.floor(footprint.maxZ)) {
+                val floorY = findLocalWaterFloor(level, BlockPos(floorX, candidate.y, floorZ))?.y
+                    ?: return null
+                minimumFloorY = minOf(minimumFloorY, floorY)
+                maximumFloorY = maxOf(maximumFloorY, floorY)
+            }
+        }
+
+        if (
+            maximumFloorY - minimumFloorY >
+            RED_SLOBBERER_MAXIMUM_FLOOR_VARIATION
+        ) {
+            return null
+        }
+
+        val spawnPos = BlockPos(
+            candidate.x,
+            maximumFloorY,
+            candidate.z
+        )
+
+        val spawnBox = entityType.getSpawnAABB(
+            spawnPos.x + 0.5,
+            spawnPos.y.toDouble(),
+            spawnPos.z + 0.5
+        )
+        val occupiedBlocks = BlockPos.betweenClosed(
+            spawnBox.deflate(SPAWN_BOX_EDGE_EPSILON)
+        )
+        if (occupiedBlocks.any { pos ->
+            !level.getFluidState(pos).`is`(FluidTags.WATER)
+        }) {
+            return null
+        }
+
+        return spawnPos.takeIf { level.noCollision(spawnBox) }
+    }
 
     internal fun findBrineSpawnPosition(
         level: LevelReader,

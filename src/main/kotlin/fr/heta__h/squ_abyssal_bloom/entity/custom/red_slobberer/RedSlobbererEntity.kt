@@ -73,6 +73,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         const val LOCOMOTION_ANIMATION_LOOP_TICKS = 50
         const val LOCOMOTION_CHARGE_TICKS = 35
         const val LOCOMOTION_PROPULSION_SPEED_MULTIPLIER = 50.0 / 15.0
+        const val LOCOMOTION_CHARGE_TURN_DEGREES = 8.0f
         const val ANIM_HIDE_S = 1.0f
         const val ANIM_SHOW_S = 0.5833f
         private const val WATER_GRAVITY = 0.4
@@ -294,6 +295,12 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         get() {
             if (!entityData.get(LOCOMOTION_ACTIVE)) return false
             return locomotionCycleTick() >= LOCOMOTION_CHARGE_TICKS
+        }
+
+    val isInLocomotionChargePhase: Boolean
+        get() {
+            if (!entityData.get(LOCOMOTION_ACTIVE)) return false
+            return locomotionCycleTick() < LOCOMOTION_CHARGE_TICKS
         }
 
     private fun currentLocomotionClockTick(): Int =

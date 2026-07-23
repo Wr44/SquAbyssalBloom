@@ -12,10 +12,11 @@ class RedSlobbererMoveControl(
 
     private companion object {
         const val MIN_HORIZONTAL_DISTANCE_SQR = 2.5000003E-7
-        const val MAX_PATH_TURN_DEGREES = 8.0f
     }
 
     private var wasPropelling = false
+    private var propulsionHeadingLocked = false
+    private var lockedPropulsionYaw = 0.0f
 
     fun stopForDefense() {
         operation = Operation.WAIT
@@ -25,6 +26,7 @@ class RedSlobbererMoveControl(
         redSlobberer.zza = 0.0f
         redSlobberer.deltaMovement = Vec3.ZERO
         wasPropelling = false
+        unlockPropulsionHeading()
     }
 
     override fun tick() {
@@ -41,15 +43,20 @@ class RedSlobbererMoveControl(
     }
 
     private fun tickStrafe() {
+        operation = Operation.WAIT
         if (!redSlobberer.updateLocomotionCycle(true)) {
-            operation = Operation.WAIT
             holdDuringCharge()
             return
         }
 
-        super.tick()
-        redSlobberer.speed *=
-            RedSlobbererEntity.LOCOMOTION_PROPULSION_SPEED_MULTIPLIER.toFloat()
+        lockPropulsionHeading()
+        redSlobberer.xxa = 0.0f
+        redSlobberer.yya = 0.0f
+        redSlobberer.speed = (
+            speedModifier *
+                redSlobberer.getAttributeValue(Attributes.MOVEMENT_SPEED) *
+                RedSlobbererEntity.LOCOMOTION_PROPULSION_SPEED_MULTIPLIER
+            ).toFloat()
         wasPropelling = true
     }
 
@@ -62,19 +69,16 @@ class RedSlobbererMoveControl(
             return
         }
 
-        if (!redSlobberer.updateLocomotionCycle(true)) {
+        val isPropelling = redSlobberer.updateLocomotionCycle(true)
+        if (!isPropelling) {
+            if (redSlobberer.isInLocomotionChargePhase) {
+                turnToward(dx, dz)
+            }
             holdDuringCharge()
             return
         }
 
-        val targetYaw = (
-            Mth.atan2(dz, dx) * 180.0 / Math.PI
-            ).toFloat() - 90.0f
-        redSlobberer.yRot = rotlerp(
-            redSlobberer.yRot,
-            targetYaw,
-            MAX_PATH_TURN_DEGREES
-        )
+        lockPropulsionHeading()
         redSlobberer.xxa = 0.0f
         redSlobberer.yya = 0.0f
         redSlobberer.speed = (
@@ -90,15 +94,43 @@ class RedSlobbererMoveControl(
         redSlobberer.speed = 0.0f
         redSlobberer.xxa = 0.0f
         redSlobberer.yya = 0.0f
-        redSlobberer.updateLocomotionCycle(false)
+        if (redSlobberer.updateLocomotionCycle(false)) {
+            lockPropulsionHeading()
+        } else {
+            unlockPropulsionHeading()
+        }
         stopPropulsionMomentum()
     }
 
     private fun holdDuringCharge() {
+        unlockPropulsionHeading()
         redSlobberer.speed = 0.0f
         redSlobberer.xxa = 0.0f
         redSlobberer.yya = 0.0f
         stopPropulsionMomentum()
+    }
+
+    private fun turnToward(dx: Double, dz: Double) {
+        val targetYaw = (
+            Mth.atan2(dz, dx) * 180.0 / Math.PI
+            ).toFloat() - 90.0f
+        redSlobberer.yRot = rotlerp(
+            redSlobberer.yRot,
+            targetYaw,
+            RedSlobbererEntity.LOCOMOTION_CHARGE_TURN_DEGREES
+        )
+    }
+
+    private fun lockPropulsionHeading() {
+        if (!propulsionHeadingLocked) {
+            lockedPropulsionYaw = redSlobberer.yRot
+            propulsionHeadingLocked = true
+        }
+        redSlobberer.yRot = lockedPropulsionYaw
+    }
+
+    private fun unlockPropulsionHeading() {
+        propulsionHeadingLocked = false
     }
 
     private fun stopPropulsionMomentum() {
