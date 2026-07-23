@@ -26,8 +26,10 @@ class RedSlobbererBodyRotationControl(
 
         val dx = redSlobberer.x - redSlobberer.xo
         val dz = redSlobberer.z - redSlobberer.zo
-        val isCrawling = dx * dx + dz * dz > MOVEMENT_EPSILON_SQR ||
-            redSlobberer.speed > MIN_ACTIVE_SPEED
+        val isCrawling = redSlobberer.isInLocomotionPropulsionPhase && (
+            dx * dx + dz * dz > MOVEMENT_EPSILON_SQR ||
+                redSlobberer.speed > MIN_ACTIVE_SPEED
+            )
 
         if (isCrawling) {
             stableBodyYaw = Mth.approachDegrees(

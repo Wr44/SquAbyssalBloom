@@ -464,21 +464,7 @@ object ConduitDomainHandler {
     }
 
     private fun deactivateAstralBlocks(level: ServerLevel, pos: BlockPos) {
-        val allPositions = listOf(
-            pos.offset(0, 2, 0), pos.offset(0, -2, 0),
-            pos.offset(0, 0, 2), pos.offset(0, 0, -2),
-            pos.offset(2, 0, 0), pos.offset(-2, 0, 0),
-
-            pos.offset(0, 2, 2), pos.offset(0, 2, -2),
-            pos.offset(0, -2, 2), pos.offset(0, -2, -2),
-
-            pos.offset(2, 0, 2), pos.offset(2, 0, -2),
-            pos.offset(-2, 0, 2), pos.offset(-2, 0, -2),
-
-            pos.offset(2, 2, 0), pos.offset(2, -2, 0),
-            pos.offset(-2, 2, 0), pos.offset(-2, -2, 0)
-        )
-
+        val allPositions = AstralPrismarineTracker.nearbyOffsetPositions(pos)
 
         allPositions.forEach { checkPos ->
 

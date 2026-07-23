@@ -38,9 +38,14 @@ class RedSlobbererMoveControl(
     private var smoothedDirectionZ = 1.0
     private var lockedClimbDirectionX = 0.0
     private var lockedClimbDirectionZ = 1.0
+    private var wasPropelling = false
 
     val preventsNativeStep: Boolean
         get() = climbController.preventsNativeStep
+
+    val holdsVerticalPositionDuringCharge: Boolean
+        get() = climbController.phase != RedSlobbererClimbPhase.NONE &&
+            !redSlobberer.isInLocomotionPropulsionPhase
 
     val followsTerrainTangent: Boolean
         get() = climbController.phase == RedSlobbererClimbPhase.NONE
@@ -48,19 +53,34 @@ class RedSlobbererMoveControl(
     override fun tick() {
         if (operation == Operation.STRAFE) {
             climbController.stop()
+            if (!redSlobberer.updateLocomotionCycle(true)) {
+                operation = Operation.WAIT
+                holdDuringCharge()
+                return
+            }
             super.tick()
+            redSlobberer.speed *=
+                RedSlobbererEntity.LOCOMOTION_PROPULSION_SPEED_MULTIPLIER.toFloat()
+            wasPropelling = true
             return
         }
 
         if (climbController.phase != RedSlobbererClimbPhase.NONE) {
             operation = Operation.WAIT
+            if (!redSlobberer.updateLocomotionCycle(true)) {
+                holdDuringCharge()
+                return
+            }
             continueActiveClimb()
+            wasPropelling = true
             return
         }
 
         if (operation != Operation.MOVE_TO) {
             operation = Operation.WAIT
             redSlobberer.speed = 0.0f
+            redSlobberer.updateLocomotionCycle(false)
+            stopPropulsionMomentum()
             return
         }
 
@@ -73,15 +93,22 @@ class RedSlobbererMoveControl(
 
         if (horizontalDistanceSqr < MIN_HORIZONTAL_DISTANCE_SQR && !elevatedPathNode) {
             redSlobberer.speed = 0.0f
+            redSlobberer.updateLocomotionCycle(false)
+            stopPropulsionMomentum()
             return
         }
 
         updateSmoothedHeading(dx, dz, horizontalDistanceSqr)
+        if (!redSlobberer.updateLocomotionCycle(true)) {
+            holdDuringCharge()
+            return
+        }
         rotateTowardSmoothedHeading()
 
         val climbProbeDirection = getClimbProbeDirection(smoothedDirectionX, smoothedDirectionZ)
         if (climbProbeDirection == null) {
             applyMovementSpeed()
+            wasPropelling = true
             return
         }
 
@@ -101,6 +128,7 @@ class RedSlobbererMoveControl(
 
         climbController.tick(climbRequested, obstacleAhead, climbTargetY)
         applyMovementSpeed()
+        wasPropelling = true
     }
 
     private fun continueActiveClimb() {
@@ -164,8 +192,26 @@ class RedSlobbererMoveControl(
         redSlobberer.speed = (
             speedModifier *
                 redSlobberer.getAttributeValue(Attributes.MOVEMENT_SPEED) *
-                climbController.horizontalSpeedMultiplier
+                climbController.horizontalSpeedMultiplier *
+                RedSlobbererEntity.LOCOMOTION_PROPULSION_SPEED_MULTIPLIER
             ).toFloat()
+    }
+
+    private fun holdDuringCharge() {
+        redSlobberer.speed = 0.0f
+        stopPropulsionMomentum()
+    }
+
+    private fun stopPropulsionMomentum() {
+        if (!wasPropelling) return
+        val movement = redSlobberer.deltaMovement
+        val verticalMovement = if (climbController.phase == RedSlobbererClimbPhase.NONE) {
+            movement.y
+        } else {
+            0.0
+        }
+        redSlobberer.deltaMovement = Vec3(0.0, verticalMovement, 0.0)
+        wasPropelling = false
     }
 
     private fun getClimbProbeDirection(pathDirectionX: Double, pathDirectionZ: Double): Vec3? {

@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights
 
 import dev.lambdaurora.lambdynlights.api.behavior.LineLightBehavior
 import net.neoforged.fml.ModList
+import org.joml.Vector3d
 
 abstract class AbstractDynamicLightCompat {
 
@@ -46,6 +47,36 @@ abstract class AbstractDynamicLightCompat {
     protected fun removeDynamicLight(light: LineLightBehavior) {
         if (isInitialized) {
             try { removeMethod?.invoke(managerInstance, light) } catch (e: Exception) {}
+        }
+    }
+
+    protected fun updateLineLight(
+        map: MutableMap<Int, LineLightBehavior>,
+        id: Int,
+        start: Vector3d,
+        end: Vector3d,
+        luminance: Int,
+        removedCheck: () -> Boolean
+    ) {
+        val existing = map[id]
+
+        if (existing != null) {
+            existing.startPoint = start
+            existing.endPoint = end
+            existing.luminance = luminance
+        } else {
+            val newLight = object : LineLightBehavior(start, end, luminance) {
+                override fun isRemoved(): Boolean = removedCheck()
+            }
+            map[id] = newLight
+            addDynamicLight(newLight)
+        }
+    }
+
+    protected fun removeLineLight(map: MutableMap<Int, LineLightBehavior>, id: Int) {
+        val light = map.remove(id)
+        if (light != null) {
+            removeDynamicLight(light)
         }
     }
 }

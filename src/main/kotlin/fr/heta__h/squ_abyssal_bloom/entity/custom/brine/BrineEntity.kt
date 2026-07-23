@@ -16,6 +16,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineHoverBehaviorG
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineIdleBehaviorGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrinePlayerTargetGoal
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -23,7 +24,6 @@ import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
-import net.minecraft.tags.FluidTags
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.EntitySpawnReason
@@ -192,11 +192,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     override fun createNavigation(level: Level): PathNavigation = AmphibiousPathNavigation(this, level)
 
     override fun getWalkTargetValue(pos: BlockPos, level: LevelReader): Float {
-        return if (level.getFluidState(pos).`is`(FluidTags.WATER)) {
-            10.0f
-        } else {
-            super.getWalkTargetValue(pos, level)
-        }
+        return ModUtilities.preferWaterWalkTarget(pos, level) { super.getWalkTargetValue(pos, level) }
     }
 
     override fun checkSpawnRules(level: LevelAccessor, spawnReason: EntitySpawnReason): Boolean {

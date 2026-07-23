@@ -29,6 +29,7 @@ import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
+import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.min
 
@@ -195,6 +196,23 @@ object ModUtilities {
             }
         }
         return maxFound
+    }
+
+    fun preferWaterWalkTarget(pos: BlockPos, level: LevelReader, fallback: () -> Float): Float {
+        return if (level.getFluidState(pos).`is`(FluidTags.WATER)) 10.0f else fallback()
+    }
+
+    fun getCombinedLampInfluence(entity: LivingEntity?, level: Level, pos: BlockPos, maxRange: Double, maxInfluence: Double): Double {
+        entity ?: return 0.0
+        return maxOf(getRiderLampInfluence(entity), getNautilusLampInfluence(level, pos, maxRange, maxInfluence))
+    }
+
+    fun smoothstep(t: Double): Double {
+        return t * t * (3.0 - 2.0 * t)
+    }
+
+    fun sweepStaleUuidTicks(map: MutableMap<UUID, Long>, now: Long, maxAge: Long) {
+        map.entries.removeIf { (_, tick) -> now - tick > maxAge }
     }
 
     fun getDepth(level: Level, pos: BlockPos): Double {

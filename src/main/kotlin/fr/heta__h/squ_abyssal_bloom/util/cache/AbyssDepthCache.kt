@@ -18,10 +18,7 @@ object AbyssDepthCache {
 
     val displayedDepthFactor: Double
         get() {
-            val s = smoothedDepthFactor
-            val s2 = s * s
-            val s3 = s2 * s
-            val inner = 3.0 * s2 - 2.0 * s3
+            val inner = ModUtilities.smoothstep(smoothedDepthFactor)
             return inner * inner
         }
 
@@ -45,13 +42,8 @@ object AbyssDepthCache {
             smoothedDepthFactor = cachedRawDepthFactor
 
             val entity = mc.cameraEntity as? LivingEntity
-            if (entity != null) {
-                cachedLampInfluence = maxOf(
-                    ModUtilities.getRiderLampInfluence(entity),
-                    ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
-                )
-                smoothedLampInfluence = cachedLampInfluence
-            }
+            cachedLampInfluence = ModUtilities.getCombinedLampInfluence(entity, level, camPos, 16.0, 1.0)
+            smoothedLampInfluence = cachedLampInfluence
             isInitialized = true
             return
         }
@@ -70,13 +62,6 @@ object AbyssDepthCache {
         cachedRawDepthFactor = ModUtilities.getDepthFactor(physicalDepth)
 
         val entity = mc.cameraEntity as? LivingEntity
-        if (entity != null) {
-            cachedLampInfluence = maxOf(
-                ModUtilities.getRiderLampInfluence(entity),
-                ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
-            )
-        } else {
-            cachedLampInfluence = 0.0
-        }
+        cachedLampInfluence = ModUtilities.getCombinedLampInfluence(entity, level, camPos, 16.0, 1.0)
     }
 }

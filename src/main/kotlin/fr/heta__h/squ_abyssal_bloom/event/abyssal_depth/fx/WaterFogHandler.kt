@@ -87,10 +87,7 @@ object WaterFogHandler {
         val baseFogEndRaw = Mth.lerp(depthEased, FOG_END_SHALLOW, finalTargetEnd)
         val baseFogEnd = baseFogEndRaw.coerceAtLeast(baseFogStart + 2.0f)
 
-        val lampInfluence = maxOf(
-            ModUtilities.getRiderLampInfluence(entity),
-            ModUtilities.getNautilusLampInfluence(level, camPos, 32.0, 1.5)
-        )
+        val lampInfluence = ModUtilities.getCombinedLampInfluence(entity, level, camPos, 32.0, 1.5)
         val lampPower = (lampInfluence * ModConfig.nautilusLampInfluence).toFloat() * depthEased
         val nearPlane = baseFogStart + lampPower * ModConfig.lampNearPlaneMultiplier.toFloat()
         val farPlane = baseFogEnd + lampPower * ModConfig.lampFarPlaneMultiplier.toFloat()

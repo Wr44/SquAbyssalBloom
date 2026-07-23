@@ -106,10 +106,7 @@ object AbyssOverlayRender {
         val alpha = AbyssDepthCache.displayedDepthFactor.toFloat()
         if (alpha < 0.005f) return
 
-        val lampInfluence = maxOf(
-            ModUtilities.getRiderLampInfluence(entity),
-            ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
-        )
+        val lampInfluence = ModUtilities.getCombinedLampInfluence(entity, level, camPos, 16.0, 1.0)
 
         val waterColor = level.getBiome(camPos).value().waterColor
         val r = ((waterColor shr 16 and 0xFF) * 0.12f).toInt().coerceIn(0, 255)

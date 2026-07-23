@@ -9,6 +9,7 @@ import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
+import net.minecraft.core.particles.BlockParticleOption
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.FluidTags
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.animal.fish.AbstractFish
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.SeaPickleBlock
+import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.level.gamerules.GameRules
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
@@ -850,11 +852,13 @@ class RedSlobbererReefManager private constructor(
             val pos = growable[level.random.nextInt(growable.size)]
             val state = level.getBlockState(pos)
             val oldAge = state.getValue(CalcareousDepositBlock.AGE)
+            val grownState = state.setValue(CalcareousDepositBlock.AGE, oldAge + 1)
             if (level.setBlock(
                 pos,
-                state.setValue(CalcareousDepositBlock.AGE, oldAge + 1),
+                grownState,
                 Block.UPDATE_ALL
             )) {
+                playCalcareousGrowthEffects(pos, grownState)
                 if (debugEnabled()) {
                     SquAbyssalBloom.LOGGER.info(
                         "[Red Slobberer reef debug] event=depositGrew reef={} pos={} age={}->{} chance={} roll={}",
@@ -983,6 +987,7 @@ class RedSlobbererReefManager private constructor(
                     if (!placement.canSurvive(level, immutablePos)) {
                         diagnostics.rejectedSurvival++
                     } else if (level.setBlock(immutablePos, placement, Block.UPDATE_ALL)) {
+                        playCalcareousGrowthEffects(immutablePos, placement)
                         if (debugEnabled()) {
                             SquAbyssalBloom.LOGGER.info(
                                 "[Red Slobberer reef debug] event=depositPlaced reef={} pos={} facing={} scanned={} chancePassed=true",
@@ -1092,6 +1097,7 @@ class RedSlobbererReefManager private constructor(
                     if (!decoration.canSurvive(level, immutablePos)) {
                         diagnostics.rejectedSurvival++
                     } else if (level.setBlock(immutablePos, decoration, Block.UPDATE_ALL)) {
+                        playDecorationGrowthEffects(immutablePos)
                         if (debugEnabled()) {
                             SquAbyssalBloom.LOGGER.info(
                                 "[Red Slobberer reef debug] event=decorationPlaced reef={} type={} block={} pos={} scanned={}",
@@ -1125,6 +1131,38 @@ class RedSlobbererReefManager private constructor(
             )
         }
         return false
+    }
+
+    private fun playDecorationGrowthEffects(pos: BlockPos) {
+        // Same world event as successful bone meal: visible to every tracking client and cheap
+        // enough for the deliberately low-frequency reef decoration pass.
+        level.levelEvent(1505, pos, 15)
+    }
+
+    private fun playCalcareousGrowthEffects(pos: BlockPos, state: BlockState) {
+        val age = state.getValue(CalcareousDepositBlock.AGE)
+        level.sendParticles(
+            BlockParticleOption(ParticleTypes.BLOCK, state),
+            pos.x + 0.5,
+            pos.y + 0.18 + age * 0.05,
+            pos.z + 0.5,
+            14 + age * 5,
+            0.34,
+            0.12 + age * 0.025,
+            0.34,
+            0.035
+        )
+        level.sendParticles(
+            ParticleTypes.BUBBLE_POP,
+            pos.x + 0.5,
+            pos.y + 0.24,
+            pos.z + 0.5,
+            3 + age,
+            0.24,
+            0.08,
+            0.24,
+            0.018
+        )
     }
 
     private fun hasNearbyLiveCoralDecoration(reef: ReefState): Boolean {

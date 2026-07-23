@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.terrain
 
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalShapingContext
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnMods
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnSample
@@ -140,7 +141,7 @@ object AbyssalFloorShaper {
         val side = clampedSide * clampedSide * (3.0 - 2.0 * abs(clampedSide)) * (if (line >= 0) 1.0 else -1.0)
 
         val t = ((faultThreshold + faultBlend - dist) / faultBlend).coerceIn(0.0, 1.0)
-        val smooth = t * t * (3.0 - 2.0 * t)
+        val smooth = ModUtilities.smoothstep(t)
 
         return side * ModServerConfig.FAULT_OFFSET_AMP.get() * smooth
     }
@@ -224,7 +225,7 @@ object AbyssalFloorShaper {
 
     private fun shallowFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods, finalDensityDf: DensityFunction, effectiveCont: Double): Int {
         val rawT = ((effectiveCont - OCEAN_MAX_CONT) / (SHALLOW_COAST_FADE - OCEAN_MAX_CONT)).coerceIn(0.0, 1.0)
-        val smoothT = rawT * rawT * (3.0 - 2.0 * rawT)
+        val smoothT = ModUtilities.smoothstep(rawT)
         val computed = shallowComputedFloor(shaping, column, mods)
 
         if (smoothT >= 1.0) return computed
@@ -274,7 +275,7 @@ object AbyssalFloorShaper {
         val slopeVar = shaping.wallNoise.getValue(mods.warp1X * SLOPE_PERTURB_SCALE, 1600.0, mods.warp1Z * SLOPE_PERTURB_SCALE) * SLOPE_PERTURB_AMP
         val rawT = ((effectiveCont - blendLo) / (blendHi - blendLo) + slopeVar * 0.5).coerceIn(0.0, 1.0)
         val biasedT = rawT.pow(SLOPE_POWER)
-        val smoothT = biasedT * biasedT * (3.0 - 2.0 * biasedT)
+        val smoothT = ModUtilities.smoothstep(biasedT)
 
         val localVar = shaping.detailNoise.getValue(
             column.worldX * TRANSITION_LOCAL_SCALE, 1400.0, column.worldZ * TRANSITION_LOCAL_SCALE
@@ -296,7 +297,7 @@ object AbyssalFloorShaper {
         val abyssalY = abyssalFloor(shaping, column, mods, finalDensityDf, effectiveCont)
 
         val rawT = ((effectiveCont - blendLo) / (blendHi - blendLo)).coerceIn(0.0, 1.0)
-        val smoothT = rawT * rawT * (3.0 - 2.0 * rawT)
+        val smoothT = ModUtilities.smoothstep(rawT)
 
         val localVar = shaping.detailNoise.getValue(
             column.worldX * TRANSITION_LOCAL_SCALE, 1700.0, column.worldZ * TRANSITION_LOCAL_SCALE
@@ -311,7 +312,7 @@ object AbyssalFloorShaper {
         val softStart = limit + ABYSSAL_SOFT_ZONE
         if (value >= softStart) return value
         val t = ((value - limit) / ABYSSAL_SOFT_ZONE).coerceIn(0.0, 1.0)
-        return limit + ABYSSAL_SOFT_ZONE * t * t * (3.0 - 2.0 * t)
+        return limit + ABYSSAL_SOFT_ZONE * ModUtilities.smoothstep(t)
     }
 
     private fun abyssalFloor(shaping: AbyssalShapingContext, column: ColumnSample, mods: ColumnMods, finalDensityDf: DensityFunction, effectiveCont: Double = 0.0): Int {

@@ -36,10 +36,7 @@ object AbyssVignetteOverlay {
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
         val rawFactor = AbyssDepthCache.displayedDepthFactor
-        val lampInfluence = maxOf(
-            ModUtilities.getRiderLampInfluence(entity),
-            ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
-        )
+        val lampInfluence = ModUtilities.getCombinedLampInfluence(entity, level, camPos, 16.0, 1.0)
         val effectiveFactor = rawFactor * (1.0 - lampInfluence * ModConfig.nautilusLampInfluence)
 
         val alpha = (effectiveFactor.pow(0.8) * ModConfig.vignetteIntensity).toFloat().coerceIn(0f, 0.7f)

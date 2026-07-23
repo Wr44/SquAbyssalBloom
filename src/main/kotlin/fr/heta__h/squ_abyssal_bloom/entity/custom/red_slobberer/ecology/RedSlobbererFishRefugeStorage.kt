@@ -259,18 +259,19 @@ class RedSlobbererFishRefugeStorage(
         reason: ReleaseReason,
         predicate: (StoredFish) -> Boolean
     ) {
-        var released = 0
+        val releasePositions = mutableListOf<Vec3>()
         val iterator = storedFish.iterator()
         while (iterator.hasNext()) {
             val stored = iterator.next()
             if (!predicate(stored)) continue
-            if (!restoreFish(level, stored, reason)) continue
+            val releasePosition = restoreFish(level, stored, reason) ?: continue
             iterator.remove()
-            released++
+            releasePositions.add(releasePosition)
         }
+        val released = releasePositions.size
         if (released <= 0) return
 
-        playExitEffects(level, released)
+        playExitEffects(level, releasePositions)
         RedSlobbererReefManager.forLevel(level).recordFishReleased(
             redSlobberer,
             released,
@@ -283,7 +284,7 @@ class RedSlobbererFishRefugeStorage(
         level: ServerLevel,
         stored: StoredFish,
         reason: ReleaseReason
-    ): Boolean {
+    ): Vec3? {
         val restored = try {
             EntityType.loadEntityRecursive(
                 stored.data.copy(),
@@ -305,7 +306,7 @@ class RedSlobbererFishRefugeStorage(
                 "Stored refuge entity in Red Slobberer {} is not a fish; keeping its data",
                 redSlobberer.uuid
             )
-            return false
+            return null
         }
 
         val releasePosition = findReleasePosition(level, fish)
@@ -325,14 +326,14 @@ class RedSlobbererFishRefugeStorage(
         }
         fish.persistentData.putLong(REENTRY_COOLDOWN_TAG, level.gameTime + cooldown)
         FishCollectiveManager.forLevel(level).forget(fish)
-        if (level.addFreshEntity(fish)) return true
+        if (level.addFreshEntity(fish)) return releasePosition
 
         SquAbyssalBloom.LOGGER.warn(
             "Could not add restored fish {} from Red Slobberer refuge {} back to the level",
             fish.uuid,
             redSlobberer.uuid
         )
-        return false
+        return null
     }
 
     private fun findReleasePosition(level: ServerLevel, fish: AbstractFish): Vec3 {
@@ -402,15 +403,47 @@ class RedSlobbererFishRefugeStorage(
             entrance.x,
             entrance.y,
             entrance.z,
-            5,
+            7,
             0.15,
             0.15,
             0.15,
             0.02
         )
+        level.sendParticles(
+            ParticleTypes.POOF,
+            entrance.x,
+            entrance.y,
+            entrance.z,
+            4,
+            0.12,
+            0.1,
+            0.12,
+            0.015
+        )
+
+        val refugeCenter = Vec3(
+            redSlobberer.x,
+            redSlobberer.boundingBox.minY + ENTRANCE_HEIGHT,
+            redSlobberer.z
+        )
+        for (step in 1..5) {
+            val trailPosition = entrance.lerp(refugeCenter, step / 6.0)
+            level.sendParticles(
+                if (step % 2 == 0) ParticleTypes.NAUTILUS else ParticleTypes.BUBBLE,
+                trailPosition.x,
+                trailPosition.y,
+                trailPosition.z,
+                2,
+                0.06,
+                0.06,
+                0.06,
+                0.012
+            )
+        }
     }
 
-    private fun playExitEffects(level: ServerLevel, released: Int) {
+    private fun playExitEffects(level: ServerLevel, releasePositions: List<Vec3>) {
+        val released = releasePositions.size
         val position = Vec3(
             redSlobberer.x,
             redSlobberer.boundingBox.minY + ENTRANCE_HEIGHT,
@@ -427,16 +460,41 @@ class RedSlobbererFishRefugeStorage(
             0.9f + level.random.nextFloat() * 0.2f
         )
         level.sendParticles(
-            ParticleTypes.BUBBLE_POP,
+            ParticleTypes.NAUTILUS,
             position.x,
             position.y,
             position.z,
-            (released * 3).coerceAtMost(30),
+            (released * 2).coerceAtMost(24),
             redSlobberer.bbWidth * 0.55,
             0.35,
             redSlobberer.bbWidth * 0.55,
-            0.025
+            0.02
         )
+
+        releasePositions.take(20).forEach { releasePosition ->
+            level.sendParticles(
+                ParticleTypes.BUBBLE_POP,
+                releasePosition.x,
+                releasePosition.y,
+                releasePosition.z,
+                6,
+                0.16,
+                0.14,
+                0.16,
+                0.025
+            )
+            level.sendParticles(
+                ParticleTypes.POOF,
+                releasePosition.x,
+                releasePosition.y,
+                releasePosition.z,
+                3,
+                0.1,
+                0.08,
+                0.1,
+                0.012
+            )
+        }
     }
 
     private fun configuredCapacity(): Int =

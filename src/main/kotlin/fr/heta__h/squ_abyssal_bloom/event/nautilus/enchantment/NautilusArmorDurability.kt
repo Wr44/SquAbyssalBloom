@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.neoforged.bus.api.SubscribeEvent
@@ -19,7 +20,7 @@ object NautilusArmorDurability {
     fun onServerTick(event: ServerTickEvent.Post) {
         if (event.server.tickCount % 6000 == 0) {
             val now = event.server.overworld().gameTime
-            lastDamageTick.entries.removeIf { (_, tick) -> now - tick > 1200L }
+            ModUtilities.sweepStaleUuidTicks(lastDamageTick, now, 1200L)
         }
     }
 

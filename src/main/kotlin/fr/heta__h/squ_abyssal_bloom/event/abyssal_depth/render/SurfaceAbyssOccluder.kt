@@ -168,12 +168,7 @@ object SurfaceAbyssOccluder {
         val entity = camera.entity() as? LivingEntity
         if (entity != null && entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
-        val lampInfluence = if (entity != null) {
-            maxOf(
-                ModUtilities.getRiderLampInfluence(entity),
-                ModUtilities.getNautilusLampInfluence(level, BlockPos.containing(camPos), 16.0, 1.0)
-            ).toFloat()
-        } else 0f
+        val lampInfluence = ModUtilities.getCombinedLampInfluence(entity, level, BlockPos.containing(camPos), 16.0, 1.0).toFloat()
         val lampReduction = lampInfluence * ModConfig.nautilusLampInfluence.toFloat() * LAMP_REDUCTION_MULTIPLIER
 
         val alphaMin = ModConfig.surfaceOccluderAlphaMin.toFloat()

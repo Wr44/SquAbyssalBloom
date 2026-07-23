@@ -176,8 +176,8 @@ object PressureEffectEvent {
     fun onServerTick(event: ServerTickEvent.Post) {
         if (event.server.tickCount % 6000 == 0) {
             val now = event.server.overworld().gameTime
-            lastDamageTick.entries.removeIf { (_, tick) -> now - tick > 1200L }
-            lastDrownTick.entries.removeIf { (_, tick) -> now - tick > 1200L }
+            ModUtilities.sweepStaleUuidTicks(lastDamageTick, now, 1200L)
+            ModUtilities.sweepStaleUuidTicks(lastDrownTick, now, 1200L)
         }
     }
 }

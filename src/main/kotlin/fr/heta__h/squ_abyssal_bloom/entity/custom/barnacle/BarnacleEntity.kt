@@ -24,7 +24,7 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
-import net.minecraft.util.Mth.wrapDegrees
+import net.minecraft.util.Mth
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
@@ -503,18 +503,11 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         val targetYaw = (atan2(dir.z, dir.x) * (180.0 / Math.PI)).toFloat() - 90.0f
         val targetPitch = (atan2(dir.y, sqrt(dir.x * dir.x + dir.z * dir.z)) * (180.0 / Math.PI)).toFloat()
 
-        this.yRot = rotlerp(this.yRot, targetYaw, BODY_ROTATION_SPEED)
-        this.xRot = rotlerp(this.xRot, -targetPitch, BODY_ROTATION_SPEED)
+        this.yRot = Mth.approachDegrees(this.yRot, targetYaw, BODY_ROTATION_SPEED)
+        this.xRot = Mth.approachDegrees(this.xRot, -targetPitch, BODY_ROTATION_SPEED)
 
         this.yBodyRot = this.yRot
         this.yHeadRot = this.yRot
-    }
-
-    private fun rotlerp(current: Float, target: Float, maxChange: Float): Float {
-        var f = wrapDegrees(target - current)
-        if (f > maxChange) f = maxChange
-        if (f < -maxChange) f = -maxChange
-        return current + f
     }
 
     fun barnacleSpeed(t: Float, tMax: Float, vMax: Float, k: Float = 2.0f): Float {

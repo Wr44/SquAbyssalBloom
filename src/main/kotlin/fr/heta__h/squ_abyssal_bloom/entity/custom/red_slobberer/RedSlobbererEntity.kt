@@ -16,12 +16,12 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.LegacyRe
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefManager
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.tags.FluidTags
 import net.minecraft.util.Mth
 import net.minecraft.util.Mth.lerp
 import net.minecraft.world.DifficultyInstance
@@ -56,7 +56,6 @@ import net.minecraft.world.level.pathfinder.PathType
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
 import net.minecraft.world.phys.Vec3
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(type, level) {
@@ -68,9 +67,10 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private const val NATURAL_FOLLOWER_BABY_SPAWN_CHANCE = 0.30f
         private const val ADULT_MAXIMUM_CLIMB_HEIGHT = 2.0
         private const val BABY_MAXIMUM_CLIMB_HEIGHT = 1.5
-        private const val MINIMUM_VISIBLE_CLIMB_PITCH = 0.1f
         private const val MODEL_PITCH_CHANGE_PER_TICK = 0.65f
-        private const val LOCOMOTION_ANIMATION_LOOP_TICKS = 50
+        const val LOCOMOTION_ANIMATION_LOOP_TICKS = 50
+        const val LOCOMOTION_CHARGE_TICKS = 35
+        const val LOCOMOTION_PROPULSION_SPEED_MULTIPLIER = 50.0 / 15.0
         private const val WATER_GRAVITY = 0.4
         private const val MIN_FISH_PUSH_DISTANCE = 0.01
         private const val FISH_PUSH_STRENGTH = 0.05
@@ -82,6 +82,14 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private val CLIMB_VISUAL_PITCH_TARGET: EntityDataAccessor<Float> = SynchedEntityData.defineId(
             RedSlobbererEntity::class.java,
             EntityDataSerializers.FLOAT
+        )
+        private val LOCOMOTION_ACTIVE: EntityDataAccessor<Boolean> = SynchedEntityData.defineId(
+            RedSlobbererEntity::class.java,
+            EntityDataSerializers.BOOLEAN
+        )
+        private val LOCOMOTION_CYCLE_ANCHOR: EntityDataAccessor<Int> = SynchedEntityData.defineId(
+            RedSlobbererEntity::class.java,
+            EntityDataSerializers.INT
         )
 
         fun createAttributes(): AttributeSupplier.Builder {
@@ -103,7 +111,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     private var climbVisualPitch = 0.0f
     private var previousClimbVisualPitch = 0.0f
     private var activeLocomotionAnimation: LocomotionAnimation? = null
-    private var nextLocomotionAnimationBoundaryTick = 0
+    private var renderedLocomotionCycleAnchor = Int.MIN_VALUE
     private var isPathfinding = false
     private var legacyReefSnapshot: LegacyRedSlobbererReefSnapshot? = null
 
@@ -117,6 +125,8 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         super.defineSynchedData(builder)
         builder.define(CLIMB_VISUAL_PITCH_TARGET, 0.0f)
+        builder.define(LOCOMOTION_ACTIVE, false)
+        builder.define(LOCOMOTION_CYCLE_ANCHOR, 0)
     }
 
     override fun createNavigation(level: Level): PathNavigation {
@@ -131,10 +141,10 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     override fun getDefaultGravity(): Double {
         val movementController = moveControl as? RedSlobbererMoveControl
-        return if (isInWater && movementController?.preventsNativeStep != true) {
-            WATER_GRAVITY
-        } else {
-            super.getDefaultGravity()
+        return when {
+            isInWater && movementController?.holdsVerticalPositionDuringCharge == true -> 0.0
+            isInWater && movementController?.preventsNativeStep != true -> WATER_GRAVITY
+            else -> super.getDefaultGravity()
         }
     }
 
@@ -231,6 +241,42 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         return terrainAlignment.getInterpolatedNormal(partialTick)
     }
 
+    /**
+     * Keeps physical locomotion on the same 50-tick clock as the move animation. The clock is
+     * server-owned and synchronized so a late client starts the animation at the correct phase.
+     */
+    fun updateLocomotionCycle(hasMovementIntent: Boolean): Boolean {
+        if (level().isClientSide) return isInLocomotionPropulsionPhase
+
+        if (!hasMovementIntent) {
+            if (entityData.get(LOCOMOTION_ACTIVE)) {
+                entityData.set(LOCOMOTION_ACTIVE, false)
+            }
+            return false
+        }
+
+        if (!entityData.get(LOCOMOTION_ACTIVE)) {
+            entityData.set(
+                LOCOMOTION_CYCLE_ANCHOR,
+                Math.floorMod(level().gameTime, LOCOMOTION_ANIMATION_LOOP_TICKS.toLong()).toInt()
+            )
+            entityData.set(LOCOMOTION_ACTIVE, true)
+        }
+        return isInLocomotionPropulsionPhase
+    }
+
+    val isInLocomotionPropulsionPhase: Boolean
+        get() {
+            if (!entityData.get(LOCOMOTION_ACTIVE)) return false
+            return locomotionCycleTick() >= LOCOMOTION_CHARGE_TICKS
+        }
+
+    private fun locomotionCycleTick(): Int = Math.floorMod(
+        Math.floorMod(level().gameTime, LOCOMOTION_ANIMATION_LOOP_TICKS.toLong()).toInt() -
+            entityData.get(LOCOMOTION_CYCLE_ANCHOR),
+        LOCOMOTION_ANIMATION_LOOP_TICKS
+    )
+
     override fun tick() {
         super.tick()
 
@@ -250,44 +296,34 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     private fun setupAnimationStates() {
-        val isClimbAnimating = abs(climbVisualPitch) > MINIMUM_VISIBLE_CLIMB_PITCH ||
-            entityData.get(CLIMB_VISUAL_PITCH_TARGET) != 0.0f
-        val isMoving = isClimbAnimating || walkAnimation.speed() > 0.01f
-        val requestedAnimation = if (isMoving) {
-            LocomotionAnimation.MOVE
-        } else {
-            LocomotionAnimation.IDLE
+        if (entityData.get(LOCOMOTION_ACTIVE)) {
+            val synchronizedAnchor = entityData.get(LOCOMOTION_CYCLE_ANCHOR)
+            if (
+                activeLocomotionAnimation != LocomotionAnimation.MOVE ||
+                renderedLocomotionCycleAnchor != synchronizedAnchor
+            ) {
+                startLocomotionAnimation(
+                    LocomotionAnimation.MOVE,
+                    tickCount - locomotionCycleTick()
+                )
+                renderedLocomotionCycleAnchor = synchronizedAnchor
+            }
+        } else if (activeLocomotionAnimation != LocomotionAnimation.IDLE) {
+            startLocomotionAnimation(LocomotionAnimation.IDLE, tickCount)
+            renderedLocomotionCycleAnchor = Int.MIN_VALUE
         }
-
-        val activeAnimation = activeLocomotionAnimation
-        if (activeAnimation == null) {
-            startLocomotionAnimation(requestedAnimation)
-            return
-        }
-
-        if (tickCount < nextLocomotionAnimationBoundaryTick) return
-
-        if (requestedAnimation != activeAnimation) {
-            startLocomotionAnimation(requestedAnimation)
-            return
-        }
-
-        do {
-            nextLocomotionAnimationBoundaryTick += LOCOMOTION_ANIMATION_LOOP_TICKS
-        } while (tickCount >= nextLocomotionAnimationBoundaryTick)
     }
 
-    private fun startLocomotionAnimation(animation: LocomotionAnimation) {
+    private fun startLocomotionAnimation(animation: LocomotionAnimation, startTick: Int) {
         idleAnimationState.stop()
         moveAnimationState.stop()
 
         when (animation) {
-            LocomotionAnimation.IDLE -> idleAnimationState.start(tickCount)
-            LocomotionAnimation.MOVE -> moveAnimationState.start(tickCount)
+            LocomotionAnimation.IDLE -> idleAnimationState.start(startTick)
+            LocomotionAnimation.MOVE -> moveAnimationState.start(startTick)
         }
 
         activeLocomotionAnimation = animation
-        nextLocomotionAnimationBoundaryTick = tickCount + LOCOMOTION_ANIMATION_LOOP_TICKS
     }
 
     override fun aiStep() {
@@ -389,11 +425,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     override fun getWalkTargetValue(pos: BlockPos, level: LevelReader): Float {
-        return if (level.getFluidState(pos).`is`(FluidTags.WATER)) {
-            10.0f
-        } else {
-            super.getWalkTargetValue(pos, level)
-        }
+        return ModUtilities.preferWaterWalkTarget(pos, level) { super.getWalkTargetValue(pos, level) }
     }
 
     override fun checkSpawnRules(level: LevelAccessor, spawnReason: EntitySpawnReason): Boolean {

@@ -97,8 +97,8 @@ object AstralPrismarineTracker {
         }
     }
 
-    private fun hasActiveConduitNearby(level: Level, pos: BlockPos): Boolean {
-        val possibleConduitPositions = listOf(
+    fun nearbyOffsetPositions(pos: BlockPos): List<BlockPos> {
+        return listOf(
             pos.offset(0, 2, 0), pos.offset(0, -2, 0),
             pos.offset(0, 0, 2), pos.offset(0, 0, -2),
             pos.offset(2, 0, 0), pos.offset(-2, 0, 0),
@@ -109,6 +109,10 @@ object AstralPrismarineTracker {
             pos.offset(2, 2, 0), pos.offset(2, -2, 0),
             pos.offset(-2, 2, 0), pos.offset(-2, -2, 0)
         )
+    }
+
+    private fun hasActiveConduitNearby(level: Level, pos: BlockPos): Boolean {
+        val possibleConduitPositions = nearbyOffsetPositions(pos)
 
         for (conduitPos in possibleConduitPositions) {
             val state = level.getBlockState(conduitPos)

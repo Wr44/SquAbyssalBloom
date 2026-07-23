@@ -28,20 +28,7 @@ class LifelineBubbleItem(properties: Properties) : Item(properties) {
         val serverLevel = level as ServerLevel
 
         if (hasAttachedBubble(level, player.id)) return InteractionResult.FAIL
-        val bubble = BubbleProjectile(ModEntities.BUBBLE.get(), serverLevel)
-        bubble.apply {
-            bubbleStage = 0
-            owner = player
-            bubble.setPos(player.x, player.eyeY + 1.0, player.z)
-            deltaMovement = Vec3(0.0, 0.05, 0.0)
-            attachedPlayerId = player.id
-        }
-        serverLevel.addFreshEntity(bubble)
-
-        serverLevel.playSound(
-            null, player.x, player.y, player.z,
-            SoundEvents.LEAD_TIED, SoundSource.NEUTRAL, 1.0f, 1.0f
-        )
+        spawnAndAttachBubble(serverLevel, player, Vec3(player.x, player.eyeY + 1.0, player.z), player.id)
 
         if (!player.isCreative) player.getItemInHand(hand).shrink(1)
         return InteractionResult.CONSUME
@@ -63,23 +50,27 @@ class LifelineBubbleItem(properties: Properties) : Item(properties) {
         if (hasAttachedBubble(player.level() as ServerLevel, target.id)) return InteractionResult.FAIL
 
         val serverLevel = player.level() as ServerLevel
+        spawnAndAttachBubble(serverLevel, player, Vec3(target.x, target.eyeY + 1.0, target.z), target.id)
+
+        if (!player.abilities.instabuild) stack.shrink(1)
+        return InteractionResult.CONSUME
+    }
+
+    private fun spawnAndAttachBubble(serverLevel: ServerLevel, ownerPlayer: Player, targetPos: Vec3, attachedEntityId: Int) {
         val bubble = BubbleProjectile(ModEntities.BUBBLE.get(), serverLevel)
         bubble.apply {
             bubbleStage = 0
-            owner = player
-            setPos(target.x, target.eyeY + 1.0, target.z)
+            owner = ownerPlayer
+            setPos(targetPos.x, targetPos.y, targetPos.z)
             deltaMovement = Vec3(0.0, 0.05, 0.0)
-            attachedPlayerId = target.id
+            attachedPlayerId = attachedEntityId
         }
         serverLevel.addFreshEntity(bubble)
 
         serverLevel.playSound(
-            null, target.x, target.y, target.z,
+            null, targetPos.x, targetPos.y, targetPos.z,
             SoundEvents.LEAD_TIED, SoundSource.NEUTRAL, 1.0f, 1.0f
         )
-
-        if (!player.abilities.instabuild) stack.shrink(1)
-        return InteractionResult.CONSUME
     }
 
     private fun hasAttachedBubble(serverLevel: ServerLevel, entityId: Int): Boolean {
