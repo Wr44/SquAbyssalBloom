@@ -47,6 +47,8 @@ object SquAbyssalBloom {
     init {
         LOGGER.info("Hello world!")
 
+
+        // Register
         ModEntities.register(MOD_BUS)
         ModItems.register(MOD_BUS)
         ModBlocks.register(MOD_BUS)
@@ -58,6 +60,8 @@ object SquAbyssalBloom {
         ModCreativeModeTabs.register(MOD_BUS)
         ModParticles.register(MOD_BUS)
         ModDataComponents.register(MOD_BUS)
+
+        // Mod Register
         FishSchoolInfluenceRegistry.register(RedSlobbererFishInfluenceProvider())
 
         MOD_BUS.addListener(ModBiomes::registerRegions)

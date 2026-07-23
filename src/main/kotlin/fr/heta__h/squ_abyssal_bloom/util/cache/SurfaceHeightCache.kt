@@ -12,6 +12,7 @@ import net.minecraft.world.level.levelgen.Heightmap
 object SurfaceHeightCache {
 
     private const val MIN_WATER_DEPTH = 2f
+    private const val MAX_THIN_OBSTRUCTION_THICKNESS = 4
 
     private const val TTL_NEAR = 20L
     private const val TTL_FAR = 80L
@@ -116,13 +117,26 @@ object SurfaceHeightCache {
             val surfaceY = searchY - 1
 
             var localFloor = surfaceY
-            for (y in surfaceY downTo level.minY) {
-                mutPos.set(cx, y, cz)
+            var floorScanY = surfaceY
+            floorScan@ while (floorScanY > level.minY) {
+                mutPos.set(cx, floorScanY, cz)
                 val state = level.getBlockState(mutPos)
+
                 if (!state.fluidState.`is`(FluidTags.WATER) && state.blocksMotion()) {
-                    localFloor = y
+                    val peekLimit = maxOf(level.minY, floorScanY - MAX_THIN_OBSTRUCTION_THICKNESS)
+                    for (py in (floorScanY - 1) downTo peekLimit) {
+                        mutPos.set(cx, py, cz)
+                        if (level.getFluidState(mutPos).`is`(FluidTags.WATER)) {
+                            floorScanY = py
+                            continue@floorScan
+                        }
+                    }
+
+                    localFloor = floorScanY
                     break
                 }
+
+                floorScanY--
             }
 
             val deepEnough = (surfaceY - localFloor) >= MIN_WATER_DEPTH

@@ -12,8 +12,7 @@ class RedSlobbererFishInfluenceProvider : FishSchoolInfluenceProvider {
 
     private companion object {
         const val NORMAL_INFLUENCE_DISTANCE = 16.0
-        const val NORMAL_INFLUENCE_DISTANCE_SQR =
-            NORMAL_INFLUENCE_DISTANCE * NORMAL_INFLUENCE_DISTANCE
+        const val NORMAL_INFLUENCE_DISTANCE_SQR = NORMAL_INFLUENCE_DISTANCE * NORMAL_INFLUENCE_DISTANCE
     }
 
     override val searchRadius: Double
