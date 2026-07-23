@@ -211,6 +211,12 @@ object ModUtilities {
         return t * t * (3.0 - 2.0 * t)
     }
 
+    fun minOfPositive(first: Long, second: Long): Long {
+        if (first <= 0L) return second
+        if (second <= 0L) return first
+        return minOf(first, second)
+    }
+
     fun sweepStaleUuidTicks(map: MutableMap<UUID, Long>, now: Long, maxAge: Long) {
         map.entries.removeIf { (_, tick) -> now - tick > maxAge }
     }

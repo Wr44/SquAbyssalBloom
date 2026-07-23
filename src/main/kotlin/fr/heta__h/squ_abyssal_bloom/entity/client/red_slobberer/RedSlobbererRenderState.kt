@@ -6,7 +6,6 @@ import net.minecraft.world.entity.AnimationState
 
 class RedSlobbererRenderState : LivingEntityRenderState() {
     var isBaby: Boolean = false
-    var climbPitch: Float = 0.0f
     var terrainPitch: Float = 0.0f
     var terrainRoll: Float = 0.0f
     var defenseState: RedSlobbererDefenseState = RedSlobbererDefenseState.NORMAL

@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.block.calcareous_deposit.CalcareousDepositBl
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.BlockPos
 import net.minecraft.core.Direction
@@ -116,11 +117,8 @@ class RedSlobbererReefManager private constructor(
         )
 
         private val LIVE_CORAL_DECORATIONS = arrayOf(
-            Blocks.TUBE_CORAL_FAN,
-            Blocks.BRAIN_CORAL_FAN,
-            Blocks.BUBBLE_CORAL_FAN,
-            Blocks.FIRE_CORAL_FAN,
-            Blocks.HORN_CORAL_FAN
+            Blocks.FIRE_CORAL,
+            Blocks.FIRE_CORAL_FAN
         )
     }
 
@@ -164,9 +162,7 @@ class RedSlobbererReefManager private constructor(
     )
 
     private val savedData = level.dataStorage.computeIfAbsent(RedSlobbererReefSavedData.TYPE)
-    // Entity AI, ecology ticks and level-unload callbacks all mutate these collections on the
-    // ServerLevel thread. ConcurrentHashMap would not make entity access safe off-thread and
-    // would hide an invalid caller instead of fixing it.
+
     private val observations: MutableMap<UUID, Observation> = hashMapOf()
     private val memberToReef: MutableMap<UUID, UUID> = hashMapOf()
 
@@ -495,7 +491,6 @@ class RedSlobbererReefManager private constructor(
             if (canForgetEmptyTrace) iterator.remove()
         }
 
-        // Clamp data loaded from older versions or a subsequently lowered configuration.
         val maximumMaturity = maturityRequirement.toLong() * MAXIMUM_MATURITY_MULTIPLIER
         savedData.reefs.values.forEach { reef ->
             reef.maturityTicks = reef.maturityTicks.coerceIn(0L, maximumMaturity)
@@ -597,7 +592,7 @@ class RedSlobbererReefManager private constructor(
             target.placedDecorations = max(target.placedDecorations, merged.placedDecorations)
             target.depositPositions.addAll(merged.depositPositions)
             if (merged.nextDepositGameTime > 0L) {
-                target.nextDepositGameTime = minOfPositive(
+                target.nextDepositGameTime = ModUtilities.minOfPositive(
                     target.nextDepositGameTime,
                     merged.nextDepositGameTime
                 )
@@ -1057,8 +1052,6 @@ class RedSlobbererReefManager private constructor(
 
     private fun tryPlaceReefDecoration(reef: ReefState): Boolean {
         val diagnostics = DecorationPlacementDiagnostics()
-        // Ensure that a reef which already produced only pickles eventually receives a visible
-        // live coral. Once one exists, keep a slightly pickle-heavy but varied distribution.
         val placeCoral = !hasNearbyLiveCoralDecoration(reef) ||
             level.random.nextFloat() >= SEA_PICKLE_CHANCE
         val coral = if (placeCoral) {
@@ -1134,8 +1127,6 @@ class RedSlobbererReefManager private constructor(
     }
 
     private fun playDecorationGrowthEffects(pos: BlockPos) {
-        // Same world event as successful bone meal: visible to every tracking client and cheap
-        // enough for the deliberately low-frequency reef decoration pass.
         level.levelEvent(1505, pos, 15)
     }
 
@@ -1437,12 +1428,6 @@ class RedSlobbererReefManager private constructor(
         if (range <= 1L) return 0L
         val mixed = id.mostSignificantBits xor id.leastSignificantBits
         return (mixed and Long.MAX_VALUE) % range
-    }
-
-    private fun minOfPositive(first: Long, second: Long): Long {
-        if (first <= 0L) return second
-        if (second <= 0L) return first
-        return minOf(first, second)
     }
 
 }

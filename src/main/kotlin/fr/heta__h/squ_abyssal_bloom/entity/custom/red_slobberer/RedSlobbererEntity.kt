@@ -27,7 +27,6 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.Mth
-import net.minecraft.util.Mth.lerp
 import net.minecraft.world.DifficultyInstance
 import net.minecraft.world.entity.AgeableMob
 import net.minecraft.world.entity.AnimationState
@@ -69,9 +68,8 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
         private const val BABY_START_AGE_TICKS = -72_000
         private const val NATURAL_FOLLOWER_BABY_SPAWN_CHANCE = 0.30f
-        private const val ADULT_MAXIMUM_CLIMB_HEIGHT = 2.0
-        private const val BABY_MAXIMUM_CLIMB_HEIGHT = 1.5
-        private const val MODEL_PITCH_CHANGE_PER_TICK = 0.65f
+        private const val ADULT_STEP_HEIGHT = 2.0f
+        private const val BABY_STEP_HEIGHT = 1.5f
         const val LOCOMOTION_ANIMATION_LOOP_TICKS = 50
         const val LOCOMOTION_CHARGE_TICKS = 35
         const val LOCOMOTION_PROPULSION_SPEED_MULTIPLIER = 50.0 / 15.0
@@ -87,10 +85,6 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private const val LEGACY_TAG_RESIDENCE_TICKS = "red_slobberer_residence_tick"
         private const val LEGACY_TAG_PLACED_DECORATIONS = "red_slobberer_placed_decorations"
 
-        private val CLIMB_VISUAL_PITCH_TARGET: EntityDataAccessor<Float> = SynchedEntityData.defineId(
-            RedSlobbererEntity::class.java,
-            EntityDataSerializers.FLOAT
-        )
         private val LOCOMOTION_ACTIVE: EntityDataAccessor<Boolean> = SynchedEntityData.defineId(
             RedSlobbererEntity::class.java,
             EntityDataSerializers.BOOLEAN
@@ -127,12 +121,9 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     private val fishRefugeStorage = RedSlobbererFishRefugeStorage(this)
     private val defenseController = RedSlobbererDefenseController(this)
 
-    private var climbVisualPitch = 0.0f
-    private var previousClimbVisualPitch = 0.0f
     private var activeLocomotionAnimation: LocomotionAnimation? = null
     private var renderedLocomotionCycleAnchor = Int.MIN_VALUE
     private var locomotionCycleInitialized = false
-    private var isPathfinding = false
     private var legacyReefSnapshot: LegacyRedSlobbererReefSnapshot? = null
 
     var timeExposedInAir = 0
@@ -144,7 +135,6 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         super.defineSynchedData(builder)
-        builder.define(CLIMB_VISUAL_PITCH_TARGET, 0.0f)
         builder.define(LOCOMOTION_ACTIVE, false)
         builder.define(LOCOMOTION_CYCLE_ANCHOR, 0)
         builder.define(DEFENSE_STATE, RedSlobbererDefenseState.NORMAL.networkId)
@@ -162,21 +152,11 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     override fun getDefaultGravity(): Double {
-        val movementController = moveControl as? RedSlobbererMoveControl
-        return when {
-            isInWater && movementController?.holdsVerticalPositionDuringCharge == true -> 0.0
-            isInWater && movementController?.preventsNativeStep != true -> WATER_GRAVITY
-            else -> super.getDefaultGravity()
-        }
+        return if (isInWater) WATER_GRAVITY else super.getDefaultGravity()
     }
 
     override fun moveRelative(speed: Float, input: Vec3) {
-        val movementController = moveControl as? RedSlobbererMoveControl
-        val tangentMovement = if (movementController?.followsTerrainTangent == true) {
-            terrainAlignment.createTangentMovement(input, speed, yRot)
-        } else {
-            null
-        }
+        val tangentMovement = terrainAlignment.createTangentMovement(input, speed, yRot)
 
         if (tangentMovement == null) {
             super.moveRelative(speed, input)
@@ -226,36 +206,11 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     override fun jumpFromGround() = Unit
 
-    val maximumClimbHeight: Double
-        get() = if (isBaby) BABY_MAXIMUM_CLIMB_HEIGHT else ADULT_MAXIMUM_CLIMB_HEIGHT
+    val maximumStepHeight: Float
+        get() = if (isBaby) BABY_STEP_HEIGHT else ADULT_STEP_HEIGHT
 
-    override fun onPathfindingStart() {
-        super.onPathfindingStart()
-        isPathfinding = true
-    }
-
-    override fun onPathfindingDone() {
-        isPathfinding = false
-        super.onPathfindingDone()
-    }
-
-    override fun maxUpStep(): Float {
-        return if (isPathfinding) {
-            maximumClimbHeight.toFloat()
-        } else {
-            0.0f
-        }
-    }
-
-    fun setClimbVisualPitchTarget(pitch: Float) {
-        if (!level().isClientSide && entityData.get(CLIMB_VISUAL_PITCH_TARGET) != pitch) {
-            entityData.set(CLIMB_VISUAL_PITCH_TARGET, pitch)
-        }
-    }
-
-    fun getClimbVisualPitch(partialTick: Float): Float {
-        return lerp(partialTick, previousClimbVisualPitch, climbVisualPitch)
-    }
+    override fun maxUpStep(): Float =
+        if (isInWater) maximumStepHeight else super.maxUpStep()
 
     fun getTerrainNormal(partialTick: Float): Vec3 {
         return terrainAlignment.getInterpolatedNormal(partialTick)
@@ -358,13 +313,6 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     override fun tick() {
         super.tick()
-
-        previousClimbVisualPitch = climbVisualPitch
-        climbVisualPitch = Mth.approachDegrees(
-            climbVisualPitch,
-            entityData.get(CLIMB_VISUAL_PITCH_TARGET),
-            MODEL_PITCH_CHANGE_PER_TICK
-        )
 
         setXRot(0.0f)
         xRotO = 0.0f

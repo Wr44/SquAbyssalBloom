@@ -65,7 +65,7 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.setupRotations(state, poseStack, rotationYaw, partialTicks)
-        poseStack.mulPose(Axis.XP.rotationDegrees(state.terrainPitch - state.climbPitch))
+        poseStack.mulPose(Axis.XP.rotationDegrees(state.terrainPitch))
         poseStack.mulPose(Axis.ZP.rotationDegrees(state.terrainRoll))
     }
 
@@ -77,7 +77,6 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
         super.extractRenderState(entity, state, partialTicks)
 
         state.isBaby = entity.isBaby
-        state.climbPitch = entity.getClimbVisualPitch(partialTicks)
 
         val terrainNormal = entity.getTerrainNormal(partialTicks)
         val renderYawRadians = (180.0 - state.bodyRot) * PI / 180.0

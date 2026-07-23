@@ -175,7 +175,7 @@ public class RedSlobbererAnimation {
 			))
 			.build();
 
-	public static final AnimationDefinition hide = AnimationDefinition.Builder.withLength(1.0F)
+	public static final AnimationDefinition hide = AnimationDefinition.Builder.withLength(1.125F)
 			.addAnimation("oeild", new AnimationChannel(AnimationChannel.Targets.ROTATION,
 					new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.625F, KeyframeAnimations.degreeVec(122.8987F, 8.4215F, 5.4121F), AnimationChannel.Interpolations.CATMULLROM)
@@ -183,7 +183,7 @@ public class RedSlobbererAnimation {
 			.addAnimation("oeild", new AnimationChannel(AnimationChannel.Targets.POSITION,
 					new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.4167F, KeyframeAnimations.posVec(1.3618F, -3.5616F, 1.8685F), AnimationChannel.Interpolations.CATMULLROM),
-					new Keyframe(0.625F, KeyframeAnimations.posVec(0.699F, -2.8499F, 3.1954F), AnimationChannel.Interpolations.CATMULLROM)
+					new Keyframe(0.625F, KeyframeAnimations.posVec(0.9145F, -3.3408F, 4.231F), AnimationChannel.Interpolations.CATMULLROM)
 			))
 			.addAnimation("oeild", new AnimationChannel(AnimationChannel.Targets.SCALE,
 					new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
@@ -197,7 +197,7 @@ public class RedSlobbererAnimation {
 			.addAnimation("oeilg", new AnimationChannel(AnimationChannel.Targets.POSITION,
 					new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.4167F, KeyframeAnimations.posVec(-1.3177F, -3.2649F, 1.875F), AnimationChannel.Interpolations.CATMULLROM),
-					new Keyframe(0.625F, KeyframeAnimations.posVec(-0.5383F, -2.3133F, 2.912F), AnimationChannel.Interpolations.CATMULLROM)
+					new Keyframe(0.625F, KeyframeAnimations.posVec(-0.8417F, -2.7644F, 3.8549F), AnimationChannel.Interpolations.CATMULLROM)
 			))
 			.addAnimation("oeilg", new AnimationChannel(AnimationChannel.Targets.SCALE,
 					new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
@@ -217,7 +217,7 @@ public class RedSlobbererAnimation {
 			.addAnimation("corps", new AnimationChannel(AnimationChannel.Targets.SCALE,
 					new Keyframe(0.0F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.4167F, KeyframeAnimations.scaleVec(0.4F, 0.625F, 0.25F), AnimationChannel.Interpolations.CATMULLROM),
-					new Keyframe(0.625F, KeyframeAnimations.scaleVec(0.475F, 0.525F, 0.1F), AnimationChannel.Interpolations.CATMULLROM)
+					new Keyframe(0.625F, KeyframeAnimations.scaleVec(0.425F, 0.325F, 0.1F), AnimationChannel.Interpolations.CATMULLROM)
 			))
 			.addAnimation("root", new AnimationChannel(AnimationChannel.Targets.ROTATION,
 					new Keyframe(0.0F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM),
@@ -236,7 +236,7 @@ public class RedSlobbererAnimation {
 					new Keyframe(0.5833F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 			))
 			.addAnimation("oeild", new AnimationChannel(AnimationChannel.Targets.POSITION,
-					new Keyframe(0.0F, KeyframeAnimations.posVec(0.699F, -2.8499F, 3.1954F), AnimationChannel.Interpolations.CATMULLROM),
+					new Keyframe(0.0F, KeyframeAnimations.posVec(0.9145F, -3.3408F, 4.231F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.1667F, KeyframeAnimations.posVec(1.3618F, -3.5616F, 1.8685F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.5833F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 			))
@@ -250,7 +250,7 @@ public class RedSlobbererAnimation {
 					new Keyframe(0.5833F, KeyframeAnimations.degreeVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 			))
 			.addAnimation("oeilg", new AnimationChannel(AnimationChannel.Targets.POSITION,
-					new Keyframe(0.0F, KeyframeAnimations.posVec(-0.5383F, -2.3133F, 2.912F), AnimationChannel.Interpolations.CATMULLROM),
+					new Keyframe(0.0F, KeyframeAnimations.posVec(-0.8417F, -2.7644F, 3.8549F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.1667F, KeyframeAnimations.posVec(-1.3177F, -3.2649F, 1.875F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.5833F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 			))
@@ -270,7 +270,7 @@ public class RedSlobbererAnimation {
 					new Keyframe(0.5833F, KeyframeAnimations.posVec(0.0F, 0.0F, 0.0F), AnimationChannel.Interpolations.CATMULLROM)
 			))
 			.addAnimation("corps", new AnimationChannel(AnimationChannel.Targets.SCALE,
-					new Keyframe(0.0F, KeyframeAnimations.scaleVec(0.475F, 0.525F, 0.1F), AnimationChannel.Interpolations.CATMULLROM),
+					new Keyframe(0.0F, KeyframeAnimations.scaleVec(0.425F, 0.325F, 0.1F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.1667F, KeyframeAnimations.scaleVec(0.4F, 0.625F, 0.25F), AnimationChannel.Interpolations.CATMULLROM),
 					new Keyframe(0.5833F, KeyframeAnimations.scaleVec(1.0F, 1.0F, 1.0F), AnimationChannel.Interpolations.CATMULLROM)
 			))

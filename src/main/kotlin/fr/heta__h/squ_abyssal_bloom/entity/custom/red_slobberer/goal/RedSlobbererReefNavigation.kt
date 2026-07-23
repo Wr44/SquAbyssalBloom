@@ -35,7 +35,7 @@ internal object RedSlobbererReefNavigation {
             if (!level.isLoaded(candidate)) return@repeat
 
             val maximumY = currentY +
-                maxOf(redSlobberer.maximumClimbHeight.toInt(), MAXIMUM_VERTICAL_SEARCH_ABOVE)
+                maxOf(redSlobberer.maximumStepHeight.toInt(), MAXIMUM_VERTICAL_SEARCH_ABOVE)
             val minimumY = currentY - MAXIMUM_VERTICAL_SEARCH_BELOW
             for (targetY in maximumY downTo minimumY) {
                 candidate.setY(targetY)

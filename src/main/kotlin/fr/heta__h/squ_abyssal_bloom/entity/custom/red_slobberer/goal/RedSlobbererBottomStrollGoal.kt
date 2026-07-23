@@ -10,12 +10,30 @@ import net.minecraft.world.phys.Vec3
 class RedSlobbererBottomStrollGoal(
     private val redSlobberer: RedSlobbererEntity,
     speedModifier: Double
-) : RandomStrollGoal(redSlobberer, speedModifier) {
+) : RandomStrollGoal(
+    redSlobberer,
+    speedModifier,
+    WANDER_RETRY_INTERVAL_TICKS,
+    false
+) {
 
     private companion object {
-        const val POSITION_ATTEMPTS = 12
+        const val WANDER_RETRY_INTERVAL_TICKS = 10
+        const val POSITION_ATTEMPTS = 24
         const val HORIZONTAL_RADIUS = 10
         const val MIN_DISTANCE_SQR = 4.0
+    }
+
+    override fun canUse(): Boolean {
+        return redSlobberer.isUnderWater &&
+            !redSlobberer.isDefenseImmobilized &&
+            super.canUse()
+    }
+
+    override fun canContinueToUse(): Boolean {
+        return redSlobberer.isUnderWater &&
+            !redSlobberer.isDefenseImmobilized &&
+            super.canContinueToUse()
     }
 
     override fun getPosition(): Vec3? {
