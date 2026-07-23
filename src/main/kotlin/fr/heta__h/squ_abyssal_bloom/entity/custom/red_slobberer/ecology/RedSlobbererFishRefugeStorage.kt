@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.FishCollectiveManager
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.FishThreatClassifier
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseState
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.nbt.CompoundTag
@@ -16,6 +17,7 @@ import net.minecraft.util.ProblemReporter
 import net.minecraft.world.entity.EntityProcessor
 import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.fish.AbstractFish
 import net.minecraft.world.level.storage.TagValueOutput
@@ -34,11 +36,13 @@ class RedSlobbererFishRefugeStorage(
         private const val TAG_STORED_FISH = "RedSlobbererStoredRefugeFish"
         private const val TAG_FISH_DATA = "FishData"
         private const val TAG_SHELTERED_TICKS = "ShelteredTicks"
+        private const val TAG_OCCUPANT_KIND = "OccupantKind"
         private const val TAG_UNSAFE_TICKS = "RedSlobbererRefugeUnsafeTicks"
         private const val TAG_QUIET_TICKS = "RedSlobbererRefugeQuietTicks"
 
         private const val REENTRY_COOLDOWN_TAG = "squ_abyssal_bloom:red_slobberer_refuge_cooldown_until"
-        private const val MAXIMUM_LOADED_FISH = 64
+        private const val MAXIMUM_LOADED_OCCUPANTS = 128
+        private const val MAXIMUM_STORED_BABIES = 64
         private const val THREAT_SCAN_INTERVAL_TICKS = 10L
         private const val ENTRANCE_CLEARANCE = 0.35
         private const val ENTRANCE_HEIGHT = 0.75
@@ -62,20 +66,31 @@ class RedSlobbererFishRefugeStorage(
         }
     }
 
-    private data class StoredFish(
+    private data class StoredOccupant(
         val data: CompoundTag,
+        val kind: OccupantKind,
         var shelteredTicks: Int
     )
 
-    private val storedFish = mutableListOf<StoredFish>()
+    private data class ReleasedOccupant(
+        val position: Vec3,
+        val kind: OccupantKind
+    )
+
+    private val storedOccupants = mutableListOf<StoredOccupant>()
     private var unsafeTicks = 0
+    private var unsafeCooldownRefreshGameTime = Long.MIN_VALUE
+    private var lastUnsafeCooldownTickGameTime = Long.MIN_VALUE
     private var quietTicks = 0
     private var nextThreatScanGameTime = Long.MIN_VALUE
     private var hasNearbyThreat = true
     private var releaseRequested = false
 
     val size: Int
-        get() = storedFish.size
+        get() = storedOccupants.count { it.kind == OccupantKind.FISH }
+
+    val hasActiveUnsafeCooldown: Boolean
+        get() = unsafeTicks > 0
 
     fun canAccept(fish: AbstractFish): Boolean {
         val level = redSlobberer.level()
@@ -83,14 +98,33 @@ class RedSlobbererFishRefugeStorage(
             redSlobberer.isAlive &&
             redSlobberer.isUnderWater &&
             !redSlobberer.isBaby &&
+            redSlobberer.defenseState == RedSlobbererDefenseState.NORMAL &&
             fish.isAlive &&
             fish.isInWater &&
             !fish.isPassenger &&
             !fish.isVehicle &&
             !fish.isRemoved &&
             unsafeTicks <= 0 &&
-            storedFish.size < configuredCapacity() &&
+            size < configuredCapacity() &&
             !isOnReentryCooldown(fish)
+    }
+
+    fun canAcceptBaby(baby: RedSlobbererEntity): Boolean {
+        val level = redSlobberer.level()
+        return baby !== redSlobberer &&
+            baby.level() === level &&
+            redSlobberer.isAlive &&
+            redSlobberer.isUnderWater &&
+            !redSlobberer.isBaby &&
+            redSlobberer.defenseState == RedSlobbererDefenseState.NORMAL &&
+            baby.isBaby &&
+            baby.isAlive &&
+            baby.isUnderWater &&
+            !baby.isPassenger &&
+            !baby.isVehicle &&
+            !baby.isRemoved &&
+            storedOccupants.count { it.kind == OccupantKind.BABY_RED_SLOBBERER } <
+                MAXIMUM_STORED_BABIES
     }
 
     fun entranceFor(fish: AbstractFish): Vec3 {
@@ -128,21 +162,11 @@ class RedSlobbererFishRefugeStorage(
         val entrance = entranceFor(fish)
         if (fish.distanceToSqr(entrance) > CAPTURE_DISTANCE_SQR) return false
 
-        val reporter = ProblemReporter.Collector()
-        val output = TagValueOutput.createWithContext(reporter, level.registryAccess())
-        if (!fish.save(output) || !reporter.isEmpty) {
-            SquAbyssalBloom.LOGGER.warn(
-                "Could not serialize fish {} into Red Slobberer refuge {}: {}",
-                fish.uuid,
-                redSlobberer.uuid,
-                if (reporter.isEmpty) "entity refused serialization" else reporter.report
-            )
-            return false
-        }
+        val data = serializeOccupant(level, fish, "fish") ?: return false
 
         val fishId = fish.id
         val fishUuid = fish.uuid
-        storedFish.add(StoredFish(output.buildResult(), 0))
+        storedOccupants.add(StoredOccupant(data, OccupantKind.FISH, 0))
         quietTicks = 0
         hasNearbyThreat = true
         nextThreatScanGameTime = level.gameTime
@@ -154,25 +178,63 @@ class RedSlobbererFishRefugeStorage(
             fishId,
             fishUuid,
             redSlobberer,
-            storedFish.size
+            size
         )
         return true
     }
 
+    fun tryStoreBaby(
+        level: ServerLevel,
+        baby: RedSlobbererEntity
+    ): Boolean {
+        if (!canAcceptBaby(baby)) return false
+
+        val data = serializeOccupant(level, baby, "Red Slobberer baby") ?: return false
+        val entrance = baby.position()
+        storedOccupants.add(
+            StoredOccupant(data, OccupantKind.BABY_RED_SLOBBERER, 0)
+        )
+        baby.discard()
+        playEnterEffects(level, entrance)
+        return true
+    }
+
+    fun tickUnsafeCooldown(level: ServerLevel) {
+        if (level.gameTime <= lastUnsafeCooldownTickGameTime) return
+        lastUnsafeCooldownTickGameTime = level.gameTime
+        if (
+            unsafeTicks > 0 &&
+            redSlobberer.defenseState != RedSlobbererDefenseState.HIDING &&
+            level.gameTime > unsafeCooldownRefreshGameTime
+        ) {
+            unsafeTicks--
+        }
+    }
+
     fun tick(level: ServerLevel) {
-        if (unsafeTicks > 0) unsafeTicks--
-        if (storedFish.isEmpty()) {
+        if (storedOccupants.isEmpty()) {
             quietTicks = 0
             releaseRequested = false
             return
         }
 
-        storedFish.forEach { stored ->
+        storedOccupants.forEach { stored ->
             stored.shelteredTicks = (stored.shelteredTicks + 1).coerceAtMost(Int.MAX_VALUE)
         }
 
-        if (releaseRequested || !redSlobberer.isAlive) {
+        if (!redSlobberer.isAlive) {
             releaseAll(level, ReleaseReason.SHELTER_DESTROYED)
+            return
+        }
+
+        if (releaseRequested) {
+            releaseMatching(level, ReleaseReason.SHELTER_ATTACKED) { true }
+            releaseRequested = storedOccupants.isNotEmpty()
+        }
+
+        if (storedOccupants.isEmpty()) {
+            quietTicks = 0
+            releaseRequested = false
             return
         }
 
@@ -195,40 +257,45 @@ class RedSlobbererFishRefugeStorage(
         }
     }
 
-    fun invalidateAfterAttack(level: ServerLevel) {
+    fun invalidateAfterDamage(level: ServerLevel) {
         unsafeTicks = configuredUnsafeCooldown()
+        unsafeCooldownRefreshGameTime = level.gameTime
         quietTicks = 0
         hasNearbyThreat = true
-        releaseRequested = storedFish.isNotEmpty()
+        releaseRequested = storedOccupants.isNotEmpty()
         RedSlobbererReefManager.forLevel(level).recordRefugeInvalidated(
             redSlobberer,
-            storedFish.size,
+            size,
             unsafeTicks
         )
-        releaseAll(level, ReleaseReason.SHELTER_ATTACKED)
+        releaseMatching(level, ReleaseReason.SHELTER_ATTACKED) { true }
+        releaseRequested = storedOccupants.isNotEmpty()
     }
 
     fun releaseOnDestruction(level: ServerLevel) {
-        releaseRequested = storedFish.isNotEmpty()
+        releaseRequested = storedOccupants.isNotEmpty()
         releaseAll(level, ReleaseReason.SHELTER_DESTROYED)
     }
 
     fun save(output: ValueOutput) {
         output.putInt(TAG_UNSAFE_TICKS, unsafeTicks)
         output.putInt(TAG_QUIET_TICKS, quietTicks)
-        if (storedFish.isEmpty()) return
+        if (storedOccupants.isEmpty()) return
 
         val outputList = output.childrenList(TAG_STORED_FISH)
-        for (stored in storedFish) {
+        for (stored in storedOccupants) {
             val child = outputList.addChild()
             child.putInt(TAG_SHELTERED_TICKS, stored.shelteredTicks)
+            child.putInt(TAG_OCCUPANT_KIND, stored.kind.networkId)
             child.store(TAG_FISH_DATA, CompoundTag.CODEC, stored.data)
         }
     }
 
     fun load(input: ValueInput) {
-        storedFish.clear()
+        storedOccupants.clear()
         unsafeTicks = input.getIntOr(TAG_UNSAFE_TICKS, 0).coerceAtLeast(0)
+        unsafeCooldownRefreshGameTime = redSlobberer.level().gameTime
+        lastUnsafeCooldownTickGameTime = redSlobberer.level().gameTime
         quietTicks = input.getIntOr(TAG_QUIET_TICKS, 0).coerceAtLeast(0)
         hasNearbyThreat = true
         nextThreatScanGameTime = Long.MIN_VALUE
@@ -236,53 +303,58 @@ class RedSlobbererFishRefugeStorage(
 
         var loadedCount = 0
         for (child in input.childrenListOrEmpty(TAG_STORED_FISH)) {
-            if (loadedCount >= MAXIMUM_LOADED_FISH) break
+            if (loadedCount >= MAXIMUM_LOADED_OCCUPANTS) break
             val data = child.read(TAG_FISH_DATA, CompoundTag.CODEC).orElse(null) ?: continue
-            storedFish.add(
-                StoredFish(
+            storedOccupants.add(
+                StoredOccupant(
                     data = data,
+                    kind = OccupantKind.fromNetworkId(
+                        child.getIntOr(TAG_OCCUPANT_KIND, OccupantKind.FISH.networkId)
+                    ),
                     shelteredTicks = child.getIntOr(TAG_SHELTERED_TICKS, 0).coerceAtLeast(0)
                 )
             )
             loadedCount++
         }
-        releaseRequested = unsafeTicks > 0 && storedFish.isNotEmpty()
+        releaseRequested = unsafeTicks > 0 && storedOccupants.isNotEmpty()
     }
 
     private fun releaseAll(level: ServerLevel, reason: ReleaseReason) {
         releaseMatching(level, reason) { true }
-        releaseRequested = storedFish.isNotEmpty()
+        releaseRequested = storedOccupants.isNotEmpty()
     }
 
     private fun releaseMatching(
         level: ServerLevel,
         reason: ReleaseReason,
-        predicate: (StoredFish) -> Boolean
+        predicate: (StoredOccupant) -> Boolean
     ) {
-        val releasePositions = mutableListOf<Vec3>()
-        val iterator = storedFish.iterator()
+        val releasedOccupants = mutableListOf<ReleasedOccupant>()
+        val iterator = storedOccupants.iterator()
         while (iterator.hasNext()) {
             val stored = iterator.next()
             if (!predicate(stored)) continue
-            val releasePosition = restoreFish(level, stored, reason) ?: continue
+            val releasePosition = restoreOccupant(level, stored, reason) ?: continue
             iterator.remove()
-            releasePositions.add(releasePosition)
+            releasedOccupants.add(ReleasedOccupant(releasePosition, stored.kind))
         }
-        val released = releasePositions.size
-        if (released <= 0) return
+        if (releasedOccupants.isEmpty()) return
 
-        playExitEffects(level, releasePositions)
-        RedSlobbererReefManager.forLevel(level).recordFishReleased(
-            redSlobberer,
-            released,
-            storedFish.size,
-            reason.debugName
-        )
+        playExitEffects(level, releasedOccupants.map { it.position })
+        val releasedFish = releasedOccupants.count { it.kind == OccupantKind.FISH }
+        if (releasedFish > 0) {
+            RedSlobbererReefManager.forLevel(level).recordFishReleased(
+                redSlobberer,
+                releasedFish,
+                size,
+                reason.debugName
+            )
+        }
     }
 
-    private fun restoreFish(
+    private fun restoreOccupant(
         level: ServerLevel,
-        stored: StoredFish,
+        stored: StoredOccupant,
         reason: ReleaseReason
     ): Vec3? {
         val restored = try {
@@ -294,52 +366,66 @@ class RedSlobbererFishRefugeStorage(
             )
         } catch (exception: RuntimeException) {
             SquAbyssalBloom.LOGGER.error(
-                "Could not restore fish from Red Slobberer refuge {}",
+                "Could not restore occupant from Red Slobberer refuge {}",
                 redSlobberer.uuid,
                 exception
             )
             null
         }
-        val fish = restored as? AbstractFish
-        if (fish == null) {
+
+        val occupant: LivingEntity? = when (stored.kind) {
+            OccupantKind.FISH -> restored as? AbstractFish
+            OccupantKind.BABY_RED_SLOBBERER ->
+                (restored as? RedSlobbererEntity)?.takeIf { it.isBaby }
+        }
+        if (occupant == null) {
             SquAbyssalBloom.LOGGER.warn(
-                "Stored refuge entity in Red Slobberer {} is not a fish; keeping its data",
-                redSlobberer.uuid
+                "Stored refuge entity in Red Slobberer {} does not match kind {}; keeping its data",
+                redSlobberer.uuid,
+                stored.kind.debugName
             )
             return null
         }
 
-        val releasePosition = findReleasePosition(level, fish)
-        fish.setPos(releasePosition)
+        val releasePosition = findReleasePosition(level, occupant)
+        occupant.setPos(releasePosition)
         val outward = releasePosition.subtract(redSlobberer.position())
             .multiply(1.0, 0.0, 1.0)
             .normalize()
-        fish.deltaMovement = Vec3(
+        occupant.deltaMovement = Vec3(
             outward.x * RELEASE_HORIZONTAL_MOTION,
             RELEASE_VERTICAL_MOTION,
             outward.z * RELEASE_HORIZONTAL_MOTION
         )
-        fish.airSupply = fish.maxAirSupply
-        val cooldown = when (reason) {
-            ReleaseReason.AREA_CALM -> NORMAL_REENTRY_COOLDOWN_TICKS
-            else -> configuredUnsafeCooldown().toLong()
+        occupant.airSupply = occupant.maxAirSupply
+
+        if (occupant is AbstractFish) {
+            val cooldown = when (reason) {
+                ReleaseReason.AREA_CALM -> NORMAL_REENTRY_COOLDOWN_TICKS
+                else -> configuredUnsafeCooldown().toLong()
+            }
+            occupant.persistentData.putLong(
+                REENTRY_COOLDOWN_TAG,
+                level.gameTime + cooldown
+            )
+            FishCollectiveManager.forLevel(level).forget(occupant)
         }
-        fish.persistentData.putLong(REENTRY_COOLDOWN_TAG, level.gameTime + cooldown)
-        FishCollectiveManager.forLevel(level).forget(fish)
-        if (level.addFreshEntity(fish)) return releasePosition
+
+        if (level.addFreshEntity(occupant)) return releasePosition
 
         SquAbyssalBloom.LOGGER.warn(
-            "Could not add restored fish {} from Red Slobberer refuge {} back to the level",
-            fish.uuid,
+            "Could not add restored occupant {} from Red Slobberer refuge {} back to the level",
+            occupant.uuid,
             redSlobberer.uuid
         )
         return null
     }
 
-    private fun findReleasePosition(level: ServerLevel, fish: AbstractFish): Vec3 {
+    private fun findReleasePosition(level: ServerLevel, occupant: Entity): Vec3 {
         val bodyRadius = redSlobberer.bbWidth.toDouble() * 0.5
-        val baseRadius = bodyRadius + fish.bbWidth.toDouble() * 0.5 + ENTRANCE_CLEARANCE
-        val baseAngle = refugeAngle(fish)
+        val baseRadius =
+            bodyRadius + occupant.bbWidth.toDouble() * 0.5 + ENTRANCE_CLEARANCE
+        val baseAngle = refugeAngle(occupant)
 
         repeat(RELEASE_RING_ATTEMPTS) { ring ->
             val radius = baseRadius + ring * RELEASE_RING_STEP
@@ -354,8 +440,8 @@ class RedSlobbererFishRefugeStorage(
                     val blockPos = BlockPos.containing(candidate)
                     if (!level.isLoaded(blockPos)) continue
                     if (!level.getFluidState(blockPos).`is`(FluidTags.WATER)) continue
-                    fish.setPos(candidate)
-                    if (level.noCollision(fish)) return candidate
+                    occupant.setPos(candidate)
+                    if (level.noCollision(occupant)) return candidate
                 }
             }
         }
@@ -381,10 +467,31 @@ class RedSlobbererFishRefugeStorage(
         )
     }
 
-    private fun refugeAngle(fish: AbstractFish): Double {
-        val mixedUuid = fish.uuid.mostSignificantBits xor redSlobberer.uuid.leastSignificantBits
+    private fun refugeAngle(occupant: Entity): Double {
+        val mixedUuid =
+            occupant.uuid.mostSignificantBits xor redSlobberer.uuid.leastSignificantBits
         val normalized = (mixedUuid and ANGLE_MASK).toDouble() / ANGLE_MASK.toDouble()
         return normalized * Math.PI * 2.0
+    }
+
+    private fun serializeOccupant(
+        level: ServerLevel,
+        occupant: Entity,
+        description: String
+    ): CompoundTag? {
+        val reporter = ProblemReporter.Collector()
+        val output = TagValueOutput.createWithContext(reporter, level.registryAccess())
+        if (!occupant.save(output) || !reporter.isEmpty) {
+            SquAbyssalBloom.LOGGER.warn(
+                "Could not serialize {} {} into Red Slobberer refuge {}: {}",
+                description,
+                occupant.uuid,
+                redSlobberer.uuid,
+                if (reporter.isEmpty) "entity refused serialization" else reporter.report
+            )
+            return null
+        }
+        return output.buildResult()
     }
 
     private fun playEnterEffects(level: ServerLevel, entrance: Vec3) {
@@ -517,5 +624,18 @@ class RedSlobbererFishRefugeStorage(
         MAXIMUM_STAY("maximum_stay"),
         SHELTER_ATTACKED("shelter_attacked"),
         SHELTER_DESTROYED("shelter_destroyed")
+    }
+
+    private enum class OccupantKind(
+        val networkId: Int,
+        val debugName: String
+    ) {
+        FISH(0, "fish"),
+        BABY_RED_SLOBBERER(1, "red_slobberer_baby");
+
+        companion object {
+            fun fromNetworkId(networkId: Int): OccupantKind =
+                entries.firstOrNull { it.networkId == networkId } ?: FISH
+        }
     }
 }

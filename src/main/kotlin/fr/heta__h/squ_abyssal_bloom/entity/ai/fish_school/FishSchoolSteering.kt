@@ -62,6 +62,7 @@ object FishSchoolSteering {
     private const val MINIMUM_AGGREGATION_DISTANCE = 1.0E-4
     private const val PANIC_NOISE_REDUCTION = 0.9
     private const val PANIC_ALIGNMENT_INCREASE = 0.45
+    private const val PANIC_SEPARATION_INCREASE = 0.75
     private const val HERD_COMPRESSION = 0.6
     private const val AVOIDANCE_ALIGNMENT_REDUCTION = 0.75
     private const val DIRECT_THREAT_ALIGNMENT_FACTOR = 0.45
@@ -75,6 +76,12 @@ object FishSchoolSteering {
     private const val LARGE_ENTITY_ANTICIPATION_DISTANCE = 1.5
     private const val MINIMUM_ENTITY_DISTANCE = 0.25
     private const val MAXIMUM_ENTITY_AVOIDANCE = 1.8
+    private const val PANIC_FISH_COLLISION_PREDICTION_TICKS = 2.0
+    private const val PANIC_FISH_HORIZONTAL_CLEARANCE = 0.12
+    private const val PANIC_FISH_VERTICAL_CLEARANCE = 0.05
+    private const val PANIC_FISH_SEPARATION_RESPONSE = 0.65
+    private const val PANIC_FISH_MINIMUM_ESCAPE_SPEED = 0.015
+    private const val PANIC_FISH_COLLISION_PASSES = 2
     private const val CURRENT_DIRECTION_PROBE_WEIGHT = 0.75
     private const val INTENDED_DIRECTION_PROBE_WEIGHT = 0.25
     private const val PROBE_TURN_PENALTY = 0.08
@@ -255,6 +262,7 @@ object FishSchoolSteering {
         )
 
         val separationWeight = settings.separationWeight *
+            (1.0 + threatIntensity * PANIC_SEPARATION_INCREASE) *
             (1.0 - separationSuppression.coerceIn(0.0, 1.0))
         val aggregationInfluence = calculateAggregationInfluence(state, settings)
         val aggregationWeight = settings.cohesionWeight *
@@ -396,6 +404,111 @@ object FishSchoolSteering {
         desiredX = desiredDirection.x * horizontalSpeed
         desiredZ = desiredDirection.z * horizontalSpeed
         return Vec3(desiredX, desiredY, desiredZ)
+    }
+
+    fun avoidPanicFishCollisions(
+        fish: AbstractFish,
+        proposedVelocity: Vec3,
+        nearbyFish: List<AbstractFish>
+    ): Vec3 {
+        if (nearbyFish.isEmpty()) return proposedVelocity
+
+        val maximumSpeed = proposedVelocity.length()
+        if (maximumSpeed <= MINIMUM_DIRECTION_LENGTH_SQR) return proposedVelocity
+
+        var adjustedVelocity = proposedVelocity
+        val sortedFish = nearbyFish.sortedBy(fish::distanceToSqr)
+        repeat(PANIC_FISH_COLLISION_PASSES) {
+            for (other in sortedFish) {
+                val otherVelocity = other.deltaMovement
+                val relativeX = fish.x - other.x
+                val relativeY =
+                    (fish.boundingBox.minY + fish.boundingBox.maxY) * 0.5 -
+                        (other.boundingBox.minY + other.boundingBox.maxY) * 0.5
+                val relativeZ = fish.z - other.z
+                val relativeVelocityX = adjustedVelocity.x - otherVelocity.x
+                val relativeVelocityY = adjustedVelocity.y - otherVelocity.y
+                val relativeVelocityZ = adjustedVelocity.z - otherVelocity.z
+                val relativeSpeedSqr =
+                    relativeVelocityX * relativeVelocityX +
+                        relativeVelocityY * relativeVelocityY +
+                        relativeVelocityZ * relativeVelocityZ
+                val closestTick = if (relativeSpeedSqr > MINIMUM_DIRECTION_LENGTH_SQR) {
+                    -(
+                        relativeX * relativeVelocityX +
+                            relativeY * relativeVelocityY +
+                            relativeZ * relativeVelocityZ
+                        ) / relativeSpeedSqr
+                } else {
+                    0.0
+                }.coerceIn(0.0, PANIC_FISH_COLLISION_PREDICTION_TICKS)
+
+                val closestX = relativeX + relativeVelocityX * closestTick
+                val closestY = relativeY + relativeVelocityY * closestTick
+                val closestZ = relativeZ + relativeVelocityZ * closestTick
+                val verticalClearance =
+                    (fish.bbHeight + other.bbHeight) * 0.5 + PANIC_FISH_VERTICAL_CLEARANCE
+                if (abs(closestY) >= verticalClearance) continue
+
+                val requiredDistance =
+                    (fish.bbWidth + other.bbWidth) * 0.5 + PANIC_FISH_HORIZONTAL_CLEARANCE
+                val closestDistanceSqr = closestX * closestX + closestZ * closestZ
+                if (closestDistanceSqr >= requiredDistance * requiredDistance) continue
+
+                val closestDistance = sqrt(closestDistanceSqr)
+                val normal = when {
+                    closestDistance > MINIMUM_AGGREGATION_DISTANCE ->
+                        Vec3(closestX / closestDistance, 0.0, closestZ / closestDistance)
+                    relativeX * relativeX + relativeZ * relativeZ >
+                        MINIMUM_DIRECTION_LENGTH_SQR -> {
+                        val currentDistance = sqrt(relativeX * relativeX + relativeZ * relativeZ)
+                        Vec3(relativeX / currentDistance, 0.0, relativeZ / currentDistance)
+                    }
+                    else -> {
+                        val angle = fallbackCollisionAngle(fish, other)
+                        Vec3(cos(angle), 0.0, sin(angle))
+                    }
+                }
+                val relativeNormalSpeed =
+                    relativeVelocityX * normal.x + relativeVelocityZ * normal.z
+                val escapeSpeed =
+                    (requiredDistance - closestDistance) * PANIC_FISH_SEPARATION_RESPONSE +
+                        PANIC_FISH_MINIMUM_ESCAPE_SPEED
+                val correction =
+                    (-relativeNormalSpeed).coerceAtLeast(0.0) + escapeSpeed
+                adjustedVelocity = adjustedVelocity.add(normal.scale(correction))
+                adjustedVelocity = limitVelocity(adjustedVelocity, maximumSpeed)
+            }
+        }
+        return adjustedVelocity
+    }
+
+    private fun fallbackCollisionAngle(
+        fish: AbstractFish,
+        other: AbstractFish
+    ): Double {
+        val mixedUuid =
+            fish.uuid.mostSignificantBits xor
+                fish.uuid.leastSignificantBits xor
+                other.uuid.mostSignificantBits xor
+                other.uuid.leastSignificantBits
+        val normalized = (mixedUuid and FishCollectiveState.PHASE_MASK).toDouble() /
+            FishCollectiveState.PHASE_MASK.toDouble()
+        val baseAngle = normalized * PI * 2.0
+        return if (fish.uuid.compareTo(other.uuid) < 0) baseAngle else baseAngle + PI
+    }
+
+    private fun limitVelocity(velocity: Vec3, maximumSpeed: Double): Vec3 {
+        val verticalSpeed = velocity.y.coerceIn(-maximumSpeed, maximumSpeed)
+        val maximumHorizontalSpeed = sqrt(
+            max(0.0, maximumSpeed * maximumSpeed - verticalSpeed * verticalSpeed)
+        )
+        val horizontalSpeed = sqrt(velocity.x * velocity.x + velocity.z * velocity.z)
+        if (horizontalSpeed <= maximumHorizontalSpeed || horizontalSpeed <= MINIMUM_DIRECTION_LENGTH_SQR) {
+            return Vec3(velocity.x, verticalSpeed, velocity.z)
+        }
+        val scale = maximumHorizontalSpeed / horizontalSpeed
+        return Vec3(velocity.x * scale, verticalSpeed, velocity.z * scale)
     }
 
     private fun calculateEntityAvoidance(

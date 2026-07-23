@@ -59,6 +59,7 @@ class FishSchoolMovementGoal(
             manager.debugRecordNavigationSuppression(fish)
         }
         val desiredVelocity = manager.desiredVelocity(fish) ?: return
+        if (fish.isRemoved) return
         applyDesiredVelocity(desiredVelocity, manager.currentSettings(), manager)
     }
 
@@ -114,6 +115,7 @@ class FishSchoolMovementGoal(
             nextVelocity.y.coerceIn(-MAXIMUM_VERTICAL_SPEED, MAXIMUM_VERTICAL_SPEED),
             nextVelocity.z
         )
+        nextVelocity = manager.avoidPanicFishCollisions(fish, nextVelocity)
 
         val pendingVanillaBuoyancy = if (fish.isEyeInFluid(FluidTags.WATER)) {
             VANILLA_FISH_BUOYANCY

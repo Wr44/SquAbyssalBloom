@@ -39,7 +39,6 @@ class RedSlobbererFishInfluence(
         const val REFUGE_HOLD_STRENGTH = 1.1
         const val REFUGE_VERTICAL_HOLD = 2.2
         const val MAXIMUM_THREAT_ESCAPE_SUPPRESSION = 1.0
-        const val MAXIMUM_SEPARATION_SUPPRESSION = 0.78
         const val MAXIMUM_REFUGE_VERTICAL_SPEED_BONUS = 0.025
         const val MINIMUM_VECTOR_LENGTH = 1.0E-5
         const val ANGLE_MASK = 0xFFFFL
@@ -196,14 +195,6 @@ class RedSlobbererFishInfluence(
     ): Double {
         if (!canUseRefuge(fish)) return 0.0
         return refugeBlend(context.threatIntensity)
-    }
-
-    override fun separationSuppression(
-        fish: AbstractFish,
-        context: FishSchoolInfluenceContext
-    ): Double {
-        if (!canUseRefuge(fish)) return 0.0
-        return refugeBlend(context.threatIntensity) * MAXIMUM_SEPARATION_SUPPRESSION
     }
 
     override fun additionalVerticalSpeed(

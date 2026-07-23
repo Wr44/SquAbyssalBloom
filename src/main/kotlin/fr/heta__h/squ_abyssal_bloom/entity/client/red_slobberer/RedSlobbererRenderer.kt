@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseState
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRendererProvider
@@ -89,8 +90,20 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
 
         state.xRot = entity.getViewXRot(partialTicks)
         state.yRot = entity.getViewYRot(partialTicks)
+        state.defenseState = if (entity.isBaby) {
+            RedSlobbererDefenseState.NORMAL
+        } else {
+            entity.defenseState
+        }
+        state.defensePhaseElapsedTicks = if (entity.isBaby) {
+            0.0f
+        } else {
+            entity.getDefensePhaseElapsedTicks(partialTicks)
+        }
 
         state.idleAnimationState.copyFrom(entity.idleAnimationState)
         state.moveAnimationState.copyFrom(entity.moveAnimationState)
+        state.swingingAnimationState.copyFrom(entity.swingingAnimationState)
+        state.eyesAnimationState.copyFrom(entity.eyesAnimationState)
     }
 }

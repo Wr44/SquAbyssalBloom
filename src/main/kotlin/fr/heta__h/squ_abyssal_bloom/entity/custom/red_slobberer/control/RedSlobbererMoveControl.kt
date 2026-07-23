@@ -50,7 +50,20 @@ class RedSlobbererMoveControl(
     val followsTerrainTangent: Boolean
         get() = climbController.phase == RedSlobbererClimbPhase.NONE
 
+    fun stopForDefense() {
+        operation = Operation.WAIT
+        climbController.stop()
+        redSlobberer.speed = 0.0f
+        redSlobberer.deltaMovement = Vec3.ZERO
+        wasPropelling = false
+    }
+
     override fun tick() {
+        if (redSlobberer.isDefenseImmobilized) {
+            stopForDefense()
+            return
+        }
+
         if (operation == Operation.STRAFE) {
             climbController.stop()
             if (!redSlobberer.updateLocomotionCycle(true)) {

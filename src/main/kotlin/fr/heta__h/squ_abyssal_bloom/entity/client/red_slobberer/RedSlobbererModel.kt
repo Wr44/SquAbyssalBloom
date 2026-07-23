@@ -1,6 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseState
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayerLocation
 import net.minecraft.client.model.geom.ModelPart
@@ -10,13 +12,25 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder
 import net.minecraft.client.model.geom.builders.LayerDefinition
 import net.minecraft.client.model.geom.builders.MeshDefinition
 import net.minecraft.resources.Identifier
+import kotlin.math.ceil
 
 class RedSlobbererModel(modelPart: ModelPart) : EntityModel<RedSlobbererRenderState>(modelPart) {
 
     private val idleAnimation = RedSlobbererAnimation.idle.bake(modelPart)
     private val moveAnimation = RedSlobbererAnimation.move.bake(modelPart)
+    private val swingingAnimation = RedSlobbererAnimation.swinging.bake(modelPart)
+    private val eyesAnimation = RedSlobbererAnimation.eyes.bake(modelPart)
+    private val hideAnimation = RedSlobbererAnimation.hide.bake(modelPart)
+    private val showAnimation = RedSlobbererAnimation.show.bake(modelPart)
 
     companion object {
+        private const val MILLISECONDS_PER_SECOND = 1_000.0
+        private const val MILLISECONDS_PER_TICK = 50.0f
+        private val HIDE_ANIMATION_MILLISECONDS =
+            ceil(RedSlobbererEntity.ANIM_HIDE_S * MILLISECONDS_PER_SECOND).toLong()
+        private val SHOW_ANIMATION_MILLISECONDS =
+            ceil(RedSlobbererEntity.ANIM_SHOW_S * MILLISECONDS_PER_SECOND).toLong()
+
         val LAYER_LOCATION: ModelLayerLocation = ModelLayerLocation(
             Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "red_slobberer"), "main"
         )
@@ -381,7 +395,48 @@ class RedSlobbererModel(modelPart: ModelPart) : EntityModel<RedSlobbererRenderSt
     override fun setupAnim(renderState: RedSlobbererRenderState) {
         super.setupAnim(renderState)
 
-        this.idleAnimation.apply(renderState.idleAnimationState, renderState.ageInTicks)
-        this.moveAnimation.apply(renderState.moveAnimationState, renderState.ageInTicks)
+        when (renderState.defenseState) {
+            RedSlobbererDefenseState.NORMAL -> {
+                idleAnimation.apply(renderState.idleAnimationState, renderState.ageInTicks)
+                moveAnimation.apply(renderState.moveAnimationState, renderState.ageInTicks)
+            }
+            RedSlobbererDefenseState.HIDING ->
+                hideAnimation.apply(
+                    defenseAnimationMilliseconds(
+                        renderState.defensePhaseElapsedTicks,
+                        HIDE_ANIMATION_MILLISECONDS
+                    ),
+                    1.0f
+                )
+            RedSlobbererDefenseState.HIDDEN ->
+                hideAnimation.apply(HIDE_ANIMATION_MILLISECONDS, 1.0f)
+            RedSlobbererDefenseState.SHOWING ->
+                showAnimation.apply(
+                    defenseAnimationMilliseconds(
+                        renderState.defensePhaseElapsedTicks,
+                        SHOW_ANIMATION_MILLISECONDS
+                    ),
+                    1.0f
+                )
+        }
+
+        if (!renderState.isBaby) {
+            swingingAnimation.apply(renderState.swingingAnimationState, renderState.ageInTicks)
+            if (renderState.defenseState == RedSlobbererDefenseState.NORMAL) {
+                eyesAnimation.apply(renderState.eyesAnimationState, renderState.ageInTicks)
+            }
+        }
+    }
+
+    private fun defenseAnimationMilliseconds(
+        elapsedTicks: Float,
+        maximumMilliseconds: Long
+    ): Long {
+        return (
+            elapsedTicks.coerceAtLeast(0.0f) *
+                MILLISECONDS_PER_TICK
+        )
+            .toLong()
+            .coerceAtMost(maximumMilliseconds)
     }
 }

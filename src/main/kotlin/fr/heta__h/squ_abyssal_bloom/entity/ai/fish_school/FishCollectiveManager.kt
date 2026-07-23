@@ -34,6 +34,8 @@ class FishCollectiveManager private constructor(
         private const val AGGREGATION_LOCAL_DENSITY_LIMIT = 100
         private const val MINIMUM_DIRECT_THREAT_INTENSITY = 0.35
         private const val MINIMUM_PROPAGATED_THREAT_INTENSITY = 0.01
+        private const val MINIMUM_PANIC_COLLISION_SIGNAL = 0.03
+        private const val PANIC_COLLISION_SEARCH_RADIUS = 1.5
         private const val FISH_THREAT_PREDICTION_TICKS = 2.0
         private const val THREAT_PREDICTION_TICKS = 5.0
         private const val MINIMUM_ESCAPE_VECTOR_LENGTH = 1.0E-4
@@ -60,6 +62,30 @@ class FishCollectiveManager private constructor(
     fun desiredVelocity(fish: AbstractFish): Vec3? {
         val state = updateState(fish, calculateSteering = true) ?: return null
         return state.desiredVelocity.takeIf { state.isUnderCustomControl }
+    }
+
+    fun avoidPanicFishCollisions(
+        fish: AbstractFish,
+        proposedVelocity: Vec3
+    ): Vec3 {
+        val state = statesByFish[fish.uuid] ?: return proposedVelocity
+        if (state.threatIntensity <= MINIMUM_PANIC_COLLISION_SIGNAL) return proposedVelocity
+
+        val nearbyFish = level.getEntitiesOfClass(
+            AbstractFish::class.java,
+            fish.boundingBox.inflate(PANIC_COLLISION_SEARCH_RADIUS)
+        ) { candidate ->
+            candidate !== fish &&
+                candidate.isAlive &&
+                candidate.isInWater &&
+                !candidate.isRemoved &&
+                !candidate.isPassenger
+        }
+        return FishSchoolSteering.avoidPanicFishCollisions(
+            fish,
+            proposedVelocity,
+            nearbyFish
+        )
     }
 
     fun setMovementControllerRunning(

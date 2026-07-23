@@ -14,6 +14,8 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobb
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererFishRefugeStorage
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.LegacyRedSlobbererReefSnapshot
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefManager
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseController
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseState
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -22,6 +24,8 @@ import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.sounds.SoundEvent
+import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.Mth
 import net.minecraft.util.Mth.lerp
 import net.minecraft.world.DifficultyInstance
@@ -71,13 +75,17 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         const val LOCOMOTION_ANIMATION_LOOP_TICKS = 50
         const val LOCOMOTION_CHARGE_TICKS = 35
         const val LOCOMOTION_PROPULSION_SPEED_MULTIPLIER = 50.0 / 15.0
+        const val ANIM_HIDE_S = 1.0f
+        const val ANIM_SHOW_S = 0.5833f
         private const val WATER_GRAVITY = 0.4
         private const val MIN_FISH_PUSH_DISTANCE = 0.01
         private const val FISH_PUSH_STRENGTH = 0.05
-        private const val LEGACY_TAG_HAS_REEF_ANCHOR = "RedSlobbererHasReefAnchor"
-        private const val LEGACY_TAG_REEF_ANCHOR = "RedSlobbererReefAnchor"
-        private const val LEGACY_TAG_RESIDENCE_TICKS = "RedSlobbererReefResidenceTicks"
-        private const val LEGACY_TAG_PLACED_DECORATIONS = "RedSlobbererReefDecorations"
+        private const val HIDDEN_DAMAGE_MULTIPLIER = 0.5f
+        private const val BABY_SHELTER_SEARCH_RADIUS = 12.0
+        private const val LEGACY_TAG_HAS_REEF_ANCHOR = "red_slobberer_has_reef_anchor"
+        private const val LEGACY_TAG_REEF_ANCHOR = "red_slobberer_reef_anchor"
+        private const val LEGACY_TAG_RESIDENCE_TICKS = "red_slobberer_residence_tick"
+        private const val LEGACY_TAG_PLACED_DECORATIONS = "red_slobberer_placed_decorations"
 
         private val CLIMB_VISUAL_PITCH_TARGET: EntityDataAccessor<Float> = SynchedEntityData.defineId(
             RedSlobbererEntity::class.java,
@@ -91,6 +99,14 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             RedSlobbererEntity::class.java,
             EntityDataSerializers.INT
         )
+        private val DEFENSE_STATE: EntityDataAccessor<Int> = SynchedEntityData.defineId(
+            RedSlobbererEntity::class.java,
+            EntityDataSerializers.INT
+        )
+        private val DEFENSE_PHASE_START_GAME_TIME: EntityDataAccessor<Long> = SynchedEntityData.defineId(
+            RedSlobbererEntity::class.java,
+            EntityDataSerializers.LONG
+        )
 
         fun createAttributes(): AttributeSupplier.Builder {
             return createMobAttributes()
@@ -103,15 +119,19 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     val idleAnimationState = AnimationState()
     val moveAnimationState = AnimationState()
+    val swingingAnimationState = AnimationState()
+    val eyesAnimationState = AnimationState()
 
     val groupController = RedSlobbererGroupController(this)
     private val terrainAlignment = RedSlobbererTerrainAlignment(this)
     private val fishRefugeStorage = RedSlobbererFishRefugeStorage(this)
+    private val defenseController = RedSlobbererDefenseController(this)
 
     private var climbVisualPitch = 0.0f
     private var previousClimbVisualPitch = 0.0f
     private var activeLocomotionAnimation: LocomotionAnimation? = null
     private var renderedLocomotionCycleAnchor = Int.MIN_VALUE
+    private var locomotionCycleInitialized = false
     private var isPathfinding = false
     private var legacyReefSnapshot: LegacyRedSlobbererReefSnapshot? = null
 
@@ -127,6 +147,8 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         builder.define(CLIMB_VISUAL_PITCH_TARGET, 0.0f)
         builder.define(LOCOMOTION_ACTIVE, false)
         builder.define(LOCOMOTION_CYCLE_ANCHOR, 0)
+        builder.define(DEFENSE_STATE, RedSlobbererDefenseState.NORMAL.networkId)
+        builder.define(DEFENSE_PHASE_START_GAME_TIME, 0L)
     }
 
     override fun createNavigation(level: Level): PathNavigation {
@@ -239,23 +261,76 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         return terrainAlignment.getInterpolatedNormal(partialTick)
     }
 
+    val defenseState: RedSlobbererDefenseState
+        get() = RedSlobbererDefenseState.fromNetworkId(entityData.get(DEFENSE_STATE))
+
+    val isDefenseImmobilized: Boolean
+        get() = !isBaby && defenseState != RedSlobbererDefenseState.NORMAL
+
+    fun getDefensePhaseElapsedTicks(partialTick: Float): Float {
+        val elapsedTicks = level().gameTime - entityData.get(DEFENSE_PHASE_START_GAME_TIME)
+        return elapsedTicks.coerceAtLeast(0L).toFloat() + partialTick
+    }
+
+    internal fun syncDefenseState(
+        state: RedSlobbererDefenseState,
+        phaseStartGameTime: Long
+    ) {
+        entityData.set(DEFENSE_PHASE_START_GAME_TIME, phaseStartGameTime)
+        entityData.set(DEFENSE_STATE, state.networkId)
+        resetLocomotionCycle()
+        if (state != RedSlobbererDefenseState.NORMAL) {
+            stopDefenseMovement()
+            hurtMarked = true
+        }
+    }
+
+    internal fun hasActiveRefugeUnsafeCooldown(): Boolean =
+        fishRefugeStorage.hasActiveUnsafeCooldown
+
+    private fun tryShelterAfterDamage(level: ServerLevel): Boolean {
+        val parent = level.getEntitiesOfClass(
+            RedSlobbererEntity::class.java,
+            boundingBox.inflate(BABY_SHELTER_SEARCH_RADIUS)
+        ) { candidate ->
+            candidate !== this &&
+                candidate.fishRefugeStorage.canAcceptBaby(this)
+        }.minByOrNull(::distanceToSqr) ?: return false
+
+        return parent.acceptShelteredBaby(level, this)
+    }
+
+    private fun acceptShelteredBaby(
+        level: ServerLevel,
+        baby: RedSlobbererEntity
+    ): Boolean = fishRefugeStorage.tryStoreBaby(level, baby)
 
     fun updateLocomotionCycle(hasMovementIntent: Boolean): Boolean {
         if (level().isClientSide) return isInLocomotionPropulsionPhase
-
-        if (!hasMovementIntent) {
-            if (entityData.get(LOCOMOTION_ACTIVE)) {
-                entityData.set(LOCOMOTION_ACTIVE, false)
-            }
+        if (isDefenseImmobilized) {
+            resetLocomotionCycle()
             return false
         }
 
-        if (!entityData.get(LOCOMOTION_ACTIVE)) {
+        if (!locomotionCycleInitialized) {
+            locomotionCycleInitialized = true
             entityData.set(
                 LOCOMOTION_CYCLE_ANCHOR,
-                Math.floorMod(level().gameTime, LOCOMOTION_ANIMATION_LOOP_TICKS.toLong()).toInt()
+                currentLocomotionClockTick()
             )
-            entityData.set(LOCOMOTION_ACTIVE, true)
+            entityData.set(LOCOMOTION_ACTIVE, hasMovementIntent)
+            return isInLocomotionPropulsionPhase
+        }
+
+        if (
+            entityData.get(LOCOMOTION_ACTIVE) != hasMovementIntent &&
+            locomotionCycleTick() == 0
+        ) {
+            entityData.set(
+                LOCOMOTION_CYCLE_ANCHOR,
+                currentLocomotionClockTick()
+            )
+            entityData.set(LOCOMOTION_ACTIVE, hasMovementIntent)
         }
         return isInLocomotionPropulsionPhase
     }
@@ -266,11 +341,20 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             return locomotionCycleTick() >= LOCOMOTION_CHARGE_TICKS
         }
 
+    private fun currentLocomotionClockTick(): Int =
+        Math.floorMod(level().gameTime, LOCOMOTION_ANIMATION_LOOP_TICKS.toLong()).toInt()
+
     private fun locomotionCycleTick(): Int = Math.floorMod(
-        Math.floorMod(level().gameTime, LOCOMOTION_ANIMATION_LOOP_TICKS.toLong()).toInt() -
+        currentLocomotionClockTick() -
             entityData.get(LOCOMOTION_CYCLE_ANCHOR),
         LOCOMOTION_ANIMATION_LOOP_TICKS
     )
+
+    private fun resetLocomotionCycle() {
+        entityData.set(LOCOMOTION_ACTIVE, false)
+        entityData.set(LOCOMOTION_CYCLE_ANCHOR, currentLocomotionClockTick())
+        locomotionCycleInitialized = false
+    }
 
     override fun tick() {
         super.tick()
@@ -291,22 +375,49 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     private fun setupAnimationStates() {
-        if (entityData.get(LOCOMOTION_ACTIVE)) {
-            val synchronizedAnchor = entityData.get(LOCOMOTION_CYCLE_ANCHOR)
-            if (
-                activeLocomotionAnimation != LocomotionAnimation.MOVE ||
-                renderedLocomotionCycleAnchor != synchronizedAnchor
-            ) {
-                startLocomotionAnimation(
-                    LocomotionAnimation.MOVE,
-                    tickCount - locomotionCycleTick()
-                )
-                renderedLocomotionCycleAnchor = synchronizedAnchor
-            }
-        } else if (activeLocomotionAnimation != LocomotionAnimation.IDLE) {
-            startLocomotionAnimation(LocomotionAnimation.IDLE, tickCount)
-            renderedLocomotionCycleAnchor = Int.MIN_VALUE
+        if (isBaby) {
+            setupLocomotionAnimationState()
+            swingingAnimationState.stop()
+            eyesAnimationState.stop()
+            return
         }
+
+        val synchronizedStartTick = tickCount - locomotionCycleTick()
+        swingingAnimationState.startIfStopped(synchronizedStartTick)
+        if (defenseState != RedSlobbererDefenseState.NORMAL) {
+            stopAnimationsForDefense()
+            return
+        }
+
+        setupLocomotionAnimationState()
+        eyesAnimationState.startIfStopped(synchronizedStartTick)
+    }
+
+    private fun setupLocomotionAnimationState() {
+        val animation = if (entityData.get(LOCOMOTION_ACTIVE)) {
+            LocomotionAnimation.MOVE
+        } else {
+            LocomotionAnimation.IDLE
+        }
+        val synchronizedAnchor = entityData.get(LOCOMOTION_CYCLE_ANCHOR)
+        if (
+            activeLocomotionAnimation != animation ||
+            renderedLocomotionCycleAnchor != synchronizedAnchor
+        ) {
+            startLocomotionAnimation(
+                animation,
+                tickCount - locomotionCycleTick()
+            )
+            renderedLocomotionCycleAnchor = synchronizedAnchor
+        }
+    }
+
+    private fun stopAnimationsForDefense() {
+        idleAnimationState.stop()
+        moveAnimationState.stop()
+        eyesAnimationState.stop()
+        activeLocomotionAnimation = null
+        renderedLocomotionCycleAnchor = Int.MIN_VALUE
     }
 
     private fun startLocomotionAnimation(animation: LocomotionAnimation, startTick: Int) {
@@ -323,8 +434,16 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     override fun aiStep() {
         terrainAlignment.tick()
+        if (isDefenseImmobilized) {
+            stopDefenseMovement()
+        }
         super.aiStep()
         val serverLevel = level() as? ServerLevel ?: return
+        fishRefugeStorage.tickUnsafeCooldown(serverLevel)
+        defenseController.tick(serverLevel)
+        if (isDefenseImmobilized) {
+            stopDefenseMovement()
+        }
 
         if (isUnderWater) {
             timeExposedInAir = 0
@@ -339,6 +458,32 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         groupController.tick()
         RedSlobbererReefManager.forLevel(serverLevel).observe(this)
         fishRefugeStorage.tick(serverLevel)
+    }
+
+    override fun isImmobile(): Boolean {
+        return isDefenseImmobilized || super.isImmobile()
+    }
+
+    override fun isPushable(): Boolean {
+        return !isDefenseImmobilized && super.isPushable()
+    }
+
+    override fun travel(travelVector: Vec3) {
+        if (isDefenseImmobilized) {
+            deltaMovement = Vec3.ZERO
+            return
+        }
+        super.travel(travelVector)
+    }
+
+    private fun stopDefenseMovement() {
+        navigation.stop()
+        (moveControl as? RedSlobbererMoveControl)?.stopForDefense()
+        speed = 0.0f
+        xxa = 0.0f
+        yya = 0.0f
+        zza = 0.0f
+        deltaMovement = Vec3.ZERO
     }
 
     val shelteredFishCount: Int
@@ -359,16 +504,43 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         source: DamageSource,
         amount: Float
     ): Boolean {
-        val wasHurt = super.hurtServer(level, source, amount)
-        if (wasHurt && source.entity != null) {
-            fishRefugeStorage.invalidateAfterAttack(level)
+        fishRefugeStorage.tickUnsafeCooldown(level)
+        defenseController.tick(level)
+        val appliesHiddenResistance =
+            !isBaby && defenseController.state == RedSlobbererDefenseState.HIDDEN
+        val appliedAmount = if (appliesHiddenResistance) {
+            amount * HIDDEN_DAMAGE_MULTIPLIER
+        } else {
+            amount
         }
-        return wasHurt
+        if (!super.hurtServer(level, source, appliedAmount)) return false
+
+        if (isBaby && isAlive) {
+            tryShelterAfterDamage(level)
+        } else if (isAlive) {
+            fishRefugeStorage.invalidateAfterDamage(level)
+            defenseController.onDamage(level)
+            defenseController.tick(level)
+        }
+        if (isDefenseImmobilized) {
+            stopDefenseMovement()
+        }
+        return true
+    }
+
+    override fun getHurtSound(source: DamageSource): SoundEvent? {
+        return if (!isBaby && defenseState == RedSlobbererDefenseState.HIDDEN) {
+            SoundEvents.SHULKER_HURT_CLOSED
+        } else {
+            super.getHurtSound(source)
+        }
     }
 
     override fun remove(reason: Entity.RemovalReason) {
         if (reason.shouldDestroy() && !isRemoved) {
-            (level() as? ServerLevel)?.let(fishRefugeStorage::releaseOnDestruction)
+            (level() as? ServerLevel)?.let { serverLevel ->
+                fishRefugeStorage.releaseOnDestruction(serverLevel)
+            }
         }
         super.remove(reason)
     }
@@ -482,6 +654,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     override fun readAdditionalSaveData(input: ValueInput) {
         super.readAdditionalSaveData(input)
         fishRefugeStorage.load(input)
+        defenseController.load(input, level().gameTime)
         if (!input.getBooleanOr(LEGACY_TAG_HAS_REEF_ANCHOR, false)) return
 
         val residenceTicks = input.getIntOr(LEGACY_TAG_RESIDENCE_TICKS, 0).coerceAtLeast(0)
@@ -496,6 +669,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     override fun addAdditionalSaveData(output: ValueOutput) {
         super.addAdditionalSaveData(output)
         fishRefugeStorage.save(output)
+        defenseController.save(output, level().gameTime)
     }
 
     fun consumeLegacyReefSnapshot(): LegacyRedSlobbererReefSnapshot? {
