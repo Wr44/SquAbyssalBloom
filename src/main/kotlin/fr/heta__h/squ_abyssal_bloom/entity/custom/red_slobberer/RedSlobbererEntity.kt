@@ -218,8 +218,6 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     override fun maxUpStep(): Float {
-        // The pathfinder needs the full climb height to create elevated nodes. Exposing it while
-        // moving would also let Entity's generic collision code step onto side blocks and entities.
         return if (isPathfinding) {
             maximumClimbHeight.toFloat()
         } else {
@@ -241,10 +239,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         return terrainAlignment.getInterpolatedNormal(partialTick)
     }
 
-    /**
-     * Keeps physical locomotion on the same 50-tick clock as the move animation. The clock is
-     * server-owned and synchronized so a late client starts the animation at the correct phase.
-     */
+
     fun updateLocomotionCycle(hasMovementIntent: Boolean): Boolean {
         if (level().isClientSide) return isInLocomotionPropulsionPhase
 
@@ -378,7 +373,6 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         super.remove(reason)
     }
 
-    @Deprecated("Minecraft still calls this hook for fluid-push immunity")
     override fun isPushedByFluid(): Boolean = false
 
     override fun push(entity: Entity) {

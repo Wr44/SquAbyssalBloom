@@ -9,7 +9,6 @@ import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.phys.Vec3
 import java.util.EnumSet
 
-/** Pulls a member back toward its fixed ReefState anchor after ordinary wandering. */
 class RedSlobbererReefResidenceGoal(
     private val redSlobberer: RedSlobbererEntity,
     private val speedModifier: Double
