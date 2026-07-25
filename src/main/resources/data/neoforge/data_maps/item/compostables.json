@@ -1,0 +1,17 @@
+{
+  "replace": false,
+  "values": {
+    "squ_abyssal_bloom:blood_seagrass": {
+      "chance": 0.3
+    },
+    "squ_abyssal_bloom:tall_blood_seagrass": {
+      "chance": 0.6
+    },
+    "squ_abyssal_bloom:rhodophyta": {
+      "chance": 0.7
+    },
+    "squ_abyssal_bloom:dead_rhodophyta": {
+      "chance": 0.5
+    }
+  }
+}

@@ -11,7 +11,7 @@ import kotlin.math.abs
 
 object BarnacleTargeting {
     fun isEligibleTarget(barnacle: BarnacleEntity, candidate: LivingEntity, radius: Double): Boolean {
-        if (!candidate.isAlive || candidate.isRemoved || candidate.level() !== barnacle.level()) return false
+        if (!candidate.isAlive || candidate.isRemoved || !candidate.isInWater || candidate.level() !== barnacle.level()) return false
         if (barnacle.distanceToSqr(candidate) > radius * radius) return false
 
         return when (candidate) {

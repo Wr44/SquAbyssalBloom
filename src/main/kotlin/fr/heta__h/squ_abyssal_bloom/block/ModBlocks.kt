@@ -9,7 +9,11 @@ import fr.heta__h.squ_abyssal_bloom.block.calcareous_deposit.CalcareousDepositBl
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.CoralBlock
+import net.minecraft.world.level.block.SlabBlock
 import net.minecraft.world.level.block.SoundType
+import net.minecraft.world.level.block.StairBlock
+import net.minecraft.world.level.block.WallBlock
+import net.minecraft.world.level.block.state.BlockBehaviour
 import net.minecraft.world.level.block.state.properties.NoteBlockInstrument
 import net.minecraft.world.level.material.MapColor
 import net.minecraft.world.level.material.PushReaction
@@ -114,7 +118,60 @@ object ModBlocks {
         )
     }
 
+    val MARINE_BRICKS = REGISTRY.registerBlock("marine_bricks") { props -> Block(props.marineBricks()) }
+
+    val ALGEA_INFESTED_MARINE_BRICKS = REGISTRY.registerBlock("algea_infested_marine_bricks") { props -> Block(props.marineBricks()) }
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS = REGISTRY.registerBlock("rhodophyta_infested_marine_bricks") { props -> Block(props.marineBricks()) }
+
+    val CHISELED_MARINE_BRICKS = REGISTRY.registerBlock("chiseled_marine_bricks") { props -> Block(props.marineBricks()) }
+
+    val MARINE_BRICKS_STAIRS = REGISTRY.registerBlock("marine_bricks_stairs") { props ->
+        StairBlock(MARINE_BRICKS.get().defaultBlockState(), props.marineBricks())
+    }
+
+    val MARINE_BRICKS_SLAB = REGISTRY.registerBlock("marine_bricks_slab") { props ->
+        SlabBlock(props.marineBricks())
+    }
+
+    val ALGEA_INFESTED_MARINE_BRICKS_STAIRS = REGISTRY.registerBlock("algea_infested_marine_bricks_stairs") { props ->
+        StairBlock(ALGEA_INFESTED_MARINE_BRICKS.get().defaultBlockState(), props.marineBricks())
+    }
+
+    val ALGEA_INFESTED_MARINE_BRICKS_SLAB = REGISTRY.registerBlock("algea_infested_marine_bricks_slab") { props ->
+        SlabBlock(props.marineBricks())
+    }
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS_STAIRS = REGISTRY.registerBlock("rhodophyta_infested_marine_bricks_stairs") { props ->
+        StairBlock(RHODOPHYTA_INFESTED_MARINE_BRICKS.get().defaultBlockState(), props.marineBricks())
+    }
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS_SLAB = REGISTRY.registerBlock("rhodophyta_infested_marine_bricks_slab") { props ->
+        SlabBlock(props.marineBricks())
+    }
+
+    val MARINE_BRICKS_WALL = REGISTRY.registerBlock("marine_bricks_wall") { props ->
+        WallBlock(props.marineBricks().forceSolidOn())
+    }
+
+    val ALGEA_INFESTED_MARINE_BRICKS_WALL = REGISTRY.registerBlock("algea_infested_marine_bricks_wall") { props ->
+        WallBlock(props.marineBricks().forceSolidOn())
+    }
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL = REGISTRY.registerBlock("rhodophyta_infested_marine_bricks_wall") { props ->
+        WallBlock(props.marineBricks().forceSolidOn())
+    }
+
     fun register(bus: IEventBus) {
         REGISTRY.register(bus)
     }
+
+    // Utilities for Block
+
+    private fun BlockBehaviour.Properties.marineBricks(): BlockBehaviour.Properties =
+        this.mapColor(MapColor.COLOR_GRAY)
+            .instrument(NoteBlockInstrument.BASEDRUM)
+            .requiresCorrectToolForDrops()
+            .strength(2.0f, 6.0f)
+            .sound(SoundType.STONE)
 }

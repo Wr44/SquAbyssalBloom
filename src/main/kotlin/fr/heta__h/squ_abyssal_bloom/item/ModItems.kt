@@ -54,6 +54,10 @@ object ModItems {
         "marine_cement"
     ) { properties -> Item(properties) }
 
+    val MARINE_BRICK: DeferredItem<Item> = ITEMS.registerItem(
+        "marine_brick",
+    ) { properties -> Item(properties) }
+
     val BRINE_BUBBLES : DeferredItem<Item> = ITEMS.registerItem(
         "brine_bubbles"
     ) { properties -> Item(properties) }
@@ -116,6 +120,32 @@ object ModItems {
     val BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.BLOOD_SEAGRASS)
 
     val TALL_BLOOD_SEAGRASS = ITEMS.registerSimpleBlockItem(ModBlocks.TALL_BLOOD_SEAGRASS)
+
+    val MARINE_BRICKS = ITEMS.registerSimpleBlockItem(ModBlocks.MARINE_BRICKS)
+
+    val CHISELED_MARINE_BRICKS = ITEMS.registerSimpleBlockItem(ModBlocks.CHISELED_MARINE_BRICKS)
+
+    val MARINE_BRICKS_STAIRS = ITEMS.registerSimpleBlockItem(ModBlocks.MARINE_BRICKS_STAIRS)
+
+    val MARINE_BRICKS_SLAB = ITEMS.registerSimpleBlockItem(ModBlocks.MARINE_BRICKS_SLAB)
+
+    val ALGEA_INFESTED_MARINE_BRICKS = ITEMS.registerSimpleBlockItem(ModBlocks.ALGEA_INFESTED_MARINE_BRICKS)
+
+    val ALGEA_INFESTED_MARINE_BRICKS_STAIRS = ITEMS.registerSimpleBlockItem(ModBlocks.ALGEA_INFESTED_MARINE_BRICKS_STAIRS)
+
+    val ALGEA_INFESTED_MARINE_BRICKS_SLAB = ITEMS.registerSimpleBlockItem(ModBlocks.ALGEA_INFESTED_MARINE_BRICKS_SLAB)
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA_INFESTED_MARINE_BRICKS)
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS_STAIRS = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA_INFESTED_MARINE_BRICKS_STAIRS)
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS_SLAB = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA_INFESTED_MARINE_BRICKS_SLAB)
+
+    val MARINE_BRICKS_WALL = ITEMS.registerSimpleBlockItem(ModBlocks.MARINE_BRICKS_WALL)
+
+    val ALGEA_INFESTED_MARINE_BRICKS_WALL = ITEMS.registerSimpleBlockItem(ModBlocks.ALGEA_INFESTED_MARINE_BRICKS_WALL)
+
+    val RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL)
 
     // Fictive items for testing
     val BARBED_NAUTILUS_SCALE_DISPLAY: DeferredItem<Item> = ITEMS.registerItem(

@@ -29,6 +29,7 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.PRISMARINE_SPIKE.get())
                 output.accept(ModItems.CALCAREOUS_FRAGMENT.get())
                 output.accept(ModItems.MARINE_CEMENT.get())
+                output.accept(ModItems.MARINE_BRICK)
                 output.accept(ModItems.BRINE_BUBBLES.get())
                 output.accept(ModItems.LIFELINE_BUBBLE.get())
                 output.accept(ModItems.RESPIRATION_BUBBLE.get())
@@ -44,6 +45,20 @@ object ModCreativeModeTabs {
 
                 output.accept(ModItems.BLOOD_SEAGRASS.get())
                 output.accept(ModItems.TALL_BLOOD_SEAGRASS.get())
+
+                output.accept(ModItems.MARINE_BRICKS.get())
+                output.accept(ModItems.MARINE_BRICKS_STAIRS.get())
+                output.accept(ModItems.MARINE_BRICKS_SLAB.get())
+                output.accept(ModItems.MARINE_BRICKS_WALL.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS_STAIRS.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS_SLAB.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS_WALL.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_STAIRS.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_SLAB.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL.get())
+                output.accept(ModItems.CHISELED_MARINE_BRICKS.get())
 
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
                 output.accept(ModItems.BRINE_SPAWN_EGG.get())

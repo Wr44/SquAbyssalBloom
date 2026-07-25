@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_wall_side_tall",
+  "textures": {
+    "wall": "squ_abyssal_bloom:block/algea_infested_marine_bricks"
+  }
+}

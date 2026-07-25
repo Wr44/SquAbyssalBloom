@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "rolls": 1,
+      "entries": [
+        { "type": "minecraft:item", "name": "squ_abyssal_bloom:algea_infested_marine_bricks" }
+      ]
+    }
+  ]
+}

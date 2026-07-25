@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.3,
+  "group": "marine_cement",
+  "ingredient": "squ_abyssal_bloom:marine_cement",
+  "result": {
+    "count": 1,
+    "id": "squ_abyssal_bloom:marine_brick"
+  }
+}

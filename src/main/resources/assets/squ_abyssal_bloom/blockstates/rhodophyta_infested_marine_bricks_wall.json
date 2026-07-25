@@ -1,0 +1,13 @@
+{
+  "multipart": [
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_post" }, "when": { "up": "true" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side", "uvlock": true }, "when": { "north": "low" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side", "uvlock": true, "y": 90 }, "when": { "east": "low" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side", "uvlock": true, "y": 180 }, "when": { "south": "low" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side", "uvlock": true, "y": 270 }, "when": { "west": "low" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side_tall", "uvlock": true }, "when": { "north": "tall" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side_tall", "uvlock": true, "y": 90 }, "when": { "east": "tall" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side_tall", "uvlock": true, "y": 180 }, "when": { "south": "tall" } },
+    { "apply": { "model": "squ_abyssal_bloom:block/rhodophyta_infested_marine_bricks_wall_side_tall", "uvlock": true, "y": 270 }, "when": { "west": "tall" } }
+  ]
+}

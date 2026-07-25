@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/inner_stairs",
+  "textures": {
+    "bottom": "squ_abyssal_bloom:block/algea_infested_marine_bricks",
+    "side": "squ_abyssal_bloom:block/algea_infested_marine_bricks",
+    "top": "squ_abyssal_bloom:block/algea_infested_marine_bricks"
+  }
+}
