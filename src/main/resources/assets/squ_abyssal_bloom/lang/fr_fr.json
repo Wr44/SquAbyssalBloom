@@ -368,5 +368,15 @@
   "subtitles.squ_abyssal_bloom.clean_bubble_spitter": "Nettoyage d'un cracheur de bulles",
   "subtitles.squ_abyssal_bloom.potion_bubble_spitter": "Potion versée dans un cracheur de bulles",
 
+  "subtitles.squ_abyssal_bloom.red_slobberer_ambient": "Le Baveur Rouge grogne",
+  "subtitles.squ_abyssal_bloom.red_slobberer_moving": "Le Baveur Rouge se déplace",
+  "subtitles.squ_abyssal_bloom.red_slobberer_death": "Le Baveur Rouge meurt",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hit": "Le Baveur Rouge est blessé",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide": "Le Baveur Rouge est blessé, protégé",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hide": "Le Baveur Rouge se cache",
+  "subtitles.squ_abyssal_bloom.red_slobberer_show": "Le Baveur Rouge ressort",
+  "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Une créature entre dans l'abri",
+  "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Une créature quitte l'abri",
+
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Peut produire des bulbes de prismarine"
 }

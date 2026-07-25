@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense
 
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.storage.ValueInput
 import net.minecraft.world.level.storage.ValueOutput
@@ -88,7 +89,7 @@ class RedSlobbererDefenseController(
             input.getIntOr(TAG_STATE, RedSlobbererDefenseState.NORMAL.networkId)
         )
         if (loadedState == RedSlobbererDefenseState.NORMAL) {
-            transitionTo(RedSlobbererDefenseState.NORMAL, gameTime, 0)
+            transitionTo(RedSlobbererDefenseState.NORMAL, gameTime, 0, announce = false)
             return
         }
 
@@ -104,7 +105,8 @@ class RedSlobbererDefenseController(
         transitionTo(
             loadedState,
             gameTime - elapsedTicks,
-            fullDurationTicks
+            fullDurationTicks,
+            announce = false
         )
     }
 
@@ -136,12 +138,26 @@ class RedSlobbererDefenseController(
     private fun transitionTo(
         newState: RedSlobbererDefenseState,
         startGameTime: Long,
-        durationTicks: Int
+        durationTicks: Int,
+        announce: Boolean = true
     ) {
+        val previousState = state
         state = newState
         phaseStartGameTime = startGameTime
         phaseDurationTicks = durationTicks.coerceAtLeast(0)
         redSlobberer.syncDefenseState(newState, startGameTime)
+        if (announce && newState != previousState) {
+            playTransitionSound(newState)
+        }
+    }
+
+    private fun playTransitionSound(newState: RedSlobbererDefenseState) {
+        val sound = when (newState) {
+            RedSlobbererDefenseState.HIDING -> ModSounds.RED_SLOBBERER_HIDE.get()
+            RedSlobbererDefenseState.SHOWING -> ModSounds.RED_SLOBBERER_SHOW.get()
+            RedSlobbererDefenseState.NORMAL, RedSlobbererDefenseState.HIDDEN -> return
+        }
+        redSlobberer.playSound(sound)
     }
 
     private fun phaseEndGameTime(): Long = phaseStartGameTime + phaseDurationTicks

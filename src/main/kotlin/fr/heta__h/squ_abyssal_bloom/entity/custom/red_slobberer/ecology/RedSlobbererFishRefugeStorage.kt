@@ -6,11 +6,11 @@ import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.FishCollectiveManager
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.FishThreatClassifier
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseState
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.tags.FluidTags
 import net.minecraft.util.ProblemReporter
@@ -500,9 +500,9 @@ class RedSlobbererFishRefugeStorage(
             entrance.x,
             entrance.y,
             entrance.z,
-            SoundEvents.BEEHIVE_ENTER,
+            ModSounds.RED_SLOBBERER_ENTITY_ENTER.get(),
             SoundSource.NEUTRAL,
-            0.8f,
+            1.0f,
             0.9f + level.random.nextFloat() * 0.2f
         )
         level.sendParticles(
@@ -561,9 +561,9 @@ class RedSlobbererFishRefugeStorage(
             position.x,
             position.y,
             position.z,
-            SoundEvents.BEEHIVE_EXIT,
+            ModSounds.RED_SLOBBERER_ENTITY_LEAVE.get(),
             SoundSource.NEUTRAL,
-            0.8f,
+            1.0f,
             0.9f + level.random.nextFloat() * 0.2f
         )
         level.sendParticles(

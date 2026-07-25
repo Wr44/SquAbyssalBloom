@@ -370,6 +370,16 @@
   "subtitles.squ_abyssal_bloom.clean_bubble_spitter": "Cleaning a bubble spitter",
   "subtitles.squ_abyssal_bloom.potion_bubble_spitter": "Potion poured into a bubble spitter",
 
+  "subtitles.squ_abyssal_bloom.red_slobberer_ambient": "Red Slobberer groans",
+  "subtitles.squ_abyssal_bloom.red_slobberer_moving": "Red Slobberer moves",
+  "subtitles.squ_abyssal_bloom.red_slobberer_death": "Red Slobberer dies",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hit": "Red Slobberer hurts",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide": "Red Slobberer hurts, shielded",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hide": "Red Slobberer hides",
+  "subtitles.squ_abyssal_bloom.red_slobberer_show": "Red Slobberer emerges",
+  "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Creature enters shelter",
+  "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Creature leaves shelter",
+
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Can produce Prismarine Bulbs"
 
 }

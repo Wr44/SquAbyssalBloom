@@ -91,5 +91,43 @@
   "pressure_damage": {
     "subtitle": "subtitles.squ_abyssal_bloom.pressure_damage",
     "sounds": [ "squ_abyssal_bloom:damage_type/pressure_damage" ]
+  },
+
+
+  "red_slobberer_ambient": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_ambient",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambient_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_3" ]
+  },
+  "red_slobberer_moving": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_moving",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_moving_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_moving_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_moving_3" ]
+  },
+  "red_slobberer_death": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_death",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_death" ]
+  },
+  "red_slobberer_hit": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_hit",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_2" ]
+  },
+  "red_slobberer_hit_hide": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_3", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_4" ]
+  },
+  "red_slobberer_hide": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_hide",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hide" ]
+  },
+  "red_slobberer_show": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_show",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_show" ]
+  },
+  "red_slobberer_entity_enter": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_entity_enter" ]
+  },
+  "red_slobberer_entity_leave": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_entity_leave" ]
   }
 }

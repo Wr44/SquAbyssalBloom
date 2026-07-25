@@ -17,6 +17,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobb
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseController
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.defense.RedSlobbererDefenseState
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -25,7 +26,6 @@ import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
-import net.minecraft.sounds.SoundEvents
 import net.minecraft.util.Mth
 import net.minecraft.world.DifficultyInstance
 import net.minecraft.world.entity.AgeableMob
@@ -79,6 +79,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private const val WATER_GRAVITY = 0.4
         private const val MIN_FISH_PUSH_DISTANCE = 0.01
         private const val FISH_PUSH_STRENGTH = 0.05
+        private const val FISH_COLLISION_CLEARANCE = 1.0E-3
         private const val HIDDEN_DAMAGE_MULTIPLIER = 0.5f
         private const val BABY_SHELTER_SEARCH_RADIUS = 12.0
         private const val LEGACY_TAG_HAS_REEF_ANCHOR = "red_slobberer_has_reef_anchor"
@@ -291,6 +292,9 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         return isInLocomotionPropulsionPhase
     }
 
+    val isLocomotionActive: Boolean
+        get() = entityData.get(LOCOMOTION_ACTIVE)
+
     val isInLocomotionPropulsionPhase: Boolean
         get() {
             if (!entityData.get(LOCOMOTION_ACTIVE)) return false
@@ -483,12 +487,24 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         return true
     }
 
-    override fun getHurtSound(source: DamageSource): SoundEvent? {
-        return if (!isBaby && defenseState == RedSlobbererDefenseState.HIDDEN) {
-            SoundEvents.SHULKER_HURT_CLOSED
+    override fun getAmbientSound(): SoundEvent {
+        return if (isLocomotionActive) {
+            ModSounds.RED_SLOBBERER_MOVING.get()
         } else {
-            super.getHurtSound(source)
+            ModSounds.RED_SLOBBERER_AMBIENT.get()
         }
+    }
+
+    override fun getHurtSound(source: DamageSource): SoundEvent {
+        return if (isDefenseImmobilized) {
+            ModSounds.RED_SLOBBERER_HIT_HIDE.get()
+        } else {
+            ModSounds.RED_SLOBBERER_HIT.get()
+        }
+    }
+
+    override fun getDeathSound(): SoundEvent {
+        return ModSounds.RED_SLOBBERER_DEATH.get()
     }
 
     override fun remove(reason: Entity.RemovalReason) {
@@ -521,13 +537,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     private fun pushFishAwayWithoutRecoil(fish: AbstractFish) {
         if (isPassengerOfSameVehicle(fish) || noPhysics || fish.noPhysics) return
         if (fish.isVehicle || !fish.isPushable) return
-        val serverLevel = level() as? ServerLevel
-        if (
-            serverLevel != null &&
-            RedSlobbererReefManager.forLevel(serverLevel).isFishUsingRefuge(fish, this)
-        ) {
-            return
-        }
+        separateOverlappingFish(fish)
 
         var pushX = fish.x - x
         var pushZ = fish.z - z
@@ -543,6 +553,38 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             0.0,
             pushZ * proximityScale * FISH_PUSH_STRENGTH
         )
+    }
+
+    private fun separateOverlappingFish(fish: AbstractFish) {
+        val bodyBox = boundingBox
+        val fishBox = fish.boundingBox
+        if (!bodyBox.intersects(fishBox)) return
+
+        val candidates = listOf(
+            Vec3(bodyBox.minX - fishBox.maxX - FISH_COLLISION_CLEARANCE, 0.0, 0.0) to
+                Vec3(-1.0, 0.0, 0.0),
+            Vec3(bodyBox.maxX - fishBox.minX + FISH_COLLISION_CLEARANCE, 0.0, 0.0) to
+                Vec3(1.0, 0.0, 0.0),
+            Vec3(0.0, 0.0, bodyBox.minZ - fishBox.maxZ - FISH_COLLISION_CLEARANCE) to
+                Vec3(0.0, 0.0, -1.0),
+            Vec3(0.0, 0.0, bodyBox.maxZ - fishBox.minZ + FISH_COLLISION_CLEARANCE) to
+                Vec3(0.0, 0.0, 1.0)
+        ).sortedBy { (offset, _) -> offset.lengthSqr() }
+
+        val (offset, outwardNormal) = candidates.firstOrNull { (candidateOffset, _) ->
+            level().noBlockCollision(fish, fishBox.move(candidateOffset))
+        } ?: return
+
+        fish.setPos(
+            fish.x + offset.x,
+            fish.y,
+            fish.z + offset.z
+        )
+        val velocity = fish.deltaMovement
+        val inwardSpeed = velocity.dot(outwardNormal)
+        if (inwardSpeed < 0.0) {
+            fish.deltaMovement = velocity.subtract(outwardNormal.scale(inwardSpeed))
+        }
     }
 
     override fun getWalkTargetValue(pos: BlockPos, level: LevelReader): Float {

@@ -106,6 +106,45 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+
+    // Red Slobberer
+
+    val RED_SLOBBERER_AMBIENT = SOUNDS.register("red_slobberer_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_MOVING = SOUNDS.register("red_slobberer_moving") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_DEATH = SOUNDS.register("red_slobberer_death") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_HIT = SOUNDS.register("red_slobberer_hit") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_HIT_HIDE = SOUNDS.register("red_slobberer_hit_hide") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_HIDE = SOUNDS.register("red_slobberer_hide") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_SHOW = SOUNDS.register("red_slobberer_show") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_ENTITY_ENTER = SOUNDS.register("red_slobberer_entity_enter") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_ENTITY_LEAVE = SOUNDS.register("red_slobberer_entity_leave") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
     fun register(eventBus: IEventBus) {
         SOUNDS.register(eventBus)
     }

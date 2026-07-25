@@ -107,7 +107,6 @@ class RedSlobbererReefManager private constructor(
         const val DEBUG_REFUGE_PARTICLE_INTERVAL_TICKS = 10L
         const val DEBUG_REFUGE_ACTIVE_WINDOW_TICKS = 30L
         const val DEBUG_REFUGE_EVENT_GAP_TICKS = 60L
-        const val ACTIVE_REFUGE_COLLISION_WINDOW_TICKS = 5L
 
         private val HORIZONTAL_DIRECTIONS = arrayOf(
             Direction.NORTH,
@@ -386,17 +385,6 @@ class RedSlobbererReefManager private constructor(
             storedCount,
             cooldownTicks
         )
-    }
-
-    fun isFishUsingRefuge(
-        fish: AbstractFish,
-        shelter: RedSlobbererEntity
-    ): Boolean {
-        if (fish.level() !== level || shelter.level() !== level) return false
-        val activeRefuge = activeRefugeByFish[fish.uuid] ?: return false
-        return activeRefuge.shelterId == shelter.uuid &&
-            level.gameTime - activeRefuge.lastInfluenceGameTime <=
-            ACTIVE_REFUGE_COLLISION_WINDOW_TICKS
     }
 
     private fun tickOnce(gameTime: Long) {
