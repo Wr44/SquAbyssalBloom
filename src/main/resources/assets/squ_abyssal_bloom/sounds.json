@@ -19,6 +19,23 @@
     "subtitle": "subtitles.squ_abyssal_bloom.barnacle_death",
     "sounds": [ "squ_abyssal_bloom:entity/barnacle/barnacle_death" ]
   },
+  "barnacle_shoot": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_shoot",
+    "sounds": [
+      { "name": "minecraft:mob/squid/squirt1", "pitch": 0.5 },
+      { "name": "minecraft:mob/squid/squirt2", "pitch": 0.5 },
+      { "name": "minecraft:mob/squid/squirt3", "pitch": 0.5 }
+    ]
+  },
+  "barnacle_flop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_flop",
+    "sounds": [
+      { "name": "minecraft:mob/guardian/flop1", "pitch": 0.5 },
+      { "name": "minecraft:mob/guardian/flop2", "pitch": 0.5 },
+      { "name": "minecraft:mob/guardian/flop3", "pitch": 0.5 },
+      { "name": "minecraft:mob/guardian/flop4", "pitch": 0.5 }
+    ]
+  },
 
 
 

@@ -483,7 +483,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
 
     override fun getDeathSound(): SoundEvent = ModSounds.BARNACLE_DEATH.get()
 
-    fun getFlopSound(): SoundEvent = SoundEvents.GUARDIAN_FLOP
+    fun getFlopSound(): SoundEvent = ModSounds.BARNACLE_FLOP.get()
 
     override fun getSoundVolume(): Float = DEFAULT_SOUND_VOLUME
 
@@ -569,7 +569,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         if (level is ServerLevel) {
 
             this.playSound(
-                SoundEvents.SQUID_SQUIRT,
+                ModSounds.BARNACLE_SHOOT.get(),
                 1.0f,
                 (this.random.nextFloat() - this.random.nextFloat()) * INK_SOUND_PITCH_VAR + INK_SOUND_PITCH_BASE
             )
