@@ -77,6 +77,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         const val ANIM_HIDE_S = 1.0f
         const val ANIM_SHOW_S = 0.5833f
         private const val WATER_GRAVITY = 0.4
+        private const val MOVING_AMBIENT_SOUND_CHANCE = 0.33f
         private const val MIN_FISH_PUSH_DISTANCE = 0.01
         private const val FISH_PUSH_STRENGTH = 0.05
         private const val FISH_COLLISION_CLEARANCE = 1.0E-3
@@ -488,7 +489,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     override fun getAmbientSound(): SoundEvent {
-        return if (isLocomotionActive) {
+        return if (isLocomotionActive && random.nextFloat() >= MOVING_AMBIENT_SOUND_CHANCE) {
             ModSounds.RED_SLOBBERER_MOVING.get()
         } else {
             ModSounds.RED_SLOBBERER_AMBIENT.get()
