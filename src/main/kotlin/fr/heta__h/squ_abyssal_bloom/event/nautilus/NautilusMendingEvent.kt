@@ -24,23 +24,23 @@ object NautilusMendingEvent {
 
         if (vehicle !is AbstractNautilus) return
 
-        val candidates = mutableListOf<ItemStack>()
+        val candidates = mutableListOf<Pair<ItemStack, () -> Unit>>()
 
         val extraSlot = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
         if (!extraSlot.isEmpty && extraSlot.isDamaged &&
             ModUtilities.getEnchantLevel(extraSlot, player.level(), "mending", "minecraft") > 0) {
-            candidates.add(extraSlot)
+            candidates.add(extraSlot to { vehicle.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, extraSlot) })
         }
 
         val bodyArmor = vehicle.getItemBySlot(EquipmentSlot.BODY)
         if (!bodyArmor.isEmpty && bodyArmor.isDamaged &&
             ModUtilities.getEnchantLevel(bodyArmor, player.level(), "mending", "minecraft") > 0) {
-            candidates.add(bodyArmor)
+            candidates.add(bodyArmor to { vehicle.setItemSlot(EquipmentSlot.BODY, bodyArmor) })
         }
 
         if (candidates.isEmpty()) return
 
-        val target = candidates.random()
+        val (target, writeBack) = candidates.random()
         val orbXp = orb.value
         val repairAmount = min(orbXp * 2, target.damageValue)
         val consumedXp = ceil(repairAmount / 2.0).toInt()
@@ -48,6 +48,7 @@ object NautilusMendingEvent {
 
         if (consumedXp > 0) {
             target.damageValue -= repairAmount
+            writeBack()
             event.isCanceled = true
             orb.discard()
 

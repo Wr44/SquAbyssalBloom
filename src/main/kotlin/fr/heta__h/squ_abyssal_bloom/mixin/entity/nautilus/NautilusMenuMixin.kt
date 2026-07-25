@@ -14,6 +14,7 @@ import net.minecraft.world.Container
 import net.minecraft.world.SimpleContainer
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.player.Inventory
+import net.minecraft.world.inventory.AbstractContainerMenu
 import net.minecraft.world.inventory.NautilusInventoryMenu
 import net.minecraft.world.inventory.Slot
 import net.minecraft.world.item.ItemStack
@@ -41,6 +42,7 @@ abstract class NautilusMenuMixin {
         ci: CallbackInfo
     ) {
         val player = playerInventory.player
+        val thisMenu = this as AbstractContainerMenu
         val savedItem: ItemStack = mount.getData(ModAttachments.NAUTILUS_EXTRA_SLOT) ?: ItemStack.EMPTY
 
         var hadChestState = savedItem.`is`(Items.CHEST)
@@ -82,6 +84,7 @@ abstract class NautilusMenuMixin {
                 if (hadChest != hasChestNow && player is ServerPlayer) {
                     NautilusReopenQueue.schedule {
                         if (!mount.isAlive || !player.isAlive || player.hasDisconnected()) return@schedule
+                        if (player.containerMenu !== thisMenu) return@schedule
                         val carried: ItemStack = player.containerMenu.carried ?: ItemStack.EMPTY
                         try {
                             player.containerMenu.carried = ItemStack.EMPTY
