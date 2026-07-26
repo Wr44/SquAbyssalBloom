@@ -7,9 +7,14 @@ import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardi
 import fr.heta__h.squ_abyssal_bloom.item.bubble_spitter.BubbleSpitterItem
 import fr.heta__h.squ_abyssal_bloom.item.respiration_bubble.RespirationBubbleItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
+import net.minecraft.core.component.DataComponents
+import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.item.Item
+import net.minecraft.world.item.MobBucketItem
 import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.SpawnEggItem
+import net.minecraft.world.item.component.CustomData
+import net.minecraft.world.level.material.Fluids
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.registries.DeferredItem
 import net.neoforged.neoforge.registries.DeferredRegister
@@ -29,6 +34,19 @@ object ModItems {
     val RED_SLOBBERER_SPAWN_EGG: DeferredItem<Item> = ITEMS.registerItem(
         "red_slobberer_spawn_egg"
     )  { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.RED_SLOBBERER.get())) }
+
+    val BABY_RED_SLOBBERER_BUCKET: DeferredItem<Item> = ITEMS.registerItem(
+        "baby_red_slobberer_bucket"
+    ) { properties ->
+        MobBucketItem(
+            ModEntities.RED_SLOBBERER.get(),
+            Fluids.WATER,
+            SoundEvents.BUCKET_EMPTY_FISH,
+            properties
+                .stacksTo(1)
+                .component(DataComponents.BUCKET_ENTITY_DATA, CustomData.EMPTY)
+        )
+    }
 
     val BARNACLE_TOOTH: DeferredItem<Item> = ITEMS.registerItem(
         "barnacle_tooth"

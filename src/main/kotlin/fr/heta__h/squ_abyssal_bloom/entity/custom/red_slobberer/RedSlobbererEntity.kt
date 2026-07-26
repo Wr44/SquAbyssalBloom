@@ -28,6 +28,8 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.util.Mth
 import net.minecraft.world.DifficultyInstance
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.AgeableMob
 import net.minecraft.world.entity.AnimationState
 import net.minecraft.world.entity.Entity
@@ -67,6 +69,8 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         const val MAX_AIR_TICKS = 200
 
         private const val BABY_START_AGE_TICKS = -72_000
+        private const val ADULT_MAX_HEALTH = 50.0
+        private const val BABY_MAX_HEALTH = 4.0
         private const val NATURAL_FOLLOWER_BABY_SPAWN_CHANCE = 0.30f
         private const val ADULT_STEP_HEIGHT = 2.0f
         private const val BABY_STEP_HEIGHT = 1.5f
@@ -87,6 +91,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private const val LEGACY_TAG_REEF_ANCHOR = "red_slobberer_reef_anchor"
         private const val LEGACY_TAG_RESIDENCE_TICKS = "red_slobberer_residence_tick"
         private const val LEGACY_TAG_PLACED_DECORATIONS = "red_slobberer_placed_decorations"
+        private const val TAG_FROM_BUCKET = "FromBucket"
 
         private val LOCOMOTION_ACTIVE: EntityDataAccessor<Boolean> = SynchedEntityData.defineId(
             RedSlobbererEntity::class.java,
@@ -104,10 +109,14 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             RedSlobbererEntity::class.java,
             EntityDataSerializers.LONG
         )
+        private val FROM_BUCKET: EntityDataAccessor<Boolean> = SynchedEntityData.defineId(
+            RedSlobbererEntity::class.java,
+            EntityDataSerializers.BOOLEAN
+        )
 
         fun createAttributes(): AttributeSupplier.Builder {
             return createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 50.0)
+                .add(Attributes.MAX_HEALTH, ADULT_MAX_HEALTH)
                 .add(Attributes.MOVEMENT_SPEED, 0.25)
                 .add(Attributes.STEP_HEIGHT, 1.0)
                 .add(Attributes.TEMPT_RANGE, 10.0)
@@ -142,6 +151,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         builder.define(LOCOMOTION_CYCLE_ANCHOR, 0)
         builder.define(DEFENSE_STATE, RedSlobbererDefenseState.NORMAL.networkId)
         builder.define(DEFENSE_PHASE_START_GAME_TIME, 0L)
+        builder.define(FROM_BUCKET, false)
     }
 
     override fun createNavigation(level: Level): PathNavigation {
@@ -326,7 +336,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     override fun tick() {
         super.tick()
 
-        setXRot(0.0f)
+        xRot = 0.0f
         xRotO = 0.0f
 
         if (level().isClientSide) {
@@ -517,6 +527,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         super.remove(reason)
     }
 
+    @Deprecated("Idk why")
     override fun isPushedByFluid(): Boolean = false
 
     override fun push(entity: Entity) {
@@ -639,6 +650,30 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     override fun getBabyStartAge(): Int = BABY_START_AGE_TICKS
 
+    override fun ageBoundaryReached() {
+        super.ageBoundaryReached()
+        val maxHealth = if (isBaby) BABY_MAX_HEALTH else ADULT_MAX_HEALTH
+        getAttribute(Attributes.MAX_HEALTH)?.baseValue = maxHealth
+        health = maxHealth.toFloat()
+    }
+
+    fun babyStartAge(): Int = BABY_START_AGE_TICKS
+
+    fun isFromBucket(): Boolean = entityData.get(FROM_BUCKET)
+
+    fun setFromBucketFlag(fromBucket: Boolean) {
+        entityData.set(FROM_BUCKET, fromBucket)
+    }
+
+    override fun mobInteract(player: Player, hand: InteractionHand): InteractionResult {
+        return super.mobInteract(player, hand)
+    }
+
+    @Suppress("RedundantOverride")
+    override fun requiresCustomPersistence(): Boolean {
+        return super.requiresCustomPersistence()
+    }
+
     override fun isFood(food: ItemStack): Boolean {
         return food.typeHolder().`is`(ModTags.Items.RED_SLOBBERER_FOOD) ||
             food.item === ModItems.BLOOD_SEAGRASS.get() ||
@@ -653,6 +688,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         super.readAdditionalSaveData(input)
         fishRefugeStorage.load(input)
         defenseController.load(input, level().gameTime)
+        setFromBucketFlag(input.getBooleanOr(TAG_FROM_BUCKET, false))
         if (!input.getBooleanOr(LEGACY_TAG_HAS_REEF_ANCHOR, false)) return
 
         val residenceTicks = input.getIntOr(LEGACY_TAG_RESIDENCE_TICKS, 0).coerceAtLeast(0)
@@ -668,6 +704,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         super.addAdditionalSaveData(output)
         fishRefugeStorage.save(output)
         defenseController.save(output, level().gameTime)
+        output.putBoolean(TAG_FROM_BUCKET, isFromBucket())
     }
 
     fun consumeLegacyReefSnapshot(): LegacyRedSlobbererReefSnapshot? {

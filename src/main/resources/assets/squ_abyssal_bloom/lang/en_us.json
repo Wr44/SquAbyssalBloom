@@ -339,6 +339,7 @@
   "item.squ_abyssal_bloom.barnacle_spawn_egg": "Barnacle Spawn Egg",
   "item.squ_abyssal_bloom.ghost_chimaera_spawn_egg": "Ghost Chimera Spawn Egg",
   "item.squ_abyssal_bloom.red_slobberer_spawn_egg": "Red Slobberer Spawn Egg",
+  "item.squ_abyssal_bloom.baby_red_slobberer_bucket": "Bucket of Baby Red Slobberer",
   "item.squ_abyssal_bloom.brine_spawn_egg": "Brine Egg",
   "item.squ_abyssal_bloom.barnacle_tooth": "Barnacle Tooth",
   "item.squ_abyssal_bloom.calcareous_fragment": "Calcareous Fragment",
@@ -394,6 +395,7 @@
   "subtitles.squ_abyssal_bloom.red_slobberer_show": "Red Slobberer emerges",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Creature enters shelter",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Creature leaves shelter",
+  "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket": "Baby Red Slobberer captured",
 
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Can produce Prismarine Bulbs"
 

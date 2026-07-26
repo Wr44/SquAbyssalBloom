@@ -338,6 +338,7 @@
   "item.squ_abyssal_bloom.barnacle_spawn_egg": "Oeuf d'apparition de Barnacle",
   "item.squ_abyssal_bloom.ghost_chimaera_spawn_egg": "Oeuf d'apparition de Chimère fantôme",
   "item.squ_abyssal_bloom.red_slobberer_spawn_egg": "Oeuf d'apparition de Baveur Rouge",
+  "item.squ_abyssal_bloom.baby_red_slobberer_bucket": "Seau de bébé Baveur Rouge",
   "item.squ_abyssal_bloom.brine_spawn_egg": "Oeuf d'apparition de Brine",
   "item.squ_abyssal_bloom.barnacle_tooth": "Dent de Barnacle",
   "item.squ_abyssal_bloom.calcareous_fragment": "Fragment calcaire",
@@ -392,6 +393,7 @@
   "subtitles.squ_abyssal_bloom.red_slobberer_show": "Le Baveur Rouge ressort",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Une créature entre dans l'abri",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Une créature quitte l'abri",
+  "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket": "Bébé Baveur Rouge capturé",
 
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Peut produire des bulbes de prismarine"
 }

@@ -60,6 +60,8 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL.get())
                 output.accept(ModItems.CHISELED_MARINE_BRICKS.get())
 
+                output.accept(ModItems.BABY_RED_SLOBBERER_BUCKET.get())
+
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
                 output.accept(ModItems.BRINE_SPAWN_EGG.get())
                 output.accept(ModItems.RED_SLOBBERER_SPAWN_EGG.get())

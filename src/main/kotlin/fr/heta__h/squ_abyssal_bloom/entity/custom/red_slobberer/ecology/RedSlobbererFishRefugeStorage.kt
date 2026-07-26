@@ -495,6 +495,7 @@ class RedSlobbererFishRefugeStorage(
     }
 
     private fun playEnterEffects(level: ServerLevel, entrance: Vec3) {
+
         level.playSound(
             null,
             entrance.x,
@@ -505,6 +506,7 @@ class RedSlobbererFishRefugeStorage(
             1.0f,
             0.9f + level.random.nextFloat() * 0.2f
         )
+
         level.sendParticles(
             ParticleTypes.BUBBLE_POP,
             entrance.x,
@@ -516,6 +518,7 @@ class RedSlobbererFishRefugeStorage(
             0.15,
             0.02
         )
+
         level.sendParticles(
             ParticleTypes.POOF,
             entrance.x,

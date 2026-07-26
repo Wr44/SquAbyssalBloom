@@ -20,6 +20,7 @@
     "entity.nautilus.NautilusBubbleColumnTidal",
     "entity.nautilus.NautilusChestMixin",
     "entity.nautilus.NautilusRegenMixin",
+    "entity.red_slobberer.RedSlobbererBucketMixin",
 
     "enable.AbstractContainerMenuAccessor",
     "enable.AbstractNautilusAccessor",

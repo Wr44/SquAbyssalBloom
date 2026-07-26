@@ -56,61 +56,6 @@
 
 
 
-  "bubble_projectile_burst": {
-    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_burst",
-    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_burst" ]
-  },
-  "bubble_projectile_bouncing": {
-    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_bouncing",
-    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_bouncing" ]
-  },
-  "bubble_projectile_stage_up": {
-    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_stage_up",
-    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_stage_up" ]
-  },
-  "bubble_projectile_launch": {
-    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_launch",
-    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_launch" ]
-  },
-
-  "clean_bubble_spitter": {
-    "subtitle": "subtitles.squ_abyssal_bloom.clean_bubble_spitter",
-    "sounds": [ "squ_abyssal_bloom:item/bubble_spitter/clean_bubble_spitter" ]
-  },
-
-  "potion_bubble_spitter": {
-    "subtitle": "subtitles.squ_abyssal_bloom.potion_bubble_spitter",
-    "sounds": [ "squ_abyssal_bloom:item/bubble_spitter/potion_bubble_spitter" ]
-  },
-
-
-  "abyssal_guardian_focalist_ready": {
-    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_guardian_focalist_ready",
-    "sounds": [ "squ_abyssal_bloom:item/abyssal_guardian_focalist/abyssal_guardian_focalist_ready" ]
-  },
-  "respiration_bubble": {
-    "subtitle": "subtitles.squ_abyssal_bloom.respiration_bubble",
-    "sounds": [ "squ_abyssal_bloom:item/respiration_bubble/respiration_bubble" ]
-  },
-
-
-  "conduit_entering": {
-    "subtitle": "subtitles.squ_abyssal_bloom.conduit_entering",
-    "sounds": [ "squ_abyssal_bloom:block/conduit/conduit_entering" ]
-  },
-
-  "conduit_leaving": {
-    "subtitle": "subtitles.squ_abyssal_bloom.conduit_leaving",
-    "sounds": [ "squ_abyssal_bloom:block/conduit/conduit_leaving" ]
-  },
-
-
-  "pressure_damage": {
-    "subtitle": "subtitles.squ_abyssal_bloom.pressure_damage",
-    "sounds": [ "squ_abyssal_bloom:damage_type/pressure_damage" ]
-  },
-
-
   "red_slobberer_ambient": {
     "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_ambient",
     "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambient_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_3" ]
@@ -146,5 +91,67 @@
   "red_slobberer_entity_leave": {
     "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave",
     "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_entity_leave" ]
+  },
+
+
+
+
+  "bubble_projectile_burst": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_burst",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_burst" ]
+  },
+  "bubble_projectile_bouncing": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_bouncing",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_bouncing" ]
+  },
+  "bubble_projectile_stage_up": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_stage_up",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_stage_up" ]
+  },
+  "bubble_projectile_launch": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_launch",
+    "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_launch" ]
+  },
+
+
+
+  "clean_bubble_spitter": {
+    "subtitle": "subtitles.squ_abyssal_bloom.clean_bubble_spitter",
+    "sounds": [ "squ_abyssal_bloom:item/bubble_spitter/clean_bubble_spitter" ]
+  },
+
+  "potion_bubble_spitter": {
+    "subtitle": "subtitles.squ_abyssal_bloom.potion_bubble_spitter",
+    "sounds": [ "squ_abyssal_bloom:item/bubble_spitter/potion_bubble_spitter" ]
+  },
+
+
+  "abyssal_guardian_focalist_ready": {
+    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_guardian_focalist_ready",
+    "sounds": [ "squ_abyssal_bloom:item/abyssal_guardian_focalist/abyssal_guardian_focalist_ready" ]
+  },
+  "respiration_bubble": {
+    "subtitle": "subtitles.squ_abyssal_bloom.respiration_bubble",
+    "sounds": [ "squ_abyssal_bloom:item/respiration_bubble/respiration_bubble" ]
+  },
+  "fill_baby_red_slobberer_bucket": {
+    "subtitle": "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket",
+    "sounds": [ "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_1", "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_2", "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_3" ]
+  },
+
+  "conduit_entering": {
+    "subtitle": "subtitles.squ_abyssal_bloom.conduit_entering",
+    "sounds": [ "squ_abyssal_bloom:block/conduit/conduit_entering" ]
+  },
+
+  "conduit_leaving": {
+    "subtitle": "subtitles.squ_abyssal_bloom.conduit_leaving",
+    "sounds": [ "squ_abyssal_bloom:block/conduit/conduit_leaving" ]
+  },
+
+
+  "pressure_damage": {
+    "subtitle": "subtitles.squ_abyssal_bloom.pressure_damage",
+    "sounds": [ "squ_abyssal_bloom:damage_type/pressure_damage" ]
   }
 }
