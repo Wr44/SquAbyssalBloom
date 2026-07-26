@@ -10,6 +10,8 @@ import fr.heta__h.squ_abyssal_bloom.effect.ModPotions
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.FishCollectiveManager
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceRegistry
+import fr.heta__h.squ_abyssal_bloom.entity.ai.stealth.StealthRetargetRegistry
+import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleStealthRetargetProvider
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererFishInfluenceProvider
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefManager
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
@@ -63,6 +65,7 @@ object SquAbyssalBloom {
 
         // Mod Register
         FishSchoolInfluenceRegistry.register(RedSlobbererFishInfluenceProvider())
+        StealthRetargetRegistry.register(BarnacleStealthRetargetProvider())
 
         MOD_BUS.addListener(ModBiomes::registerRegions)
 

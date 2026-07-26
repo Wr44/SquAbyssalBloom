@@ -1,8 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
-import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleTargeting
+import fr.heta__h.squ_abyssal_bloom.entity.ai.stealth.StealthRetargetRegistry
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import net.minecraft.server.level.ServerPlayer
@@ -16,7 +15,7 @@ import net.minecraft.world.entity.monster.Enemy
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent
+import net.neoforged.neoforge.event.entity.living.LivingDamageEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.tick.ServerTickEvent
 import java.util.UUID
@@ -61,44 +60,42 @@ object MurkVeil {
         val followRangeSqr = followRange * followRange
         val aabb = mob.boundingBox.inflate(followRange)
 
-        val nextTarget = when (mob) {
-            is BarnacleEntity -> {
-                BarnacleTargeting.findNearestTarget(mob, followRange, target) { candidate ->
-                    !isStealthActive(candidate, currentTime)
+        val provider = StealthRetargetRegistry.find(mob)
+        val nextTarget = if (provider != null) {
+            provider.findStealthRetarget(mob, target) { candidate -> !isStealthActive(candidate, currentTime) }
+        } else {
+            val field = targetTypeField ?: return
+            val targetTypes = mob.targetSelector.availableGoals
+                .map { it.goal }
+                .filterIsInstance<NearestAttackableTargetGoal<*>>()
+                .mapNotNull { goal ->
+                    runCatching {
+                        @Suppress("UNCHECKED_CAST")
+                        field.get(goal) as? Class<out LivingEntity>
+                    }.getOrNull()
                 }
-            }
-            else -> {
-                val field = targetTypeField ?: return
-                val targetTypes = mob.targetSelector.availableGoals
-                    .map { it.goal }
-                    .filterIsInstance<NearestAttackableTargetGoal<*>>()
-                    .mapNotNull { goal ->
-                        runCatching {
-                            @Suppress("UNCHECKED_CAST")
-                            field.get(goal) as? Class<out LivingEntity>
-                        }.getOrNull()
-                    }
-                    .toSet()
+                .toSet()
 
-                mob.level().getEntitiesOfClass(LivingEntity::class.java, aabb) { candidate ->
-                    candidate != target &&
-                            candidate.isAlive &&
-                            !isStealthActive(candidate, currentTime) &&
-                            targetTypes.any { it.isInstance(candidate) }
-                }
-                    .map { it to mob.distanceToSqr(it) }
-                    .filter { (_, dist) -> dist <= followRangeSqr }
-                    .minByOrNull { (_, dist) -> dist }
-                    ?.first
+            mob.level().getEntitiesOfClass(LivingEntity::class.java, aabb) { candidate ->
+                candidate !== mob &&
+                        candidate != target &&
+                        candidate.isAlive &&
+                        !isStealthActive(candidate, currentTime) &&
+                        targetTypes.any { it.isInstance(candidate) }
             }
+                .map { it to mob.distanceToSqr(it) }
+                .filter { (_, dist) -> dist <= followRangeSqr }
+                .minByOrNull { (_, dist) -> dist }
+                ?.first
         }
 
         event.newAboutToBeSetTarget = nextTarget
     }
 
     @SubscribeEvent
-    fun onPlayerAttack(event: AttackEntityEvent) {
-        lastAttackTick[event.entity.uuid] = event.entity.level().gameTime
+    fun onLivingDamage(event: LivingDamageEvent.Post) {
+        val attacker = event.source.entity as? ServerPlayer ?: return
+        lastAttackTick[attacker.uuid] = attacker.level().gameTime
     }
 
     @SubscribeEvent
