@@ -8,6 +8,7 @@ class RedSlobbererRenderState : LivingEntityRenderState() {
     var isBaby: Boolean = false
     var terrainPitch: Float = 0.0f
     var terrainRoll: Float = 0.0f
+    var stepRenderOffset: Double = 0.0
     var defenseState: RedSlobbererDefenseState = RedSlobbererDefenseState.NORMAL
     var defensePhaseElapsedTicks: Float = 0.0f
     val idleAnimationState = AnimationState()

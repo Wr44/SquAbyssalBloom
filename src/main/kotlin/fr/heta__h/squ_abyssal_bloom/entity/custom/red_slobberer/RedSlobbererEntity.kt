@@ -7,6 +7,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbere
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererGoalPriorities
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererGrazeBloodSeagrassGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.goal.RedSlobbererReefResidenceGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererBabyClimbAlignment
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererBodyRotationControl
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererMoveControl
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control.RedSlobbererTerrainAlignment
@@ -72,8 +73,8 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         private const val ADULT_MAX_HEALTH = 50.0
         private const val BABY_MAX_HEALTH = 4.0
         private const val NATURAL_FOLLOWER_BABY_SPAWN_CHANCE = 0.30f
-        private const val ADULT_STEP_HEIGHT = 2.0f
-        private const val BABY_STEP_HEIGHT = 1.5f
+        private const val ADULT_STEP_HEIGHT = 1.05f
+        private const val BABY_STEP_HEIGHT = 0.6f
         const val LOCOMOTION_ANIMATION_LOOP_TICKS = 50
         const val LOCOMOTION_CHARGE_TICKS = 35
         const val LOCOMOTION_PROPULSION_SPEED_MULTIPLIER = 50.0 / 15.0
@@ -130,6 +131,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
 
     val groupController = RedSlobbererGroupController(this)
     private val terrainAlignment = RedSlobbererTerrainAlignment(this)
+    private val babyClimbAlignment = RedSlobbererBabyClimbAlignment(this)
     private val fishRefugeStorage = RedSlobbererFishRefugeStorage(this)
     private val defenseController = RedSlobbererDefenseController(this)
 
@@ -169,7 +171,11 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     override fun moveRelative(speed: Float, input: Vec3) {
-        val tangentMovement = terrainAlignment.createTangentMovement(input, speed, yRot)
+        val tangentMovement = if (isBaby) {
+            babyClimbAlignment.createTangentMovement(input, speed, yRot)
+        } else {
+            terrainAlignment.createTangentMovement(input, speed, yRot)
+        }
 
         if (tangentMovement == null) {
             super.moveRelative(speed, input)
@@ -226,7 +232,15 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
         if (isInWater) maximumStepHeight else super.maxUpStep()
 
     fun getTerrainNormal(partialTick: Float): Vec3 {
-        return terrainAlignment.getInterpolatedNormal(partialTick)
+        return if (isBaby) {
+            babyClimbAlignment.getInterpolatedNormal(partialTick)
+        } else {
+            terrainAlignment.getInterpolatedNormal(partialTick)
+        }
+    }
+
+    fun getStepRenderOffset(partialTick: Float): Double {
+        return terrainAlignment.getStepRenderOffset(partialTick)
     }
 
     val defenseState: RedSlobbererDefenseState
@@ -403,7 +417,11 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
     }
 
     override fun aiStep() {
-        terrainAlignment.tick()
+        if (isBaby) {
+            babyClimbAlignment.tick()
+        } else {
+            terrainAlignment.tick()
+        }
         if (isDefenseImmobilized) {
             stopDefenseMovement()
         }

@@ -142,8 +142,6 @@ class CalcareousDepositBlock(properties: Properties) : Block(properties), Simple
         if (state.getValue(WATERLOGGED)) {
             ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level))
         }
-        // Like vanilla coral fans, only a change to the block directly below can detach the
-        // deposit. Age, water and unrelated neighbour updates must preserve it.
         if (directionToNeighbour == Direction.DOWN && !state.canSurvive(level, pos)) {
             return Blocks.AIR.defaultBlockState()
         }

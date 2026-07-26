@@ -9,6 +9,7 @@ import net.minecraft.world.entity.monster.Enemy
 import net.minecraft.world.entity.player.Player
 
 object FishThreatClassifier {
+
     fun isThreat(
         observer: AbstractFish,
         entity: LivingEntity
@@ -16,6 +17,7 @@ object FishThreatClassifier {
         if (entity === observer || !entity.isAlive) return false
         if (entity is AbstractFish) return false
         if (observer.isAlliedTo(entity) || entity.isAlliedTo(observer)) return false
+
         return isPotentialThreat(entity)
     }
 

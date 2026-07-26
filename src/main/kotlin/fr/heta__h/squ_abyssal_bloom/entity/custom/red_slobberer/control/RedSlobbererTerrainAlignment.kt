@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.control
 
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
+import net.minecraft.core.BlockPos
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
@@ -20,7 +21,7 @@ class RedSlobbererTerrainAlignment(
 
     private companion object {
         const val SAMPLE_RADIUS_FACTOR = 0.42
-        const val SAMPLE_START_HEIGHT = 0.15
+        const val SAMPLE_START_HEIGHT_MARGIN = 0.15
         const val SAMPLE_DEPTH_BELOW_BODY = 2.5
         const val MAX_SURFACE_HEIGHT_ABOVE_BODY_BOTTOM = 0.025
         const val MAX_GROUND_CONTACT_GAP = 0.3
@@ -32,12 +33,27 @@ class RedSlobbererTerrainAlignment(
         const val MIN_PLANE_DETERMINANT = 1.0E-6
         const val MAX_PLANE_RESIDUAL = 0.7
         const val MAX_TERRAIN_TILT_DEGREES = 45.0
-        const val NORMAL_RESPONSE = 0.16
-        const val MAX_NORMAL_ROTATION_DEGREES_PER_TICK = 1.25
+        const val NORMAL_RESPONSE = 0.08
+        const val MAX_NORMAL_ROTATION_DEGREES_PER_TICK = 0.6
         const val MIN_NORMAL_ROTATION_DEGREES = 0.08
         const val MIN_VECTOR_LENGTH_SQR = 1.0E-8
 
+        const val NATURAL_STEP_RISE_PER_TICK = 0.2
+        const val MAX_STEP_CATCH_UP_PER_TICK = 0.12
+        const val MAX_BANKED_STEP_OFFSET = 2.0
+        const val TELEPORT_RISE_THRESHOLD = 3.0
+
+        const val MAX_CLIMB_BLOCKS = 2
+        const val MAX_CLIMB_HEIGHT = 2.05
+        const val CLIMB_RISE_PER_TICK = 0.1
+        const val CLIMB_PROBE_FORWARD_MARGIN = 0.05
+        const val CLIMB_PROBE_HEIGHT_FRACTION = 0.2
+        const val CLIMB_EXIT_EPSILON = 0.02
+        const val CLIMB_NORMAL_RESPONSE = 0.3
+        const val CLIMB_NORMAL_ROTATION_DEGREES_PER_TICK = 15.0
+
         val UP: Vec3 = Vec3(0.0, 1.0, 0.0)
+        val MAX_TILT_GRADIENT: Double = tan(MAX_TERRAIN_TILT_DEGREES * PI / 180.0)
 
         val SAMPLE_DIRECTIONS: Array<DoubleArray> = arrayOf(
             doubleArrayOf(0.0, 0.0),
@@ -52,13 +68,13 @@ class RedSlobbererTerrainAlignment(
         )
     }
 
-    private data class GroundSample(
+    data class GroundSample(
         val x: Double,
         val z: Double,
         val height: Double
     )
 
-    private data class TerrainPlane(
+    data class TerrainPlane(
         val gradientX: Double,
         val gradientZ: Double,
         val intercept: Double
@@ -71,6 +87,19 @@ class RedSlobbererTerrainAlignment(
     private var previousNormal: Vec3 = UP
     private var currentNormal: Vec3 = UP
 
+    private var lastY: Double? = null
+    private var previousStepOffset: Double = 0.0
+    private var currentStepOffset: Double = 0.0
+
+    private enum class ClimbState {
+        NONE,
+        CLIMBING
+    }
+
+    private var climbState = ClimbState.NONE
+    private var climbTargetTopY = 0.0
+    private var climbWallNormal: Vec3 = UP
+
     var hasGroundContact: Boolean = false
         private set
 
@@ -78,23 +107,50 @@ class RedSlobbererTerrainAlignment(
 
     fun tick() {
         previousNormal = currentNormal
+        previousStepOffset = currentStepOffset
+        updateStepOffsetTracking()
+
+        val bodyBottom = redSlobberer.boundingBox.minY
+        if (climbState == ClimbState.CLIMBING && bodyBottom >= climbTargetTopY - CLIMB_EXIT_EPSILON) {
+            climbState = ClimbState.NONE
+        }
 
         val samples = sampleGroundAcrossBody()
-        val bodyBottom = redSlobberer.boundingBox.minY
         hasGroundContact = samples.any { bodyBottom - it.height <= MAX_GROUND_CONTACT_GAP }
         val supportingSamples = findConnectedSupportingSamples(samples, bodyBottom)
         hasStableSupport = supportingSamples.size >= MIN_GROUND_SAMPLE_COUNT &&
             hasSupportAcrossBody(supportingSamples)
 
-        val rawTerrainNormal = if (hasGroundContact) {
-            calculateTerrainNormal(samples, bodyBottom)
+        if (
+            climbState != ClimbState.CLIMBING &&
+            !hasStableSupport &&
+            redSlobberer.isInLocomotionPropulsionPhase
+        ) {
+            tryStartClimb(bodyBottom)
+        }
+
+        val targetNormal = if (climbState == ClimbState.CLIMBING) {
+            climbWallNormal
         } else {
-            null
+            val rawTerrainNormal = if (hasGroundContact) {
+                calculateTerrainNormal(samples, bodyBottom)
+            } else {
+                null
+            }
+            rawTerrainNormal?.let { normal ->
+                attenuateTiltForSupport(normal, calculateSupportCoverage(supportingSamples))
+            } ?: UP
         }
-        val targetNormal = rawTerrainNormal?.let { normal ->
-            attenuateTiltForSupport(normal, calculateSupportCoverage(supportingSamples))
+        currentNormal = if (climbState == ClimbState.CLIMBING || !hasGroundContact) {
+            smoothNormal(
+                currentNormal,
+                targetNormal,
+                CLIMB_NORMAL_ROTATION_DEGREES_PER_TICK,
+                CLIMB_NORMAL_RESPONSE
+            )
+        } else {
+            smoothNormal(currentNormal, targetNormal, MAX_NORMAL_ROTATION_DEGREES_PER_TICK, NORMAL_RESPONSE)
         }
-        currentNormal = smoothNormal(currentNormal, targetNormal ?: UP)
     }
 
     fun getInterpolatedNormal(partialTick: Float): Vec3 {
@@ -103,7 +159,13 @@ class RedSlobbererTerrainAlignment(
         return if (interpolated.lengthSqr() > MIN_VECTOR_LENGTH_SQR) interpolated.normalize() else UP
     }
 
+    fun getStepRenderOffset(partialTick: Float): Double {
+        val alpha = partialTick.toDouble().coerceIn(0.0, 1.0)
+        return previousStepOffset * (1.0 - alpha) + currentStepOffset * alpha
+    }
+
     fun createTangentMovement(input: Vec3, speed: Float, yawDegrees: Float): Vec3? {
+        if (climbState == ClimbState.CLIMBING) return Vec3(0.0, CLIMB_RISE_PER_TICK, 0.0)
         if (!hasStableSupport) return null
 
         val inputLengthSqr = input.lengthSqr()
@@ -126,23 +188,86 @@ class RedSlobbererTerrainAlignment(
             .scale(speed * inputScale)
     }
 
+    private fun updateStepOffsetTracking() {
+        val y = redSlobberer.y
+        val previousY = lastY
+        lastY = y
+        if (previousY == null) return
+
+        val rise = y - previousY
+        if (rise > NATURAL_STEP_RISE_PER_TICK) {
+            val bankedRise = rise - NATURAL_STEP_RISE_PER_TICK
+            currentStepOffset = if (bankedRise > TELEPORT_RISE_THRESHOLD) {
+                0.0
+            } else {
+                (currentStepOffset + bankedRise).coerceAtMost(MAX_BANKED_STEP_OFFSET)
+            }
+        }
+
+        if (currentStepOffset > 0.0) {
+            currentStepOffset = (currentStepOffset - MAX_STEP_CATCH_UP_PER_TICK).coerceAtLeast(0.0)
+        }
+    }
+
+    private fun tryStartClimb(bodyBottom: Double) {
+        val level = redSlobberer.level()
+        val yawRadians = redSlobberer.yRot * PI / 180.0
+        val dirX = -sin(yawRadians)
+        val dirZ = cos(yawRadians)
+
+        val probeDistance = redSlobberer.bbWidth / 2.0 + CLIMB_PROBE_FORWARD_MARGIN
+        val probeX = redSlobberer.x + dirX * probeDistance
+        val probeZ = redSlobberer.z + dirZ * probeDistance
+        val baseWallPos = BlockPos.containing(
+            probeX,
+            bodyBottom + redSlobberer.bbHeight * CLIMB_PROBE_HEIGHT_FRACTION,
+            probeZ
+        )
+
+        if (level.getBlockState(baseWallPos).getCollisionShape(level, baseWallPos).isEmpty) return
+
+        var topSolidY = baseWallPos.y
+        val maxSolidY = baseWallPos.y + MAX_CLIMB_BLOCKS
+        while (topSolidY < maxSolidY) {
+            val nextPos = BlockPos(baseWallPos.x, topSolidY + 1, baseWallPos.z)
+            if (level.getBlockState(nextPos).getCollisionShape(level, nextPos).isEmpty) break
+            topSolidY++
+        }
+        if (topSolidY >= maxSolidY) return
+
+        val ledgeTopY = topSolidY + 1.0
+        val rise = ledgeTopY - bodyBottom
+        // Anything vanilla can already step over silently (maxUpStep) is left to it —
+        // the explicit climb only takes over for ledges taller than that.
+        if (rise <= redSlobberer.maximumStepHeight || rise > MAX_CLIMB_HEIGHT) return
+
+        climbTargetTopY = ledgeTopY
+        climbWallNormal = Vec3(-dirX, 0.0, -dirZ)
+        climbState = ClimbState.CLIMBING
+    }
+
     private fun sampleGroundAcrossBody(): List<GroundSample> {
         val radius = redSlobberer.bbWidth * SAMPLE_RADIUS_FACTOR
         val bodyBottom = redSlobberer.boundingBox.minY
         val samples = ArrayList<GroundSample>(SAMPLE_DIRECTIONS.size)
 
         for (direction in SAMPLE_DIRECTIONS) {
-            val sampleX = redSlobberer.x + direction[0] * radius
-            val sampleZ = redSlobberer.z + direction[1] * radius
-            val height = sampleGroundHeight(sampleX, sampleZ, bodyBottom) ?: continue
+            val offsetX = direction[0] * radius
+            val offsetZ = direction[1] * radius
+            val sampleX = redSlobberer.x + offsetX
+            val sampleZ = redSlobberer.z + offsetZ
+            val horizontalOffset = sqrt(offsetX * offsetX + offsetZ * offsetZ)
+            val height = sampleGroundHeight(sampleX, sampleZ, bodyBottom, horizontalOffset) ?: continue
             samples.add(GroundSample(sampleX, sampleZ, height))
         }
 
         return samples
     }
 
-    private fun sampleGroundHeight(x: Double, z: Double, bodyBottom: Double): Double? {
-        val from = Vec3(x, bodyBottom + SAMPLE_START_HEIGHT, z)
+    private fun sampleGroundHeight(x: Double, z: Double, bodyBottom: Double, horizontalOffset: Double): Double? {
+        val maxHeightAboveBodyBottom = MAX_SURFACE_HEIGHT_ABOVE_BODY_BOTTOM +
+            horizontalOffset * MAX_TILT_GRADIENT
+        val from = Vec3(x, bodyBottom + maxHeightAboveBodyBottom + SAMPLE_START_HEIGHT_MARGIN, z)
         val to = Vec3(x, bodyBottom - SAMPLE_DEPTH_BELOW_BODY, z)
         val hitResult = redSlobberer.level().clip(
             ClipContext(
@@ -156,7 +281,7 @@ class RedSlobbererTerrainAlignment(
         if (hitResult.type != HitResult.Type.BLOCK) return null
 
         val surfaceHeight = hitResult.location.y
-        return if (surfaceHeight <= bodyBottom + MAX_SURFACE_HEIGHT_ABOVE_BODY_BOTTOM) {
+        return if (surfaceHeight <= bodyBottom + maxHeightAboveBodyBottom) {
             surfaceHeight
         } else {
             null
@@ -181,9 +306,8 @@ class RedSlobbererTerrainAlignment(
         var gradientX = plane.gradientX
         var gradientZ = plane.gradientZ
         val gradientLength = sqrt(gradientX * gradientX + gradientZ * gradientZ)
-        val maximumGradient = tan(MAX_TERRAIN_TILT_DEGREES * PI / 180.0)
-        if (gradientLength > maximumGradient) {
-            val scale = maximumGradient / gradientLength
+        if (gradientLength > MAX_TILT_GRADIENT) {
+            val scale = MAX_TILT_GRADIENT / gradientLength
             gradientX *= scale
             gradientZ *= scale
         }
@@ -224,9 +348,11 @@ class RedSlobbererTerrainAlignment(
                 val candidate = samples[candidateIndex]
                 val dx = candidate.x - supportingSample.x
                 val dz = candidate.z - supportingSample.z
-                val isNeighbor = dx * dx + dz * dz <= maximumNeighborDistanceSqr
+                val distanceSqr = dx * dx + dz * dz
+                val isNeighbor = distanceSqr <= maximumNeighborDistanceSqr
+                val maxContinuousHeight = MAX_SUPPORT_STEP_HEIGHT + sqrt(distanceSqr) * MAX_TILT_GRADIENT
                 val hasContinuousHeight = abs(candidate.height - supportingSample.height) <=
-                    MAX_SUPPORT_STEP_HEIGHT
+                    maxContinuousHeight
                 if (isNeighbor && hasContinuousHeight) {
                     connected[candidateIndex] = true
                     pending.addLast(candidateIndex)
@@ -256,9 +382,30 @@ class RedSlobbererTerrainAlignment(
     }
 
     private fun fitPlane(samples: List<GroundSample>): TerrainPlane? {
-        val meanX = samples.sumOf { it.x } / samples.size
-        val meanZ = samples.sumOf { it.z } / samples.size
-        val meanHeight = samples.sumOf { it.height } / samples.size
+        val centerX = redSlobberer.x
+        val centerZ = redSlobberer.z
+        val weights = DoubleArray(samples.size)
+        var weightSum = 0.0
+        var weightedX = 0.0
+        var weightedZ = 0.0
+        var weightedHeight = 0.0
+
+        for (index in samples.indices) {
+            val sample = samples[index]
+            val dx = sample.x - centerX
+            val dz = sample.z - centerZ
+            val weight = 1.0 / (1.0 + dx * dx + dz * dz)
+            weights[index] = weight
+            weightSum += weight
+            weightedX += weight * sample.x
+            weightedZ += weight * sample.z
+            weightedHeight += weight * sample.height
+        }
+        if (weightSum < MIN_PLANE_DETERMINANT) return null
+
+        val meanX = weightedX / weightSum
+        val meanZ = weightedZ / weightSum
+        val meanHeight = weightedHeight / weightSum
 
         var covarianceXX = 0.0
         var covarianceXZ = 0.0
@@ -266,15 +413,17 @@ class RedSlobbererTerrainAlignment(
         var covarianceXHeight = 0.0
         var covarianceZHeight = 0.0
 
-        for (sample in samples) {
+        for (index in samples.indices) {
+            val sample = samples[index]
+            val weight = weights[index]
             val centeredX = sample.x - meanX
             val centeredZ = sample.z - meanZ
             val centeredHeight = sample.height - meanHeight
-            covarianceXX += centeredX * centeredX
-            covarianceXZ += centeredX * centeredZ
-            covarianceZZ += centeredZ * centeredZ
-            covarianceXHeight += centeredX * centeredHeight
-            covarianceZHeight += centeredZ * centeredHeight
+            covarianceXX += weight * centeredX * centeredX
+            covarianceXZ += weight * centeredX * centeredZ
+            covarianceZZ += weight * centeredZ * centeredZ
+            covarianceXHeight += weight * centeredX * centeredHeight
+            covarianceZHeight += weight * centeredZ * centeredHeight
         }
 
         val determinant = covarianceXX * covarianceZZ - covarianceXZ * covarianceXZ
@@ -290,13 +439,18 @@ class RedSlobbererTerrainAlignment(
         return TerrainPlane(gradientX, gradientZ, intercept)
     }
 
-    private fun smoothNormal(from: Vec3, target: Vec3): Vec3 {
+    private fun smoothNormal(
+        from: Vec3,
+        target: Vec3,
+        maxRotationDegreesPerTick: Double,
+        response: Double
+    ): Vec3 {
         val angle = acos(from.dot(target).coerceIn(-1.0, 1.0))
         val minimumAngle = MIN_NORMAL_ROTATION_DEGREES * PI / 180.0
         if (angle <= minimumAngle) return from
 
-        val maximumAngle = MAX_NORMAL_ROTATION_DEGREES_PER_TICK * PI / 180.0
-        val blend = min(NORMAL_RESPONSE, maximumAngle / angle).coerceIn(0.0, 1.0)
+        val maximumAngle = maxRotationDegreesPerTick * PI / 180.0
+        val blend = min(response, maximumAngle / angle).coerceIn(0.0, 1.0)
         val blended = from.scale(1.0 - blend).add(target.scale(blend))
         return if (blended.lengthSqr() > MIN_VECTOR_LENGTH_SQR) blended.normalize() else UP
     }
