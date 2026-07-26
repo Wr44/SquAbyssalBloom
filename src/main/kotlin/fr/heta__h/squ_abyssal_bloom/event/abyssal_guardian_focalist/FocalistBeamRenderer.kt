@@ -8,11 +8,16 @@ import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.abyssal_guardian_focali
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.ClientBeamData
 import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.rendertype.RenderTypes
+import net.minecraft.core.BlockPos
+import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.resources.Identifier
+import net.minecraft.tags.FluidTags
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.phys.Vec3
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.ModList
@@ -27,6 +32,7 @@ object FocalistBeamRenderer {
     private val BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/guardian/guardian_beam.png")
 
     private val playersShootingLastFrame = mutableSetOf<Int>()
+    private val lastBubbleTickByPlayer = mutableMapOf<Int, Long>()
 
     private val hasDynLights: Boolean by lazy {
         ModList.get().mods.any { it.modId.contains("lambdynlights", ignoreCase = true) }
@@ -69,6 +75,11 @@ object FocalistBeamRenderer {
 
             val f = distance + 1.0f
             beamVector = beamVector.normalize()
+
+            if (lastBubbleTickByPlayer.put(player.id, level.gameTime) != level.gameTime) {
+                spawnBeamBubbles(level, startPos, beamVector, distance.toDouble(), scale.toDouble())
+            }
+
             val f1 = acos(beamVector.y).toFloat()
             val f2 = (Math.PI / 2.0).toFloat() - atan2(beamVector.z, beamVector.x).toFloat()
 
@@ -139,6 +150,26 @@ object FocalistBeamRenderer {
 
             playersShootingLastFrame.clear()
             playersShootingLastFrame.addAll(currentlyShooting)
+        }
+    }
+
+    private fun spawnBeamBubbles(
+        level: ClientLevel,
+        startPos: Vec3,
+        direction: Vec3,
+        distance: Double,
+        scale: Double
+    ) {
+        var dist = level.random.nextDouble()
+        while (dist < distance) {
+            dist += 1.8 - scale + level.random.nextDouble() * (1.7 - scale)
+            val x = startPos.x + direction.x * dist
+            val y = startPos.y + direction.y * dist
+            val z = startPos.z + direction.z * dist
+
+            if (!level.getFluidState(BlockPos.containing(x, y, z)).`is`(FluidTags.WATER)) continue
+
+            level.addParticle(ParticleTypes.BUBBLE, x, y, z, 0.0, 0.0, 0.0)
         }
     }
 

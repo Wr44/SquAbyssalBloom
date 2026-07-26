@@ -115,6 +115,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val FLOP_MOTION_Y = 0.45
         const val FLOP_MOTION_XZ = 0.1
         const val BODY_ROTATION_SPEED = 10f
+        const val MIN_ACTUAL_MOVEMENT_LENGTH_SQR = 1.0E-6
 
         // SOUNDS
         const val DEFAULT_SOUND_VOLUME = 1.3f
@@ -497,7 +498,12 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     }
 
     private fun updateBodyRotation() {
-        val dir = getMovementDirection()
+        val actualMovement = Vec3(x - xo, y - yo, z - zo)
+        val dir = if (actualMovement.lengthSqr() >= MIN_ACTUAL_MOVEMENT_LENGTH_SQR) {
+            actualMovement.normalize()
+        } else {
+            getMovementDirection()
+        }
         if (dir.lengthSqr() < 0.01) return
 
         val targetYaw = (atan2(dir.z, dir.x) * (180.0 / Math.PI)).toFloat() - 90.0f

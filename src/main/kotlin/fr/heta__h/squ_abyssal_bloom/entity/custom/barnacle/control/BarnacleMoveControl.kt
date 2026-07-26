@@ -39,6 +39,8 @@ class BarnacleMoveControl(private val barnacle: BarnacleEntity) : MoveControl(ba
         if (requestTick != barnacle.tickCount || requestedSpeed <= 0.0) {
             operation = Operation.WAIT
             barnacle.speed = 0.0f
+
+            if (barnacle.isUnderWater) barnacle.deltaMovement = Vec3.ZERO
             return
         }
 
@@ -121,8 +123,6 @@ class BarnacleMoveControl(private val barnacle: BarnacleEntity) : MoveControl(ba
             return to
         }
 
-        // sqrt(2*a*d) is the maximum angular speed that can still decelerate to zero
-        // over the remaining angle. It produces a progressive ease-in/ease-out turn.
         val brakingSpeed = sqrt(2.0 * PATH_TURN_ACCELERATION_RADIANS * angle)
         val targetAngularSpeed = minOf(MAX_PATH_TURN_SPEED_RADIANS, brakingSpeed)
         steeringAngularSpeed = approach(

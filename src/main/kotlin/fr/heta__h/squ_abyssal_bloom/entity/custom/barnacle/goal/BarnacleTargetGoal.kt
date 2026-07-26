@@ -25,7 +25,7 @@ class BarnacleTargetGoal(private val barnacle: BarnacleEntity) : TargetGoal(barn
 
     override fun start() {
         barnacle.target = targetMob
-        targetMob = barnacle.target // LivingChangeTargetEvent may replace or clear the candidate.
+        targetMob = barnacle.target // LivingChangeTargetEvent may replace or clear the candidate (it's normal btw).
         lastSeenTick = barnacle.tickCount
         super.start()
     }
