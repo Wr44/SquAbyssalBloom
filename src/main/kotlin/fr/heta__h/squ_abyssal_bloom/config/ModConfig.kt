@@ -6,27 +6,23 @@ import dev.isxander.yacl3.api.*
 import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
-import fr.heta__h.squ_abyssal_bloom.config.server.EntityConfigRenderer
+import fr.heta__h.squ_abyssal_bloom.config.renderer.StaticImageRenderer
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
-import fr.heta__h.squ_abyssal_bloom.config.server.types.BoolOption
-import fr.heta__h.squ_abyssal_bloom.config.server.types.DoubleOption
-import fr.heta__h.squ_abyssal_bloom.config.server.types.IntOption
-import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
-import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
-import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
-import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererAnimation
-import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
-import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
-import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
-import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
+import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.BrineSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.FishSchoolSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.RedSlobbererSubMenu
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.persistServerConfigChanges
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.subScreenButton
 import net.minecraft.ChatFormatting
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.neoforged.fml.loading.FMLPaths
-import net.neoforged.neoforge.client.network.ClientPacketDistributor
 import java.io.File
 
 object ModConfig {
@@ -217,14 +213,7 @@ object ModConfig {
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
             .save {
                 saveConfig()
-                if (ServerConfigCache.isSingleplayer()) {
-                    ServerConfigCache.toData().applyToSpec()
-                } else {
-                    val currentServerConfig = ServerConfigCache.toData()
-                    if (currentServerConfig != initialServerConfig && Minecraft.getInstance().connection != null) {
-                        ClientPacketDistributor.sendToServer(C2SServerConfigPacket(currentServerConfig))
-                    }
-                }
+                persistServerConfigChanges(initialServerConfig)
             }
 
             .category(ConfigCategory.createBuilder()
@@ -235,6 +224,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.fog").withStyle(ChatFormatting.AQUA))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.fog.desc"))
+                        .customImage(StaticImageRenderer("marine_fog", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.enableAbyssFog"))
@@ -298,6 +288,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.marine_snow").withStyle(ChatFormatting.GOLD))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.marine_snow.desc"))
+                        .customImage(StaticImageRenderer("marine_snow", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.maxMarinSnowParticles"))
@@ -335,6 +326,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.surface_occluder").withStyle(ChatFormatting.DARK_BLUE))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.surface_occluder.desc"))
+                        .customImage(StaticImageRenderer("surface_occluder", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.enableSurfaceOccluder"))
@@ -374,6 +366,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.conduit").withStyle(ChatFormatting.DARK_AQUA))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.conduit.desc"))
+                        .customImage(StaticImageRenderer("conduit_boundary", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled"))
@@ -415,15 +408,6 @@ object ModConfig {
                 .tooltip(Component.translatable("config.squ_abyssal_bloom.server.tooltip"))
 
                 .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones").withStyle(ChatFormatting.DARK_AQUA))
-                    .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones.desc"))
-                        .build())
-                    .option(shallowDeepOpt)
-                    .option(deepAbyssalOpt)
-                    .build())
-
-                .group(OptionGroup.createBuilder()
                     .name(Component.translatable("config.squ_abyssal_bloom.group.ocean_territories").withStyle(ChatFormatting.BLUE))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_territories.desc"))
@@ -435,134 +419,46 @@ object ModConfig {
                     .build())
 
                 .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("entity.squ_abyssal_bloom.barnacle").withStyle(ChatFormatting.LIGHT_PURPLE))
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.entities").withStyle(ChatFormatting.LIGHT_PURPLE))
                     .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.barnacle.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.BARNACLE.get()) { entity, tick ->
-                            if (entity is BarnacleEntity) {
-                                val durationTicks = (BarnacleAnimation.still_mouth_open.lengthInSeconds * 20).toInt()
-                                val loopTick = tick % durationTicks
-                                if (loopTick == 0 || !entity.stillMouthOpenAnimationState.isStarted)
-                                    entity.stillMouthOpenAnimationState.start(tick)
-                            }
-                        })
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.entities.desc"))
                         .build())
-                    .option(serverBool(ModServerConfig.STRICT_BARNACLE_SPAWNING))
-                    .option(serverInt(ModServerConfig.BARNACLE_SPAWN_MAX_Y))
-                    .option(serverDouble(ModServerConfig.BARNACLE_DETECTION_RANGE, step = 1.0))
-                    .option(serverDouble(ModServerConfig.BARNACLE_MOVEMENT_SPEED, step = 0.1))
-                    .option(serverDouble(ModServerConfig.BARNACLE_OBSTACLE_AVOIDANCE_SPEED, step = 0.05))
-                    .option(serverDouble(ModServerConfig.BARNACLE_FLEE_SPEED, step = 0.1))
-                    .option(serverInt(ModServerConfig.BARNACLE_REGEN_COOLDOWN, step = 20))
-                    .option(serverDouble(ModServerConfig.BARNACLE_DIRECT_CORRIDOR_DISTANCE, step = 0.5))
-                    .option(serverDouble(ModServerConfig.BARNACLE_CAPTURE_DISTANCE, step = 0.25))
-                    .option(serverDouble(ModServerConfig.BARNACLE_HOLD_DISTANCE, step = 0.25))
-                    .build())
-
-                .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("entity.squ_abyssal_bloom.brine").withStyle(ChatFormatting.LIGHT_PURPLE))
-                    .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.brine.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.BRINE.get()) { entity, tick ->
-                            if (entity is BrineEntity) {
-                                val durationTicks = (BrineAnimation.idle.lengthInSeconds * 20).toInt()
-                                val loopTick = tick % durationTicks
-                                if (loopTick == 0 || !entity.idleAnimationState.isStarted)
-                                    entity.idleAnimationState.start(tick)
-                            }
-                        })
-                        .build())
-                    .option(serverBool(ModServerConfig.BRINE_NATURAL_SPAWNING))
-                    .option(serverDouble(ModServerConfig.BRINE_DETECTION_RANGE, step = 1.0))
-                    .option(serverDouble(ModServerConfig.BRINE_FOLLOW_SPEED, step = 0.01))
-                    .option(serverDouble(ModServerConfig.BRINE_ATTACK_SPEED, step = 0.01))
-                    .option(serverDouble(ModServerConfig.BRINE_ATTACK_ENTER_RADIUS, step = 0.25))
-                    .option(serverDouble(ModServerConfig.BRINE_ATTACK_EXIT_RADIUS, step = 0.25))
-                    .option(serverInt(ModServerConfig.BRINE_COLUMN_ATTACK_COOLDOWN, step = 5))
-                    .option(serverInt(ModServerConfig.BRINE_DIRECT_ATTACK_COOLDOWN, step = 5))
-                    .build())
-
-                .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("entity.squ_abyssal_bloom.red_slobberer").withStyle(ChatFormatting.RED))
-                    .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.red_slobberer.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.RED_SLOBBERER.get()) { entity, tick ->
-                            if (entity is RedSlobbererEntity) {
-                                val durationTicks = (RedSlobbererAnimation.idle.lengthInSeconds * 20).toInt()
-                                    .coerceAtLeast(1)
-                                val loopTick = tick % durationTicks
-                                if (loopTick == 0 || !entity.idleAnimationState.isStarted)
-                                    entity.idleAnimationState.start(tick)
-                            }
-                        })
-                        .build())
-                    .option(serverBool(ModServerConfig.RED_SLOBBERER_REEF_DEBUG))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_REEF_MATURITY_TICKS, step = 200))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_MAX_REEF_FISH))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_DEPOSIT_MIN_INTERVAL_TICKS, step = 20))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_DEPOSIT_MAX_INTERVAL_TICKS, step = 20))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_MAX_CALCAREOUS_DEPOSITS))
-                    .option(serverDouble(ModServerConfig.RED_SLOBBERER_MINIMUM_REEF_STABILITY, step = 0.01))
-                    .option(serverDouble(ModServerConfig.RED_SLOBBERER_DEPOSIT_GROWTH_CHANCE, step = 0.005))
-                    .option(serverDouble(ModServerConfig.RED_SLOBBERER_NEW_DEPOSIT_CHANCE, step = 0.005))
-                    .option(serverDouble(ModServerConfig.RED_SLOBBERER_FISH_REFUGE_RADIUS, step = 0.5))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_FISH_REFUGE_CAPACITY))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_FISH_REFUGE_MINIMUM_STAY_TICKS, step = 20))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_FISH_REFUGE_MAXIMUM_STAY_TICKS, step = 20))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_FISH_REFUGE_QUIET_RELEASE_TICKS, step = 20))
-                    .option(serverInt(ModServerConfig.RED_SLOBBERER_FISH_REFUGE_UNSAFE_COOLDOWN_TICKS, step = 20))
-                    .option(serverDouble(ModServerConfig.RED_SLOBBERER_REEF_RESIDENCE_RADIUS, step = 0.5))
-                    .build())
-
-                .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("config.squ_abyssal_bloom.group.fish_schools").withStyle(ChatFormatting.AQUA))
-                    .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.group.fish_schools.desc"))
-                        .build())
-                    .option(serverBool(ModServerConfig.FISH_SCHOOL_DEBUG))
-                    .option(serverInt(ModServerConfig.FISH_SCHOOL_NEIGHBOR_COUNT))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_NEIGHBOR_SEARCH_RADIUS, step = 0.5))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_AGGREGATION_RADIUS, step = 0.5))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_CROSS_SPECIES_AFFINITY, step = 0.01))
-                    .option(serverInt(ModServerConfig.FISH_SCHOOL_ACTIVATION_THRESHOLD))
-                    .option(serverInt(ModServerConfig.FISH_SCHOOL_DEACTIVATION_THRESHOLD))
-                    .option(serverInt(ModServerConfig.FISH_SCHOOL_ACTIVATION_DELAY, step = 20))
-                    .option(serverInt(ModServerConfig.FISH_SCHOOL_DEACTIVATION_DELAY, step = 20))
-                    .option(serverInt(ModServerConfig.FISH_SCHOOL_NEIGHBOR_REFRESH_INTERVAL))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_SEPARATION_WEIGHT, step = 0.05))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_ALIGNMENT_WEIGHT, step = 0.05))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_COHESION_WEIGHT, step = 0.05))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_OBSTACLE_AVOIDANCE_WEIGHT, step = 0.05))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_THREAT_AVOIDANCE_WEIGHT, step = 0.05))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_THREAT_DETECTION_RADIUS, step = 0.5))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_THREAT_PROPAGATION_SPEED, step = 0.01))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_THREAT_SIGNAL_DECAY, step = 0.001))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_MAXIMUM_SPEED, step = 0.01))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_PANIC_SPEED, step = 0.01))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_MAXIMUM_TURN_RATE, step = 0.5))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_VERTICAL_MOVEMENT_WEIGHT, step = 0.01))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_VERTICAL_DRIFT_SPEED, step = 0.001))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_NEIGHBOR_FOV_HALF_ANGLE, step = 5.0))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_AGGREGATION_COHESION_SCALE, step = 0.05))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_COHESION_SPEED_RESPONSE_SCALE, step = 0.05))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_SEPARATION_RADIUS, step = 0.25))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_MAXIMUM_SEPARATION_FORCE, step = 0.1))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_COHESION_FULL_STRENGTH_DISTANCE, step = 0.25))
-                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_HERD_COMPRESSION, step = 0.05))
-                    .build())
-
-                .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("entity.squ_abyssal_bloom.ghost_chimaera").withStyle(ChatFormatting.LIGHT_PURPLE))
-                    .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.ghost_chimaera.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.GHOST_CHIMAERA.get()))
-                        .build())
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.template"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.template")))
-                        .binding(Binding.generic(false, { false }, {}))
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.barnacle"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.barnacle.desc"))
+                            .customImage(BarnacleSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.barnacle"),
+                        buildGroups = BarnacleSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.brine"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.brine.desc"))
+                            .customImage(BrineSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.brine"),
+                        buildGroups = BrineSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.red_slobberer"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.red_slobberer.desc"))
+                            .customImage(RedSlobbererSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.red_slobberer"),
+                        buildGroups = RedSlobbererSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("config.squ_abyssal_bloom.group.fish_schools"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.group.fish_schools.desc"))
+                            .customImage(StaticImageRenderer("fish_school", 1920, 991))
+                            .build(),
+                        screenTitle = Component.translatable("config.squ_abyssal_bloom.group.fish_schools"),
+                        buildGroups = FishSchoolSubMenu::buildGroups
+                    ))
                     .build())
 
                 .build())
@@ -571,6 +467,15 @@ object ModConfig {
                 .name(Component.translatable("config.squ_abyssal_bloom.worldgen")
                     .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GREEN))
                 .tooltip(Component.translatable("config.squ_abyssal_bloom.worldgen.tooltip"))
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones").withStyle(ChatFormatting.DARK_AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones.desc"))
+                        .build())
+                    .option(shallowDeepOpt)
+                    .option(deepAbyssalOpt)
+                    .build())
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("config.squ_abyssal_bloom.group.terrain_zones").withStyle(ChatFormatting.GREEN))
@@ -604,7 +509,7 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.faults.desc"))
                         .build())
-                    .option(serverDouble(ModServerConfig.FAULT_THRESHOLD, 0.001..0.15, 0.001) { Component.literal(String.format("%.3f", it)) })
+                    .option(serverDouble(ModServerConfig.FAULT_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
                     .option(serverDouble(ModServerConfig.FAULT_BLEND, step = 0.001) { Component.literal(String.format("%.3f", it)) })
                     .option(serverDouble(ModServerConfig.FAULT_OFFSET_AMP, step = 1.0))
                     .build())
@@ -614,7 +519,7 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.trenches.desc"))
                         .build())
-                    .option(serverDouble(ModServerConfig.TRENCH_THRESHOLD, step = 0.01) { Component.literal(String.format("%.2f", it)) })
+                    .option(serverDouble(ModServerConfig.TRENCH_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
                     .option(serverDouble(ModServerConfig.TRENCH_DEPTH_AMP, step = 1.0))
                     .build())
 
@@ -623,7 +528,7 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.terraces.desc"))
                         .build())
-                    .option(serverDouble(ModServerConfig.TERRACE_MASK_THRESHOLD, step = 0.01) { Component.literal(String.format("%.2f", it)) })
+                    .option(serverDouble(ModServerConfig.TERRACE_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
                     .option(serverDouble(ModServerConfig.TERRACE_STEP, step = 1.0))
                     .build())
 
@@ -632,46 +537,4 @@ object ModConfig {
             .build()
             .generateScreen(parent)
     }
-
-    private fun serverDouble(
-        opt: DoubleOption,
-        range: ClosedFloatingPointRange<Double> = opt.min..opt.max,
-        step: Double = 0.1,
-        format: ((Double) -> Component)? = null
-    ): Option<Double> =
-        Option.createBuilder<Double>()
-            .name(Component.translatable("config.squ_abyssal_bloom.${opt.key}"))
-            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.${opt.key}.desc")))
-            .binding(Binding.generic(opt.default, { ServerConfigCache.current(opt) }, { ServerConfigCache.set(opt, it) }))
-            .controller { o ->
-                var c = DoubleSliderControllerBuilder.create(o).range(range.start, range.endInclusive).step(step)
-                if (format != null) c = c.formatValue(format)
-                c
-            }
-            .build()
-
-    private fun serverInt(
-        opt: IntOption,
-        range: IntRange = opt.min..opt.max,
-        step: Int = 1,
-        format: ((Int) -> Component)? = null
-    ): Option<Int> =
-        Option.createBuilder<Int>()
-            .name(Component.translatable("config.squ_abyssal_bloom.${opt.key}"))
-            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.${opt.key}.desc")))
-            .binding(Binding.generic(opt.default, { ServerConfigCache.current(opt) }, { ServerConfigCache.set(opt, it) }))
-            .controller { o ->
-                var c = IntegerSliderControllerBuilder.create(o).range(range.first, range.last).step(step)
-                if (format != null) c = c.formatValue(format)
-                c
-            }
-            .build()
-
-    private fun serverBool(opt: BoolOption): Option<Boolean> =
-        Option.createBuilder<Boolean>()
-            .name(Component.translatable("config.squ_abyssal_bloom.${opt.key}"))
-            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.${opt.key}.desc")))
-            .binding(Binding.generic(opt.default, { ServerConfigCache.current(opt) }, { ServerConfigCache.set(opt, it) }))
-            .controller(TickBoxControllerBuilder::create)
-            .build()
 }

@@ -1,6 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.Animal
 import net.minecraft.world.entity.animal.fish.AbstractFish
@@ -26,6 +28,7 @@ object FishThreatClassifier {
         if (!entity.isAlive) return false
         if (entity is AbstractFish) return false
         if (entity.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_FRIENDLY)) return false
+        if (isConfigFriendly(entity)) return false
 
         if (entity is Player) {
             return !entity.isCreative && !entity.isSpectator
@@ -35,5 +38,10 @@ object FishThreatClassifier {
         if (entity is Animal || entity is WaterAnimal) return false
 
         return true
+    }
+
+    private fun isConfigFriendly(entity: LivingEntity): Boolean {
+        val id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.type).toString()
+        return ModServerConfig.FISH_SCHOOL_FRIENDLY_ENTITIES.get().contains(id)
     }
 }

@@ -4,6 +4,8 @@ import fr.heta__h.squ_abyssal_bloom.config.server.types.BoolOption
 import fr.heta__h.squ_abyssal_bloom.config.server.types.ConfigOption
 import fr.heta__h.squ_abyssal_bloom.config.server.types.DoubleOption
 import fr.heta__h.squ_abyssal_bloom.config.server.types.IntOption
+import fr.heta__h.squ_abyssal_bloom.config.server.types.StringListOption
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.NoiseThresholdCalibration
 import net.neoforged.neoforge.common.ModConfigSpec
 
 object ModServerConfig {
@@ -31,6 +33,14 @@ object ModServerConfig {
         return opt
     }
 
+    private fun stringList(key: String, default: List<String>, comment: String): StringListOption {
+        val opt = StringListOption(key, default, comment)
+        opt.spec = opt.build(builder)
+        registered.add(opt)
+        return opt
+    }
+
+    val BARNACLE_SPAWN_ENABLED = bool("barnacleSpawnEnabled", true, "Allows Barnacles to spawn naturally.")
     val STRICT_BARNACLE_SPAWNING = bool("strictBarnacleSpawning", true, "If true, mobs from other mods with \"barnacle\" in their name will be unable to spawn.")
     val BARNACLE_SPAWN_MAX_Y = int("barnacleSpawnMaxY", -10, -64, 63, "Highest Y level at which Barnacles may spawn naturally.")
     val BARNACLE_DETECTION_RANGE = double("barnacleDetectionRange", 55.0, 4.0, 96.0, "Maximum range at which a Barnacle can acquire prey.")
@@ -51,6 +61,7 @@ object ModServerConfig {
     val BRINE_COLUMN_ATTACK_COOLDOWN = int("brineColumnAttackCooldown", 20, 1, 200, "Ticks between bubble projectiles during the column attack.")
     val BRINE_DIRECT_ATTACK_COOLDOWN = int("brineDirectAttackCooldown", 30, 1, 200, "Ticks between direct bubble projectiles.")
 
+    val RED_SLOBBERER_SPAWN_ENABLED = bool("redSlobbererSpawnEnabled", true, "Allows Red Slobberers to spawn naturally.")
     val RED_SLOBBERER_REEF_DEBUG = bool("redSlobbererReefDebug", false, "Displays reef, deposit and fish-refuge diagnostics and writes periodic summaries to the server log.")
     val RED_SLOBBERER_REEF_MATURITY_TICKS = int("redSlobbererReefMaturityTicks", 6000, 200, 72000, "Ticks a Red Slobberer group must remain nearby before its local reef matures.")
     val RED_SLOBBERER_MAX_REEF_FISH = int("redSlobbererMaximumReefFish", 12, 0, 48, "Maximum local fish population maintained by a mature Red Slobberer reef.")
@@ -68,6 +79,7 @@ object ModServerConfig {
     val RED_SLOBBERER_FISH_REFUGE_UNSAFE_COOLDOWN_TICKS = int("redSlobbererFishRefugeUnsafeCooldownTicks", 200, 0, 2400, "Time during which a damaged Red Slobberer cannot shelter fish.")
     val RED_SLOBBERER_REEF_RESIDENCE_RADIUS = double("redSlobbererReefResidenceRadius", 10.0, 4.0, 18.0, "Horizontal radius around its reef anchor in which a Red Slobberer naturally grazes and wanders.")
 
+    val FISH_SCHOOL_ENABLED = bool("fishSchoolEnabled", true, "Enables collective schooling movement. When disabled, all fish keep their full vanilla AI.")
     val FISH_SCHOOL_DEBUG = bool("fishSchoolDebug", false, "Displays collective-state particles and writes periodic fish-school summaries to the server log.")
     val FISH_SCHOOL_NEIGHBOR_COUNT = int("fishSchoolNeighborCount", 7, 1, 12, "Maximum number of nearest compatible fish influencing one fish.")
     val FISH_SCHOOL_NEIGHBOR_SEARCH_RADIUS = double("fishSchoolNeighborSearchRadius", 7.0, 2.0, 16.0, "Radius used only to discover candidate topological neighbors.")
@@ -91,6 +103,11 @@ object ModServerConfig {
     val FISH_SCHOOL_MAXIMUM_TURN_RATE = double("fishSchoolMaximumTurnRate", 7.0, 1.0, 30.0, "Maximum horizontal direction change in degrees per tick.")
     val FISH_SCHOOL_VERTICAL_MOVEMENT_WEIGHT = double("fishSchoolVerticalMovementWeight", 0.3, 0.0, 1.0, "Relative strength of non-obstacle vertical steering.")
     val FISH_SCHOOL_VERTICAL_DRIFT_SPEED = double("fishSchoolVerticalDriftSpeed", 0.012, 0.0, 0.05, "Maximum vertical speed of the slow shared depth current that lets whole schools rise and sink over time.")
+    val FISH_SCHOOL_FRIENDLY_ENTITIES = stringList(
+        "fishSchoolFriendlyEntities",
+        emptyList(),
+        "Extra entities exempted from fish threat detection, on top of whatever is currently tagged fish_school_friendly."
+    )
     val FISH_SCHOOL_NEIGHBOR_FOV_HALF_ANGLE = double("fishSchoolNeighborFovHalfAngle", 150.0, 30.0, 180.0, "Half-angle in degrees of the forward cone used to gate alignment and cohesion; separation stays omnidirectional. 180 disables the cone.")
     val FISH_SCHOOL_AGGREGATION_COHESION_SCALE = double("fishSchoolAggregationCohesionScale", 0.65, 0.0, 2.0, "Fraction of cohesion weight applied to the long-range pull that merges separate nearby schools.")
     val FISH_SCHOOL_COHESION_SPEED_RESPONSE_SCALE = double("fishSchoolCohesionSpeedResponseScale", 0.55, 0.0, 1.0, "Independent strength of the local crowding/spacing speed adjustment, decoupled from positional cohesion strength.")
@@ -114,13 +131,13 @@ object ModServerConfig {
     val DETAIL_AMP = double("detailAmp", 7.0, 0.0, 40.0, "Amplitude of detail noise in abyssal zone (blocks).")
     val MICRO_AMP = double("microAmp", 4.0, 0.0, 20.0, "Amplitude of micro noise in abyssal zone (blocks).")
     val WEIRDNESS_AMP = double("weirdnessAmp", 11.0, 0.0, 50.0, "Influence of weirdness on abyssal floor height (blocks).")
-    val FAULT_THRESHOLD = double("faultThreshold", 0.012, 0.0, 0.2, "Noise threshold controlling fault line density.")
+    val FAULT_FREQUENCY_PERCENT = double("faultFrequencyPercent", NoiseThresholdCalibration.percentForFaultThreshold(0.012), 0.0, 100.0, "Percentage of the abyssal floor covered by fault lines.")
     val FAULT_BLEND = double("faultBlend", 0.045, 0.001, 0.2, "Blend width for fault line edges.")
     val FAULT_OFFSET_AMP = double("faultOffsetAmp", 10.0, 0.0, 22.0, "Maximum vertical offset caused by fault lines (blocks).")
-    val TRENCH_THRESHOLD = double("trenchThreshold", 0.88, 0.5, 0.99, "Noise threshold above which a trench forms (0-1).")
+    val TRENCH_FREQUENCY_PERCENT = double("trenchFrequencyPercent", NoiseThresholdCalibration.percentForTrenchThreshold(0.88), 0.0, 100.0, "Percentage of the abyssal floor eligible to carve into trenches.")
     val TRENCH_DEPTH_AMP = double("trenchDepthAmp", 10.0, 0.0, 22.0, "Maximum depth of trenches (blocks).")
     val TERRACE_STEP = double("terraceStep", 13.0, 2.0, 40.0, "Vertical height of each terrace step (blocks).")
-    val TERRACE_MASK_THRESHOLD = double("terraceMaskThreshold", 0.80, 0.3, 0.99, "Noise threshold above which terraces appear.")
+    val TERRACE_FREQUENCY_PERCENT = double("terraceFrequencyPercent", NoiseThresholdCalibration.percentForTerraceThreshold(0.80), 0.0, 100.0, "Percentage of eligible abyssal slopes that can develop terraces.")
     val OCEAN_TERRITORY_EXTRA_ZOOMS = int("oceanTerritoryExtraZooms", 6, 0, 10, "Size of ocean territories per mod, in number of extra zooms. Higher = larger territories.")
     val OCEAN_TERRITORY_DEFAULT_WEIGHT = int("oceanTerritoryDefaultWeight", 10, 1, 1000, "Default weight of an unknown namespace in territorial competition.")
     val OCEAN_TERRITORY_OWN_WEIGHT = int("oceanTerritoryOwnWeight", 20, 1, 1000, "Weight of Abyssal Bloom in territorial competition, relative to the default weight.")

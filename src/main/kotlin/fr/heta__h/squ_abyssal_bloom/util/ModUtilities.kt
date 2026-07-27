@@ -1,14 +1,33 @@
 package fr.heta__h.squ_abyssal_bloom.util
 
+import dev.isxander.yacl3.api.Binding
+import dev.isxander.yacl3.api.ButtonOption
+import dev.isxander.yacl3.api.ConfigCategory
+import dev.isxander.yacl3.api.Option
+import dev.isxander.yacl3.api.OptionDescription
+import dev.isxander.yacl3.api.YetAnotherConfigLib
+import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
+import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
+import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
+import dev.isxander.yacl3.gui.YACLScreen
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
+import fr.heta__h.squ_abyssal_bloom.config.server.types.BoolOption
+import fr.heta__h.squ_abyssal_bloom.config.server.types.DoubleOption
+import fr.heta__h.squ_abyssal_bloom.config.server.types.IntOption
+import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
+import net.minecraft.client.Minecraft
+import net.neoforged.neoforge.client.network.ClientPacketDistributor
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
+import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
@@ -282,4 +301,82 @@ object ModUtilities {
         return (surfaceY - pos.y).toDouble()
     }
 
+    fun serverDouble(
+        opt: DoubleOption,
+        range: ClosedFloatingPointRange<Double> = opt.min..opt.max,
+        step: Double = 0.1,
+        format: ((Double) -> Component)? = null
+    ): Option<Double> =
+        Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.${opt.key}"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.${opt.key}.desc")))
+            .binding(Binding.generic(opt.default, { ServerConfigCache.current(opt) }, { ServerConfigCache.set(opt, it) }))
+            .controller { o ->
+                var c = DoubleSliderControllerBuilder.create(o).range(range.start, range.endInclusive).step(step)
+                if (format != null) c = c.formatValue(format)
+                c
+            }
+            .build()
+
+    fun serverInt(
+        opt: IntOption,
+        range: IntRange = opt.min..opt.max,
+        step: Int = 1,
+        format: ((Int) -> Component)? = null
+    ): Option<Int> =
+        Option.createBuilder<Int>()
+            .name(Component.translatable("config.squ_abyssal_bloom.${opt.key}"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.${opt.key}.desc")))
+            .binding(Binding.generic(opt.default, { ServerConfigCache.current(opt) }, { ServerConfigCache.set(opt, it) }))
+            .controller { o ->
+                var c = IntegerSliderControllerBuilder.create(o).range(range.first, range.last).step(step)
+                if (format != null) c = c.formatValue(format)
+                c
+            }
+            .build()
+
+    fun serverBool(opt: BoolOption): Option<Boolean> =
+        Option.createBuilder<Boolean>()
+            .name(Component.translatable("config.squ_abyssal_bloom.${opt.key}"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.${opt.key}.desc")))
+            .binding(Binding.generic(opt.default, { ServerConfigCache.current(opt) }, { ServerConfigCache.set(opt, it) }))
+            .controller(TickBoxControllerBuilder::create)
+            .build()
+
+
+
+    fun persistServerConfigChanges(initialServerConfig: ServerConfigData) {
+        if (ServerConfigCache.isSingleplayer()) {
+            ServerConfigCache.toData().applyToSpec()
+        } else {
+            val currentServerConfig = ServerConfigCache.toData()
+            if (currentServerConfig != initialServerConfig && Minecraft.getInstance().connection != null) {
+                ClientPacketDistributor.sendToServer(C2SServerConfigPacket(currentServerConfig))
+            }
+        }
+    }
+
+    fun subScreenButton(
+        name: Component,
+        description: OptionDescription,
+        screenTitle: Component,
+        buildGroups: (ConfigCategory.Builder) -> Unit
+    ): Option<*> =
+        ButtonOption.createBuilder()
+            .name(name)
+            .description(description)
+            .text(Component.translatable("config.squ_abyssal_bloom.subScreenButton"))
+            .action { screen: YACLScreen ->
+                val initialServerConfig = ServerConfigCache.toData()
+                val categoryBuilder = ConfigCategory.createBuilder().name(screenTitle)
+                buildGroups(categoryBuilder)
+                val subScreen = YetAnotherConfigLib.createBuilder()
+                    .title(screenTitle)
+                    .save { persistServerConfigChanges(initialServerConfig) }
+                    .category(categoryBuilder.build())
+                    .build()
+                    .generateScreen(screen)
+                Minecraft.getInstance().setScreen(subScreen)
+            }
+            .build()
 }

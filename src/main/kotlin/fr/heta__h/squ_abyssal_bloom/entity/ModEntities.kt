@@ -293,6 +293,7 @@ object ModEntities {
         random: RandomSource
     ): Boolean {
         if (
+            !ModServerConfig.BARNACLE_SPAWN_ENABLED.get() ||
             pos.y > ModServerConfig.BARNACLE_SPAWN_MAX_Y.get() ||
             !level.getBiome(pos).`is`(ModTags.Biomes.IS_ABYSSAL) ||
             !level.getFluidState(pos).`is`(FluidTags.WATER)
@@ -342,6 +343,7 @@ object ModEntities {
         pos: BlockPos,
         random: RandomSource
     ): Boolean {
+        if (!ModServerConfig.RED_SLOBBERER_SPAWN_ENABLED.get()) return false
         return findRedSlobbererSpawnPosition(level, pos, entityType) != null
     }
 

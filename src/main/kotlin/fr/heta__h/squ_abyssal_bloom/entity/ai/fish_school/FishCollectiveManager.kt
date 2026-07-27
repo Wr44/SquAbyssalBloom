@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceRegistry
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
@@ -156,6 +157,7 @@ class FishCollectiveManager private constructor(
         calculateSteering: Boolean
     ): FishCollectiveState? {
         if (
+            !ModServerConfig.FISH_SCHOOL_ENABLED.get() ||
             fish.level() !== level ||
             !fish.isAlive ||
             !fish.isInWater

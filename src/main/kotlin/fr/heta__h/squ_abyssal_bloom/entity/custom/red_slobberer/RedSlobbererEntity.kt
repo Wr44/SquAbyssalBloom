@@ -388,10 +388,12 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             activeLocomotionAnimation != animation ||
             renderedLocomotionCycleAnchor != synchronizedAnchor
         ) {
-            startLocomotionAnimation(
-                animation,
+            val startTick = if (renderedLocomotionCycleAnchor == Int.MIN_VALUE) {
                 tickCount - locomotionCycleTick()
-            )
+            } else {
+                tickCount
+            }
+            startLocomotionAnimation(animation, startTick)
             renderedLocomotionCycleAnchor = synchronizedAnchor
         }
     }

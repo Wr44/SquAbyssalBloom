@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.worldgen.terrain
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalShapingContext
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.NoiseThresholdCalibration
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnMods
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.ColumnSample
 import net.minecraft.world.level.levelgen.DensityFunction
@@ -128,7 +129,7 @@ object AbyssalFloorShaper {
     }
 
     private fun faultOffset(shaping: AbyssalShapingContext, column: ColumnSample): Double {
-        val faultThreshold = ModServerConfig.FAULT_THRESHOLD.get()
+        val faultThreshold = NoiseThresholdCalibration.faultThresholdForPercent(ModServerConfig.FAULT_FREQUENCY_PERCENT.get())
         val faultBlend = ModServerConfig.FAULT_BLEND.get()
         val line = shaping.wallNoise.getValue(column.worldX * FAULT_SCALE, 7700.0, column.worldZ * FAULT_SCALE)
         val dist = abs(line)
@@ -360,7 +361,7 @@ object AbyssalFloorShaper {
         val terrainFine = topoFineRaw + wallVar + detailVar + weirdnessVar + tempVar + anisoVar + interpolationCompensation
         val terrainBase = terrainCoarse + terrainFine
 
-        val terraceMaskThreshold = ModServerConfig.TERRACE_MASK_THRESHOLD.get()
+        val terraceMaskThreshold = NoiseThresholdCalibration.terraceThresholdForPercent(ModServerConfig.TERRACE_FREQUENCY_PERCENT.get())
         val maskCoarse = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK_SCALE, 6100.0, mods.warpZ * TERRACE_MASK_SCALE)
         val maskFine = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK2_SCALE, 6150.0, mods.warpZ * TERRACE_MASK2_SCALE)
         val terraceMask = maskCoarse * TERRACE_MASK_AMP + maskFine * TERRACE_MASK2_AMP + TERRACE_MASK_OFFSET
@@ -398,7 +399,7 @@ object AbyssalFloorShaper {
 
     private fun trenchFactor(shaping: AbyssalShapingContext, mods: ColumnMods): Double {
         val raw = 1.0 - abs(shaping.wallNoise.getValue(mods.warpX * TRENCH_SCALE, 500.0, mods.warpZ * TRENCH_SCALE))
-        val trenchThreshold = ModServerConfig.TRENCH_THRESHOLD.get()
+        val trenchThreshold = NoiseThresholdCalibration.trenchThresholdForPercent(ModServerConfig.TRENCH_FREQUENCY_PERCENT.get())
         return ((raw - trenchThreshold) / (1.0 - trenchThreshold)).coerceIn(0.0, 1.0)
     }
 }
