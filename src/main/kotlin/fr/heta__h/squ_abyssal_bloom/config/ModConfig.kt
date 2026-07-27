@@ -542,6 +542,13 @@ object ModConfig {
                     .option(serverDouble(ModServerConfig.FISH_SCHOOL_MAXIMUM_TURN_RATE, step = 0.5))
                     .option(serverDouble(ModServerConfig.FISH_SCHOOL_VERTICAL_MOVEMENT_WEIGHT, step = 0.01))
                     .option(serverDouble(ModServerConfig.FISH_SCHOOL_VERTICAL_DRIFT_SPEED, step = 0.001))
+                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_NEIGHBOR_FOV_HALF_ANGLE, step = 5.0))
+                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_AGGREGATION_COHESION_SCALE, step = 0.05))
+                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_COHESION_SPEED_RESPONSE_SCALE, step = 0.05))
+                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_SEPARATION_RADIUS, step = 0.25))
+                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_MAXIMUM_SEPARATION_FORCE, step = 0.1))
+                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_COHESION_FULL_STRENGTH_DISTANCE, step = 0.25))
+                    .option(serverDouble(ModServerConfig.FISH_SCHOOL_HERD_COMPRESSION, step = 0.05))
                     .build())
 
                 .group(OptionGroup.createBuilder()

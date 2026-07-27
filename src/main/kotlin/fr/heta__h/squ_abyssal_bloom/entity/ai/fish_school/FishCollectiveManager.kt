@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceRegistry
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.LivingEntity
@@ -316,8 +317,15 @@ class FishCollectiveManager private constructor(
 
         if (nearestThreat != null) {
             val distance = sqrt(nearestThreatDistanceSqr)
-            val intensity = (1.0 - distance / settings.threatDetectionRadius)
-                .coerceIn(MINIMUM_DIRECT_THREAT_INTENSITY, 1.0)
+            val edgeProximity = (1.0 - distance / settings.threatDetectionRadius)
+                .coerceIn(0.0, 1.0)
+            val intensity = if (edgeProximity < MINIMUM_DIRECT_THREAT_INTENSITY) {
+                MINIMUM_DIRECT_THREAT_INTENSITY * ModUtilities.smoothstep(
+                    (edgeProximity / MINIMUM_DIRECT_THREAT_INTENSITY).coerceIn(0.0, 1.0)
+                )
+            } else {
+                edgeProximity
+            }
             state.receiveDirectThreat(
                 predictedThreatEscapeDirection(fish, nearestThreat, state),
                 intensity

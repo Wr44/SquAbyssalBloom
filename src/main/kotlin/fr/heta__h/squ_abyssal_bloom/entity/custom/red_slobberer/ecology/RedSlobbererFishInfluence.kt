@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluence
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceContext
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.RedSlobbererEntity
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.util.Mth
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.Entity
@@ -222,7 +223,7 @@ class RedSlobbererFishInfluence(
     private fun refugeBlend(threatIntensity: Double): Double {
         val linear = ((threatIntensity - MINIMUM_REFUGE_SIGNAL) /
             (FULL_REFUGE_SIGNAL - MINIMUM_REFUGE_SIGNAL)).coerceIn(0.0, 1.0)
-        return linear * linear * (3.0 - 2.0 * linear)
+        return ModUtilities.smoothstep(linear)
     }
 
     private fun usesClockwiseOrbit(fish: AbstractFish): Boolean {
@@ -232,8 +233,7 @@ class RedSlobbererFishInfluence(
 
     private fun fallbackAngle(fish: AbstractFish): Double {
         val mixedUuid = fish.uuid.mostSignificantBits xor redSlobberer.uuid.leastSignificantBits
-        val normalized = (mixedUuid and ANGLE_MASK).toDouble() / ANGLE_MASK.toDouble()
-        return normalized * Math.PI * 2.0
+        return ModUtilities.uuidFractionAsAngle(mixedUuid, mask = ANGLE_MASK)
     }
 
 }

@@ -221,6 +221,18 @@ object ModUtilities {
         map.entries.removeIf { (_, tick) -> now - tick > maxAge }
     }
 
+    fun mixedUuidBits(uuid: UUID): Long {
+        return uuid.mostSignificantBits xor uuid.leastSignificantBits
+    }
+
+    fun normalizedUuidFraction(bits: Long, shift: Int = 0, mask: Long = 0xFFFFL): Double {
+        return ((bits ushr shift) and mask).toDouble() / mask.toDouble()
+    }
+
+    fun uuidFractionAsAngle(bits: Long, shift: Int = 0, mask: Long = 0xFFFFL): Double {
+        return normalizedUuidFraction(bits, shift, mask) * Math.PI * 2.0
+    }
+
     fun getDepth(level: Level, pos: BlockPos): Double {
         if (!level.getFluidState(pos).`is`(FluidTags.WATER)) return 0.0
 

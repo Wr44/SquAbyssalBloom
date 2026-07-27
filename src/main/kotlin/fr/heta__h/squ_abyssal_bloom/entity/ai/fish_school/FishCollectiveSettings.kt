@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
+import kotlin.math.cos
 import kotlin.math.max
 
 data class FishCollectiveSettings(
@@ -29,7 +30,15 @@ data class FishCollectiveSettings(
     val neighborRefreshInterval: Int,
     val threatDetectionRadius: Double,
     val threatPropagationSpeed: Double,
-    val threatSignalDecay: Double
+    val threatSignalDecay: Double,
+    val neighborFovCosine: Double,
+    val aggregationCohesionScale: Double,
+    val cohesionSpeedResponseScale: Double,
+    val separationRadius: Double,
+    val separationRadiusSqr: Double,
+    val maximumSeparationForce: Double,
+    val cohesionFullStrengthDistance: Double,
+    val herdCompression: Double
 ) {
     companion object {
         fun fromConfig(): FishCollectiveSettings {
@@ -47,6 +56,8 @@ data class FishCollectiveSettings(
                     .coerceIn(0, activationThreshold - 1)
             val maximumFishSpeed =
                 ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_MAXIMUM_SPEED)
+            val separationRadius =
+                ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_SEPARATION_RADIUS)
 
             return FishCollectiveSettings(
                 debugEnabled = ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_DEBUG),
@@ -91,7 +102,24 @@ data class FishCollectiveSettings(
                 threatPropagationSpeed =
                     ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_THREAT_PROPAGATION_SPEED),
                 threatSignalDecay =
-                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_THREAT_SIGNAL_DECAY)
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_THREAT_SIGNAL_DECAY),
+                neighborFovCosine = cos(
+                    Math.toRadians(
+                        ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_NEIGHBOR_FOV_HALF_ANGLE)
+                    )
+                ),
+                aggregationCohesionScale =
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_AGGREGATION_COHESION_SCALE),
+                cohesionSpeedResponseScale =
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_COHESION_SPEED_RESPONSE_SCALE),
+                separationRadius = separationRadius,
+                separationRadiusSqr = separationRadius * separationRadius,
+                maximumSeparationForce =
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_MAXIMUM_SEPARATION_FORCE),
+                cohesionFullStrengthDistance =
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_COHESION_FULL_STRENGTH_DISTANCE),
+                herdCompression =
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_HERD_COMPRESSION)
             )
         }
     }

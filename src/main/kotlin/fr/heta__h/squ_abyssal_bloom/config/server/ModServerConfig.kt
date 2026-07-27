@@ -91,6 +91,13 @@ object ModServerConfig {
     val FISH_SCHOOL_MAXIMUM_TURN_RATE = double("fishSchoolMaximumTurnRate", 7.0, 1.0, 30.0, "Maximum horizontal direction change in degrees per tick.")
     val FISH_SCHOOL_VERTICAL_MOVEMENT_WEIGHT = double("fishSchoolVerticalMovementWeight", 0.3, 0.0, 1.0, "Relative strength of non-obstacle vertical steering.")
     val FISH_SCHOOL_VERTICAL_DRIFT_SPEED = double("fishSchoolVerticalDriftSpeed", 0.012, 0.0, 0.05, "Maximum vertical speed of the slow shared depth current that lets whole schools rise and sink over time.")
+    val FISH_SCHOOL_NEIGHBOR_FOV_HALF_ANGLE = double("fishSchoolNeighborFovHalfAngle", 150.0, 30.0, 180.0, "Half-angle in degrees of the forward cone used to gate alignment and cohesion; separation stays omnidirectional. 180 disables the cone.")
+    val FISH_SCHOOL_AGGREGATION_COHESION_SCALE = double("fishSchoolAggregationCohesionScale", 0.65, 0.0, 2.0, "Fraction of cohesion weight applied to the long-range pull that merges separate nearby schools.")
+    val FISH_SCHOOL_COHESION_SPEED_RESPONSE_SCALE = double("fishSchoolCohesionSpeedResponseScale", 0.55, 0.0, 1.0, "Independent strength of the local crowding/spacing speed adjustment, decoupled from positional cohesion strength.")
+    val FISH_SCHOOL_SEPARATION_RADIUS = double("fishSchoolSeparationRadius", 2.25, 0.5, 6.0, "Distance below which fish actively push apart to avoid anticipated collisions.")
+    val FISH_SCHOOL_MAXIMUM_SEPARATION_FORCE = double("fishSchoolMaximumSeparationForce", 2.4, 0.1, 6.0, "Hard cap on the combined separation steering vector.")
+    val FISH_SCHOOL_COHESION_FULL_STRENGTH_DISTANCE = double("fishSchoolCohesionFullStrengthDistance", 3.0, 0.5, 8.0, "Distance from the local flock center at which cohesion reaches full strength.")
+    val FISH_SCHOOL_HERD_COMPRESSION = double("fishSchoolHerdCompression", 0.6, 0.0, 2.0, "Strength with which panicking fish additionally compress toward their local group center.")
 
     val SHALLOW_DEEP_BOUNDARY = double("shallowDeepBoundary", -0.45, -1.0, -0.19, "Continentalness boundary between shallow and deep ocean. Vanilla: -0.455")
     val DEEP_ABYSSAL_BOUNDARY = double("deepAbyssalBoundary", -0.70, -1.05, -0.19, "Continentalness boundary between deep ocean and abyssal zone.")

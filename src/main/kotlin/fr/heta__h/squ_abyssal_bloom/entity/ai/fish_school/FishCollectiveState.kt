@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluence
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.animal.fish.AbstractFish
 import net.minecraft.world.phys.Vec3
@@ -75,20 +76,19 @@ class FishCollectiveState(
         private set
 
     val movementPhase: Double = run {
-        val mixedUuid = fish.uuid.mostSignificantBits xor fish.uuid.leastSignificantBits
-        val normalized = (mixedUuid and PHASE_MASK).toDouble() / PHASE_MASK.toDouble()
-        normalized * PI * 2.0
+        val mixedUuid = ModUtilities.mixedUuidBits(fish.uuid)
+        ModUtilities.uuidFractionAsAngle(mixedUuid, mask = PHASE_MASK)
     }
 
     val individualSpeedFactor: Double = run {
-        val mixedUuid = fish.uuid.mostSignificantBits xor fish.uuid.leastSignificantBits
-        val normalized = ((mixedUuid ushr 16) and PHASE_MASK).toDouble() / PHASE_MASK.toDouble()
+        val mixedUuid = ModUtilities.mixedUuidBits(fish.uuid)
+        val normalized = ModUtilities.normalizedUuidFraction(mixedUuid, shift = 16, mask = PHASE_MASK)
         1.0 + (normalized - 0.5) * 2.0 * INDIVIDUAL_SPEED_VARIATION
     }
 
     val swimWiggleAngularStep: Double = run {
-        val mixedUuid = fish.uuid.mostSignificantBits xor fish.uuid.leastSignificantBits
-        val normalized = ((mixedUuid ushr 32) and PHASE_MASK).toDouble() / PHASE_MASK.toDouble()
+        val mixedUuid = ModUtilities.mixedUuidBits(fish.uuid)
+        val normalized = ModUtilities.normalizedUuidFraction(mixedUuid, shift = 32, mask = PHASE_MASK)
         2.0 * PI / (MINIMUM_WIGGLE_PERIOD_TICKS + normalized * WIGGLE_PERIOD_VARIATION_TICKS)
     }
 
@@ -108,7 +108,7 @@ class FishCollectiveState(
         if (initialized) return
 
         val interval = refreshInterval.coerceAtLeast(1)
-        val mixedUuid = fish.uuid.mostSignificantBits xor fish.uuid.leastSignificantBits
+        val mixedUuid = ModUtilities.mixedUuidBits(fish.uuid)
         val offset = Math.floorMod(mixedUuid, interval.toLong())
         nextNeighborhoodRefreshTick = gameTime + offset
         lastNeighborhoodRefreshTick = gameTime

@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
 
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluence
 import fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school.influence.FishSchoolInfluenceContext
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.tags.FluidTags
@@ -28,12 +29,9 @@ object FishSchoolSteering {
     private const val MINIMUM_DIRECTION_LENGTH_SQR = 1.0E-10
     private const val COLLISION_PREDICTION_TICKS = 3.0
     private const val ENTITY_COLLISION_PREDICTION_TICKS = 2.0
-    private const val SEPARATION_RADIUS_SQR = 5.0625
     private const val MINIMUM_SEPARATION_DISTANCE_SQR = 0.09
-    private const val MAXIMUM_SEPARATION_FORCE = 2.4
     private const val ALIGNMENT_VERTICAL_SCALE = 3.0
     private const val MAXIMUM_LOCAL_VERTICAL_ERROR = 1.0
-    private const val COHESION_FULL_STRENGTH_DISTANCE = 3.0
     private const val LOCAL_COHESION_COMFORT_DISTANCE = 1.75
     private const val LOCAL_COHESION_FULL_SPEED_ERROR = 4.0
     private const val COHESION_SPEED_RESPONSE = 0.5
@@ -56,14 +54,12 @@ object FishSchoolSteering {
     private const val AMBIENT_VERTICAL_SPATIAL_FREQUENCY = 0.02
     private const val AMBIENT_VERTICAL_TIME_FREQUENCY = 0.006
     private const val AMBIENT_VERTICAL_PHASE_OFFSET = PI / 5.0
-    private const val AGGREGATION_COHESION_SCALE = 0.65
     private const val PANIC_AGGREGATION_REDUCTION = 0.5
     private const val MINIMUM_AGGREGATION_STRENGTH = 0.25
     private const val MINIMUM_AGGREGATION_DISTANCE = 1.0E-4
     private const val PANIC_NOISE_REDUCTION = 0.9
     private const val PANIC_ALIGNMENT_INCREASE = 0.45
     private const val PANIC_SEPARATION_INCREASE = 0.75
-    private const val HERD_COMPRESSION = 0.6
     private const val AVOIDANCE_ALIGNMENT_REDUCTION = 0.75
     private const val DIRECT_THREAT_ALIGNMENT_FACTOR = 0.45
     private const val NORMAL_CRUISING_SPEED_FACTOR = 0.72
@@ -117,7 +113,8 @@ object FishSchoolSteering {
         var cohesionY = 0.0
         var cohesionZ = 0.0
 
-
+        val hasHeading = currentDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR
+        val neighborFovCosine = settings.neighborFovCosine
 
         val predictedFishX = fish.x + currentVelocity.x * COLLISION_PREDICTION_TICKS
         val predictedFishY = fish.y + currentVelocity.y * COLLISION_PREDICTION_TICKS
@@ -145,9 +142,9 @@ object FishSchoolSteering {
                     distanceSqr = MINIMUM_SEPARATION_DISTANCE_SQR
                 }
             }
-            if (distanceSqr < SEPARATION_RADIUS_SQR) {
+            if (distanceSqr < settings.separationRadiusSqr) {
                 val proximity =
-                    (1.0 - distanceSqr / SEPARATION_RADIUS_SQR).coerceIn(0.0, 1.0)
+                    (1.0 - distanceSqr / settings.separationRadiusSqr).coerceIn(0.0, 1.0)
                 val smoothFalloff = proximity * proximity
                 val inverseDistanceSqr = 1.0 / max(distanceSqr, MINIMUM_SEPARATION_DISTANCE_SQR)
                 separationX += awayX * inverseDistanceSqr * smoothFalloff
@@ -155,19 +152,37 @@ object FishSchoolSteering {
                 separationZ += awayZ * inverseDistanceSqr * smoothFalloff
             }
 
-            val neighborHorizontalSpeedSqr =
-                neighborVelocity.x * neighborVelocity.x + neighborVelocity.z * neighborVelocity.z
-            if (neighborHorizontalSpeedSqr > MINIMUM_DIRECTION_LENGTH_SQR) {
-                val inverseNeighborSpeed = 1.0 / sqrt(neighborHorizontalSpeedSqr)
-                alignmentX += neighborVelocity.x * inverseNeighborSpeed * socialAffinity
-                alignmentZ += neighborVelocity.z * inverseNeighborSpeed * socialAffinity
-                horizontalAlignmentSamples++
+            val withinFov = if (!hasHeading) {
+                true
+            } else {
+                val towardX = neighbor.x - fish.x
+                val towardZ = neighbor.z - fish.z
+                val towardLengthSqr = towardX * towardX + towardZ * towardZ
+                if (towardLengthSqr <= MINIMUM_DIRECTION_LENGTH_SQR) {
+                    true
+                } else {
+                    val inverseTowardLength = 1.0 / sqrt(towardLengthSqr)
+                    val facingDot = towardX * inverseTowardLength * currentDirection.x +
+                        towardZ * inverseTowardLength * currentDirection.z
+                    facingDot >= neighborFovCosine
+                }
             }
-            alignmentY += neighborVelocity.y * socialAffinity
-            cohesionX += neighbor.x * socialAffinity
-            cohesionY += neighbor.y * socialAffinity
-            cohesionZ += neighbor.z * socialAffinity
-            socialNeighborWeight += socialAffinity
+
+            if (withinFov) {
+                val neighborHorizontalSpeedSqr =
+                    neighborVelocity.x * neighborVelocity.x + neighborVelocity.z * neighborVelocity.z
+                if (neighborHorizontalSpeedSqr > MINIMUM_DIRECTION_LENGTH_SQR) {
+                    val inverseNeighborSpeed = 1.0 / sqrt(neighborHorizontalSpeedSqr)
+                    alignmentX += neighborVelocity.x * inverseNeighborSpeed * socialAffinity
+                    alignmentZ += neighborVelocity.z * inverseNeighborSpeed * socialAffinity
+                    horizontalAlignmentSamples++
+                }
+                alignmentY += neighborVelocity.y * socialAffinity
+                cohesionX += neighbor.x * socialAffinity
+                cohesionY += neighbor.y * socialAffinity
+                cohesionZ += neighbor.z * socialAffinity
+                socialNeighborWeight += socialAffinity
+            }
         }
 
         var alignment = Vec3.ZERO
@@ -175,7 +190,7 @@ object FishSchoolSteering {
         var centroidDirection = Vec3.ZERO
         var localCenterOffset = Vec3.ZERO
         var localCohesionAffinity = 0.0
-        if (state.neighbors.isNotEmpty()) {
+        if (state.neighbors.isNotEmpty() && socialNeighborWeight > 0.0) {
             val inverseAlignmentSamples = if (horizontalAlignmentSamples > 0) {
                 1.0 / horizontalAlignmentSamples.toDouble()
             } else {
@@ -205,7 +220,7 @@ object FishSchoolSteering {
                     localCenterOffset.z * localCenterOffset.z
             )
             val horizontalCohesionStrength =
-                (horizontalCenterDistance / COHESION_FULL_STRENGTH_DISTANCE).coerceIn(0.0, 1.0)
+                (horizontalCenterDistance / settings.cohesionFullStrengthDistance).coerceIn(0.0, 1.0)
             cohesion = Vec3(
                 horizontalCohesion.x * horizontalCohesionStrength * averageSocialAffinity,
                 localCenterOffset.y
@@ -217,7 +232,7 @@ object FishSchoolSteering {
 
         val separation = limitMagnitude(
             Vec3(separationX, separationY, separationZ),
-            MAXIMUM_SEPARATION_FORCE
+            settings.maximumSeparationForce
         )
         val threatIntensity = state.threatIntensity.coerceIn(0.0, 1.0)
         val influenceContext = FishSchoolInfluenceContext(
@@ -266,12 +281,13 @@ object FishSchoolSteering {
             (1.0 - separationSuppression.coerceIn(0.0, 1.0))
         val aggregationInfluence = calculateAggregationInfluence(state, settings)
         val aggregationWeight = settings.cohesionWeight *
-            AGGREGATION_COHESION_SCALE *
+            settings.aggregationCohesionScale *
             (1.0 - threatIntensity * PANIC_AGGREGATION_REDUCTION)
         val herdInfluence = calculateHerdInfluence(
             state,
             centroidDirection,
-            threatIntensity * (1.0 - threatEscapeSuppression.coerceIn(0.0, 1.0))
+            threatIntensity * (1.0 - threatEscapeSuppression.coerceIn(0.0, 1.0)),
+            settings
         )
         val densityNoiseFactor = (
             1.0 / (1.0 + state.localCompatibleFishCount * NOISE_DENSITY_REDUCTION_PER_NEIGHBOR)
@@ -487,14 +503,8 @@ object FishSchoolSteering {
         fish: AbstractFish,
         other: AbstractFish
     ): Double {
-        val mixedUuid =
-            fish.uuid.mostSignificantBits xor
-                fish.uuid.leastSignificantBits xor
-                other.uuid.mostSignificantBits xor
-                other.uuid.leastSignificantBits
-        val normalized = (mixedUuid and FishCollectiveState.PHASE_MASK).toDouble() /
-            FishCollectiveState.PHASE_MASK.toDouble()
-        val baseAngle = normalized * PI * 2.0
+        val mixedUuid = ModUtilities.mixedUuidBits(fish.uuid) xor ModUtilities.mixedUuidBits(other.uuid)
+        val baseAngle = ModUtilities.uuidFractionAsAngle(mixedUuid, mask = FishCollectiveState.PHASE_MASK)
         return if (fish.uuid.compareTo(other.uuid) < 0) baseAngle else baseAngle + PI
     }
 
@@ -694,11 +704,12 @@ object FishSchoolSteering {
     private fun calculateHerdInfluence(
         state: FishCollectiveState,
         centroidDirection: Vec3,
-        threatIntensity: Double
+        threatIntensity: Double,
+        settings: FishCollectiveSettings
     ): Vec3 {
         if (threatIntensity <= 0.0) return Vec3.ZERO
 
-        val compression = threatIntensity * (1.0 - threatIntensity) * HERD_COMPRESSION
+        val compression = threatIntensity * (1.0 - threatIntensity) * settings.herdCompression
         return Vec3(
             state.threatDirection.x * threatIntensity + centroidDirection.x * compression,
             0.0,
@@ -802,7 +813,7 @@ object FishSchoolSteering {
             }
         }
 
-        val cohesionConfigurationResponse = settings.cohesionWeight.coerceIn(0.0, 1.0)
+        val cohesionConfigurationResponse = settings.cohesionSpeedResponseScale.coerceIn(0.0, 1.0)
         val panicResponse = 1.0 - threatIntensity * PANIC_COHESION_SPEED_REDUCTION
         return closingResponse.coerceIn(-1.0, 1.0) *
             settings.maximumFishSpeed *
