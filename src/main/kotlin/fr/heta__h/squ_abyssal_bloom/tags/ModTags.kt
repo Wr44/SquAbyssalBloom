@@ -29,6 +29,11 @@ object ModTags {
             Registries.ITEM,
             Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "red_slobberer_food")
         )
+
+        val NAUTILUS_EQUIPMENT: TagKey<Item> = TagKey.create(
+            Registries.ITEM,
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "nautilus_equipment")
+        )
     }
 
     object Biomes {

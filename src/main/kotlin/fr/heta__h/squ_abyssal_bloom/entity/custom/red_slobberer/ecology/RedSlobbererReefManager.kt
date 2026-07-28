@@ -67,6 +67,7 @@ class RedSlobbererReefManager private constructor(
         const val MAXIMUM_MATURITY_MULTIPLIER = 8L
         const val INACTIVE_MATURITY_LOSS_PER_REFRESH = 5L
         const val EMPTY_REEF_RETENTION_TICKS = 24000L
+        const val ABANDONED_REEF_HARD_LIMIT_TICKS = 20L * 60L * 60L * 24L * 30L
 
         const val ECOLOGY_INTERVAL_TICKS = 100L
         const val BASE_FISH_COUNT = 2
@@ -421,7 +422,13 @@ class RedSlobbererReefManager private constructor(
     }
 
     private fun refreshCollectiveReefs(gameTime: Long) {
-        observations.entries.removeIf { (_, observation) ->
+        val frozenReefIds = hashSetOf<UUID>()
+        observations.entries.removeIf { (memberId, observation) ->
+            val removalReason = observation.entity.removalReason
+            if (removalReason != null && !removalReason.shouldDestroy()) {
+                memberToReef[memberId]?.let { reefId -> frozenReefIds.add(reefId) }
+                return@removeIf true
+            }
             gameTime - observation.lastSeenGameTime > OBSERVATION_EXPIRY_TICKS ||
                 !observation.entity.isAlive ||
                 observation.entity.isRemoved
@@ -469,6 +476,13 @@ class RedSlobbererReefManager private constructor(
         while (iterator.hasNext()) {
             val reef = iterator.next()
             if (reef.members.size >= MINIMUM_GROUP_SIZE) continue
+
+            if (!level.hasChunkAt(reef.anchor) || reef.id in frozenReefIds) {
+                if (gameTime - reef.lastActiveGameTime > ABANDONED_REEF_HARD_LIMIT_TICKS) {
+                    iterator.remove()
+                }
+                continue
+            }
 
             if (gameTime - reef.lastActiveGameTime > ReefState.DECLINE_GRACE_TICKS) {
                 reef.maturityTicks = (reef.maturityTicks - INACTIVE_MATURITY_LOSS_PER_REFRESH)

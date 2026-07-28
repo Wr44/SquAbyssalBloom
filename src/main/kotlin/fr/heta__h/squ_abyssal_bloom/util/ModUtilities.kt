@@ -188,15 +188,7 @@ object ModUtilities {
 
     fun isNautilusExtraEquipment(stack: ItemStack): Boolean {
         if (stack.isEmpty) return false
-
-        val item = stack.item
-        return item in listOf(
-            NautilusLayerItems.LAMP,
-            NautilusLayerItems.SHIELD,
-            NautilusLayerItems.BUBBLE,
-            NautilusLayerItems.CHEST,
-            NautilusLayerItems.CONDUIT
-        )
+        return stack.typeHolder().`is`(ModTags.Items.NAUTILUS_EQUIPMENT)
     }
 
     fun getNautilusLampInfluence(level: Level, pos: BlockPos, maxRange: Double, maxInfluence: Double): Double {
