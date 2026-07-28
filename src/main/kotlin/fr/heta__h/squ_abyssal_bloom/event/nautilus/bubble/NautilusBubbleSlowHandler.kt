@@ -9,6 +9,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
+import net.neoforged.neoforge.event.server.ServerStoppedEvent
 import net.neoforged.neoforge.event.tick.EntityTickEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -26,6 +27,11 @@ object NautilusBubbleSlowHandler {
 
     fun onBubbleReleased(nautilusUUID: UUID) {
         nautilusWithHeldBubble.remove(nautilusUUID)
+    }
+
+    @SubscribeEvent
+    fun onServerStopped(_event: ServerStoppedEvent) {
+        nautilusWithHeldBubble.clear()
     }
 
     @SubscribeEvent
