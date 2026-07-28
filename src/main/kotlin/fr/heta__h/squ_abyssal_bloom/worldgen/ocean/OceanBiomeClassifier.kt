@@ -16,9 +16,6 @@ import kotlin.math.abs
 
 object OceanBiomeClassifier {
 
-    private const val VANILLA_DEEP_CENTER = (-1.05f + -0.455f) / 2f
-    private const val VANILLA_OCEAN_CENTER = (-0.455f + -0.19f) / 2f
-
     fun isExcludedFromShallow(holder: Holder<Biome>): Boolean {
         return holder.`is`(BiomeTags.IS_DEEP_OCEAN)
                 || holder.`is`(ModTags.Biomes.IS_ABYSSAL)
@@ -73,8 +70,10 @@ object OceanBiomeClassifier {
 
         if (max <= AbyssalOceanBiomes.OCEAN_MIN_CONT || min >= AbyssalOceanBiomes.OCEAN_MAX_CONT) return null
 
+        val deepCenter = (deepAbyssal + shallowDeep) / 2f
+        val shallowCenter = (shallowDeep + AbyssalOceanBiomes.OCEAN_MAX_CONT) / 2f
         val center = (min + max) / 2f
-        return if (distance(center, VANILLA_DEEP_CENTER) <= distance(center, VANILLA_OCEAN_CENTER)) {
+        return if (distance(center, deepCenter) <= distance(center, shallowCenter)) {
             OceanZone.DEEP
         } else {
             OceanZone.SHALLOW

@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.ocean
 
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.ocean.OceanZone
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
@@ -7,6 +8,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.world.level.biome.Biome
 import net.minecraft.world.level.biome.Biomes
 import net.minecraft.world.level.biome.Climate
+import java.util.concurrent.atomic.AtomicBoolean
 
 object AbyssalOceanBiomes {
 
@@ -31,6 +33,7 @@ object AbyssalOceanBiomes {
 
     const val OCEAN_MAX_CONT: Float = -0.19f
     const val OCEAN_MIN_CONT: Float = -1.05f
+    private const val VANILLA_SHALLOW_DEEP_BOUNDARY: Float = -0.455f
 
     val ABYSSAL_OCEAN: ResourceKey<Biome> = ModBiomes.ABYSSAL_OCEAN
 
@@ -51,18 +54,33 @@ object AbyssalOceanBiomes {
     )
 
     val DEEP_OCEANS: Array<ResourceKey<Biome>> = arrayOf(
-        Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN
+        Biomes.DEEP_FROZEN_OCEAN, Biomes.DEEP_COLD_OCEAN, Biomes.DEEP_OCEAN, Biomes.DEEP_LUKEWARM_OCEAN, Biomes.WARM_OCEAN
     )
+
+    private val boundaryOrderWarningLogged = AtomicBoolean(false)
 
     fun shallowDeep(): Float = ModServerConfig.SHALLOW_DEEP_BOUNDARY.get().toFloat()
 
-    fun deepAbyssal(): Float = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get().toFloat()
+    fun deepAbyssal(): Float {
+        val raw = ModServerConfig.DEEP_ABYSSAL_BOUNDARY.get().toFloat()
+        val shallow = shallowDeep()
+        if (raw > shallow) {
+            if (boundaryOrderWarningLogged.compareAndSet(false, true)) {
+                SquAbyssalBloom.LOGGER.warn(
+                    "deepAbyssalBoundary ({}) is greater than shallowDeepBoundary ({}); clamping to shallowDeepBoundary to avoid inverted ocean zones. Fix your server config.",
+                    raw, shallow
+                )
+            }
+            return shallow
+        }
+        return raw
+    }
 
     fun vanillaDeepCont(): Climate.Parameter =
-        Climate.Parameter.span(OCEAN_MIN_CONT, shallowDeep())
+        Climate.Parameter.span(OCEAN_MIN_CONT, VANILLA_SHALLOW_DEEP_BOUNDARY)
 
     fun vanillaOceanCont(): Climate.Parameter =
-        Climate.Parameter.span(shallowDeep(), OCEAN_MAX_CONT)
+        Climate.Parameter.span(VANILLA_SHALLOW_DEEP_BOUNDARY, OCEAN_MAX_CONT)
 
     fun abyssalContinentalness(): Climate.Parameter =
         Climate.Parameter.span(OCEAN_MIN_CONT, deepAbyssal())
