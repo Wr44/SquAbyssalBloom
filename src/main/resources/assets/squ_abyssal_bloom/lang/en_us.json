@@ -193,6 +193,12 @@
   "config.squ_abyssal_bloom.redSlobbererReefResidenceRadius": "Reef Residence Radius",
   "config.squ_abyssal_bloom.redSlobbererReefResidenceRadius.desc": "Radius around the anchor (reef center) where Red Slobberers wander and naturally look for food",
 
+  "config.squ_abyssal_bloom.mackerel.desc": "Mackerel are fish that swim in schools in temperate and cold oceans",
+  "config.squ_abyssal_bloom.mackerelSpawnEnabled": "Enable Spawning",
+  "config.squ_abyssal_bloom.mackerelSpawnEnabled.desc": "Allows Mackerel to spawn naturally",
+  "config.squ_abyssal_bloom.mackerelMaxSpawnTemperature": "Max Spawn Temperature",
+  "config.squ_abyssal_bloom.mackerelMaxSpawnTemperature.desc": "Mackerel won't spawn in oceans whose climate temperature parameter is at or above this value \n\n(0.55 is the vanilla warm ocean threshold)",
+
   "config.squ_abyssal_bloom.group.fish_schools": "Fish Schools",
   "config.squ_abyssal_bloom.group.fish_schools.desc": "Controls a fish school's collective movement using a mathematical model",
   "config.squ_abyssal_bloom.group.fish_schools_general": "General",
@@ -369,6 +375,7 @@
   "entity.squ_abyssal_bloom.bubble_projectile": "Bubble",
   "entity.squ_abyssal_bloom.brine" : "Brine",
   "entity.squ_abyssal_bloom.red_slobberer": "Red Slobberer",
+  "entity.squ_abyssal_bloom.mackerel": "Mackerel",
 
 
   "death.attack.squ_abyssal_bloom.barnacle_swallow": "%1$s was swallowed by a %2$s",
@@ -382,6 +389,10 @@
   "item.squ_abyssal_bloom.ghost_chimaera_spawn_egg": "Ghost Chimera Spawn Egg",
   "item.squ_abyssal_bloom.red_slobberer_spawn_egg": "Red Slobberer Spawn Egg",
   "item.squ_abyssal_bloom.baby_red_slobberer_bucket": "Bucket of Baby Red Slobberer",
+  "item.squ_abyssal_bloom.mackerel_spawn_egg": "Mackerel Spawn Egg",
+  "item.squ_abyssal_bloom.mackerel_bucket": "Bucket of Mackerel",
+  "item.squ_abyssal_bloom.raw_mackerel": "Raw Mackerel",
+  "item.squ_abyssal_bloom.cooked_mackerel": "Cooked Mackerel",
   "item.squ_abyssal_bloom.brine_spawn_egg": "Brine Egg",
   "item.squ_abyssal_bloom.barnacle_tooth": "Barnacle Tooth",
   "item.squ_abyssal_bloom.calcareous_fragment": "Calcareous Fragment",
@@ -407,6 +418,9 @@
   "item.minecraft.tipped_arrow.effect.guardian_s_redistribution": "Arrow of Guardian's Redistribution",
 
 
+  "subtitles.squ_abyssal_bloom.mackerel_hurt": "Mackerel hurts",
+  "subtitles.squ_abyssal_bloom.mackerel_death": "Mackerel dies",
+  "subtitles.squ_abyssal_bloom.mackerel_flop": "Mackerel flops",
   "subtitles.squ_abyssal_bloom.barnacle_ambient": "Barnacle growls",
   "subtitles.squ_abyssal_bloom.barnacle_open_mouth": "Barnacle open mouth",
   "subtitles.squ_abyssal_bloom.barnacle_close_mouth": "Barnacle close mouth",

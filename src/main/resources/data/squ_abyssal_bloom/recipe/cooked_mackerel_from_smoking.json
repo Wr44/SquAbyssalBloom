@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smoking",
+  "category": "food",
+  "cookingtime": 100,
+  "experience": 0.35,
+  "ingredient": "squ_abyssal_bloom:raw_mackerel",
+  "result": {
+    "id": "squ_abyssal_bloom:cooked_mackerel"
+  }
+}

@@ -40,6 +40,23 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    // Mackerel
+    val MACKEREL_AMBIENT = SOUNDS.register("mackerel_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val MACKEREL_HURT = SOUNDS.register("mackerel_hurt") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val MACKEREL_DEATH = SOUNDS.register("mackerel_death") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val MACKEREL_FLOP = SOUNDS.register("mackerel_flop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
     // Brine
     val BRINE_AMBIENT = SOUNDS.register("brine_ambient") { id ->
         SoundEvent.createVariableRangeEvent(id)

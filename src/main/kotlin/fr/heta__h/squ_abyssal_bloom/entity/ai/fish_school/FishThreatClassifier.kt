@@ -27,8 +27,7 @@ object FishThreatClassifier {
     fun isPotentialThreat(entity: LivingEntity): Boolean {
         if (!entity.isAlive) return false
         if (entity is AbstractFish) return false
-        if (entity.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_FRIENDLY)) return false
-        if (isConfigFriendly(entity)) return false
+        if (isFriendly(entity)) return false
 
         if (entity is Player) {
             return !entity.isCreative && !entity.isSpectator
@@ -38,6 +37,10 @@ object FishThreatClassifier {
         if (entity is Animal || entity is WaterAnimal) return false
 
         return true
+    }
+
+    fun isFriendly(entity: LivingEntity): Boolean {
+        return entity.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_FRIENDLY) || isConfigFriendly(entity)
     }
 
     private fun isConfigFriendly(entity: LivingEntity): Boolean {

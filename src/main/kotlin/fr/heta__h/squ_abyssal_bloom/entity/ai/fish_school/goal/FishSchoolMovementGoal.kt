@@ -200,6 +200,6 @@ class FishSchoolMovementGoal(
         const val VERTICAL_VELOCITY_INTERPOLATION = 0.12
         const val MAXIMUM_ACCELERATION_PER_TICK = 0.018
         const val MAXIMUM_VERTICAL_ACCELERATION = 0.006
-        const val MAXIMUM_VERTICAL_SPEED = 0.028
+        const val MAXIMUM_VERTICAL_SPEED = 0.065
     }
 }

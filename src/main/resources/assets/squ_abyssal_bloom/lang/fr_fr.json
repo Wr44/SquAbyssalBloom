@@ -195,6 +195,12 @@
   "config.squ_abyssal_bloom.redSlobbererReefResidenceRadius": "Rayon de résidence du récif",
   "config.squ_abyssal_bloom.redSlobbererReefResidenceRadius.desc": "Rayon autour de l'ancre (centre du recif) dans lequel les baveurs rouges se promènent et cherchent naturellement de la nourriture",
 
+  "config.squ_abyssal_bloom.mackerel.desc": "Les Maquereaux sont des poissons qui se déplacent en bancs dans l'océan tempéré et froid",
+  "config.squ_abyssal_bloom.mackerelSpawnEnabled": "Activer le spawn",
+  "config.squ_abyssal_bloom.mackerelSpawnEnabled.desc": "Autorise les Maquereaux à apparaître naturellement",
+  "config.squ_abyssal_bloom.mackerelMaxSpawnTemperature": "Température maximale de spawn",
+  "config.squ_abyssal_bloom.mackerelMaxSpawnTemperature.desc": "Les Maquereaux n'apparaissent pas dans les océans dont le paramètre climatique de température est supérieur ou égal à cette valeur \n\n(0.55 est le seuil vanilla des océans chauds)",
+
   "config.squ_abyssal_bloom.group.fish_schools": "Bancs de poissons",
   "config.squ_abyssal_bloom.group.fish_schools.desc": "Contrôle le déplacement collectif d'un banc de poisson via un modèle mathématique",
   "config.squ_abyssal_bloom.group.fish_schools_general": "Général",
@@ -371,6 +377,7 @@
   "entity.squ_abyssal_bloom.bubble_projectile": "Bulle",
   "entity.squ_abyssal_bloom.brine" : "Brine",
   "entity.squ_abyssal_bloom.red_slobberer": "Baveur Rouge",
+  "entity.squ_abyssal_bloom.mackerel": "Maquereau",
 
   "death.attack.squ_abyssal_bloom.barnacle_swallow": "%1$s a été avalé par un %2$s",
   "death.attack.squ_abyssal_bloom.barnacle_swallow.player": "%1$s a été avalé par un %2$s lors d'un combat contre %3$s",
@@ -383,6 +390,10 @@
   "item.squ_abyssal_bloom.ghost_chimaera_spawn_egg": "Oeuf d'apparition de Chimère fantôme",
   "item.squ_abyssal_bloom.red_slobberer_spawn_egg": "Oeuf d'apparition de Baveur Rouge",
   "item.squ_abyssal_bloom.baby_red_slobberer_bucket": "Bébé Baveur Rouge dans un seau",
+  "item.squ_abyssal_bloom.mackerel_spawn_egg": "Oeuf d'apparition de Maquereau",
+  "item.squ_abyssal_bloom.mackerel_bucket": "Maquereau dans un seau",
+  "item.squ_abyssal_bloom.raw_mackerel": "Maquereau cru",
+  "item.squ_abyssal_bloom.cooked_mackerel": "Maquereau cuit",
   "item.squ_abyssal_bloom.brine_spawn_egg": "Oeuf d'apparition de Brine",
   "item.squ_abyssal_bloom.barnacle_tooth": "Dent de Barnacle",
   "item.squ_abyssal_bloom.calcareous_fragment": "Fragment calcaire",
@@ -407,6 +418,9 @@
   "item.minecraft.lingering_potion.effect.guardian_s_redistribution": "Potion de Redistribution du Gardien persistante",
   "item.minecraft.tipped_arrow.effect.guardian_s_redistribution": "Flèche de Redistribution du Gardien",
 
+  "subtitles.squ_abyssal_bloom.mackerel_hurt": "Maquereau souffre",
+  "subtitles.squ_abyssal_bloom.mackerel_death": "Maquereau meurt",
+  "subtitles.squ_abyssal_bloom.mackerel_flop": "Maquereau sautille",
   "subtitles.squ_abyssal_bloom.barnacle_ambient": "Barnacle grogne",
   "subtitles.squ_abyssal_bloom.barnacle_open_mouth": "Barnacle ouvre la bouche",
   "subtitles.squ_abyssal_bloom.barnacle_close_mouth": "Barnacle ferme la bouche",

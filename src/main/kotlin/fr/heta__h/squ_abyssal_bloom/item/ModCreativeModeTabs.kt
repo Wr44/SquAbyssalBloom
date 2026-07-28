@@ -23,6 +23,9 @@ object ModCreativeModeTabs {
             .icon { ItemStack(ModItems.BARNACLE_SPAWN_EGG.get()) }
             .title(Component.translatable("creativetab.squ_abyssal_bloom.spawn_eggs"))
             .displayItems { itemDisplayParameters, output ->
+                output.accept(ModItems.RAW_MACKEREL.get())
+                output.accept(ModItems.COOKED_MACKEREL.get())
+
                 output.accept(ModItems.BARNACLE_TOOTH.get())
                 output.accept(ModItems.GUARDIAN_EYE.get())
                 output.accept(ModItems.PRISMARINE_BULB.get())
@@ -61,10 +64,12 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.CHISELED_MARINE_BRICKS.get())
 
                 output.accept(ModItems.BABY_RED_SLOBBERER_BUCKET.get())
+                output.accept(ModItems.MACKEREL_BUCKET.get())
 
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
                 output.accept(ModItems.BRINE_SPAWN_EGG.get())
                 output.accept(ModItems.RED_SLOBBERER_SPAWN_EGG.get())
+                output.accept(ModItems.MACKEREL_SPAWN_EGG.get())
             }
             .build()
     }

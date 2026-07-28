@@ -9,6 +9,7 @@ import fr.heta__h.squ_abyssal_bloom.item.respiration_bubble.RespirationBubbleIte
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
 import net.minecraft.core.component.DataComponents
 import net.minecraft.sounds.SoundEvents
+import net.minecraft.world.food.FoodProperties
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.MobBucketItem
 import net.minecraft.world.item.Rarity
@@ -47,6 +48,31 @@ object ModItems {
                 .component(DataComponents.BUCKET_ENTITY_DATA, CustomData.EMPTY)
         )
     }
+
+    val MACKEREL_SPAWN_EGG: DeferredItem<Item> = ITEMS.registerItem(
+        "mackerel_spawn_egg"
+    ) { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.MACKEREL.get())) }
+
+    val MACKEREL_BUCKET: DeferredItem<Item> = ITEMS.registerItem(
+        "mackerel_bucket"
+    ) { properties ->
+        MobBucketItem(
+            ModEntities.MACKEREL.get(),
+            Fluids.WATER,
+            SoundEvents.BUCKET_EMPTY_FISH,
+            properties
+                .stacksTo(1)
+                .component(DataComponents.BUCKET_ENTITY_DATA, CustomData.EMPTY)
+        )
+    }
+
+    val RAW_MACKEREL: DeferredItem<Item> = ITEMS.registerItem(
+        "raw_mackerel"
+    ) { properties -> Item(properties.food(FoodProperties.Builder().nutrition(2).saturationModifier(0.1f).build())) }
+
+    val COOKED_MACKEREL: DeferredItem<Item> = ITEMS.registerItem(
+        "cooked_mackerel"
+    ) { properties -> Item(properties.food(FoodProperties.Builder().nutrition(5).saturationModifier(0.6f).build())) }
 
     val BARNACLE_TOOTH: DeferredItem<Item> = ITEMS.registerItem(
         "barnacle_tooth"

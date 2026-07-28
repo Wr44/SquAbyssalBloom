@@ -13,6 +13,7 @@ import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BrineSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.FishSchoolSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.MackerelSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.RedSlobbererSubMenu
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.persistServerConfigChanges
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
@@ -449,6 +450,15 @@ object ModConfig {
                             .build(),
                         screenTitle = Component.translatable("entity.squ_abyssal_bloom.red_slobberer"),
                         buildGroups = RedSlobbererSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.mackerel"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.mackerel.desc"))
+                            .customImage(MackerelSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.mackerel"),
+                        buildGroups = MackerelSubMenu::buildGroups
                     ))
                     .option(subScreenButton(
                         name = Component.translatable("config.squ_abyssal_bloom.group.fish_schools"),

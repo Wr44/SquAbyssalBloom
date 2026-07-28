@@ -83,6 +83,9 @@ object ModServerConfig {
     val RED_SLOBBERER_FISH_REFUGE_UNSAFE_COOLDOWN_TICKS = int("redSlobbererFishRefugeUnsafeCooldownTicks", 200, 0, 2400, "Time during which a damaged Red Slobberer cannot shelter fish.")
     val RED_SLOBBERER_REEF_RESIDENCE_RADIUS = double("redSlobbererReefResidenceRadius", 10.0, 4.0, 18.0, "Horizontal radius around its reef anchor in which a Red Slobberer naturally grazes and wanders.")
 
+    val MACKEREL_SPAWN_ENABLED = bool("mackerelSpawnEnabled", true, "Allows Mackerel to spawn naturally.")
+    val MACKEREL_MAX_SPAWN_TEMPERATURE = double("mackerelMaxSpawnTemperature", 0.55, -1.0, 1.0, "Mackerel cannot spawn where the ocean's climate temperature parameter is at or above this value (0.55 is the vanilla warm ocean threshold).")
+
     val FISH_SCHOOL_ENABLED = bool("fishSchoolEnabled", true, "Enables collective schooling movement. When disabled, all fish keep their full vanilla AI.")
     val FISH_SCHOOL_DEBUG = bool("fishSchoolDebug", false, "Displays collective-state particles and writes periodic fish-school summaries to the server log.")
     val FISH_SCHOOL_NEIGHBOR_COUNT = int("fishSchoolNeighborCount", 7, 1, 12, "Maximum number of nearest compatible fish influencing one fish.")

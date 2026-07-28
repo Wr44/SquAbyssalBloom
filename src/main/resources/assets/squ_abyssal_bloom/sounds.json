@@ -39,6 +39,24 @@
 
 
 
+  "mackerel_ambient": {
+    "sounds": []
+  },
+  "mackerel_hurt": {
+    "subtitle": "subtitles.squ_abyssal_bloom.mackerel_hurt",
+    "sounds": ["minecraft:entity/fish/hurt1", "minecraft:entity/fish/hurt2", "minecraft:entity/fish/hurt3", "minecraft:entity/fish/hurt4"]
+  },
+  "mackerel_death": {
+    "subtitle": "subtitles.squ_abyssal_bloom.mackerel_death",
+    "sounds": ["minecraft:entity/fish/hurt1", "minecraft:entity/fish/hurt2", "minecraft:entity/fish/hurt3", "minecraft:entity/fish/hurt4"]
+  },
+  "mackerel_flop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.mackerel_flop",
+    "sounds": ["minecraft:entity/fish/flop1", "minecraft:entity/fish/flop2", "minecraft:entity/fish/flop3", "minecraft:entity/fish/flop4"]
+  },
+
+
+
   "brine_ambient": {
     "subtitle": "subtitles.squ_abyssal_bloom.brine_ambient",
     "sounds": [ "squ_abyssal_bloom:entity/brine/brine_ambient_1", "squ_abyssal_bloom:entity/brine/brine_ambient_2", "squ_abyssal_bloom:entity/brine/brine_ambient_3", "squ_abyssal_bloom:entity/brine/brine_ambient_4" ]

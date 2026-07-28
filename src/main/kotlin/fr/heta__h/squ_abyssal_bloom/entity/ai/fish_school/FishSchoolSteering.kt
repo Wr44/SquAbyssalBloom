@@ -19,11 +19,16 @@ import kotlin.math.sqrt
 
 object FishSchoolSteering {
 
-    private val HORIZONTAL_PROBE_DISTANCES = doubleArrayOf(0.7, 1.25, 1.85)
-    private val ALTERNATIVE_PROBE_ANGLES = doubleArrayOf(
+    private val OBSTACLE_PROBE_DISTANCES = doubleArrayOf(0.7, 1.25, 1.85)
+    private val HORIZONTAL_ALTERNATIVE_PROBE_ANGLES = doubleArrayOf(
         PI / 7.2,
         PI / 4.0,
         PI / 2.4
+    )
+    private val VERTICAL_ALTERNATIVE_PROBE_ANGLES = doubleArrayOf(
+        PI / 9.0,
+        PI / 6.0,
+        PI / 4.0
     )
 
     private const val MINIMUM_DIRECTION_LENGTH_SQR = 1.0E-10
@@ -68,6 +73,7 @@ object FishSchoolSteering {
     private const val MAXIMUM_SOCIAL_VERTICAL_SPEED = 0.012
     private const val VERTICAL_MOMENTUM_RETENTION = 0.65
     private const val MAXIMUM_VERTICAL_SPEED = 0.028
+    private const val MAXIMUM_OBSTACLE_VERTICAL_SPEED = 0.065
     private const val LARGE_ENTITY_CLEARANCE = 0.8
     private const val LARGE_ENTITY_ANTICIPATION_DISTANCE = 1.5
     private const val MINIMUM_ENTITY_DISTANCE = 0.25
@@ -336,7 +342,7 @@ object FishSchoolSteering {
             probeDirection
         )
         val avoidanceUrgency = (
-            horizontalLength(obstacleAvoidance) + horizontalLength(entityAvoidance)
+            obstacleAvoidance.length() + horizontalLength(entityAvoidance)
             ).coerceIn(0.0, 1.0)
         val alignmentWeight = settings.alignmentWeight *
             (1.0 + threatIntensity * PANIC_ALIGNMENT_INCREASE) *
@@ -411,9 +417,17 @@ object FishSchoolSteering {
             environmentalVerticalVelocity +
             calculateAmbientVerticalDrift(fish, level.gameTime) * settings.verticalDriftSpeed +
             obstacleAvoidance.y * settings.obstacleAvoidanceWeight
+        val maximumVerticalSpeed = max(
+            MAXIMUM_VERTICAL_SPEED + additionalVerticalSpeed,
+            if (abs(obstacleAvoidance.y) > MINIMUM_DIRECTION_LENGTH_SQR) {
+                MAXIMUM_OBSTACLE_VERTICAL_SPEED
+            } else {
+                0.0
+            }
+        ).coerceAtMost(targetSpeed)
         desiredY = desiredY.coerceIn(
-            -MAXIMUM_VERTICAL_SPEED - additionalVerticalSpeed,
-            MAXIMUM_VERTICAL_SPEED + additionalVerticalSpeed
+            -maximumVerticalSpeed,
+            maximumVerticalSpeed
         )
 
         val horizontalSpeed = sqrt(max(0.0, targetSpeed * targetSpeed - desiredY * desiredY))
@@ -575,38 +589,42 @@ object FishSchoolSteering {
         if (forward.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR) return Vec3.ZERO
 
         val forwardClearance = probeClearance(level, fish, forward)
-        var horizontalAvoidance = Vec3.ZERO
+        var directionalAvoidance = Vec3.ZERO
         if (forwardClearance < 1.0) {
             var bestDirection = forward
             var bestScore = forwardClearance
             var foundAlternative = false
             val preferPositiveTurn = sin(state.movementPhase) >= 0.0
 
-            for (baseAngle in ALTERNATIVE_PROBE_ANGLES) {
-                val firstAngle = if (preferPositiveTurn) baseAngle else -baseAngle
-                val secondAngle = -firstAngle
-
-                val firstDirection = rotateHorizontal(forward, firstAngle)
-                val firstClearance = probeClearance(level, fish, firstDirection)
-                val firstScore = firstClearance - abs(firstAngle) * PROBE_TURN_PENALTY
-                if (firstScore > bestScore) {
-                    bestScore = firstScore
-                    bestDirection = firstDirection
-                    foundAlternative = true
-                }
-
-                val secondDirection = rotateHorizontal(forward, secondAngle)
-                val secondClearance = probeClearance(level, fish, secondDirection)
-                val secondScore = secondClearance - abs(secondAngle) * PROBE_TURN_PENALTY
-                if (secondScore > bestScore) {
-                    bestScore = secondScore
-                    bestDirection = secondDirection
+            fun considerAlternative(direction: Vec3, angle: Double) {
+                val clearance = probeClearance(level, fish, direction)
+                val score = clearance - abs(angle) * PROBE_TURN_PENALTY
+                if (score > bestScore) {
+                    bestScore = score
+                    bestDirection = direction
                     foundAlternative = true
                 }
             }
 
+            for (baseAngle in HORIZONTAL_ALTERNATIVE_PROBE_ANGLES) {
+                val firstAngle = if (preferPositiveTurn) baseAngle else -baseAngle
+                val secondAngle = -firstAngle
+
+                considerAlternative(rotateHorizontal(forward, firstAngle), firstAngle)
+                considerAlternative(rotateHorizontal(forward, secondAngle), secondAngle)
+            }
+
+            val preferUpward = cos(state.movementPhase) >= 0.0
+            for (baseAngle in VERTICAL_ALTERNATIVE_PROBE_ANGLES) {
+                val firstAngle = if (preferUpward) baseAngle else -baseAngle
+                val secondAngle = -firstAngle
+
+                considerAlternative(rotateVertical(forward, firstAngle), firstAngle)
+                considerAlternative(rotateVertical(forward, secondAngle), secondAngle)
+            }
+
             val urgency = (1.0 - forwardClearance).coerceIn(0.0, 1.0)
-            horizontalAvoidance = if (!foundAlternative) {
+            directionalAvoidance = if (!foundAlternative) {
                 Vec3(-forward.x * BLOCKED_REVERSE_WEIGHT, 0.0, -forward.z * BLOCKED_REVERSE_WEIGHT)
             } else {
                 bestDirection.subtract(forward).scale(urgency)
@@ -616,18 +634,18 @@ object FishSchoolSteering {
         val verticalProbeX = forward.x * VERTICAL_PROBE_FORWARD_DISTANCE
         val verticalProbeZ = forward.z * VERTICAL_PROBE_FORWARD_DISTANCE
         var verticalAvoidance = 0.0
-        if (!level.noBlockCollision(
-                fish,
-                fish.boundingBox.move(verticalProbeX, -DOWNWARD_COLLISION_PROBE, verticalProbeZ)
-            )
-        ) {
+        val downwardCollision = !level.noBlockCollision(
+            fish,
+            fish.boundingBox.move(verticalProbeX, -DOWNWARD_COLLISION_PROBE, verticalProbeZ)
+        )
+        val upwardCollision = !level.noBlockCollision(
+            fish,
+            fish.boundingBox.move(verticalProbeX, UPWARD_COLLISION_PROBE, verticalProbeZ)
+        )
+        if (downwardCollision && !upwardCollision) {
             verticalAvoidance += FLOOR_VERTICAL_CORRECTION
         }
-        if (!level.noBlockCollision(
-                fish,
-                fish.boundingBox.move(verticalProbeX, UPWARD_COLLISION_PROBE, verticalProbeZ)
-            )
-        ) {
+        if (upwardCollision && !downwardCollision) {
             verticalAvoidance -= CEILING_VERTICAL_CORRECTION
         }
 
@@ -636,22 +654,25 @@ object FishSchoolSteering {
             fish.boundingBox.minY - FLOOR_FLUID_PROBE_DISTANCE,
             fish.z + verticalProbeZ
         )
-        if (!level.getFluidState(floorProbe).`is`(FluidTags.WATER)) {
-            verticalAvoidance += FLOOR_VERTICAL_CORRECTION
-        }
+        val floorHasWater = level.getFluidState(floorProbe).`is`(FluidTags.WATER)
         val surfaceProbe = BlockPos.containing(
             fish.x + verticalProbeX,
             fish.boundingBox.maxY + SURFACE_FLUID_PROBE_DISTANCE,
             fish.z + verticalProbeZ
         )
-        if (!level.getFluidState(surfaceProbe).`is`(FluidTags.WATER)) {
+        val surfaceHasWater = level.getFluidState(surfaceProbe).`is`(FluidTags.WATER)
+        if (!floorHasWater && surfaceHasWater) {
+            verticalAvoidance += FLOOR_VERTICAL_CORRECTION
+        }
+        if (!surfaceHasWater && floorHasWater) {
             verticalAvoidance -= SURFACE_VERTICAL_CORRECTION
         }
 
         return Vec3(
-            horizontalAvoidance.x,
-            verticalAvoidance.coerceIn(-MAXIMUM_VERTICAL_AVOIDANCE, MAXIMUM_VERTICAL_AVOIDANCE),
-            horizontalAvoidance.z
+            directionalAvoidance.x,
+            (directionalAvoidance.y + verticalAvoidance)
+                .coerceIn(-MAXIMUM_VERTICAL_AVOIDANCE, MAXIMUM_VERTICAL_AVOIDANCE),
+            directionalAvoidance.z
         )
     }
 
@@ -661,27 +682,37 @@ object FishSchoolSteering {
         direction: Vec3
     ): Double {
         var clearProbeCount = 0
-        for (distance in HORIZONTAL_PROBE_DISTANCES) {
+        for (distance in OBSTACLE_PROBE_DISTANCES) {
             val offsetX = direction.x * distance
+            val offsetY = direction.y * distance
             val offsetZ = direction.z * distance
-            if (!level.noBlockCollision(fish, fish.boundingBox.move(offsetX, 0.0, offsetZ))) {
+            if (!level.noBlockCollision(fish, fish.boundingBox.move(offsetX, offsetY, offsetZ))) {
                 break
             }
 
             val waterProbe = BlockPos.containing(
                 fish.x + offsetX,
-                fish.eyeY,
+                fish.eyeY + offsetY,
                 fish.z + offsetZ
             )
             if (!level.getFluidState(waterProbe).`is`(FluidTags.WATER)) break
             clearProbeCount++
         }
-        return clearProbeCount.toDouble() / HORIZONTAL_PROBE_DISTANCES.size.toDouble()
+        return clearProbeCount.toDouble() / OBSTACLE_PROBE_DISTANCES.size.toDouble()
     }
 
     private fun rotateHorizontal(direction: Vec3, angle: Double): Vec3 {
         val currentAngle = atan2(direction.z, direction.x) + angle
         return Vec3(cos(currentAngle), 0.0, sin(currentAngle))
+    }
+
+    private fun rotateVertical(direction: Vec3, angle: Double): Vec3 {
+        val horizontalScale = cos(angle)
+        return Vec3(
+            direction.x * horizontalScale,
+            sin(angle),
+            direction.z * horizontalScale
+        )
     }
 
     private fun calculateAmbientWander(
