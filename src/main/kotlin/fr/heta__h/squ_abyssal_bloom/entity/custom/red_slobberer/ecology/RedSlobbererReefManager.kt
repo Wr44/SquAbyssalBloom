@@ -21,6 +21,7 @@ import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.SeaPickleBlock
 import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.level.block.state.properties.BlockStateProperties
 import net.minecraft.world.level.gamerules.GameRules
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
@@ -83,8 +84,6 @@ class RedSlobbererReefManager private constructor(
         const val MIN_FISH_HEIGHT = 2
         const val FISH_HEIGHT_VARIATION = 5
 
-        const val DECORATION_INTERVAL_TICKS = 1200L
-        const val MAX_DECORATIONS_PER_REEF = 8
         const val DECORATION_POSITION_ATTEMPTS = 8
         const val DECORATION_RADIUS = 8
         const val DECORATION_SEARCH_ABOVE = 4
@@ -268,7 +267,6 @@ class RedSlobbererReefManager private constructor(
         return nearest
     }
 
-    /** Returns the fixed environmental anchor of the member's currently active collective reef. */
     fun activeReefAnchor(member: RedSlobbererEntity): BlockPos? {
         if (member.level() !== level || !member.isAlive) return null
         val reefId = memberToReef[member.uuid] ?: return null
@@ -402,13 +400,19 @@ class RedSlobbererReefManager private constructor(
 
             if (gameTime >= reef.nextEcologyGameTime) {
                 reef.nextEcologyGameTime = gameTime + ECOLOGY_INTERVAL_TICKS
-                tickReefEcology(reef, gameTime)
+                tickReefEcology(reef)
                 savedData.setDirty()
             }
 
             if (gameTime >= reef.nextDepositGameTime) {
                 reef.nextDepositGameTime = gameTime + nextDepositDelay()
                 tickCalcareousDeposits(reef, gameTime)
+                savedData.setDirty()
+            }
+
+            if (gameTime >= reef.nextDecorationGameTime) {
+                reef.nextDecorationGameTime = gameTime + nextDecorationDelay()
+                tickReefDecorations(reef, gameTime)
                 savedData.setDirty()
             }
         }
@@ -576,8 +580,7 @@ class RedSlobbererReefManager private constructor(
             lastActiveGameTime = gameTime,
             nextEcologyGameTime = gameTime + stagger(id, ECOLOGY_INTERVAL_TICKS),
             nextDepositGameTime = gameTime + staggeredDepositDelay(id),
-            nextDecorationGameTime = gameTime + DECORATION_INTERVAL_TICKS +
-                stagger(id, DECORATION_INTERVAL_TICKS)
+            nextDecorationGameTime = gameTime + staggeredDecorationDelay(id)
         ).also { reef -> savedData.reefs[id] = reef }
     }
 
@@ -597,6 +600,12 @@ class RedSlobbererReefManager private constructor(
                 target.nextDepositGameTime = ModUtilities.minOfPositive(
                     target.nextDepositGameTime,
                     merged.nextDepositGameTime
+                )
+            }
+            if (merged.nextDecorationGameTime > 0L) {
+                target.nextDecorationGameTime = ModUtilities.minOfPositive(
+                    target.nextDecorationGameTime,
+                    merged.nextDecorationGameTime
                 )
             }
         }
@@ -650,24 +659,68 @@ class RedSlobbererReefManager private constructor(
         }
     }
 
-    private fun tickReefEcology(reef: ReefState, gameTime: Long) {
+    private fun tickReefEcology(reef: ReefState) {
         if (reef.members.size < MINIMUM_GROUP_SIZE) return
         val maturityRequirement = ModServerConfig.RED_SLOBBERER_REEF_MATURITY_TICKS.get()
         maintainFishPopulation(reef, maturityRequirement)
+    }
 
+    private fun tickReefDecorations(reef: ReefState, gameTime: Long) {
+        val maturityRequirement = ModServerConfig.RED_SLOBBERER_REEF_MATURITY_TICKS.get()
         if (
-            reef.stage(maturityRequirement, gameTime) == ReefStage.MATURE &&
-            gameTime >= reef.nextDecorationGameTime
+            reef.members.size < MINIMUM_GROUP_SIZE ||
+            reef.stage(maturityRequirement, gameTime) != ReefStage.MATURE
         ) {
-            reef.nextDecorationGameTime = gameTime + DECORATION_INTERVAL_TICKS
-            if (
-                reef.placedDecorations < MAX_DECORATIONS_PER_REEF &&
-                level.gameRules.get(GameRules.MOB_GRIEFING) &&
-                level.random.nextFloat() < reef.collectiveActivity * reef.stability &&
-                tryPlaceReefDecoration(reef)
-            ) {
-                reef.placedDecorations++
+            if (debugEnabled()) {
+                SquAbyssalBloom.LOGGER.info(
+                    "[Red Slobberer reef debug] event=decorationCheck reef={} result=blocked reasons={}",
+                    shortReefId(reef),
+                    decorationBlockers(reef, maturityRequirement, gameTime).joinToString("+")
+                )
             }
+            return
+        }
+
+        val maximumDecorations = ModServerConfig.RED_SLOBBERER_MAX_DECORATIONS.get()
+        if (reef.placedDecorations >= maximumDecorations || maximumDecorations <= 0) {
+            if (debugEnabled()) {
+                SquAbyssalBloom.LOGGER.info(
+                    "[Red Slobberer reef debug] event=decorationCheck reef={} result=capacityReached decorations={}/{}",
+                    shortReefId(reef),
+                    reef.placedDecorations,
+                    maximumDecorations
+                )
+            }
+            return
+        }
+        if (!level.gameRules.get(GameRules.MOB_GRIEFING)) {
+            if (debugEnabled()) {
+                SquAbyssalBloom.LOGGER.info(
+                    "[Red Slobberer reef debug] event=decorationCheck reef={} result=blocked reason=mob_griefing=false",
+                    shortReefId(reef)
+                )
+            }
+            return
+        }
+
+        val decorationChance = (
+            ModServerConfig.RED_SLOBBERER_DECORATION_CHANCE.get() *
+                reef.collectiveActivity * reef.stability
+            ).coerceIn(0.0, 1.0)
+        val decorationRoll = level.random.nextDouble()
+        if (decorationRoll >= decorationChance) {
+            if (debugEnabled()) {
+                SquAbyssalBloom.LOGGER.info(
+                    "[Red Slobberer reef debug] event=decorationCheck reef={} result=chanceFailed chance={} roll={}",
+                    shortReefId(reef),
+                    debugDecimal(decorationChance),
+                    debugDecimal(decorationRoll)
+                )
+            }
+            return
+        }
+        if (tryPlaceReefDecoration(reef)) {
+            reef.placedDecorations++
         }
     }
 
@@ -1084,9 +1137,9 @@ class RedSlobbererReefManager private constructor(
                         Blocks.SEA_PICKLE.defaultBlockState().setValue(
                             SeaPickleBlock.PICKLES,
                             1 + level.random.nextInt(MAX_NEW_PICKLES)
-                        )
+                        ).setValue(BlockStateProperties.WATERLOGGED, true)
                     } else {
-                        coral.defaultBlockState()
+                        coral.defaultBlockState().setValue(BlockStateProperties.WATERLOGGED, true)
                     }
                     val immutablePos = candidate.immutable()
                     if (!decoration.canSurvive(level, immutablePos)) {
@@ -1187,9 +1240,12 @@ class RedSlobbererReefManager private constructor(
             reef.nextDepositGameTime = gameTime + staggeredDepositDelay(reef.id)
             changed = true
         }
-        if (reef.nextDecorationGameTime <= 0L) {
-            reef.nextDecorationGameTime = gameTime + DECORATION_INTERVAL_TICKS +
-                stagger(reef.id, DECORATION_INTERVAL_TICKS)
+        val (_, maximumDecorationInterval) = configuredDecorationIntervals()
+        if (
+            reef.nextDecorationGameTime <= 0L ||
+            reef.nextDecorationGameTime - gameTime > maximumDecorationInterval
+        ) {
+            reef.nextDecorationGameTime = gameTime + staggeredDecorationDelay(reef.id)
             changed = true
         }
         if (changed) savedData.setDirty()
@@ -1211,6 +1267,27 @@ class RedSlobbererReefManager private constructor(
             .coerceAtLeast(20)
             .toLong()
         val maximum = ModServerConfig.RED_SLOBBERER_DEPOSIT_MAX_INTERVAL_TICKS.get()
+            .coerceAtLeast(minimum.toInt())
+            .toLong()
+        return minimum to maximum
+    }
+
+    private fun nextDecorationDelay(): Long {
+        val (minimum, maximum) = configuredDecorationIntervals()
+        val spread = (maximum - minimum + 1L).toInt()
+        return minimum + level.random.nextInt(spread).toLong()
+    }
+
+    private fun staggeredDecorationDelay(id: UUID): Long {
+        val (minimum, maximum) = configuredDecorationIntervals()
+        return minimum + stagger(id, maximum - minimum + 1L)
+    }
+
+    private fun configuredDecorationIntervals(): Pair<Long, Long> {
+        val minimum = ModServerConfig.RED_SLOBBERER_DECORATION_MIN_INTERVAL_TICKS.get()
+            .coerceAtLeast(20)
+            .toLong()
+        val maximum = ModServerConfig.RED_SLOBBERER_DECORATION_MAX_INTERVAL_TICKS.get()
             .coerceAtLeast(minimum.toInt())
             .toLong()
         return minimum to maximum
@@ -1238,6 +1315,18 @@ class RedSlobbererReefManager private constructor(
         if (ModServerConfig.RED_SLOBBERER_MAX_CALCAREOUS_DEPOSITS.get() <= 0) {
             blockers.add("max_deposits=0")
         }
+        return blockers
+    }
+
+    private fun decorationBlockers(
+        reef: ReefState,
+        maturityRequirement: Int,
+        gameTime: Long
+    ): List<String> {
+        val blockers = mutableListOf<String>()
+        val stage = reef.stage(maturityRequirement, gameTime)
+        if (reef.members.size < MINIMUM_GROUP_SIZE) blockers.add("group_size<2")
+        if (stage != ReefStage.MATURE) blockers.add("stage=${stage.name.lowercase()}")
         return blockers
     }
 
@@ -1276,8 +1365,9 @@ class RedSlobbererReefManager private constructor(
             reef.members.size >= MINIMUM_GROUP_SIZE
         }
         val (minimumDepositInterval, maximumDepositInterval) = configuredDepositIntervals()
+        val (minimumDecorationInterval, maximumDecorationInterval) = configuredDecorationIntervals()
         SquAbyssalBloom.LOGGER.info(
-            "[Red Slobberer reef debug] level={} observedRed={} underwaterRed={} storedReefs={} activeReefs={} maturityRequired={} minimumStability={} depositInterval={}..{} mobGriefing={} spawnMobs={} fishSchoolDebug={}",
+            "[Red Slobberer reef debug] level={} observedRed={} underwaterRed={} storedReefs={} activeReefs={} maturityRequired={} minimumStability={} depositInterval={}..{} decorationInterval={}..{} mobGriefing={} spawnMobs={} fishSchoolDebug={}",
             level.dimension(),
             observations.size,
             activeRedSlobberers,
@@ -1287,6 +1377,8 @@ class RedSlobbererReefManager private constructor(
             debugDecimal(configuredMinimumStability()),
             minimumDepositInterval,
             maximumDepositInterval,
+            minimumDecorationInterval,
+            maximumDecorationInterval,
             level.gameRules.get(GameRules.MOB_GRIEFING),
             level.gameRules.get(GameRules.SPAWN_MOBS),
             ModServerConfig.FISH_SCHOOL_DEBUG.get()
@@ -1302,7 +1394,7 @@ class RedSlobbererReefManager private constructor(
             .forEach { reef ->
                 val blockers = depositBlockers(reef, maturityRequirement, gameTime)
                 SquAbyssalBloom.LOGGER.info(
-                    "[Red Slobberer reef debug] reef={} stage={} anchor={} center={} members={} maturity={}/{} activity={} stability={} deposits={} decorations={} nextDepositIn={} blockers={}",
+                    "[Red Slobberer reef debug] reef={} stage={} anchor={} center={} members={} maturity={}/{} activity={} stability={} deposits={} decorations={} nextDepositIn={} nextDecorationIn={} blockers={}",
                     shortReefId(reef),
                     reef.stage(maturityRequirement, gameTime).name.lowercase(),
                     debugPos(reef.anchor),
@@ -1315,6 +1407,7 @@ class RedSlobbererReefManager private constructor(
                     reef.depositPositions.size,
                     reef.placedDecorations,
                     (reef.nextDepositGameTime - gameTime).coerceAtLeast(0L),
+                    (reef.nextDecorationGameTime - gameTime).coerceAtLeast(0L),
                     if (blockers.isEmpty()) "none" else blockers.joinToString("+")
                 )
             }
