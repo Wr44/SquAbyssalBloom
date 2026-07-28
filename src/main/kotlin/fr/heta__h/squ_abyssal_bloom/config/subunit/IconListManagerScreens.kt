@@ -46,7 +46,7 @@ object IconListManagerScreens {
                                 .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.entityListManager.include.desc")))
                                 .binding(
                                     Binding.generic(
-                                        ServerConfigCache.current(listOption).contains(idString),
+                                        listOption.default.contains(idString),
                                         { ServerConfigCache.current(listOption).contains(idString) },
                                         { included ->
                                             val current = ServerConfigCache.current(listOption).toMutableList()

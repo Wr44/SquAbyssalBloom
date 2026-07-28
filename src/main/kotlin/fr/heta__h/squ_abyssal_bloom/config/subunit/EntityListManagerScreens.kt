@@ -40,7 +40,7 @@ object EntityListManagerScreens {
                 if (!additionalFilter(idString)) return@forEach
 
                 if (!DefaultAttributes.hasSupplier(entityType)) return@forEach
-                if (excludeTag != null && BuiltInRegistries.ENTITY_TYPE.wrapAsHolder(entityType).`is`(excludeTag)) return@forEach
+                if (excludeTag != null && entityType.builtInRegistryHolder().`is`(excludeTag)) return@forEach
 
                 @Suppress("UNCHECKED_CAST")
                 val livingType = entityType as EntityType<out LivingEntity>
@@ -59,7 +59,7 @@ object EntityListManagerScreens {
                                 .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.entityListManager.include.desc")))
                                 .binding(
                                     Binding.generic(
-                                        ServerConfigCache.current(listOption).contains(idString),
+                                        listOption.default.contains(idString),
                                         { ServerConfigCache.current(listOption).contains(idString) },
                                         { included ->
                                             val current = ServerConfigCache.current(listOption).toMutableList()
