@@ -124,7 +124,14 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
         if (anyModified) {
             floorGrid = grid
-            AbyssalChunkDataCache.store(chunkMinBlockX shr 4, chunkMinBlockZ shr 4, abyssalMask, carverMask, grid)
+            AbyssalChunkDataCache.store(
+                randomState,
+                chunkMinBlockX shr 4,
+                chunkMinBlockZ shr 4,
+                abyssalMask,
+                carverMask,
+                grid
+            )
         }
     }
 

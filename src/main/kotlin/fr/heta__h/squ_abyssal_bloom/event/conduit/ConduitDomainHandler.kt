@@ -147,6 +147,9 @@ object ConduitDomainHandler {
     fun onLevelUnload(event: LevelEvent.Unload) {
         val level = event.level as? Level ?: return
         conduitRegistry.remove(level)
+        if (level is ServerLevel) {
+            AstralPrismarineTracker.releaseLevel(level)
+        }
     }
 
     @SubscribeEvent
@@ -490,7 +493,7 @@ object ConduitDomainHandler {
                 state.getValue(AstralPrismarineBlock.ACTIVE)) {
                 level.setBlock(checkPos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
                 level.sendBlockUpdated(checkPos, state, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
-                AstralPrismarineTracker.markInactive(checkPos)
+                AstralPrismarineTracker.markInactive(level, checkPos)
             }
         }
     }

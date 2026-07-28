@@ -237,7 +237,10 @@ object ModUtilities {
     }
 
     fun sweepStaleUuidTicks(map: MutableMap<UUID, Long>, now: Long, maxAge: Long) {
-        map.entries.removeIf { (_, tick) -> now - tick > maxAge }
+        map.entries.removeIf { (_, tick) ->
+            val age = now - tick
+            age < 0L || age > maxAge
+        }
     }
 
     fun mixedUuidBits(uuid: UUID): Long {

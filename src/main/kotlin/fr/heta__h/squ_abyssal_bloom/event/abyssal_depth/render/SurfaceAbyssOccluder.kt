@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.util.cache.SurfaceHeightCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap
 import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.core.BlockPos
 import net.minecraft.resources.Identifier
@@ -18,6 +19,7 @@ import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
+import net.neoforged.neoforge.event.level.LevelEvent
 import org.joml.Matrix4f
 import com.mojang.blaze3d.vertex.VertexConsumer
 import net.minecraft.tags.FluidTags
@@ -64,6 +66,24 @@ object SurfaceAbyssOccluder {
     private var lastCeilingCheckTick = -1L
     private var cachedUnderCeiling = false
     private const val CEILING_CHECK_INTERVAL = 5L
+
+    private fun reset() {
+        cachedBands = emptyList()
+        cachedRenderDist = -1
+        cachedBandWidth = -1
+        chunkFadeProgress.clear()
+        activeKeysThisFrame.clear()
+        lastFrameNanos = 0L
+        lastCeilingCheckTick = -1L
+        cachedUnderCeiling = false
+        SurfaceHeightCache.clear()
+    }
+
+    @SubscribeEvent
+    fun onLevelUnload(event: LevelEvent.Unload) {
+        if (event.level !is ClientLevel) return
+        reset()
+    }
 
     private fun buildBands(maxRadius: Int, bandWidth: Int): List<LodBand> {
         val bands = mutableListOf<LodBand>()
@@ -153,7 +173,7 @@ object SurfaceAbyssOccluder {
         val camera = mc.gameRenderer.mainCamera
         val camPos = camera.position()
 
-        if (gameTick - lastCeilingCheckTick >= CEILING_CHECK_INTERVAL) {
+        if (gameTick < lastCeilingCheckTick || gameTick - lastCeilingCheckTick >= CEILING_CHECK_INTERVAL) {
             val minSurface = findMinWaterSurface(level, camPos)
             cachedUnderCeiling = camPos.y > minSurface
             lastCeilingCheckTick = gameTick

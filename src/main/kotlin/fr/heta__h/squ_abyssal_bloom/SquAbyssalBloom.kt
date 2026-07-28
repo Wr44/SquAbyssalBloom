@@ -19,6 +19,7 @@ import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.feature.ModFeatures
+import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssalChunkDataCache
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanTerritory
 import net.minecraft.server.level.ServerLevel
@@ -34,6 +35,7 @@ import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
 import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent
+import net.neoforged.neoforge.event.server.ServerStoppedEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import thedarkcolour.kotlinforforge.neoforge.forge.LOADING_CONTEXT
@@ -120,7 +122,13 @@ object SquAbyssalBloom {
 
     @SubscribeEvent
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
+        AbyssalChunkDataCache.clear()
         OceanTerritory.seed(event.server.worldGenSettings.options().seed(), ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS.get())
+    }
+
+    @SubscribeEvent
+    fun onServerStopped(_event: ServerStoppedEvent) {
+        AbyssalChunkDataCache.clear()
     }
 
     @SubscribeEvent

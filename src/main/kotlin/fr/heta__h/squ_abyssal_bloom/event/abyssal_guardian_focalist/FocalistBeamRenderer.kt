@@ -23,6 +23,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.ModList
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
+import net.neoforged.neoforge.event.level.LevelEvent
 import kotlin.math.acos
 import kotlin.math.atan2
 
@@ -36,6 +37,18 @@ object FocalistBeamRenderer {
 
     private val hasDynLights: Boolean by lazy {
         ModList.get().mods.any { it.modId.contains("lambdynlights", ignoreCase = true) }
+    }
+
+    private fun reset() {
+        if (hasDynLights) GuardianBeamDynamicLightCompat.clearBeamLights()
+        playersShootingLastFrame.clear()
+        lastBubbleTickByPlayer.clear()
+        ClientBeamData.clear()
+    }
+
+    @SubscribeEvent
+    fun onLevelUnload(event: LevelEvent.Unload) {
+        if (event.level is ClientLevel) reset()
     }
 
     @SubscribeEvent
@@ -151,6 +164,8 @@ object FocalistBeamRenderer {
             playersShootingLastFrame.clear()
             playersShootingLastFrame.addAll(currentlyShooting)
         }
+
+        lastBubbleTickByPlayer.keys.retainAll(currentlyShooting)
     }
 
     private fun spawnBeamBubbles(

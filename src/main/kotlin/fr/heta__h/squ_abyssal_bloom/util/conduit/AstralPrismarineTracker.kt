@@ -11,20 +11,36 @@ import net.minecraft.world.level.chunk.LevelChunk
 import java.util.concurrent.ConcurrentHashMap
 
 object AstralPrismarineTracker {
-    private val activeBlocks = ConcurrentHashMap.newKeySet<BlockPos>()
+    private val activeBlocksByLevel = ConcurrentHashMap<ServerLevel, MutableSet<BlockPos>>()
+    private val orphanIteratorsByLevel = ConcurrentHashMap<ServerLevel, MutableIterator<BlockPos>>()
     private const val MAX_TRACKED_BLOCKS = 100000
 
-    fun markActive(pos: BlockPos) {
+    private fun activeBlocks(level: ServerLevel): MutableSet<BlockPos> =
+        activeBlocksByLevel.computeIfAbsent(level) { ConcurrentHashMap.newKeySet() }
+
+    fun markActive(level: ServerLevel, pos: BlockPos) {
+        val activeBlocks = activeBlocks(level)
         if (activeBlocks.size >= MAX_TRACKED_BLOCKS) return
         activeBlocks.add(pos.immutable())
     }
 
-    fun markInactive(pos: BlockPos) {
-        activeBlocks.remove(pos)
+    fun markInactive(level: ServerLevel, pos: BlockPos) {
+        activeBlocksByLevel[level]?.remove(pos)
+    }
+
+    fun releaseLevel(level: ServerLevel) {
+        orphanIteratorsByLevel.remove(level)
+        activeBlocksByLevel.remove(level)
     }
 
     fun checkOrphans(level: ServerLevel) {
-        val iterator = activeBlocks.iterator()
+        val activeBlocks = activeBlocksByLevel[level] ?: return
+        var iterator = orphanIteratorsByLevel[level]
+        if (iterator == null || !iterator.hasNext()) {
+            iterator = activeBlocks.iterator()
+            orphanIteratorsByLevel[level] = iterator
+        }
+
         var checked = 0
         val maxChecksPerTick = 50
 
@@ -44,12 +60,19 @@ object AstralPrismarineTracker {
                 iterator.remove()
             }
         }
+
+        if (!iterator.hasNext()) {
+            orphanIteratorsByLevel.remove(level, iterator)
+        }
+
+        if (activeBlocks.isEmpty()) {
+            orphanIteratorsByLevel.remove(level)
+            activeBlocksByLevel.remove(level, activeBlocks)
+        }
     }
 
     fun onChunkLoad(chunk: LevelChunk) {
-        if (chunk.level.isClientSide) return
-
-        val level = chunk.level
+        val level = chunk.level as? ServerLevel ?: return
         val sections = chunk.sections
 
         for (i in sections.indices) {
@@ -76,7 +99,7 @@ object AstralPrismarineTracker {
                             )
 
                             if (hasActiveConduitNearby(level, worldPos)) {
-                                markActive(worldPos)
+                                markActive(level, worldPos)
                             } else {
                                 level.setBlock(
                                     worldPos,

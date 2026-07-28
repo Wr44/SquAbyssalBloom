@@ -5,9 +5,9 @@ import fr.heta__h.squ_abyssal_bloom.config.server.types.StringListOption
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
 import net.minecraft.tags.TagKey
 import net.minecraft.world.item.Item
-import net.minecraft.world.item.ItemStack
 
 object ItemListManagerScreens {
 
@@ -18,18 +18,23 @@ object ItemListManagerScreens {
         excludeTag: TagKey<Item>? = null,
         additionalFilter: (String) -> Boolean = { true }
     ) {
-        val entries = mutableListOf<Pair<String, ItemStack>>()
+        val entries = mutableListOf<IconListManagerScreens.IconEntry>()
 
         BuiltInRegistries.ITEM.forEach { item ->
             try {
-                val idString = BuiltInRegistries.ITEM.getKey(item).toString()
+                val itemId = BuiltInRegistries.ITEM.getKey(item)
+                val idString = itemId.toString()
                 if (!additionalFilter(idString)) return@forEach
                 if (excludeTag != null && BuiltInRegistries.ITEM.wrapAsHolder(item).`is`(excludeTag)) return@forEach
 
-                val icon = ItemStack(item)
-                if (icon.isEmpty) return@forEach
-
-                entries.add(idString to icon)
+                val textureId = Identifier.fromNamespaceAndPath(itemId.namespace, "item/${itemId.path}")
+                entries.add(
+                    IconListManagerScreens.IconEntry(
+                        idString,
+                        textureId,
+                        Component.translatable(item.descriptionId)
+                    )
+                )
             } catch (e: Exception) {
                 SquAbyssalBloom.LOGGER.warn("Skipping item {} in item list manager screen", item, e)
             }

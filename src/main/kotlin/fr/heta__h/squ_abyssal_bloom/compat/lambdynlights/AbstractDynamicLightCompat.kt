@@ -79,4 +79,10 @@ abstract class AbstractDynamicLightCompat {
             removeDynamicLight(light)
         }
     }
+
+    protected fun clearLineLights(map: MutableMap<Int, LineLightBehavior>) {
+        val lights = map.values.toList()
+        map.clear()
+        lights.forEach(::removeDynamicLight)
+    }
 }

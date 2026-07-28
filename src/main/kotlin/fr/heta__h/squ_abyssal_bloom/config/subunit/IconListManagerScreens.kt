@@ -15,28 +15,29 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.persistServerConfigChanges
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
-import net.minecraft.world.item.ItemStack
-
+import net.minecraft.resources.Identifier
 
 object IconListManagerScreens {
+
+    data class IconEntry(val id: String, val textureId: Identifier, val name: Component)
 
     fun open(
         parent: Screen,
         listOption: StringListOption,
         title: Component,
-        entries: List<Pair<String, ItemStack>>
+        entries: List<IconEntry>
     ) {
         val initialServerConfig = ServerConfigCache.toData()
         val categoryBuilder = ConfigCategory.createBuilder().name(title)
 
-        for ((idString, icon) in entries) {
+        for ((idString, textureId, name) in entries) {
             try {
                 categoryBuilder.group(
                     OptionGroup.createBuilder()
-                        .name(icon.hoverName)
+                        .name(name)
                         .description(
                             OptionDescription.createBuilder()
-                                .customImage(ItemIconRenderer(icon))
+                                .customImage(ItemIconRenderer(textureId))
                                 .build()
                         )
                         .option(

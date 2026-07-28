@@ -12,6 +12,10 @@ object ServerConfigCache {
         values = HashMap(data.values)
     }
 
+    fun clear() {
+        values = emptyMap()
+    }
+
     fun syncFromSpec() {
         update(ServerConfigData.fromSpec())
     }

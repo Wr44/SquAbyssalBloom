@@ -1,12 +1,20 @@
 package fr.heta__h.squ_abyssal_bloom.util.cache
 
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.level.Level
+import net.neoforged.api.distmarker.Dist
+import net.neoforged.bus.api.SubscribeEvent
+import net.neoforged.fml.common.EventBusSubscriber
+import net.neoforged.neoforge.event.level.LevelEvent
 
+@EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object AbyssDepthCache {
+    private var cachedLevel: Level? = null
     private var lastFrameTime: Long = 0L
     private var cachedRawDepthFactor: Double = 0.0
     private var smoothedDepthFactor: Double = 0.0
@@ -24,7 +32,29 @@ object AbyssDepthCache {
 
     val rawPhysicalDepth: Double get() = cachedPhysicalDepth
 
+    fun clear() {
+        cachedLevel = null
+        lastFrameTime = 0L
+        cachedRawDepthFactor = 0.0
+        smoothedDepthFactor = 0.0
+        cachedPhysicalDepth = 0.0
+        smoothedPhysicalDepth = 0.0
+        cachedLampInfluence = 0.0
+        smoothedLampInfluence = 0.0
+        isInitialized = false
+    }
+
+    @SubscribeEvent
+    fun onLevelUnload(event: LevelEvent.Unload) {
+        if (event.level is ClientLevel) clear()
+    }
+
     fun refreshIfNeeded(level: Level, camPos: BlockPos) {
+        if (cachedLevel !== level) {
+            clear()
+            cachedLevel = level
+        }
+
         val now = System.nanoTime()
         val elapsedNanos = now - lastFrameTime
         if (elapsedNanos < 1_000_000L && lastFrameTime != 0L) return
@@ -54,7 +84,7 @@ object AbyssDepthCache {
         smoothedPhysicalDepth += (cachedPhysicalDepth - smoothedPhysicalDepth) * (2.0 * dt)
         smoothedLampInfluence += (cachedLampInfluence - smoothedLampInfluence) * (2.0 * dt)
 
-        val currentTick = mc.level?.gameTime ?: return
+        val currentTick = level.gameTime
         if (currentTick % 4L != 0L) return
 
         val physicalDepth = ModUtilities.getDepth(level, camPos)

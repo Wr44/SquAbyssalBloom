@@ -25,4 +25,13 @@ object GuardianBeamDynamicLightCompat : AbstractDynamicLightCompat() {
 
         removeLineLight(activeLightBeams, playerId)
     }
+
+    fun clearBeamLights() {
+        if (!isInitialized) {
+            activeLightBeams.clear()
+            return
+        }
+
+        clearLineLights(activeLightBeams)
+    }
 }

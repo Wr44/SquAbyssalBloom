@@ -35,7 +35,7 @@ abstract class AbyssalCarverFillMixin {
         val stone = Blocks.STONE.defaultBlockState()
         val mutable = BlockPos.MutableBlockPos()
 
-        val data = AbyssalChunkDataCache.consume(chunk.pos.x, chunk.pos.z)
+        val data = AbyssalChunkDataCache.consume(randomState, chunk.pos.x, chunk.pos.z)
         if (data != null) {
             for (localX in 0..15) {
                 for (localZ in 0..15) {
