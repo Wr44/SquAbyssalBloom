@@ -71,6 +71,8 @@ object OceanBiomeClassifier {
         if (fullyWithin(min, max, deepAbyssal, shallowDeep)) return OceanZone.DEEP
         if (fullyWithin(min, max, shallowDeep, AbyssalOceanBiomes.OCEAN_MAX_CONT)) return OceanZone.SHALLOW
 
+        if (max <= AbyssalOceanBiomes.OCEAN_MIN_CONT || min >= AbyssalOceanBiomes.OCEAN_MAX_CONT) return null
+
         val center = (min + max) / 2f
         return if (distance(center, VANILLA_DEEP_CENTER) <= distance(center, VANILLA_OCEAN_CENTER)) {
             OceanZone.DEEP

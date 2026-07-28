@@ -11,7 +11,7 @@ import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent
 object ClientServerConfigCacheHandler {
 
     @SubscribeEvent
-    fun onLoggingOut(_event: ClientPlayerNetworkEvent.LoggingOut) {
+    fun onLoggingOut(event: ClientPlayerNetworkEvent.LoggingOut) {
         ServerConfigCache.clear()
     }
 }

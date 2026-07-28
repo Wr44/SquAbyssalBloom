@@ -127,7 +127,7 @@ object SquAbyssalBloom {
     }
 
     @SubscribeEvent
-    fun onServerStopped(_event: ServerStoppedEvent) {
+    fun onServerStopped(event: ServerStoppedEvent) {
         AbyssalChunkDataCache.clear()
     }
 

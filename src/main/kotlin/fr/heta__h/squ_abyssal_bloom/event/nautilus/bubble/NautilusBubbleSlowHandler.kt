@@ -30,7 +30,7 @@ object NautilusBubbleSlowHandler {
     }
 
     @SubscribeEvent
-    fun onServerStopped(_event: ServerStoppedEvent) {
+    fun onServerStopped(event: ServerStoppedEvent) {
         nautilusWithHeldBubble.clear()
     }
 
