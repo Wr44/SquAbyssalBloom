@@ -12,6 +12,7 @@ import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
+import fr.heta__h.squ_abyssal_bloom.util.cache.AbstractFishTypeCache
 import net.minecraft.network.chat.Component
 
 object FishSchoolSubMenu {
@@ -34,7 +35,8 @@ object FishSchoolSubMenu {
                         screen,
                         ModServerConfig.FISH_SCHOOL_FRIENDLY_ENTITIES,
                         Component.translatable("config.squ_abyssal_bloom.fishSchoolFriendlyEntitiesManager"),
-                        excludeTag = ModTags.EntityTypes.FISH_SCHOOL_FRIENDLY
+                        excludeTag = ModTags.EntityTypes.FISH_SCHOOL_FRIENDLY,
+                        additionalFilter = { entityType -> !AbstractFishTypeCache.isAbstractFish(entityType) }
                     )
                 }
                 .build())
@@ -43,6 +45,8 @@ object FishSchoolSubMenu {
             .option(serverDouble(ModServerConfig.FISH_SCHOOL_AGGREGATION_RADIUS, step = 0.5))
             .option(serverDouble(ModServerConfig.FISH_SCHOOL_CROSS_SPECIES_AFFINITY, step = 0.01))
             .option(serverInt(ModServerConfig.FISH_SCHOOL_NEIGHBOR_REFRESH_INTERVAL))
+            .option(serverInt(ModServerConfig.FISH_SCHOOL_THREAT_REFRESH_INTERVAL))
+            .option(serverInt(ModServerConfig.FISH_SCHOOL_LONG_RANGE_REFRESH_INTERVAL))
             .option(serverDouble(ModServerConfig.FISH_SCHOOL_NEIGHBOR_FOV_HALF_ANGLE, step = 5.0))
             .build())
 

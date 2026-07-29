@@ -11,6 +11,7 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.MobRenderer
 import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.resources.Identifier
+import net.minecraft.world.entity.Pose
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.atan2
@@ -46,10 +47,11 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
     ) {
         this.model = if (renderState.isBaby) babyModel else adultModel
         this.shadowRadius = if (renderState.isBaby) 0.25f else 1f
-        poseStack.pushPose()
-        if (!renderState.isBaby) poseStack.scale(2f, 2f, 2f)
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
-        poseStack.popPose()
+    }
+
+    override fun scale(state: RedSlobbererRenderState, poseStack: PoseStack) {
+        if (!state.isBaby) poseStack.scale(2f, 2f, 2f)
     }
 
     override fun createRenderState(): RedSlobbererRenderState = RedSlobbererRenderState()
@@ -65,6 +67,15 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.setupRotations(state, poseStack, rotationYaw, partialTicks)
+
+        if (
+            state.deathTime > 0.0f ||
+            state.isUpsideDown ||
+            state.isAutoSpinAttack ||
+            state.hasPose(Pose.SLEEPING)
+        ) {
+            return
+        }
         poseStack.translate(0.0, -state.stepRenderOffset, 0.0)
         poseStack.mulPose(Axis.XP.rotationDegrees(state.terrainPitch))
         poseStack.mulPose(Axis.ZP.rotationDegrees(state.terrainRoll))
@@ -89,8 +100,6 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
         state.terrainPitch = (atan2(localNormalZ, terrainNormal.y) * 180.0 / PI).toFloat()
         state.terrainRoll = (-asin(localNormalX.coerceIn(-1.0, 1.0)) * 180.0 / PI).toFloat()
 
-        state.xRot = entity.getViewXRot(partialTicks)
-        state.yRot = entity.getViewYRot(partialTicks)
         state.defenseState = if (entity.isBaby) {
             RedSlobbererDefenseState.NORMAL
         } else {

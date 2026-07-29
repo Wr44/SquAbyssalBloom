@@ -7,6 +7,9 @@ import net.minecraft.world.phys.Vec3
 interface FishSchoolInfluence {
     val source: Entity
 
+    fun isActive(fish: AbstractFish): Boolean =
+        source.isAlive && !source.isRemoved
+
     fun computeInfluence(
         fish: AbstractFish,
         context: FishSchoolInfluenceContext

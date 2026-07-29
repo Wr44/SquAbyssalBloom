@@ -15,6 +15,8 @@ import kotlin.math.sqrt
 
 object FishCollectiveDebugger {
     private val movementTracks = HashMap<UUID, MovementTrack>()
+    private var rotationLogTick = Long.MIN_VALUE
+    private var rotationLogsThisTick = 0
 
     fun recordMovementSample(state: FishCollectiveState, gameTime: Long) {
         val track = movementTracks.getOrPut(state.fish.uuid) { MovementTrack() }
@@ -136,12 +138,13 @@ object FishCollectiveDebugger {
         if (directlyThreatened != previousDirect) {
             track.lastThreatEventTick = gameTime
             SquAbyssalBloom.LOGGER.info(
-                "[Fish school debug] event={} fishId={} type={} intensity={} escapeX={} escapeZ={}",
+                "[Fish school debug] event={} fishId={} type={} intensity={} escapeX={} escapeY={} escapeZ={}",
                 if (directlyThreatened) "directThreatStart" else "directThreatEnd",
                 fish.id,
                 typeName(state),
                 roundedDecimal(intensity, 100.0),
                 roundedDecimal(state.threatDirection.x, 100.0),
+                roundedDecimal(state.threatDirection.y, 100.0),
                 roundedDecimal(state.threatDirection.z, 100.0)
             )
             return
@@ -151,11 +154,12 @@ object FishCollectiveDebugger {
         if (intensity > MINIMUM_VISIBLE_THREAT && previousIntensity <= MINIMUM_VISIBLE_THREAT) {
             track.lastThreatEventTick = gameTime
             SquAbyssalBloom.LOGGER.info(
-                "[Fish school debug] event=propagatedThreat fishId={} type={} intensity={} escapeX={} escapeZ={}",
+                "[Fish school debug] event=propagatedThreat fishId={} type={} intensity={} escapeX={} escapeY={} escapeZ={}",
                 fish.id,
                 typeName(state),
                 roundedDecimal(intensity, 100.0),
                 roundedDecimal(state.threatDirection.x, 100.0),
+                roundedDecimal(state.threatDirection.y, 100.0),
                 roundedDecimal(state.threatDirection.z, 100.0)
             )
         } else if (intensity <= MINIMUM_VISIBLE_THREAT && previousIntensity > MINIMUM_VISIBLE_THREAT) {
@@ -209,6 +213,45 @@ object FishCollectiveDebugger {
         state.debugLastWrittenHeadingDegrees = headingDegrees(writtenVelocity.x, writtenVelocity.z)
     }
 
+    fun logBodyOrientation(
+        fish: net.minecraft.world.entity.animal.fish.AbstractFish,
+        gameTime: Long,
+        movementX: Double,
+        movementY: Double,
+        movementZ: Double,
+        targetPitch: Float,
+        pitchBefore: Float,
+        pitchAfter: Float,
+        targetYaw: Float?,
+        stationary: Boolean
+    ) {
+        if (Math.floorMod(gameTime, ROTATION_LOG_INTERVAL_TICKS) != 0L) return
+        if (rotationLogTick != gameTime) {
+            rotationLogTick = gameTime
+            rotationLogsThisTick = 0
+        }
+        if (rotationLogsThisTick >= MAXIMUM_ROTATION_LOGS_PER_TICK) return
+        rotationLogsThisTick++
+
+        SquAbyssalBloom.LOGGER.info(
+            "[Fish school rotation debug] stage=serverPostAi fishId={} type={} controlled=true stationary={} actualMoveX={} actualMoveY={} actualMoveZ={} targetPitch={} pitchBefore={} pitchAfter={} syncedPitchOld={} targetYaw={} yaw={} bodyYaw={} headYaw={}",
+            fish.id,
+            fish.type.description.string,
+            stationary,
+            roundedDecimal(movementX, 1000.0),
+            roundedDecimal(movementY, 1000.0),
+            roundedDecimal(movementZ, 1000.0),
+            roundedDecimal(targetPitch.toDouble(), 10.0),
+            roundedDecimal(pitchBefore.toDouble(), 10.0),
+            roundedDecimal(pitchAfter.toDouble(), 10.0),
+            roundedDecimal(fish.xRotO.toDouble(), 10.0),
+            targetYaw?.let { roundedDecimal(it.toDouble(), 10.0) } ?: "none",
+            roundedDecimal(fish.yRot.toDouble(), 10.0),
+            roundedDecimal(fish.yBodyRot.toDouble(), 10.0),
+            roundedDecimal(fish.yHeadRot.toDouble(), 10.0)
+        )
+    }
+
     fun renderFish(
         level: ServerLevel,
         state: FishCollectiveState,
@@ -259,6 +302,9 @@ object FishCollectiveDebugger {
         )
         SquAbyssalBloom.LOGGER.info(
             "[Fish school debug] Transition events: collectiveActivated/collectiveDeactivated, aggregationLink/aggregationEnd (school merging), directThreatStart/directThreatEnd, propagatedThreat, threatCleared."
+        )
+        SquAbyssalBloom.LOGGER.info(
+            "[Fish school debug] 3D rotation telemetry: search for '[Fish school rotation debug]'. stage=serverPostAi proves the server calculation; stage=clientExtract proves pitch synchronization; stage=clientRender proves the renderer applied it."
         )
     }
 
@@ -365,7 +411,7 @@ object FishCollectiveDebugger {
                     fish.deltaMovement.z * fish.deltaMovement.z
             )
             SquAbyssalBloom.LOGGER.info(
-                "[Fish school debug] wiggle fishId={} type={} ctrlTicks={}/{} steeringAge={} phaseStepPerTick={} wiggleDeg={} desiredTurnDeg={} avgAbsDesiredTurn={} actualTurnDeg={} avgAbsActualTurn={} appliedTurnDeg={} avgAbsAppliedTurn={} driftDeg={} avgAbsDrift={} posTurnDeg={} avgAbsPosTurn={} speed={}",
+                "[Fish school debug] wiggle fishId={} type={} ctrlTicks={}/{} steeringAge={} phaseStepPerTick={} wiggleDeg={} desiredTurnDeg={} avgAbsDesiredTurn={} actualTurnDeg={} avgAbsActualTurn={} appliedTurnDeg={} avgAbsAppliedTurn={} driftDeg={} avgAbsDrift={} posTurnDeg={} avgAbsPosTurn={} horizontalSpeed={} verticalSpeed={}",
                 fish.id,
                 typeName(state),
                 track.controlledTicks,
@@ -383,7 +429,8 @@ object FishCollectiveDebugger {
                 roundedDecimal(track.averageAbsoluteExternalDrift(), 10.0),
                 formatRange(track.minPositionTurn, track.maxPositionTurn),
                 roundedDecimal(track.averageAbsolutePositionTurn(), 10.0),
-                roundedDecimal(horizontalSpeed, 1000.0)
+                roundedDecimal(horizontalSpeed, 1000.0),
+                roundedDecimal(fish.deltaMovement.y, 1000.0)
             )
         }
 
@@ -661,6 +708,8 @@ object FishCollectiveDebugger {
     private const val MAXIMUM_LOGGED_COMPONENTS = 8
     private const val MAXIMUM_STEERING_AGE_TICKS = 2L
     private const val MAXIMUM_OBSERVATION_AGE_TICKS = 2L
+    private const val ROTATION_LOG_INTERVAL_TICKS = 40L
+    private const val MAXIMUM_ROTATION_LOGS_PER_TICK = 4
     private const val MINIMUM_VISIBLE_THREAT = 0.01
     private const val MINIMUM_VECTOR_LENGTH_SQR = 1.0E-8
     private const val STATUS_PARTICLE_HEIGHT = 0.25

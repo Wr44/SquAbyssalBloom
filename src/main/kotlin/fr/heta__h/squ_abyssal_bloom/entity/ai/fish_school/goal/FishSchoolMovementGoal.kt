@@ -133,8 +133,6 @@ class FishSchoolMovementGoal(
             turnLimitedVelocity,
             nextVelocity
         )
-
-        updateVisualRotation(nextVelocity, settings.maximumTurnRate.toFloat())
     }
 
     private fun limitHorizontalTurn(
@@ -165,22 +163,6 @@ class FishSchoolMovementGoal(
         )
     }
 
-    private fun updateVisualRotation(velocity: Vec3, maximumTurnRate: Float) {
-        val horizontalSpeed = horizontalLength(velocity)
-        if (horizontalSpeed <= MIN_ROTATION_SPEED) return
-
-        val targetYaw = (Mth.atan2(velocity.z, velocity.x) * 180.0 / Math.PI)
-            .toFloat() - 90.0f
-        fish.yRot = Mth.approachDegrees(fish.yRot, targetYaw, maximumTurnRate)
-        fish.yBodyRot = Mth.approachDegrees(fish.yBodyRot, fish.yRot, maximumTurnRate)
-        fish.yHeadRot = Mth.approachDegrees(fish.yHeadRot, fish.yRot, maximumTurnRate)
-
-        val targetPitch = (-(Mth.atan2(velocity.y, horizontalSpeed) * 180.0 / Math.PI))
-            .toFloat()
-            .coerceIn(-MAXIMUM_FISH_PITCH, MAXIMUM_FISH_PITCH)
-        fish.xRot = Mth.approachDegrees(fish.xRot, targetPitch, MAXIMUM_PITCH_CHANGE)
-    }
-
     private fun horizontalLength(vector: Vec3): Double {
         return sqrt(vector.x * vector.x + vector.z * vector.z)
     }
@@ -191,8 +173,6 @@ class FishSchoolMovementGoal(
 
     private companion object {
         const val MIN_ROTATION_SPEED = 1.0E-4
-        const val MAXIMUM_FISH_PITCH = 10.0f
-        const val MAXIMUM_PITCH_CHANGE = 1.5f
         const val VANILLA_WATER_DRAG = 0.9
         const val VANILLA_FISH_BUOYANCY = 0.005
         const val VANILLA_FISH_SINKING = 0.005

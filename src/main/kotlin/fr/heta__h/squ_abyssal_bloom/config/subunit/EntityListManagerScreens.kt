@@ -16,6 +16,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
 import net.minecraft.tags.TagKey
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
@@ -28,19 +29,21 @@ object EntityListManagerScreens {
         listOption: StringListOption,
         title: Component,
         excludeTag: TagKey<EntityType<*>>? = null,
-        additionalFilter: (String) -> Boolean = { true }
+        additionalFilter: (EntityType<*>) -> Boolean = { true }
     ) {
         val initialServerConfig = ServerConfigCache.toData()
+
+        pruneStaleEntries(listOption, excludeTag, additionalFilter)
 
         val categoryBuilder = ConfigCategory.createBuilder().name(title)
 
         BuiltInRegistries.ENTITY_TYPE.forEach { entityType ->
             try {
-                val idString = BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString()
-                if (!additionalFilter(idString)) return@forEach
-
                 if (!DefaultAttributes.hasSupplier(entityType)) return@forEach
                 if (excludeTag != null && entityType.builtInRegistryHolder().`is`(excludeTag)) return@forEach
+                if (!additionalFilter(entityType)) return@forEach
+
+                val idString = BuiltInRegistries.ENTITY_TYPE.getKey(entityType).toString()
 
                 @Suppress("UNCHECKED_CAST")
                 val livingType = entityType as EntityType<out LivingEntity>
@@ -93,6 +96,24 @@ object EntityListManagerScreens {
             Minecraft.getInstance().setScreen(screen)
         } catch (e: Exception) {
             SquAbyssalBloom.LOGGER.error("Failed to open entity list manager screen", e)
+        }
+    }
+
+    private fun pruneStaleEntries(
+        listOption: StringListOption,
+        excludeTag: TagKey<EntityType<*>>?,
+        additionalFilter: (EntityType<*>) -> Boolean
+    ) {
+        val beforePrune = ServerConfigCache.toData()
+        val current = ServerConfigCache.current(listOption)
+        val pruned = current.filter { idString ->
+            val entityType = Identifier.tryParse(idString)?.let { BuiltInRegistries.ENTITY_TYPE.get(it).orElse(null)?.value() } ?: return@filter true
+            if (excludeTag != null && entityType.builtInRegistryHolder().`is`(excludeTag)) return@filter false
+            additionalFilter(entityType)
+        }
+        if (pruned.size != current.size) {
+            ServerConfigCache.set(listOption, pruned)
+            persistServerConfigChanges(beforePrune)
         }
     }
 }

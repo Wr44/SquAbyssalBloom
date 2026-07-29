@@ -3,8 +3,8 @@
   "biomes": "#minecraft:is_ocean",
   "spawners": {
     "type": "squ_abyssal_bloom:mackerel",
-    "weight": 50,
-    "minCount": 8,
-    "maxCount": 16
+    "weight": 25,
+    "minCount": 4,
+    "maxCount": 10
   }
 }

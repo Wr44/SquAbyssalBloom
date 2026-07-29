@@ -13,6 +13,12 @@ abstract class LivingEntityRenderStateMixin : AddPropertiesToRenderState {
     private var hasGuardianSpikes: Boolean = false
 
     @Unique
+    private var applyFishBodyPitch: Boolean = false
+
+    @Unique
+    private var fishRotationEntityId: Int = -1
+
+    @Unique
     private var nautilusExtraItem : ItemStack = ItemStack.EMPTY
 
     @Unique
@@ -22,6 +28,18 @@ abstract class LivingEntityRenderStateMixin : AddPropertiesToRenderState {
 
     override fun setHasGuardianSpikes(value: Boolean) {
         hasGuardianSpikes = value
+    }
+
+    override fun getApplyFishBodyPitch(): Boolean = applyFishBodyPitch
+
+    override fun setApplyFishBodyPitch(value: Boolean) {
+        applyFishBodyPitch = value
+    }
+
+    override fun getFishRotationEntityId(): Int = fishRotationEntityId
+
+    override fun setFishRotationEntityId(value: Int) {
+        fishRotationEntityId = value
     }
 
     override fun getNautilusExtraItem(): ItemStack = nautilusExtraItem

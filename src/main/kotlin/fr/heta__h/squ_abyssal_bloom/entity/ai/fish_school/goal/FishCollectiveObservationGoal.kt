@@ -17,6 +17,11 @@ class FishCollectiveObservationGoal(
         FishCollectiveManager.forLevel(serverLevel).observe(fish)
     }
 
+    override fun stop() {
+        val serverLevel = fish.level() as? ServerLevel ?: return
+        FishCollectiveManager.forLevel(serverLevel).forget(fish)
+    }
+
     override fun requiresUpdateEveryTick(): Boolean = true
 
     private fun canObserve(): Boolean {

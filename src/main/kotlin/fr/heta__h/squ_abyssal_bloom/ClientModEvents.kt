@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
+import fr.heta__h.squ_abyssal_bloom.util.cache.AbstractFishTypeCache
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -18,6 +19,7 @@ object ClientModEvents {
     fun onClientSetup(event: FMLClientSetupEvent) {
         SquAbyssalBloom.LOGGER.info("Initializing client...")
         ModConfig.loadConfig()
+        AbstractFishTypeCache.load()
 
         event.container.registerExtensionPoint(
             IConfigScreenFactory::class.java,

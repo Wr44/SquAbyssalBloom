@@ -11,15 +11,19 @@ import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import java.util.UUID
 import kotlin.math.max
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 class FishCollectiveManager private constructor(
     private val level: ServerLevel
 ) {
     private val statesByFish = HashMap<UUID, FishCollectiveState>()
-    private val snapshotsByCell = HashMap<Long, FishLocalEntitySnapshot>()
+    private val neighborhoodSnapshotsByCell = HashMap<Long, FishLocalEntitySnapshot>()
+    private val threatSnapshotsByCell = HashMap<Long, FishLocalEntitySnapshot>()
+    private val longRangeSnapshotsByCell = HashMap<Long, FishLocalEntitySnapshot>()
     private var cachedSettings = FishCollectiveSettings.fromConfig()
     private var cachedSettingsTick = Long.MIN_VALUE
+    private var lastThreatSimulationTick = Long.MIN_VALUE
     private var nextCleanupTick = 0L
     private var nextDebugSummaryTick = 0L
     private var debugWasEnabled = false
@@ -31,22 +35,29 @@ class FishCollectiveManager private constructor(
         private const val SNAPSHOT_CELL_HALF_SIZE = SNAPSHOT_CELL_SIZE * 0.5
         private const val BLOCKER_SEARCH_RADIUS = 7.0
         private const val BLOCKER_SEARCH_RADIUS_SQR = BLOCKER_SEARCH_RADIUS * BLOCKER_SEARCH_RADIUS
-        private const val LARGE_ENTITY_MINIMUM_WIDTH = 1.0f
+        private const val LARGE_ENTITY_MINIMUM_SPAN = 1.0f
         private const val MAXIMUM_NEARBY_LARGE_ENTITIES = 8
+        private const val MAXIMUM_NEARBY_COLLISION_FISH = 16
         private const val AGGREGATION_LOCAL_DENSITY_LIMIT = 100
         private const val MINIMUM_DIRECT_THREAT_INTENSITY = 0.35
         private const val MINIMUM_PROPAGATED_THREAT_INTENSITY = 0.01
         private const val MINIMUM_PANIC_COLLISION_SIGNAL = 0.03
         private const val PANIC_COLLISION_SEARCH_RADIUS = 1.5
+        private const val PANIC_COLLISION_RELATIVE_SPEED_FACTOR = 2.0
         private const val FISH_THREAT_PREDICTION_TICKS = 2.0
         private const val THREAT_PREDICTION_TICKS = 5.0
-        private const val MINIMUM_ESCAPE_VECTOR_LENGTH = 1.0E-4
+        private const val MINIMUM_VECTOR_LENGTH_SQR = 1.0E-8
         private const val MINIMUM_MOVING_THREAT_SPEED = 0.025
         private const val MOVING_THREAT_LATERAL_SPLIT_WEIGHT = 0.65
+        private const val AVOIDANCE_COORDINATION_DISTANCE_BIAS = 0.5
+        private const val CURRENT_STATE_MAXIMUM_AGE_TICKS = 2L
         private const val CLEANUP_INTERVAL_TICKS = 200L
         private const val STATE_RETENTION_TICKS = 400L
         private const val SETTINGS_REFRESH_INTERVAL_TICKS = 20L
         private const val DEBUG_SUMMARY_INTERVAL_TICKS = 100L
+
+        private val UP_DIRECTION = Vec3(0.0, 1.0, 0.0)
+        private val X_DIRECTION = Vec3(1.0, 0.0, 0.0)
 
         fun forLevel(level: ServerLevel): FishCollectiveManager {
             return MANAGERS_BY_LEVEL.getOrPut(level) { FishCollectiveManager(level) }
@@ -73,20 +84,10 @@ class FishCollectiveManager private constructor(
         val state = statesByFish[fish.uuid] ?: return proposedVelocity
         if (state.threatIntensity <= MINIMUM_PANIC_COLLISION_SIGNAL) return proposedVelocity
 
-        val nearbyFish = level.getEntitiesOfClass(
-            AbstractFish::class.java,
-            fish.boundingBox.inflate(PANIC_COLLISION_SEARCH_RADIUS)
-        ) { candidate ->
-            candidate !== fish &&
-                candidate.isAlive &&
-                candidate.isInWater &&
-                !candidate.isRemoved &&
-                !candidate.isPassenger
-        }
         return FishSchoolSteering.avoidPanicFishCollisions(
             fish,
             proposedVelocity,
-            nearbyFish
+            state.nearbyCollisionFish
         )
     }
 
@@ -94,12 +95,33 @@ class FishCollectiveManager private constructor(
         fish: AbstractFish,
         running: Boolean
     ) {
-        statesByFish[fish.uuid]?.movementControllerRunning = running
+        val state = statesByFish[fish.uuid]
+        if (state == null) {
+            if (!running) fish.xRot = 0.0f
+            return
+        }
+
+        state.movementControllerRunning = running
+        if (!running) state.resetBodyOrientation()
     }
 
+    fun updateBodyOrientation(fish: AbstractFish) {
+        val state = statesByFish[fish.uuid] ?: return
+        if (!state.movementControllerRunning) return
+        val settings = currentSettings()
+        state.updateBodyOrientation(
+            settings.maximumTurnRate.toFloat(),
+            settings.debugEnabled
+        )
+    }
 
     fun forget(fish: AbstractFish) {
-        statesByFish.remove(fish.uuid)
+        val state = statesByFish.remove(fish.uuid)
+        if (state == null) {
+            fish.xRot = 0.0f
+        } else {
+            state.resetBodyOrientation()
+        }
     }
 
     fun debugRecordNavigationSuppression(fish: AbstractFish) {
@@ -162,6 +184,7 @@ class FishCollectiveManager private constructor(
             !fish.isAlive ||
             !fish.isInWater
         ) {
+            forget(fish)
             return null
         }
 
@@ -170,14 +193,26 @@ class FishCollectiveManager private constructor(
         cleanupIfNeeded(gameTime)
 
         val state = statesByFish.getOrPut(fish.uuid) { FishCollectiveState(fish) }
-        state.observe(gameTime, settings.neighborRefreshInterval)
-        state.decayThreatSignal(gameTime, settings.threatSignalDecay)
+        state.observe(
+            gameTime,
+            settings.neighborRefreshInterval,
+            settings.threatRefreshInterval,
+            settings.longRangeRefreshInterval
+        )
         state.refreshNoiseIfNeeded(gameTime)
         state.advanceSwimWiggle(gameTime)
 
-        if (state.needsNeighborhoodRefresh(gameTime)) {
-            refreshLocalState(state, settings, gameTime)
+        if (lastThreatSimulationTick != gameTime) {
+            advanceThreatSimulation(gameTime, settings)
         }
+        if (state.needsNeighborhoodRefresh(gameTime)) {
+            refreshNeighborhoodState(state, settings, gameTime)
+        }
+        if (state.needsLongRangeRefresh(gameTime)) {
+            refreshLongRangeState(state, settings, gameTime)
+        }
+        validateAggregationNeighbor(state, settings)
+        updateAvoidanceCoordination(state, settings, gameTime)
 
         if (
             calculateSteering &&
@@ -194,29 +229,259 @@ class FishCollectiveManager private constructor(
         return state
     }
 
-    private fun refreshLocalState(
+    private fun refreshNeighborhoodState(
         state: FishCollectiveState,
         settings: FishCollectiveSettings,
         gameTime: Long
     ) {
-        val fish = state.fish
-        val searchRadius = max(
-            max(
-                max(settings.neighborSearchRadius, settings.aggregationRadius),
-                settings.threatDetectionRadius
-            ),
-            max(BLOCKER_SEARCH_RADIUS, FishSchoolInfluenceRegistry.maximumSearchRadius())
+        val searchRadius = max(settings.neighborSearchRadius, BLOCKER_SEARCH_RADIUS)
+        val snapshot = entitySnapshot(
+            neighborhoodSnapshotsByCell,
+            state.fish,
+            searchRadius,
+            settings.neighborRefreshInterval,
+            gameTime
         )
-        val snapshot = localSnapshot(fish, searchRadius, settings, gameTime)
 
-        val localNeighborCount = populateTopologicalNeighbors(state, snapshot.entities, settings)
+        val localNeighborCount = populateTopologicalNeighbors(
+            state,
+            snapshot.entities,
+            settings
+        )
         state.completeNeighborhoodRefresh(gameTime, localNeighborCount, settings)
-        populateAggregationNeighbor(state, snapshot.entities, settings)
-        updateThreatSignal(state, snapshot.entities, settings, gameTime)
-
-        state.influences.clear()
-        FishSchoolInfluenceRegistry.collect(fish, snapshot.entities, state.influences)
+        validateAggregationNeighbor(state, settings)
+        populateCollisionFish(state, snapshot.entities, settings)
         populateLargeEntities(state, snapshot.entities)
+    }
+
+    private fun refreshLongRangeState(
+        state: FishCollectiveState,
+        settings: FishCollectiveSettings,
+        gameTime: Long
+    ) {
+        val searchRadius = max(
+            settings.aggregationRadius,
+            FishSchoolInfluenceRegistry.maximumSearchRadius()
+        )
+        val snapshot = entitySnapshot(
+            longRangeSnapshotsByCell,
+            state.fish,
+            searchRadius,
+            settings.longRangeRefreshInterval,
+            gameTime
+        )
+
+        populateAggregationNeighbor(state, snapshot.entities, settings)
+        state.influences.clear()
+        FishSchoolInfluenceRegistry.collect(state.fish, snapshot.entities, state.influences)
+        state.completeLongRangeRefresh(gameTime, settings.longRangeRefreshInterval)
+    }
+
+    private fun advanceThreatSimulation(
+        gameTime: Long,
+        settings: FishCollectiveSettings
+    ) {
+        lastThreatSimulationTick = gameTime
+        val currentStates = statesByFish.values.filter { state ->
+            val fish = state.fish
+            fish.isAlive &&
+                fish.isInWater &&
+                !fish.isRemoved &&
+                fish.level() === level &&
+                gameTime - state.lastObservedTick <= CURRENT_STATE_MAXIMUM_AGE_TICKS
+        }
+        if (currentStates.isEmpty()) return
+
+        for (state in currentStates) {
+            if (!state.needsThreatRefresh(gameTime)) continue
+            val observation = detectDirectThreat(state, settings, gameTime)
+            state.completeThreatRefresh(
+                gameTime,
+                observation?.direction ?: Vec3.ZERO,
+                observation?.intensity ?: 0.0,
+                settings.threatRefreshInterval
+            )
+        }
+
+        val previousSignals = HashMap<UUID, ThreatSignalSnapshot>(currentStates.size)
+        for (state in currentStates) {
+            previousSignals[state.fish.uuid] = ThreatSignalSnapshot(
+                state.threatDirection,
+                state.threatIntensity
+            )
+        }
+
+        val updates = ArrayList<ThreatSignalUpdate>(currentStates.size)
+        for (state in currentStates) {
+            val previousSignal = previousSignals[state.fish.uuid]
+                ?: ThreatSignalSnapshot(Vec3.ZERO, 0.0)
+            val decayedIntensity =
+                (previousSignal.intensity - settings.threatSignalDecay).coerceAtLeast(0.0)
+
+            if (state.directThreatIntensity > FishCollectiveState.MINIMUM_THREAT_SIGNAL) {
+                updates.add(
+                    ThreatSignalUpdate(
+                        state,
+                        state.directThreatDirection,
+                        max(decayedIntensity, state.directThreatIntensity),
+                        isDirect = true
+                    )
+                )
+                continue
+            }
+
+            var propagatedX = 0.0
+            var propagatedY = 0.0
+            var propagatedZ = 0.0
+            var strongestIntensity = 0.0
+            var strongestDirection = Vec3.ZERO
+            for (neighbor in state.neighbors) {
+                val neighborSignal = previousSignals[neighbor.uuid] ?: continue
+                val propagatedIntensity =
+                    neighborSignal.intensity *
+                        settings.threatPropagationSpeed *
+                        FishSchoolCompatibility.socialAffinity(state.fish, neighbor, settings)
+                if (propagatedIntensity <= MINIMUM_PROPAGATED_THREAT_INTENSITY) continue
+
+                propagatedX += neighborSignal.direction.x * propagatedIntensity
+                propagatedY += neighborSignal.direction.y * propagatedIntensity
+                propagatedZ += neighborSignal.direction.z * propagatedIntensity
+                if (propagatedIntensity > strongestIntensity) {
+                    strongestIntensity = propagatedIntensity
+                    strongestDirection = neighborSignal.direction
+                }
+            }
+
+            if (strongestIntensity > decayedIntensity) {
+                val combinedDirection = unit(
+                    Vec3(propagatedX, propagatedY, propagatedZ)
+                ).takeIf { it.lengthSqr() > MINIMUM_VECTOR_LENGTH_SQR }
+                    ?: strongestDirection
+                updates.add(
+                    ThreatSignalUpdate(
+                        state,
+                        combinedDirection,
+                        strongestIntensity,
+                        isDirect = false
+                    )
+                )
+            } else {
+                updates.add(
+                    ThreatSignalUpdate(
+                        state,
+                        previousSignal.direction,
+                        decayedIntensity,
+                        isDirect = false
+                    )
+                )
+            }
+        }
+
+        for (update in updates) {
+            update.state.applyThreatSignal(
+                update.direction,
+                update.intensity,
+                update.isDirect
+            )
+        }
+    }
+
+    private fun detectDirectThreat(
+        state: FishCollectiveState,
+        settings: FishCollectiveSettings,
+        gameTime: Long
+    ): DirectThreatObservation? {
+        val fish = state.fish
+        val snapshot = entitySnapshot(
+            threatSnapshotsByCell,
+            fish,
+            settings.threatDetectionRadius,
+            settings.threatRefreshInterval,
+            gameTime
+        )
+        val threatRadiusSqr = settings.threatDetectionRadius * settings.threatDetectionRadius
+        var nearestThreat: LivingEntity? = null
+        var nearestThreatDistanceSqr = threatRadiusSqr
+
+        for (candidate in snapshot.entities) {
+            val distanceSqr = centerDistanceSqr(fish, candidate)
+            if (distanceSqr > nearestThreatDistanceSqr) continue
+            if (!FishThreatClassifier.isThreat(fish, candidate)) continue
+            if (!fish.hasLineOfSight(candidate)) continue
+            nearestThreat = candidate
+            nearestThreatDistanceSqr = distanceSqr
+        }
+
+        val threat = nearestThreat ?: return null
+        val distance = sqrt(nearestThreatDistanceSqr)
+        val edgeProximity = (1.0 - distance / settings.threatDetectionRadius)
+            .coerceIn(0.0, 1.0)
+        val intensity = if (edgeProximity < MINIMUM_DIRECT_THREAT_INTENSITY) {
+            MINIMUM_DIRECT_THREAT_INTENSITY * ModUtilities.smoothstep(
+                (edgeProximity / MINIMUM_DIRECT_THREAT_INTENSITY).coerceIn(0.0, 1.0)
+            )
+        } else {
+            edgeProximity
+        }
+        return DirectThreatObservation(
+            predictedThreatEscapeDirection(fish, threat, state),
+            intensity
+        )
+    }
+
+    private fun predictedThreatEscapeDirection(
+        fish: AbstractFish,
+        threat: LivingEntity,
+        state: FishCollectiveState
+    ): Vec3 {
+        val predictedFish = Vec3(
+            fish.x + fish.deltaMovement.x * FISH_THREAT_PREDICTION_TICKS,
+            entityCenterY(fish) + fish.deltaMovement.y * FISH_THREAT_PREDICTION_TICKS,
+            fish.z + fish.deltaMovement.z * FISH_THREAT_PREDICTION_TICKS
+        )
+        val predictedThreat = Vec3(
+            threat.x + threat.deltaMovement.x * THREAT_PREDICTION_TICKS,
+            entityCenterY(threat) + threat.deltaMovement.y * THREAT_PREDICTION_TICKS,
+            threat.z + threat.deltaMovement.z * THREAT_PREDICTION_TICKS
+        )
+        var away = unit(predictedFish.subtract(predictedThreat))
+        if (away.lengthSqr() <= MINIMUM_VECTOR_LENGTH_SQR) {
+            val verticalSign = if (sin(state.movementPhase * 2.0) >= 0.0) 1.0 else -1.0
+            away = unit(
+                Vec3(
+                    kotlin.math.cos(state.movementPhase),
+                    verticalSign * 0.35,
+                    sin(state.movementPhase)
+                )
+            )
+        }
+
+        val threatVelocity = threat.deltaMovement
+        val threatSpeed = threatVelocity.length()
+        if (threatSpeed <= MINIMUM_MOVING_THREAT_SPEED) return away
+
+        val velocityDirection = threatVelocity.scale(1.0 / threatSpeed)
+        var lateral = unit(velocityDirection.cross(UP_DIRECTION))
+        if (lateral.lengthSqr() <= MINIMUM_VECTOR_LENGTH_SQR) {
+            lateral = unit(velocityDirection.cross(X_DIRECTION))
+        }
+        if (lateral.lengthSqr() <= MINIMUM_VECTOR_LENGTH_SQR) return away
+
+        val relativePosition = Vec3(
+            fish.x - threat.x,
+            entityCenterY(fish) - entityCenterY(threat),
+            fish.z - threat.z
+        )
+        val sideProjection = relativePosition.dot(lateral)
+        val side = when {
+            sideProjection > sqrt(MINIMUM_VECTOR_LENGTH_SQR) -> 1.0
+            sideProjection < -sqrt(MINIMUM_VECTOR_LENGTH_SQR) -> -1.0
+            state.movementPhase < Math.PI -> 1.0
+            else -> -1.0
+        }
+        return unit(
+            away.add(lateral.scale(side * MOVING_THREAT_LATERAL_SPLIT_WEIGHT))
+        )
     }
 
     private fun populateTopologicalNeighbors(
@@ -233,7 +498,8 @@ class FishCollectiveManager private constructor(
             if (
                 candidate === fish ||
                 !candidate.isAlive ||
-                !candidate.isInWater
+                !candidate.isInWater ||
+                candidate.isRemoved
             ) {
                 continue
             }
@@ -250,6 +516,43 @@ class FishCollectiveManager private constructor(
             )
         }
         return localNeighborCount
+    }
+
+    private fun populateCollisionFish(
+        state: FishCollectiveState,
+        nearbyEntities: List<LivingEntity>,
+        settings: FishCollectiveSettings
+    ) {
+        val fish = state.fish
+        state.nearbyCollisionFish.clear()
+        val predictedSearchRadius = minOf(
+            BLOCKER_SEARCH_RADIUS,
+            PANIC_COLLISION_SEARCH_RADIUS +
+                settings.panicFishSpeed *
+                settings.neighborRefreshInterval *
+                PANIC_COLLISION_RELATIVE_SPEED_FACTOR
+        )
+        val predictedSearchRadiusSqr = predictedSearchRadius * predictedSearchRadius
+        for (entity in nearbyEntities) {
+            val candidate = entity as? AbstractFish ?: continue
+            if (
+                candidate === fish ||
+                !candidate.isAlive ||
+                !candidate.isInWater ||
+                candidate.isRemoved
+            ) {
+                continue
+            }
+            val distanceSqr = centerDistanceSqr(fish, candidate)
+            if (distanceSqr > predictedSearchRadiusSqr) continue
+            insertNearestFish(
+                state.nearbyCollisionFish,
+                candidate,
+                distanceSqr,
+                fish,
+                MAXIMUM_NEARBY_COLLISION_FISH
+            )
+        }
     }
 
     private fun populateAggregationNeighbor(
@@ -274,6 +577,7 @@ class FishCollectiveManager private constructor(
                 candidate === fish ||
                 !candidate.isAlive ||
                 !candidate.isInWater ||
+                candidate.isRemoved ||
                 statesByFish[candidate.uuid]?.collectiveActive != true
             ) {
                 continue
@@ -297,109 +601,51 @@ class FishCollectiveManager private constructor(
         state.aggregationNeighbor = bestCandidate
     }
 
-    private fun updateThreatSignal(
+    private fun validateAggregationNeighbor(
         state: FishCollectiveState,
-        nearbyEntities: List<LivingEntity>,
-        settings: FishCollectiveSettings,
-        gameTime: Long
+        settings: FishCollectiveSettings
     ) {
+        val candidate = state.aggregationNeighbor ?: return
         val fish = state.fish
-        state.beginThreatRefresh()
-        val threatRadiusSqr = settings.threatDetectionRadius * settings.threatDetectionRadius
-        var nearestThreat: LivingEntity? = null
-        var nearestThreatDistanceSqr = threatRadiusSqr
-
-        for (candidate in nearbyEntities) {
-            val distanceSqr = fish.distanceToSqr(candidate)
-            if (distanceSqr > nearestThreatDistanceSqr) continue
-            if (!FishThreatClassifier.isThreat(fish, candidate)) continue
-            nearestThreat = candidate
-            nearestThreatDistanceSqr = distanceSqr
-        }
-
-        if (nearestThreat != null) {
-            val distance = sqrt(nearestThreatDistanceSqr)
-            val edgeProximity = (1.0 - distance / settings.threatDetectionRadius)
-                .coerceIn(0.0, 1.0)
-            val intensity = if (edgeProximity < MINIMUM_DIRECT_THREAT_INTENSITY) {
-                MINIMUM_DIRECT_THREAT_INTENSITY * ModUtilities.smoothstep(
-                    (edgeProximity / MINIMUM_DIRECT_THREAT_INTENSITY).coerceIn(0.0, 1.0)
-                )
-            } else {
-                edgeProximity
-            }
-            state.receiveDirectThreat(
-                predictedThreatEscapeDirection(fish, nearestThreat, state),
-                intensity
-            )
-            return
-        }
-
-        var propagatedX = 0.0
-        var propagatedZ = 0.0
-        var strongestPropagatedIntensity = 0.0
-        for (neighbor in state.neighbors) {
-            val neighborState = statesByFish[neighbor.uuid] ?: continue
-            neighborState.decayThreatSignal(gameTime, settings.threatSignalDecay)
-            val propagatedIntensity =
-                neighborState.threatIntensity *
-                    settings.threatPropagationSpeed *
-                    FishSchoolCompatibility.socialAffinity(fish, neighbor, settings)
-            if (propagatedIntensity <= MINIMUM_PROPAGATED_THREAT_INTENSITY) continue
-
-            propagatedX += neighborState.threatDirection.x * propagatedIntensity
-            propagatedZ += neighborState.threatDirection.z * propagatedIntensity
-            if (propagatedIntensity > strongestPropagatedIntensity) {
-                strongestPropagatedIntensity = propagatedIntensity
-            }
-        }
-
-        if (strongestPropagatedIntensity > 0.0) {
-            state.receivePropagatedThreat(
-                Vec3(propagatedX, 0.0, propagatedZ),
-                strongestPropagatedIntensity
-            )
+        val distanceSqr = fish.distanceToSqr(candidate)
+        if (
+            !candidate.isAlive ||
+            !candidate.isInWater ||
+            candidate.isRemoved ||
+            candidate.level() !== level ||
+            distanceSqr <= settings.neighborSearchRadiusSqr ||
+            distanceSqr > settings.aggregationRadiusSqr
+        ) {
+            state.aggregationNeighbor = null
         }
     }
 
-    private fun predictedThreatEscapeDirection(
-        fish: AbstractFish,
-        threat: LivingEntity,
-        state: FishCollectiveState
-    ): Vec3 {
-        var awayX = fish.x + fish.deltaMovement.x * FISH_THREAT_PREDICTION_TICKS -
-            (threat.x + threat.deltaMovement.x * THREAT_PREDICTION_TICKS)
-        var awayZ = fish.z + fish.deltaMovement.z * FISH_THREAT_PREDICTION_TICKS -
-            (threat.z + threat.deltaMovement.z * THREAT_PREDICTION_TICKS)
-        val awayLength = sqrt(awayX * awayX + awayZ * awayZ)
-        if (awayLength > MINIMUM_ESCAPE_VECTOR_LENGTH) {
-            awayX /= awayLength
-            awayZ /= awayLength
-        }
+    private fun updateAvoidanceCoordination(
+        state: FishCollectiveState,
+        settings: FishCollectiveSettings,
+        gameTime: Long
+    ) {
+        var directionX = 0.0
+        var directionY = 0.0
+        var directionZ = 0.0
+        for (neighbor in state.neighbors) {
+            val neighborState = statesByFish[neighbor.uuid] ?: continue
+            if (neighborState.obstacleAvoidanceRecordedTick >= gameTime) continue
+            val direction = neighborState.activeObstacleAvoidance(gameTime)
+            if (direction.lengthSqr() <= MINIMUM_VECTOR_LENGTH_SQR) continue
 
-        val threatVelocityX = threat.deltaMovement.x
-        val threatVelocityZ = threat.deltaMovement.z
-        val threatSpeed = sqrt(
-            threatVelocityX * threatVelocityX + threatVelocityZ * threatVelocityZ
-        )
-        if (threatSpeed <= MINIMUM_MOVING_THREAT_SPEED) {
-            return Vec3(awayX, 0.0, awayZ)
+            val distance = sqrt(state.fish.distanceToSqr(neighbor))
+            val weight = FishSchoolCompatibility.socialAffinity(
+                state.fish,
+                neighbor,
+                settings
+            ) / (AVOIDANCE_COORDINATION_DISTANCE_BIAS + distance)
+            directionX += direction.x * weight
+            directionY += direction.y * weight
+            directionZ += direction.z * weight
         }
-
-        val leftX = -threatVelocityZ / threatSpeed
-        val leftZ = threatVelocityX / threatSpeed
-        val sideCrossProduct = threatVelocityX * (fish.z - threat.z) -
-            threatVelocityZ * (fish.x - threat.x)
-        val side = when {
-            sideCrossProduct > MINIMUM_ESCAPE_VECTOR_LENGTH -> 1.0
-            sideCrossProduct < -MINIMUM_ESCAPE_VECTOR_LENGTH -> -1.0
-            state.movementPhase < Math.PI -> 1.0
-            else -> -1.0
-        }
-        return Vec3(
-            awayX + leftX * side * MOVING_THREAT_LATERAL_SPLIT_WEIGHT,
-            0.0,
-            awayZ + leftZ * side * MOVING_THREAT_LATERAL_SPLIT_WEIGHT
+        state.setAvoidanceCoordinationDirection(
+            Vec3(directionX, directionY, directionZ)
         )
     }
 
@@ -413,12 +659,10 @@ class FishCollectiveManager private constructor(
             if (
                 candidate === fish ||
                 candidate is AbstractFish ||
-                candidate.bbWidth < LARGE_ENTITY_MINIMUM_WIDTH
+                max(candidate.bbWidth, candidate.bbHeight) < LARGE_ENTITY_MINIMUM_SPAN
             ) {
                 continue
             }
-
-            if (state.influences.any { it.source === candidate }) continue
 
             val distanceSqr = fish.distanceToSqr(candidate)
             if (distanceSqr > BLOCKER_SEARCH_RADIUS_SQR) continue
@@ -432,17 +676,18 @@ class FishCollectiveManager private constructor(
         }
     }
 
-    private fun localSnapshot(
+    private fun entitySnapshot(
+        cache: MutableMap<Long, FishLocalEntitySnapshot>,
         fish: AbstractFish,
         searchRadius: Double,
-        settings: FishCollectiveSettings,
+        refreshInterval: Int,
         gameTime: Long
     ): FishLocalEntitySnapshot {
         val cellX = Math.floorDiv(fish.blockX, SNAPSHOT_CELL_SIZE)
         val cellY = Math.floorDiv(fish.blockY, SNAPSHOT_CELL_SIZE)
         val cellZ = Math.floorDiv(fish.blockZ, SNAPSHOT_CELL_SIZE)
         val cellKey = BlockPos.asLong(cellX, cellY, cellZ)
-        val cached = snapshotsByCell[cellKey]
+        val cached = cache[cellKey]
         if (
             cached != null &&
             cached.expiresAtTick > gameTime &&
@@ -468,10 +713,10 @@ class FishCollectiveManager private constructor(
             searchBox
         ) { it.isAlive }
         return FishLocalEntitySnapshot(
-            expiresAtTick = gameTime + settings.neighborRefreshInterval.coerceAtLeast(1),
+            expiresAtTick = gameTime + refreshInterval.coerceAtLeast(1),
             searchRadius = searchRadius,
             entities = entities
-        ).also { snapshotsByCell[cellKey] = it }
+        ).also { cache[cellKey] = it }
     }
 
     private fun insertRelevantFish(
@@ -499,6 +744,26 @@ class FishCollectiveManager private constructor(
         if (output.size > settings.neighborCount) output.removeAt(output.lastIndex)
     }
 
+    private fun insertNearestFish(
+        output: MutableList<AbstractFish>,
+        candidate: AbstractFish,
+        candidateDistanceSqr: Double,
+        observer: AbstractFish,
+        maximumCount: Int
+    ) {
+        var insertionIndex = 0
+        while (
+            insertionIndex < output.size &&
+            centerDistanceSqr(observer, output[insertionIndex]) <= candidateDistanceSqr
+        ) {
+            insertionIndex++
+        }
+        if (insertionIndex >= maximumCount) return
+
+        output.add(insertionIndex, candidate)
+        if (output.size > maximumCount) output.removeAt(output.lastIndex)
+    }
+
     private fun insertNearestEntity(
         output: MutableList<LivingEntity>,
         candidate: LivingEntity,
@@ -519,6 +784,23 @@ class FishCollectiveManager private constructor(
         if (output.size > maximumCount) output.removeAt(output.lastIndex)
     }
 
+    private fun centerDistanceSqr(first: LivingEntity, second: LivingEntity): Double {
+        val dx = first.x - second.x
+        val dy = entityCenterY(first) - entityCenterY(second)
+        val dz = first.z - second.z
+        return dx * dx + dy * dy + dz * dz
+    }
+
+    private fun entityCenterY(entity: LivingEntity): Double {
+        return (entity.boundingBox.minY + entity.boundingBox.maxY) * 0.5
+    }
+
+    private fun unit(vector: Vec3): Vec3 {
+        val lengthSqr = vector.lengthSqr()
+        if (lengthSqr <= MINIMUM_VECTOR_LENGTH_SQR) return Vec3.ZERO
+        return vector.scale(1.0 / sqrt(lengthSqr))
+    }
+
     private fun settingsForTick(gameTime: Long): FishCollectiveSettings {
         if (
             cachedSettingsTick == Long.MIN_VALUE ||
@@ -536,13 +818,39 @@ class FishCollectiveManager private constructor(
         nextCleanupTick = gameTime + CLEANUP_INTERVAL_TICKS
 
         statesByFish.entries.removeIf { (_, state) ->
-            state.fish.isRemoved ||
+            val shouldRemove =
+                state.fish.isRemoved ||
                 !state.fish.isAlive ||
                 state.fish.level() !== level ||
                 gameTime - state.lastObservedTick > STATE_RETENTION_TICKS
+            if (shouldRemove) state.resetBodyOrientation()
+            shouldRemove
         }
-        snapshotsByCell.entries.removeIf { (_, snapshot) ->
+        neighborhoodSnapshotsByCell.entries.removeIf { (_, snapshot) ->
+            snapshot.expiresAtTick <= gameTime
+        }
+        threatSnapshotsByCell.entries.removeIf { (_, snapshot) ->
+            snapshot.expiresAtTick <= gameTime
+        }
+        longRangeSnapshotsByCell.entries.removeIf { (_, snapshot) ->
             snapshot.expiresAtTick <= gameTime
         }
     }
+
+    private data class DirectThreatObservation(
+        val direction: Vec3,
+        val intensity: Double
+    )
+
+    private data class ThreatSignalSnapshot(
+        val direction: Vec3,
+        val intensity: Double
+    )
+
+    private data class ThreatSignalUpdate(
+        val state: FishCollectiveState,
+        val direction: Vec3,
+        val intensity: Double,
+        val isDirect: Boolean
+    )
 }

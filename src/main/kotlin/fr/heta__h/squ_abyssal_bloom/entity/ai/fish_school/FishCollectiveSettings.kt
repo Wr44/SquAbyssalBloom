@@ -28,6 +28,8 @@ data class FishCollectiveSettings(
     val verticalMovementWeight: Double,
     val verticalDriftSpeed: Double,
     val neighborRefreshInterval: Int,
+    val threatRefreshInterval: Int,
+    val longRangeRefreshInterval: Int,
     val threatDetectionRadius: Double,
     val threatPropagationSpeed: Double,
     val threatSignalDecay: Double,
@@ -97,6 +99,10 @@ data class FishCollectiveSettings(
                     ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_VERTICAL_DRIFT_SPEED),
                 neighborRefreshInterval =
                     ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_NEIGHBOR_REFRESH_INTERVAL),
+                threatRefreshInterval =
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_THREAT_REFRESH_INTERVAL),
+                longRangeRefreshInterval =
+                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_LONG_RANGE_REFRESH_INTERVAL),
                 threatDetectionRadius =
                     ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_THREAT_DETECTION_RADIUS),
                 threatPropagationSpeed =

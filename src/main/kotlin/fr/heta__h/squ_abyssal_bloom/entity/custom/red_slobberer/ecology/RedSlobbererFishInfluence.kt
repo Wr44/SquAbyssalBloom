@@ -48,6 +48,16 @@ class RedSlobbererFishInfluence(
     override val source: Entity
         get() = redSlobberer
 
+    override fun isActive(fish: AbstractFish): Boolean {
+        if (!redSlobberer.isAlive || !redSlobberer.isUnderWater) return false
+        val maximumDistance = if (isReefRefuge) {
+            refugeInfluenceDistance
+        } else {
+            NORMAL_INFLUENCE_DISTANCE
+        }
+        return fish.distanceToSqr(redSlobberer) <= maximumDistance * maximumDistance
+    }
+
     override fun computeInfluence(
         fish: AbstractFish,
         context: FishSchoolInfluenceContext

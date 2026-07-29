@@ -11,9 +11,11 @@ import net.minecraft.world.entity.animal.fish.AbstractFish
 import net.minecraft.world.phys.Vec3
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.acos
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -35,7 +37,6 @@ object FishSchoolSteering {
     private const val COLLISION_PREDICTION_TICKS = 3.0
     private const val ENTITY_COLLISION_PREDICTION_TICKS = 2.0
     private const val MINIMUM_SEPARATION_DISTANCE_SQR = 0.09
-    private const val ALIGNMENT_VERTICAL_SCALE = 3.0
     private const val MAXIMUM_LOCAL_VERTICAL_ERROR = 1.0
     private const val LOCAL_COHESION_COMFORT_DISTANCE = 1.75
     private const val LOCAL_COHESION_FULL_SPEED_ERROR = 4.0
@@ -48,6 +49,8 @@ object FishSchoolSteering {
     private const val MAXIMUM_ENVIRONMENTAL_VERTICAL_SPEED = 0.02
     private const val BASE_NOISE_WEIGHT = 0.14
     private const val MAXIMUM_SWIM_WIGGLE_ANGLE = PI / 8.0
+    private const val AVOIDANCE_WIGGLE_REDUCTION = 0.95
+    private const val PANIC_WIGGLE_REDUCTION = 0.8
     private const val NOISE_DENSITY_REDUCTION_PER_NEIGHBOR = 0.08
     private const val MINIMUM_DENSITY_NOISE_FACTOR = 0.5
     private const val AMBIENT_WANDER_WEIGHT = 0.16
@@ -74,9 +77,12 @@ object FishSchoolSteering {
     private const val VERTICAL_MOMENTUM_RETENTION = 0.65
     private const val MAXIMUM_VERTICAL_SPEED = 0.028
     private const val MAXIMUM_OBSTACLE_VERTICAL_SPEED = 0.065
+    private const val MAXIMUM_THREAT_VERTICAL_SPEED = 0.055
+    private const val THREAT_VERTICAL_FORCE_SCALE = 0.04
     private const val LARGE_ENTITY_CLEARANCE = 0.8
     private const val LARGE_ENTITY_ANTICIPATION_DISTANCE = 1.5
-    private const val MINIMUM_ENTITY_DISTANCE = 0.25
+    private const val LARGE_ENTITY_VERTICAL_CLEARANCE = 0.45
+    private const val LARGE_ENTITY_VERTICAL_ANTICIPATION_DISTANCE = 1.0
     private const val MAXIMUM_ENTITY_AVOIDANCE = 1.8
     private const val PANIC_FISH_COLLISION_PREDICTION_TICKS = 2.0
     private const val PANIC_FISH_HORIZONTAL_CLEARANCE = 0.12
@@ -88,6 +94,14 @@ object FishSchoolSteering {
     private const val INTENDED_DIRECTION_PROBE_WEIGHT = 0.25
     private const val PROBE_TURN_PENALTY = 0.08
     private const val BLOCKED_REVERSE_WEIGHT = 0.55
+    private const val OBSTACLE_AVOIDANCE_MEMORY_TICKS = 12
+    private const val OBSTACLE_MEMORY_SCORE_BONUS = 0.18
+    private const val OBSTACLE_COORDINATION_SCORE_BONUS = 0.14
+    private const val OBSTACLE_MEMORY_CONTINUATION_STRENGTH = 0.45
+    private const val MINIMUM_MEMORY_PROBE_CLEARANCE = 2.0 / 3.0
+    private const val MINIMUM_COORDINATED_FORWARD_DOT = 0.2
+    private const val MINIMUM_AVOIDANCE_ANGLE = PI / 36.0
+    private const val MAXIMUM_PROBE_PITCH = PI / 2.0 - 0.05
     private const val VERTICAL_PROBE_FORWARD_DISTANCE = 0.65
     private const val DOWNWARD_COLLISION_PROBE = 0.28
     private const val UPWARD_COLLISION_PROBE = 0.35
@@ -106,6 +120,7 @@ object FishSchoolSteering {
         val fish = state.fish
         val currentVelocity = fish.deltaMovement
         val currentDirection = horizontalUnit(currentVelocity.x, currentVelocity.z)
+        val currentSpatialDirection = unit(currentVelocity)
 
         var separationX = 0.0
         var separationY = 0.0
@@ -113,13 +128,14 @@ object FishSchoolSteering {
         var alignmentX = 0.0
         var alignmentY = 0.0
         var alignmentZ = 0.0
-        var horizontalAlignmentSamples = 0
+        var alignmentSamples = 0
+        var socialNeighborSamples = 0
         var socialNeighborWeight = 0.0
         var cohesionX = 0.0
         var cohesionY = 0.0
         var cohesionZ = 0.0
 
-        val hasHeading = currentDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR
+        val hasHeading = currentSpatialDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR
         val neighborFovCosine = settings.neighborFovCosine
 
         val predictedFishX = fish.x + currentVelocity.x * COLLISION_PREDICTION_TICKS
@@ -162,32 +178,36 @@ object FishSchoolSteering {
                 true
             } else {
                 val towardX = neighbor.x - fish.x
+                val towardY = neighbor.y - fish.y
                 val towardZ = neighbor.z - fish.z
-                val towardLengthSqr = towardX * towardX + towardZ * towardZ
+                val towardLengthSqr =
+                    towardX * towardX + towardY * towardY + towardZ * towardZ
                 if (towardLengthSqr <= MINIMUM_DIRECTION_LENGTH_SQR) {
                     true
                 } else {
                     val inverseTowardLength = 1.0 / sqrt(towardLengthSqr)
-                    val facingDot = towardX * inverseTowardLength * currentDirection.x +
-                        towardZ * inverseTowardLength * currentDirection.z
+                    val facingDot =
+                        towardX * inverseTowardLength * currentSpatialDirection.x +
+                            towardY * inverseTowardLength * currentSpatialDirection.y +
+                            towardZ * inverseTowardLength * currentSpatialDirection.z
                     facingDot >= neighborFovCosine
                 }
             }
 
             if (withinFov) {
-                val neighborHorizontalSpeedSqr =
-                    neighborVelocity.x * neighborVelocity.x + neighborVelocity.z * neighborVelocity.z
-                if (neighborHorizontalSpeedSqr > MINIMUM_DIRECTION_LENGTH_SQR) {
-                    val inverseNeighborSpeed = 1.0 / sqrt(neighborHorizontalSpeedSqr)
+                val neighborSpeedSqr = neighborVelocity.lengthSqr()
+                if (neighborSpeedSqr > MINIMUM_DIRECTION_LENGTH_SQR) {
+                    val inverseNeighborSpeed = 1.0 / sqrt(neighborSpeedSqr)
                     alignmentX += neighborVelocity.x * inverseNeighborSpeed * socialAffinity
+                    alignmentY += neighborVelocity.y * inverseNeighborSpeed * socialAffinity
                     alignmentZ += neighborVelocity.z * inverseNeighborSpeed * socialAffinity
-                    horizontalAlignmentSamples++
+                    alignmentSamples++
                 }
-                alignmentY += neighborVelocity.y * socialAffinity
                 cohesionX += neighbor.x * socialAffinity
                 cohesionY += neighbor.y * socialAffinity
                 cohesionZ += neighbor.z * socialAffinity
                 socialNeighborWeight += socialAffinity
+                socialNeighborSamples++
             }
         }
 
@@ -197,20 +217,18 @@ object FishSchoolSteering {
         var localCenterOffset = Vec3.ZERO
         var localCohesionAffinity = 0.0
         if (state.neighbors.isNotEmpty() && socialNeighborWeight > 0.0) {
-            val inverseAlignmentSamples = if (horizontalAlignmentSamples > 0) {
-                1.0 / horizontalAlignmentSamples.toDouble()
+            val inverseAlignmentSamples = if (alignmentSamples > 0) {
+                1.0 / alignmentSamples.toDouble()
             } else {
                 0.0
             }
             val inverseSocialNeighborWeight = 1.0 / socialNeighborWeight
             val averageSocialAffinity =
-                socialNeighborWeight / state.neighbors.size.toDouble()
+                socialNeighborWeight / socialNeighborSamples.coerceAtLeast(1).toDouble()
             localCohesionAffinity = averageSocialAffinity
             alignment = Vec3(
                 alignmentX * inverseAlignmentSamples,
-                (
-                    alignmentY * inverseSocialNeighborWeight - currentVelocity.y
-                    ) * ALIGNMENT_VERTICAL_SCALE * averageSocialAffinity,
+                alignmentY * inverseAlignmentSamples,
                 alignmentZ * inverseAlignmentSamples
             )
 
@@ -220,7 +238,7 @@ object FishSchoolSteering {
                 cohesionZ * inverseSocialNeighborWeight - fish.z
             )
             val horizontalCohesion = horizontalUnit(localCenterOffset.x, localCenterOffset.z)
-            centroidDirection = horizontalCohesion
+            centroidDirection = unit(localCenterOffset)
             val horizontalCenterDistance = sqrt(
                 localCenterOffset.x * localCenterOffset.x +
                     localCenterOffset.z * localCenterOffset.z
@@ -259,7 +277,7 @@ object FishSchoolSteering {
         var separationSuppression = 0.0
         var additionalVerticalSpeed = 0.0
         for (influence in state.influences) {
-            if (influence.source.isRemoved) continue
+            if (!influence.isActive(fish)) continue
             val contribution = influence.computeInfluence(fish, influenceContext)
             influenceX += contribution.x
             influenceY += contribution.y
@@ -314,7 +332,14 @@ object FishSchoolSteering {
                 aggregationInfluence.x * aggregationWeight +
                 ambientWander.x * ambientWanderWeight +
                 state.noiseDirection.x * noiseWeight,
-            0.0,
+            separation.y * separationWeight +
+                alignment.y * settings.alignmentWeight +
+                cohesion.y * settings.cohesionWeight +
+                entityAvoidance.y * settings.obstacleAvoidanceWeight +
+                herdInfluence.y * settings.threatAvoidanceWeight +
+                environmentalInfluence.y +
+                aggregationInfluence.y * aggregationWeight +
+                state.noiseDirection.y * noiseWeight,
             separation.z * separationWeight +
                 alignment.z * settings.alignmentWeight +
                 cohesion.z * settings.cohesionWeight +
@@ -326,15 +351,16 @@ object FishSchoolSteering {
                 state.noiseDirection.z * noiseWeight
         )
         val intendedDirection = horizontalUnit(preliminary.x, preliminary.z)
-        val probeDirection = if (currentDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR) {
-            horizontalUnit(
-                currentDirection.x * CURRENT_DIRECTION_PROBE_WEIGHT +
-                    intendedDirection.x * INTENDED_DIRECTION_PROBE_WEIGHT,
-                currentDirection.z * CURRENT_DIRECTION_PROBE_WEIGHT +
-                    intendedDirection.z * INTENDED_DIRECTION_PROBE_WEIGHT
+        val intendedSpatialDirection = unit(preliminary)
+        val probeDirection = if (
+            currentSpatialDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR
+        ) {
+            unit(
+                currentSpatialDirection.scale(CURRENT_DIRECTION_PROBE_WEIGHT)
+                    .add(intendedSpatialDirection.scale(INTENDED_DIRECTION_PROBE_WEIGHT))
             )
         } else {
-            intendedDirection
+            intendedSpatialDirection
         }
         val obstacleAvoidance = calculateBlockAvoidance(
             level,
@@ -342,7 +368,7 @@ object FishSchoolSteering {
             probeDirection
         )
         val avoidanceUrgency = (
-            obstacleAvoidance.length() + horizontalLength(entityAvoidance)
+            obstacleAvoidance.length() + entityAvoidance.length()
             ).coerceIn(0.0, 1.0)
         val alignmentWeight = settings.alignmentWeight *
             (1.0 + threatIntensity * PANIC_ALIGNMENT_INCREASE) *
@@ -376,7 +402,11 @@ object FishSchoolSteering {
                 ?: horizontalUnit(state.noiseDirection.x, state.noiseDirection.z)
         }
 
-        val wiggleAngle = sin(state.swimWigglePhase) * MAXIMUM_SWIM_WIGGLE_ANGLE
+        val wiggleStrength =
+            (1.0 - avoidanceUrgency * AVOIDANCE_WIGGLE_REDUCTION) *
+                (1.0 - threatIntensity * PANIC_WIGGLE_REDUCTION)
+        val wiggleAngle =
+            sin(state.swimWigglePhase) * MAXIMUM_SWIM_WIGGLE_ANGLE * wiggleStrength
         state.debugLastWiggleAngle = wiggleAngle
         desiredDirection = rotateHorizontal(desiredDirection, wiggleAngle)
 
@@ -402,10 +432,14 @@ object FishSchoolSteering {
         val socialVertical = (separation.y * separationWeight +
             alignment.y * alignmentWeight +
             cohesion.y * cohesionWeight +
+            aggregationInfluence.y * aggregationWeight +
             state.noiseDirection.y * noiseWeight) *
             SOCIAL_VERTICAL_FORCE_SCALE
         val socialVerticalVelocity = (socialVertical * settings.verticalMovementWeight)
             .coerceIn(-MAXIMUM_SOCIAL_VERTICAL_SPEED, MAXIMUM_SOCIAL_VERTICAL_SPEED)
+        val threatVerticalVelocity =
+            (herdInfluence.y * settings.threatAvoidanceWeight * THREAT_VERTICAL_FORCE_SCALE)
+                .coerceIn(-MAXIMUM_THREAT_VERTICAL_SPEED, MAXIMUM_THREAT_VERTICAL_SPEED)
         val environmentalVerticalVelocity =
             (environmentalInfluence.y * ENVIRONMENTAL_VERTICAL_FORCE_SCALE)
                 .coerceIn(
@@ -414,16 +448,22 @@ object FishSchoolSteering {
                 )
         var desiredY = currentVelocity.y * VERTICAL_MOMENTUM_RETENTION +
             socialVerticalVelocity +
+            threatVerticalVelocity +
             environmentalVerticalVelocity +
             calculateAmbientVerticalDrift(fish, level.gameTime) * settings.verticalDriftSpeed +
-            obstacleAvoidance.y * settings.obstacleAvoidanceWeight
+            (entityAvoidance.y + obstacleAvoidance.y) * settings.obstacleAvoidanceWeight
+        val hasVerticalObstacleAvoidance =
+            abs(entityAvoidance.y + obstacleAvoidance.y) > MINIMUM_DIRECTION_LENGTH_SQR
         val maximumVerticalSpeed = max(
             MAXIMUM_VERTICAL_SPEED + additionalVerticalSpeed,
-            if (abs(obstacleAvoidance.y) > MINIMUM_DIRECTION_LENGTH_SQR) {
-                MAXIMUM_OBSTACLE_VERTICAL_SPEED
-            } else {
-                0.0
-            }
+            max(
+                if (hasVerticalObstacleAvoidance) MAXIMUM_OBSTACLE_VERTICAL_SPEED else 0.0,
+                if (abs(threatVerticalVelocity) > MINIMUM_DIRECTION_LENGTH_SQR) {
+                    MAXIMUM_THREAT_VERTICAL_SPEED
+                } else {
+                    0.0
+                }
+            )
         ).coerceAtMost(targetSpeed)
         desiredY = desiredY.coerceIn(
             -maximumVerticalSpeed,
@@ -447,9 +487,17 @@ object FishSchoolSteering {
         if (maximumSpeed <= MINIMUM_DIRECTION_LENGTH_SQR) return proposedVelocity
 
         var adjustedVelocity = proposedVelocity
-        val sortedFish = nearbyFish.sortedBy(fish::distanceToSqr)
         repeat(PANIC_FISH_COLLISION_PASSES) {
-            for (other in sortedFish) {
+            for (other in nearbyFish) {
+                if (
+                    other === fish ||
+                    !other.isAlive ||
+                    !other.isInWater ||
+                    other.isRemoved ||
+                    other.level() !== fish.level()
+                ) {
+                    continue
+                }
                 val otherVelocity = other.deltaMovement
                 val relativeX = fish.x - other.x
                 val relativeY =
@@ -459,16 +507,31 @@ object FishSchoolSteering {
                 val relativeVelocityX = adjustedVelocity.x - otherVelocity.x
                 val relativeVelocityY = adjustedVelocity.y - otherVelocity.y
                 val relativeVelocityZ = adjustedVelocity.z - otherVelocity.z
-                val relativeSpeedSqr =
-                    relativeVelocityX * relativeVelocityX +
-                        relativeVelocityY * relativeVelocityY +
-                        relativeVelocityZ * relativeVelocityZ
-                val closestTick = if (relativeSpeedSqr > MINIMUM_DIRECTION_LENGTH_SQR) {
+                val requiredVerticalDistance =
+                    (fish.bbHeight + other.bbHeight) * 0.5 + PANIC_FISH_VERTICAL_CLEARANCE
+                val requiredHorizontalDistance =
+                    (fish.bbWidth + other.bbWidth) * 0.5 + PANIC_FISH_HORIZONTAL_CLEARANCE
+                val scaledRelativeX = relativeX / requiredHorizontalDistance
+                val scaledRelativeY = relativeY / requiredVerticalDistance
+                val scaledRelativeZ = relativeZ / requiredHorizontalDistance
+                val scaledRelativeVelocityX =
+                    relativeVelocityX / requiredHorizontalDistance
+                val scaledRelativeVelocityY =
+                    relativeVelocityY / requiredVerticalDistance
+                val scaledRelativeVelocityZ =
+                    relativeVelocityZ / requiredHorizontalDistance
+                val scaledRelativeSpeedSqr =
+                    scaledRelativeVelocityX * scaledRelativeVelocityX +
+                        scaledRelativeVelocityY * scaledRelativeVelocityY +
+                        scaledRelativeVelocityZ * scaledRelativeVelocityZ
+                val closestTick = if (
+                    scaledRelativeSpeedSqr > MINIMUM_DIRECTION_LENGTH_SQR
+                ) {
                     -(
-                        relativeX * relativeVelocityX +
-                            relativeY * relativeVelocityY +
-                            relativeZ * relativeVelocityZ
-                        ) / relativeSpeedSqr
+                        scaledRelativeX * scaledRelativeVelocityX +
+                            scaledRelativeY * scaledRelativeVelocityY +
+                            scaledRelativeZ * scaledRelativeVelocityZ
+                        ) / scaledRelativeSpeedSqr
                 } else {
                     0.0
                 }.coerceIn(0.0, PANIC_FISH_COLLISION_PREDICTION_TICKS)
@@ -476,33 +539,49 @@ object FishSchoolSteering {
                 val closestX = relativeX + relativeVelocityX * closestTick
                 val closestY = relativeY + relativeVelocityY * closestTick
                 val closestZ = relativeZ + relativeVelocityZ * closestTick
-                val verticalClearance =
-                    (fish.bbHeight + other.bbHeight) * 0.5 + PANIC_FISH_VERTICAL_CLEARANCE
-                if (abs(closestY) >= verticalClearance) continue
+                val normalizedX = closestX / requiredHorizontalDistance
+                val normalizedY = closestY / requiredVerticalDistance
+                val normalizedZ = closestZ / requiredHorizontalDistance
+                val normalizedDistanceSqr =
+                    normalizedX * normalizedX +
+                        normalizedY * normalizedY +
+                        normalizedZ * normalizedZ
+                if (normalizedDistanceSqr >= 1.0) continue
 
-                val requiredDistance =
-                    (fish.bbWidth + other.bbWidth) * 0.5 + PANIC_FISH_HORIZONTAL_CLEARANCE
-                val closestDistanceSqr = closestX * closestX + closestZ * closestZ
-                if (closestDistanceSqr >= requiredDistance * requiredDistance) continue
-
-                val closestDistance = sqrt(closestDistanceSqr)
-                val normal = when {
-                    closestDistance > MINIMUM_AGGREGATION_DISTANCE ->
-                        Vec3(closestX / closestDistance, 0.0, closestZ / closestDistance)
-                    relativeX * relativeX + relativeZ * relativeZ >
-                        MINIMUM_DIRECTION_LENGTH_SQR -> {
-                        val currentDistance = sqrt(relativeX * relativeX + relativeZ * relativeZ)
-                        Vec3(relativeX / currentDistance, 0.0, relativeZ / currentDistance)
-                    }
-                    else -> {
-                        val angle = fallbackCollisionAngle(fish, other)
-                        Vec3(cos(angle), 0.0, sin(angle))
-                    }
+                var normal = unit(
+                    Vec3(
+                        closestX / (requiredHorizontalDistance * requiredHorizontalDistance),
+                        closestY / (requiredVerticalDistance * requiredVerticalDistance),
+                        closestZ / (requiredHorizontalDistance * requiredHorizontalDistance)
+                    )
+                )
+                if (normal.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR) {
+                    normal = unit(
+                        Vec3(
+                            relativeX /
+                                (requiredHorizontalDistance * requiredHorizontalDistance),
+                            relativeY / (requiredVerticalDistance * requiredVerticalDistance),
+                            relativeZ /
+                                (requiredHorizontalDistance * requiredHorizontalDistance)
+                        )
+                    )
+                }
+                if (normal.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR) {
+                    normal = fallbackCollisionDirection(fish, other)
                 }
                 val relativeNormalSpeed =
-                    relativeVelocityX * normal.x + relativeVelocityZ * normal.z
+                    relativeVelocityX * normal.x +
+                        relativeVelocityY * normal.y +
+                        relativeVelocityZ * normal.z
+                val normalizedDistance = sqrt(normalizedDistanceSqr)
+                val clearanceScale = min(
+                    requiredHorizontalDistance,
+                    requiredVerticalDistance
+                )
                 val escapeSpeed =
-                    (requiredDistance - closestDistance) * PANIC_FISH_SEPARATION_RESPONSE +
+                    (1.0 - normalizedDistance) *
+                        clearanceScale *
+                        PANIC_FISH_SEPARATION_RESPONSE +
                         PANIC_FISH_MINIMUM_ESCAPE_SPEED
                 val correction =
                     (-relativeNormalSpeed).coerceAtLeast(0.0) + escapeSpeed
@@ -513,13 +592,24 @@ object FishSchoolSteering {
         return adjustedVelocity
     }
 
-    private fun fallbackCollisionAngle(
+    private fun fallbackCollisionDirection(
         fish: AbstractFish,
         other: AbstractFish
-    ): Double {
+    ): Vec3 {
         val mixedUuid = ModUtilities.mixedUuidBits(fish.uuid) xor ModUtilities.mixedUuidBits(other.uuid)
         val baseAngle = ModUtilities.uuidFractionAsAngle(mixedUuid, mask = FishCollectiveState.PHASE_MASK)
-        return if (fish.uuid.compareTo(other.uuid) < 0) baseAngle else baseAngle + PI
+        val baseDirection = unit(
+            Vec3(
+                cos(baseAngle),
+                sin(baseAngle * 1.7) * 0.5,
+                sin(baseAngle)
+            )
+        )
+        return if (fish.uuid.compareTo(other.uuid) < 0) {
+            baseDirection
+        } else {
+            baseDirection.scale(-1.0)
+        }
     }
 
     private fun limitVelocity(velocity: Vec3, maximumSpeed: Double): Vec3 {
@@ -542,14 +632,17 @@ object FishSchoolSteering {
         context: FishSchoolInfluenceContext
     ): Vec3 {
         var avoidanceX = 0.0
+        var avoidanceY = 0.0
         var avoidanceZ = 0.0
         val predictedFishX = fish.x + fish.deltaMovement.x * ENTITY_COLLISION_PREDICTION_TICKS
+        val predictedFishY =
+            entityCenterY(fish) + fish.deltaMovement.y * ENTITY_COLLISION_PREDICTION_TICKS
         val predictedFishZ = fish.z + fish.deltaMovement.z * ENTITY_COLLISION_PREDICTION_TICKS
 
         for (entity in nearbyLargeEntities) {
             if (!entity.isAlive || entity.isRemoved) continue
             val sourceAvoidanceSuppression = influences.asSequence()
-                .filter { influence -> influence.source === entity && !influence.source.isRemoved }
+                .filter { influence -> influence.source === entity && influence.isActive(fish) }
                 .maxOfOrNull { influence ->
                     influence.sourceEntityAvoidanceSuppression(fish, context)
                 }
@@ -558,23 +651,65 @@ object FishSchoolSteering {
             if (sourceAvoidanceSuppression >= 1.0) continue
             val predictedEntityX = entity.x +
                 entity.deltaMovement.x * ENTITY_COLLISION_PREDICTION_TICKS
+            val predictedEntityY = entityCenterY(entity) +
+                entity.deltaMovement.y * ENTITY_COLLISION_PREDICTION_TICKS
             val predictedEntityZ = entity.z +
                 entity.deltaMovement.z * ENTITY_COLLISION_PREDICTION_TICKS
             val dx = predictedFishX - predictedEntityX
+            val dy = predictedFishY - predictedEntityY
             val dz = predictedFishZ - predictedEntityZ
-            val distance = sqrt(dx * dx + dz * dz)
-            val requiredDistance =
+            val requiredHorizontalDistance =
                 (fish.bbWidth + entity.bbWidth) * 0.5 + LARGE_ENTITY_CLEARANCE
-            val influenceDistance = requiredDistance + LARGE_ENTITY_ANTICIPATION_DISTANCE
-            if (distance >= influenceDistance) continue
+            val requiredVerticalDistance =
+                (fish.bbHeight + entity.bbHeight) * 0.5 + LARGE_ENTITY_VERTICAL_CLEARANCE
+            val horizontalInfluenceDistance =
+                requiredHorizontalDistance + LARGE_ENTITY_ANTICIPATION_DISTANCE
+            val verticalInfluenceDistance =
+                requiredVerticalDistance + LARGE_ENTITY_VERTICAL_ANTICIPATION_DISTANCE
+            val normalizedX = dx / horizontalInfluenceDistance
+            val normalizedY = dy / verticalInfluenceDistance
+            val normalizedZ = dz / horizontalInfluenceDistance
+            val normalizedDistance = sqrt(
+                normalizedX * normalizedX +
+                    normalizedY * normalizedY +
+                    normalizedZ * normalizedZ
+            )
+            if (normalizedDistance >= 1.0) continue
 
-            val safeDistance = max(distance, MINIMUM_ENTITY_DISTANCE)
-            val strength = ((influenceDistance - distance) / influenceDistance).let { it * it } *
+            var normal = unit(
+                Vec3(
+                    dx / (horizontalInfluenceDistance * horizontalInfluenceDistance),
+                    dy / (verticalInfluenceDistance * verticalInfluenceDistance),
+                    dz / (horizontalInfluenceDistance * horizontalInfluenceDistance)
+                )
+            )
+            if (normal.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR) {
+                normal = fallbackEntityAvoidanceDirection(fish, entity)
+            }
+            val strength = (1.0 - normalizedDistance).let { it * it } *
                 (1.0 - sourceAvoidanceSuppression)
-            avoidanceX += dx / safeDistance * strength
-            avoidanceZ += dz / safeDistance * strength
+            avoidanceX += normal.x * strength
+            avoidanceY += normal.y * strength
+            avoidanceZ += normal.z * strength
         }
-        return limitMagnitude(Vec3(avoidanceX, 0.0, avoidanceZ), MAXIMUM_ENTITY_AVOIDANCE)
+        return limitMagnitude(
+            Vec3(avoidanceX, avoidanceY, avoidanceZ),
+            MAXIMUM_ENTITY_AVOIDANCE
+        )
+    }
+
+    private fun fallbackEntityAvoidanceDirection(
+        fish: AbstractFish,
+        entity: LivingEntity
+    ): Vec3 {
+        val mixedUuid =
+            ModUtilities.mixedUuidBits(fish.uuid) xor ModUtilities.mixedUuidBits(entity.uuid)
+        val angle = ModUtilities.uuidFractionAsAngle(
+            mixedUuid,
+            mask = FishCollectiveState.PHASE_MASK
+        )
+        val verticalSign = if (mixedUuid and 1L == 0L) 1.0 else -1.0
+        return unit(Vec3(cos(angle), verticalSign * 0.35, sin(angle)))
     }
 
     private fun calculateBlockAvoidance(
@@ -585,9 +720,12 @@ object FishSchoolSteering {
         val fish = state.fish
         val forward = requestedDirection.takeIf {
             it.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR
-        } ?: horizontalUnit(fish.deltaMovement.x, fish.deltaMovement.z)
+        } ?: unit(fish.deltaMovement)
         if (forward.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR) return Vec3.ZERO
 
+        val gameTime = level.gameTime
+        val rememberedDirection = state.activeObstacleAvoidance(gameTime)
+        val coordinatedDirection = state.avoidanceCoordinationDirection
         val forwardClearance = probeClearance(level, fish, forward)
         var directionalAvoidance = Vec3.ZERO
         if (forwardClearance < 1.0) {
@@ -597,13 +735,43 @@ object FishSchoolSteering {
             val preferPositiveTurn = sin(state.movementPhase) >= 0.0
 
             fun considerAlternative(direction: Vec3, angle: Double) {
+                if (
+                    abs(angle) < MINIMUM_AVOIDANCE_ANGLE ||
+                    direction.dot(forward) <= 0.0
+                ) {
+                    return
+                }
                 val clearance = probeClearance(level, fish, direction)
-                val score = clearance - abs(angle) * PROBE_TURN_PENALTY
+                if (clearance <= 0.0 || clearance < forwardClearance) return
+                val memoryAlignment = direction.dot(rememberedDirection).coerceAtLeast(0.0)
+                val coordinationAlignment =
+                    direction.dot(coordinatedDirection).coerceAtLeast(0.0)
+                val score =
+                    clearance -
+                        abs(angle) * PROBE_TURN_PENALTY +
+                        memoryAlignment * OBSTACLE_MEMORY_SCORE_BONUS +
+                        coordinationAlignment * OBSTACLE_COORDINATION_SCORE_BONUS
                 if (score > bestScore) {
                     bestScore = score
                     bestDirection = direction
                     foundAlternative = true
                 }
+            }
+
+            if (rememberedDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR) {
+                considerAlternative(
+                    rememberedDirection,
+                    spatialAngleBetween(forward, rememberedDirection)
+                )
+            }
+            if (
+                coordinatedDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR &&
+                coordinatedDirection.dot(forward) >= MINIMUM_COORDINATED_FORWARD_DOT
+            ) {
+                considerAlternative(
+                    coordinatedDirection,
+                    spatialAngleBetween(forward, coordinatedDirection)
+                )
             }
 
             for (baseAngle in HORIZONTAL_ALTERNATIVE_PROBE_ANGLES) {
@@ -625,10 +793,26 @@ object FishSchoolSteering {
 
             val urgency = (1.0 - forwardClearance).coerceIn(0.0, 1.0)
             directionalAvoidance = if (!foundAlternative) {
-                Vec3(-forward.x * BLOCKED_REVERSE_WEIGHT, 0.0, -forward.z * BLOCKED_REVERSE_WEIGHT)
+                state.clearObstacleAvoidance()
+                forward.scale(-BLOCKED_REVERSE_WEIGHT)
             } else {
+                state.rememberObstacleAvoidance(
+                    bestDirection,
+                    gameTime,
+                    OBSTACLE_AVOIDANCE_MEMORY_TICKS
+                )
                 bestDirection.subtract(forward).scale(urgency)
             }
+        } else if (
+            rememberedDirection.lengthSqr() > MINIMUM_DIRECTION_LENGTH_SQR &&
+            rememberedDirection.dot(forward) > 0.0 &&
+            spatialAngleBetween(forward, rememberedDirection) >= MINIMUM_AVOIDANCE_ANGLE &&
+            probeClearance(level, fish, rememberedDirection) >= MINIMUM_MEMORY_PROBE_CLEARANCE
+        ) {
+            directionalAvoidance = rememberedDirection.subtract(forward)
+                .scale(OBSTACLE_MEMORY_CONTINUATION_STRENGTH)
+        } else {
+            state.clearObstacleAvoidance()
         }
 
         val verticalProbeX = forward.x * VERTICAL_PROBE_FORWARD_DISTANCE
@@ -702,16 +886,31 @@ object FishSchoolSteering {
     }
 
     private fun rotateHorizontal(direction: Vec3, angle: Double): Vec3 {
+        val horizontalLength = horizontalLength(direction)
+        if (horizontalLength <= MINIMUM_DIRECTION_LENGTH_SQR) return direction
         val currentAngle = atan2(direction.z, direction.x) + angle
-        return Vec3(cos(currentAngle), 0.0, sin(currentAngle))
+        return Vec3(
+            cos(currentAngle) * horizontalLength,
+            direction.y,
+            sin(currentAngle) * horizontalLength
+        )
     }
 
     private fun rotateVertical(direction: Vec3, angle: Double): Vec3 {
-        val horizontalScale = cos(angle)
+        val horizontalLength = horizontalLength(direction)
+        val currentPitch = atan2(direction.y, horizontalLength)
+        val targetPitch = (currentPitch + angle)
+            .coerceIn(-MAXIMUM_PROBE_PITCH, MAXIMUM_PROBE_PITCH)
+        val horizontalScale = cos(targetPitch)
+        val horizontalDirection = if (horizontalLength > MINIMUM_DIRECTION_LENGTH_SQR) {
+            Vec3(direction.x / horizontalLength, 0.0, direction.z / horizontalLength)
+        } else {
+            Vec3(1.0, 0.0, 0.0)
+        }
         return Vec3(
-            direction.x * horizontalScale,
-            sin(angle),
-            direction.z * horizontalScale
+            horizontalDirection.x * horizontalScale,
+            sin(targetPitch),
+            horizontalDirection.z * horizontalScale
         )
     }
 
@@ -743,7 +942,7 @@ object FishSchoolSteering {
         val compression = threatIntensity * (1.0 - threatIntensity) * settings.herdCompression
         return Vec3(
             state.threatDirection.x * threatIntensity + centroidDirection.x * compression,
-            0.0,
+            state.threatDirection.y * threatIntensity + centroidDirection.y * compression,
             state.threatDirection.z * threatIntensity + centroidDirection.z * compression
         )
     }
@@ -776,26 +975,29 @@ object FishSchoolSteering {
         }
 
         val offsetX = aggregationNeighbor.x - fish.x
+        val offsetY = aggregationNeighbor.y - fish.y
         val offsetZ = aggregationNeighbor.z - fish.z
-        val horizontalDistance = sqrt(offsetX * offsetX + offsetZ * offsetZ)
+        val distance = sqrt(
+            offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ
+        )
         if (
-            horizontalDistance <= settings.neighborSearchRadius ||
-            horizontalDistance > settings.aggregationRadius ||
-            horizontalDistance <= MINIMUM_AGGREGATION_DISTANCE
+            distance <= settings.neighborSearchRadius ||
+            distance > settings.aggregationRadius ||
+            distance <= MINIMUM_AGGREGATION_DISTANCE
         ) {
             return Vec3.ZERO
         }
 
-        val strength = calculateAggregationStrength(horizontalDistance, settings)
+        val strength = calculateAggregationStrength(distance, settings)
         val affinity = FishSchoolCompatibility.socialAffinity(
             fish,
             aggregationNeighbor,
             settings
         )
         return Vec3(
-            offsetX / horizontalDistance * strength * affinity,
-            0.0,
-            offsetZ / horizontalDistance * strength * affinity
+            offsetX / distance * strength * affinity,
+            offsetY / distance * strength * affinity,
+            offsetZ / distance * strength * affinity
         )
     }
 
@@ -823,22 +1025,27 @@ object FishSchoolSteering {
             aggregationNeighbor.level() === fish.level()
         ) {
             val offsetX = aggregationNeighbor.x - fish.x
+            val offsetY = aggregationNeighbor.y - fish.y
             val offsetZ = aggregationNeighbor.z - fish.z
-            val horizontalDistance = sqrt(offsetX * offsetX + offsetZ * offsetZ)
+            val distance = sqrt(
+                offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ
+            )
             if (
-                horizontalDistance > settings.neighborSearchRadius &&
-                horizontalDistance <= settings.aggregationRadius
+                distance > settings.neighborSearchRadius &&
+                distance <= settings.aggregationRadius
             ) {
                 val axialDirection = (
-                    offsetX * travelDirection.x + offsetZ * travelDirection.z
-                    ) / horizontalDistance
+                    offsetX * travelDirection.x +
+                        offsetY * travelDirection.y +
+                        offsetZ * travelDirection.z
+                    ) / distance
                 val affinity = FishSchoolCompatibility.socialAffinity(
                     fish,
                     aggregationNeighbor,
                     settings
                 )
                 closingResponse += axialDirection *
-                    calculateAggregationStrength(horizontalDistance, settings) *
+                    calculateAggregationStrength(distance, settings) *
                     affinity *
                     AGGREGATION_SPEED_RESPONSE
             }
@@ -857,32 +1064,34 @@ object FishSchoolSteering {
         localCenterOffset: Vec3,
         travelDirection: Vec3
     ): Double {
-        val horizontalDistance = sqrt(
+        val distance = sqrt(
             localCenterOffset.x * localCenterOffset.x +
+                localCenterOffset.y * localCenterOffset.y +
                 localCenterOffset.z * localCenterOffset.z
         )
-        if (horizontalDistance <= LOCAL_COHESION_COMFORT_DISTANCE) return 0.0
+        if (distance <= LOCAL_COHESION_COMFORT_DISTANCE) return 0.0
 
         val distanceResponse = (
-            (horizontalDistance - LOCAL_COHESION_COMFORT_DISTANCE) /
+            (distance - LOCAL_COHESION_COMFORT_DISTANCE) /
                 LOCAL_COHESION_FULL_SPEED_ERROR
             ).coerceIn(0.0, 1.0)
         val axialDirection = (
             localCenterOffset.x * travelDirection.x +
+                localCenterOffset.y * travelDirection.y +
                 localCenterOffset.z * travelDirection.z
-            ) / horizontalDistance
+            ) / distance
         return axialDirection * distanceResponse
     }
 
     private fun calculateAggregationStrength(
-        horizontalDistance: Double,
+        distance: Double,
         settings: FishCollectiveSettings
     ): Double {
         val aggregationSpan =
             (settings.aggregationRadius - settings.neighborSearchRadius)
                 .coerceAtLeast(MINIMUM_AGGREGATION_DISTANCE)
         val distanceProgress = (
-            (horizontalDistance - settings.neighborSearchRadius) / aggregationSpan
+            (distance - settings.neighborSearchRadius) / aggregationSpan
             ).coerceIn(0.0, 1.0)
         return MINIMUM_AGGREGATION_STRENGTH +
             (1.0 - MINIMUM_AGGREGATION_STRENGTH) * distanceProgress
@@ -893,6 +1102,28 @@ object FishSchoolSteering {
         if (lengthSqr <= MINIMUM_DIRECTION_LENGTH_SQR) return Vec3.ZERO
         val inverseLength = 1.0 / sqrt(lengthSqr)
         return Vec3(x * inverseLength, 0.0, z * inverseLength)
+    }
+
+    private fun unit(vector: Vec3): Vec3 {
+        val lengthSqr = vector.lengthSqr()
+        if (lengthSqr <= MINIMUM_DIRECTION_LENGTH_SQR) return Vec3.ZERO
+        return vector.scale(1.0 / sqrt(lengthSqr))
+    }
+
+    private fun spatialAngleBetween(first: Vec3, second: Vec3): Double {
+        val firstUnit = unit(first)
+        val secondUnit = unit(second)
+        if (
+            firstUnit.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR ||
+            secondUnit.lengthSqr() <= MINIMUM_DIRECTION_LENGTH_SQR
+        ) {
+            return PI
+        }
+        return acos(firstUnit.dot(secondUnit).coerceIn(-1.0, 1.0))
+    }
+
+    private fun entityCenterY(entity: LivingEntity): Double {
+        return (entity.boundingBox.minY + entity.boundingBox.maxY) * 0.5
     }
 
     private fun horizontalLength(vector: Vec3): Double {
