@@ -198,7 +198,7 @@ class DeadRhodophytaFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<No
                 level.setBlock(debrisPos, state, 2)
                 if (random.nextFloat() < 0.4f) {
                     val secondPos = debrisPos.relative(Plane.HORIZONTAL.getRandomDirection(random))
-                    if (level.getBlockState(secondPos).`is`(Blocks.WATER)) {
+                    if (level.getBlockState(secondPos).`is`(Blocks.WATER) && level.getBlockState(secondPos.below()).isSolid) {
                         level.setBlock(secondPos, state, 2)
                     }
                 }
@@ -210,8 +210,11 @@ class DeadRhodophytaFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<No
         val above = pos.above()
         val targetBlockState = level.getBlockState(pos)
 
-        if ((targetBlockState.`is`(Blocks.WATER) || targetBlockState.`is`(state.block)) && level.getBlockState(above).`is`(Blocks.WATER)) {
-            level.setBlock(pos, state, 3)
+        if (!level.getBlockState(above).`is`(Blocks.WATER)) return false
+        if (targetBlockState.`is`(state.block)) return true
+
+        if (targetBlockState.`is`(Blocks.WATER)) {
+            level.setBlock(pos, state, 2)
             return true
         }
 
@@ -221,8 +224,10 @@ class DeadRhodophytaFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<No
     private fun placeFallingBlock(level: LevelAccessor, pos: BlockPos, state: BlockState): Boolean {
         val targetBlockState = level.getBlockState(pos)
 
-        if (targetBlockState.`is`(Blocks.WATER) || targetBlockState.`is`(state.block)) {
-            level.setBlock(pos, state, 3)
+        if (targetBlockState.`is`(state.block)) return true
+
+        if (targetBlockState.`is`(Blocks.WATER)) {
+            level.setBlock(pos, state, 2)
             return true
         }
 

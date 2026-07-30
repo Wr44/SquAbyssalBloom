@@ -1,8 +1,10 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
-import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssalChunkDataCache
+import fr.heta__h.squ_abyssal_bloom.mixin.enable.ChunkAccessAccessor
+import fr.heta__h.squ_abyssal_bloom.util.accessor.IAbyssalNoiseChunk
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.WorldGenRegion
+import net.minecraft.world.level.Level
 import net.minecraft.world.level.biome.BiomeManager
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.chunk.ChunkAccess
@@ -30,18 +32,17 @@ abstract class AbyssalCarverFillMixin {
         chunk: ChunkAccess,
         ci: CallbackInfo
     ) {
+        if (region.level.dimension() != Level.OVERWORLD) return
+
         val seaLevel = region.seaLevel
         val water = Blocks.WATER.defaultBlockState()
-        val stone = Blocks.STONE.defaultBlockState()
         val mutable = BlockPos.MutableBlockPos()
 
-        val data = AbyssalChunkDataCache.consume(randomState, chunk.pos.x, chunk.pos.z)
-        if (data != null) {
+        val floorGrid = ((chunk as ChunkAccessAccessor).getNoiseChunk() as? IAbyssalNoiseChunk)?.getFloorGrid()
+        if (floorGrid != null) {
             for (localX in 0..15) {
                 for (localZ in 0..15) {
-                    if (!data.carverMask[localX + localZ * 16]) continue
-
-                    val floorY = data.floorGrid[localX + localZ * 16]
+                    val floorY = floorGrid[localX + localZ * 16]
                     if (floorY == Int.MIN_VALUE) continue
 
                     val worldX = chunk.pos.minBlockX + localX

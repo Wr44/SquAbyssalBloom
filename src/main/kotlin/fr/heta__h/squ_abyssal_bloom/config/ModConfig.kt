@@ -20,6 +20,7 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.subScreenButton
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalTerrainSettings
 import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
@@ -185,14 +186,16 @@ object ModConfig {
             if (alphaMinOpt.pendingValue() >= newMax) alphaMinOpt.requestSet(newMax - 0.01)
         }
 
-        val shallowDeepOpt = serverDouble(ModServerConfig.SHALLOW_DEEP_BOUNDARY, -0.95..-0.21, 0.001) { Component.literal(String.format("%.3f", it)) }
-        val deepAbyssalOpt = serverDouble(ModServerConfig.DEEP_ABYSSAL_BOUNDARY, -1.049..-0.30, 0.001) { Component.literal(String.format("%.3f", it)) }
+        val shallowDeepOpt = serverDouble(ModServerConfig.SHALLOW_DEEP_BOUNDARY, -0.915..-0.21, 0.001) { Component.literal(String.format("%.3f", it)) }
+        val deepAbyssalOpt = serverDouble(ModServerConfig.DEEP_ABYSSAL_BOUNDARY, -0.965..-0.24, 0.001) { Component.literal(String.format("%.3f", it)) }
 
         shallowDeepOpt.addListener { _, newShallow ->
-            if (deepAbyssalOpt.pendingValue() >= newShallow) deepAbyssalOpt.requestSet(newShallow - 0.001)
+            val maximumDeep = newShallow - AbyssalTerrainSettings.MIN_BOUNDARY_GAP
+            if (deepAbyssalOpt.pendingValue() > maximumDeep) deepAbyssalOpt.requestSet(maximumDeep)
         }
         deepAbyssalOpt.addListener { _, newDeep ->
-            if (shallowDeepOpt.pendingValue() <= newDeep) shallowDeepOpt.requestSet(newDeep + 0.001)
+            val minimumShallow = newDeep + AbyssalTerrainSettings.MIN_BOUNDARY_GAP
+            if (shallowDeepOpt.pendingValue() < minimumShallow) shallowDeepOpt.requestSet(minimumShallow)
         }
 
         val shallowFloorOpt = serverInt(ModServerConfig.SHALLOW_FLOOR_Y, -60..60) { Component.literal("Y=$it") }

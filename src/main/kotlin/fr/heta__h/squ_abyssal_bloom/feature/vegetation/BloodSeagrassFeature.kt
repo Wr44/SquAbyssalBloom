@@ -25,25 +25,38 @@ class BloodSeagrassFeature(codec: Codec<ProbabilityFeatureConfiguration>) : Feat
 
         var placed = false
         val tries = 8 + random.nextInt(7)
+        val seagrassState = ModBlocks.BLOOD_SEAGRASS.get().defaultBlockState()
+        val tallSeagrassState = ModBlocks.TALL_BLOOD_SEAGRASS.get().defaultBlockState()
 
-        for (i in 0 until tries) {
+        repeat(tries) {
             val offsetPos = pos.offset(random.nextInt(8) - random.nextInt(8), random.nextInt(4) - random.nextInt(4), random.nextInt(8) - random.nextInt(8))
-            val state = ModBlocks.BLOOD_SEAGRASS.get().defaultBlockState()
 
-            if (level.getBlockState(offsetPos).`is`(Blocks.WATER) && state.canSurvive(level, offsetPos)) {
-                if (random.nextDouble() < config.probability) {
-                    val tallState = ModBlocks.TALL_BLOOD_SEAGRASS.get().defaultBlockState()
-                    level.setBlock(offsetPos, tallState.setValue(TallSeagrassBlock.HALF, DoubleBlockHalf.LOWER), 2)
-                    level.setBlock(offsetPos.above(), tallState.setValue(TallSeagrassBlock.HALF, DoubleBlockHalf.UPPER), 2)
-                } else {
-                    val finalState = if (random.nextFloat() < Sprouting.SPROUTING_CHANCE) {
-                        state.setValue(BloodSeagrassBlock.SPROUTING, true)
-                    } else {
-                        state
-                    }
-                    level.setBlock(offsetPos, finalState, 2)
+            if (!level.getBlockState(offsetPos).`is`(Blocks.WATER) || !seagrassState.canSurvive(level, offsetPos)) {
+                return@repeat
+            }
+
+            if (random.nextDouble() < config.probability) {
+                val upperPos = offsetPos.above()
+                val lowerState = tallSeagrassState.setValue(TallSeagrassBlock.HALF, DoubleBlockHalf.LOWER)
+                if (!level.getBlockState(upperPos).`is`(Blocks.WATER) || !lowerState.canSurvive(level, offsetPos)) {
+                    return@repeat
                 }
-                placed = true
+
+                if (level.setBlock(offsetPos, lowerState, 2)) {
+                    val upperState = tallSeagrassState.setValue(TallSeagrassBlock.HALF, DoubleBlockHalf.UPPER)
+                    if (level.setBlock(upperPos, upperState, 2)) {
+                        placed = true
+                    } else {
+                        level.setBlock(offsetPos, Blocks.WATER.defaultBlockState(), 2)
+                    }
+                }
+            } else {
+                val finalState = if (random.nextFloat() < Sprouting.SPROUTING_CHANCE) {
+                    seagrassState.setValue(BloodSeagrassBlock.SPROUTING, true)
+                } else {
+                    seagrassState
+                }
+                placed = level.setBlock(offsetPos, finalState, 2) || placed
             }
         }
 

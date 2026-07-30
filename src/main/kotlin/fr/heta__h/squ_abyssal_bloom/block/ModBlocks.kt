@@ -198,6 +198,18 @@ object ModBlocks {
         )
     }
 
+    val BIOLUMINESCENT_CRYSTAL_BLOCK = REGISTRY.registerBlock("bioluminescent_crystal_block") { props ->
+        Block(
+            props
+                .mapColor(MapColor.COLOR_MAGENTA)
+                .instrument(NoteBlockInstrument.BASS)
+                .requiresCorrectToolForDrops()
+                .strength(5.0f, 6.0f)
+                .sound(SoundType.METAL)
+                .lightLevel { _ -> 10 }
+        )
+    }
+
     fun register(bus: IEventBus) {
         REGISTRY.register(bus)
     }

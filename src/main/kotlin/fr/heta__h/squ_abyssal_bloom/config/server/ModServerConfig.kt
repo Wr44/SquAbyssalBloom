@@ -125,8 +125,8 @@ object ModServerConfig {
     val FISH_SCHOOL_COHESION_FULL_STRENGTH_DISTANCE = double("fishSchoolCohesionFullStrengthDistance", 3.0, 0.5, 8.0, "Distance from the local flock center at which cohesion reaches full strength.")
     val FISH_SCHOOL_HERD_COMPRESSION = double("fishSchoolHerdCompression", 0.6, 0.0, 2.0, "Strength with which panicking fish additionally compress toward their local group center.")
 
-    val SHALLOW_DEEP_BOUNDARY = double("shallowDeepBoundary", -0.45, -1.0, -0.19, "Continentalness boundary between shallow and deep ocean. Vanilla: -0.455")
-    val DEEP_ABYSSAL_BOUNDARY = double("deepAbyssalBoundary", -0.70, -1.05, -0.19, "Continentalness boundary between deep ocean and abyssal zone.")
+    val SHALLOW_DEEP_BOUNDARY = double("shallowDeepBoundary", -0.45, -0.915, -0.19, "Continentalness boundary between shallow and deep ocean. Vanilla: -0.455")
+    val DEEP_ABYSSAL_BOUNDARY = double("deepAbyssalBoundary", -0.70, -0.965, -0.24, "Continentalness boundary between deep ocean and abyssal zone.")
     val SHALLOW_FLOOR_Y = int("shallowFloorY", 36, -60, 61, "Base Y target for shallow ocean floor.")
     val DEEP_FLOOR_TARGET = int("deepFloorTarget", 18, -60, 60, "Base Y target for deep ocean floor.")
     val TARGET_FLOOR_Y = int("targetFloorY", -40, -64, 20, "Base Y target for abyssal floor.")

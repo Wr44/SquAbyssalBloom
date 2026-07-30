@@ -19,11 +19,12 @@ object RedCoralShapes {
         val targetBlockState = level.getBlockState(pos)
 
         if ((targetBlockState.`is`(Blocks.WATER) || targetBlockState.`is`(BlockTags.CORALS)) && level.getBlockState(above).`is`(Blocks.WATER)) {
-            level.setBlock(pos, state, 3)
+            level.setBlock(pos, state, 2)
 
-            if (random.nextFloat() < 0.25f) {
+            val decorationRoll = random.nextFloat()
+            if (decorationRoll < 0.25f) {
                 level.setBlock(above, Blocks.FIRE_CORAL.defaultBlockState(), 2)
-            } else if (random.nextFloat() < 0.05f) {
+            } else if (decorationRoll < 0.30f) {
                 level.setBlock(above, Blocks.SEA_PICKLE.defaultBlockState().setValue(SeaPickleBlock.PICKLES, random.nextInt(4) + 1), 2)
             }
 
@@ -49,11 +50,13 @@ object RedCoralShapes {
     fun placeTree(level: LevelAccessor, random: RandomSource, origin: BlockPos, state: BlockState): Boolean {
         val mutPos = origin.mutable()
         val trunckHeight = random.nextInt(3) + 1
+        var placed = false
 
         for (i in 0 until trunckHeight) {
             if (!placeCoralBlock(level, random, mutPos, state)) {
-                return true
+                return placed
             }
+            placed = true
             mutPos.move(Direction.UP)
         }
 
@@ -79,7 +82,7 @@ object RedCoralShapes {
             }
         }
 
-        return true
+        return placed
     }
 
     fun placeClaw(level: LevelAccessor, random: RandomSource, origin: BlockPos, state: BlockState): Boolean {
@@ -141,6 +144,7 @@ object RedCoralShapes {
         val length = random.nextInt(3) + 3
         val sinkValue = random.nextInt(3) + 1
         val mutPos = origin.mutable()
+        var placed = false
 
         for (x in 0..width) {
             for (y in 0..height) {
@@ -154,12 +158,12 @@ object RedCoralShapes {
                             (x == 0 || x == width || y == 0 || y == height || z == 0 || z == length)
 
                     if (isShell && random.nextFloat() >= 0.1f) {
-                        placeCoralBlock(level, random, mutPos, state)
+                        placed = placeCoralBlock(level, random, mutPos, state) || placed
                     }
                 }
             }
         }
 
-        return true
+        return placed
     }
 }

@@ -1,7 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.feature.vegetation
 
 import com.mojang.serialization.Codec
+import net.minecraft.core.BlockPos
 import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.level.levelgen.feature.Feature
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration
@@ -17,8 +19,10 @@ class RedCoralReefFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<None
         var placed = false
         val individuals = random.nextInt(4) + 3
 
-        for (i in 0 until individuals) {
-            val pos = origin.offset(random.nextInt(8) - random.nextInt(8), 0, random.nextInt(8) - random.nextInt(8))
+        repeat(individuals) {
+            val x = origin.x + random.nextInt(8) - random.nextInt(8)
+            val z = origin.z + random.nextInt(8) - random.nextInt(8)
+            val pos = BlockPos(x, level.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, x, z), z)
 
             val success = when (random.nextInt(3)) {
                 0 -> RedCoralShapes.placeTree(level, random, pos, state)

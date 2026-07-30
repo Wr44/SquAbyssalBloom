@@ -42,6 +42,7 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.MOBILE_CONDUIT.get())
 
                 output.accept(ModItems.BIOLUMINESCENT_CRYSTAL.get())
+                output.accept(ModItems.BIOLUMINESCENT_CRYSTAL_BLOCK.get())
                 output.accept(ModItems.BIOLUMINESCENT_TORCH.get())
                 output.accept(ModItems.BIOLUMINESCENT_LANTERN.get())
 

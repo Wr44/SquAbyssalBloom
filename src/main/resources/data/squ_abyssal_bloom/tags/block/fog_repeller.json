@@ -3,6 +3,7 @@
   "values": [
     "squ_abyssal_bloom:bioluminescent_torch",
     "squ_abyssal_bloom:bioluminescent_lantern",
-    "squ_abyssal_bloom:bioluminescent_wall_torch"
+    "squ_abyssal_bloom:bioluminescent_wall_torch",
+    "squ_abyssal_bloom:bioluminescent_crystal_block"
   ]
 }

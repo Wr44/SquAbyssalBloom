@@ -210,6 +210,8 @@ object ModItems {
 
     val RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL)
 
+    val BIOLUMINESCENT_CRYSTAL_BLOCK = ITEMS.registerSimpleBlockItem(ModBlocks.BIOLUMINESCENT_CRYSTAL_BLOCK)
+
     // Fictive items for testing
     val BARBED_NAUTILUS_SCALE_DISPLAY: DeferredItem<Item> = ITEMS.registerItem(
         "barbed_nautilus_scale_display"

@@ -39,12 +39,8 @@ class CalcareousDepositBlock(properties: Properties) : Block(properties), Simple
         const val MAX_AGE = 3
 
         private data class Cuboid(
-            val minX: Double,
-            val minY: Double,
-            val minZ: Double,
-            val maxX: Double,
-            val maxY: Double,
-            val maxZ: Double
+            val minX: Double, val minY: Double, val minZ: Double,
+            val maxX: Double, val maxY: Double, val maxZ: Double
         )
 
         private val STAGE_CUBOIDS: Array<Array<Cuboid>> = arrayOf(
@@ -139,17 +135,14 @@ class CalcareousDepositBlock(properties: Properties) : Block(properties), Simple
         neighbourState: BlockState,
         random: RandomSource
     ): BlockState {
-        if (state.getValue(WATERLOGGED)) {
-            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level))
-        }
-        if (directionToNeighbour == Direction.DOWN && !state.canSurvive(level, pos)) {
-            return Blocks.AIR.defaultBlockState()
-        }
+
+        if (state.getValue(WATERLOGGED)) ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level))
+
+        if (directionToNeighbour == Direction.DOWN && !state.canSurvive(level, pos)) return Blocks.AIR.defaultBlockState()
+
         return super.updateShape(
             state,
-            level,
-            ticks,
-            pos,
+            level, ticks, pos,
             directionToNeighbour,
             neighbourPos,
             neighbourState,

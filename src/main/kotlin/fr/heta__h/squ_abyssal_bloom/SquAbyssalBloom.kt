@@ -19,7 +19,7 @@ import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.feature.ModFeatures
-import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssalChunkDataCache
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.AbyssalWorldgenScope
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanTerritory
 import net.minecraft.server.level.ServerLevel
@@ -122,18 +122,25 @@ object SquAbyssalBloom {
 
     @SubscribeEvent
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
-        AbyssalChunkDataCache.clear()
+        AbyssalWorldgenScope.clear()
         OceanTerritory.seed(event.server.worldGenSettings.options().seed(), ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS.get())
     }
 
     @SubscribeEvent
     fun onServerStopped(event: ServerStoppedEvent) {
-        AbyssalChunkDataCache.clear()
+        AbyssalWorldgenScope.clear()
+    }
+
+    @SubscribeEvent
+    fun onLevelLoad(event: LevelEvent.Load) {
+        val serverLevel = event.level as? ServerLevel ?: return
+        AbyssalWorldgenScope.register(serverLevel)
     }
 
     @SubscribeEvent
     fun onLevelUnload(event: LevelEvent.Unload) {
         val serverLevel = event.level as? ServerLevel ?: return
+        AbyssalWorldgenScope.unregister(serverLevel)
         FishCollectiveManager.releaseLevel(serverLevel)
         RedSlobbererReefManager.releaseLevel(serverLevel)
     }

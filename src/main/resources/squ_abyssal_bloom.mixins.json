@@ -27,6 +27,7 @@
     "enable.AbstractNautilusAccessor",
     "enable.LivingEntityFluidAccessor",
     "enable.ConduitBlockEntityAccessor",
+    "enable.ChunkAccessAccessor",
 
     "item.BoneMealItemMixin",
 

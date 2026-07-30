@@ -41,11 +41,13 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
         val mutPos = origin.mutable()
         val trunkHeight = random.nextInt(15) + 10
         var reachedHeight = 0
+        var lastTrunkPos = origin.immutable()
 
         for (i in 0 until trunkHeight) {
             if (budget[0] <= 0) break
             if (!placeAlgaeBlock(level, mutPos, state, budget)) break
             reachedHeight = i + 1
+            lastTrunkPos = mutPos.immutable()
 
             decorateSides(level, random, mutPos, reservedDirections = emptySet(), chance = BRANCH_SIDE_DECORATE_CHANCE)
 
@@ -91,7 +93,7 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
             topDirections.add(Plane.HORIZONTAL.getRandomDirection(random))
         }
         for (branchDirection in topDirections) {
-            placeBranch(level, random, mutPos, state, branchDirection, depth = 0, origin = origin, heightFactor = 1f, budget = budget)
+            placeBranch(level, random, lastTrunkPos, state, branchDirection, depth = 0, origin = origin, heightFactor = 1f, budget = budget)
         }
 
         return true
@@ -169,11 +171,16 @@ class RhodophytaTowerFeature(codec: Codec<NoneFeatureConfiguration>) : Feature<N
     }
 
     private fun placeAlgaeBlock(level: LevelAccessor, pos: BlockPos, state: BlockState, budget: IntArray): Boolean {
+        if (budget[0] <= 0) return false
+
         val above = pos.above()
         val targetBlockState = level.getBlockState(pos)
 
-        if ((targetBlockState.`is`(Blocks.WATER) || targetBlockState.`is`(state.block)) && level.getBlockState(above).`is`(Blocks.WATER)) {
-            level.setBlock(pos, state, 3)
+        if (!level.getBlockState(above).`is`(Blocks.WATER)) return false
+        if (targetBlockState.`is`(state.block)) return true
+
+        if (targetBlockState.`is`(Blocks.WATER) || targetBlockState.`is`(Blocks.FIRE_CORAL_WALL_FAN)) {
+            level.setBlock(pos, state, 2)
             budget[0]--
             return true
         }

@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.worldgen
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.AbyssalWorldgenScope
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.AbyssalOceanBiomes
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanBiomeRegistry
 import net.minecraft.core.Holder
@@ -60,6 +61,8 @@ abstract class OceanBiomeZoneMixin {
         sampler: Climate.Sampler,
         cir: CallbackInfoReturnable<Holder<Biome>>
     ) {
+        if (!AbyssalWorldgenScope.isOverworld(sampler)) return
+
         val target = sampler.sample(quartX, quartY, quartZ)
         val cont = Climate.unquantizeCoord(target.continentalness())
         val depth = Climate.unquantizeCoord(target.depth())
