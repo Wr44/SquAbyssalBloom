@@ -7,8 +7,11 @@ import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.TallBloodSeagrassBlock
 import fr.heta__h.squ_abyssal_bloom.block.brine_bubble_column.BrineBubbleColumnBlock
 import fr.heta__h.squ_abyssal_bloom.block.calcareous_deposit.CalcareousDepositBlock
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
+import fr.heta__h.squ_abyssal_bloom.block.underwater_torch.UnderwaterTorchBlock
+import fr.heta__h.squ_abyssal_bloom.block.underwater_torch.UnderwaterWallTorchBlock
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.CoralBlock
+import net.minecraft.world.level.block.LanternBlock
 import net.minecraft.world.level.block.SlabBlock
 import net.minecraft.world.level.block.SoundType
 import net.minecraft.world.level.block.StairBlock
@@ -160,6 +163,39 @@ object ModBlocks {
 
     val RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL = REGISTRY.registerBlock("rhodophyta_infested_marine_bricks_wall") { props ->
         WallBlock(props.marineBricks().forceSolidOn())
+    }
+
+    val BIOLUMINESCENT_TORCH = REGISTRY.registerBlock("bioluminescent_torch") { props ->
+        UnderwaterTorchBlock(
+            props.noCollision()
+                .instabreak()
+                .lightLevel { _ -> 14 }
+                .sound(SoundType.WOOD)
+                .pushReaction(PushReaction.DESTROY)
+        )
+    }
+
+    val BIOLUMINESCENT_WALL_TORCH = REGISTRY.registerBlock("bioluminescent_wall_torch") { props ->
+        UnderwaterWallTorchBlock(
+            props.noCollision()
+                .instabreak()
+                .lightLevel { _ -> 14 }
+                .sound(SoundType.WOOD)
+                .pushReaction(PushReaction.DESTROY)
+                .overrideDescription("block.${SquAbyssalBloom.ID}.bioluminescent_torch")
+        )
+    }
+
+    val BIOLUMINESCENT_LANTERN = REGISTRY.registerBlock("bioluminescent_lantern") { props ->
+        LanternBlock(
+            props.mapColor(MapColor.METAL)
+                .forceSolidOn()
+                .strength(3.5f)
+                .sound(SoundType.LANTERN)
+                .lightLevel { _ -> 15 }
+                .noOcclusion()
+                .pushReaction(PushReaction.DESTROY)
+        )
     }
 
     fun register(bus: IEventBus) {

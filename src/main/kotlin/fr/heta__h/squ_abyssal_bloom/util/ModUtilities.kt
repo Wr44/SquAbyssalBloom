@@ -12,6 +12,8 @@ import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import dev.isxander.yacl3.gui.YACLScreen
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
@@ -32,13 +34,14 @@ import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.server.level.WorldGenRegion
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
 import net.minecraft.tags.FluidTags
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
+import net.minecraft.world.entity.decoration.ItemFrame
+import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
@@ -175,15 +178,7 @@ object ModUtilities {
             ))
         }
     }
-
-    fun getRiderLampInfluence(entity: LivingEntity): Double {
-        val vehicle = entity.vehicle
-        if (vehicle is AbstractNautilus) {
-            val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (!extra.isEmpty && extra.item == NautilusLayerItems.LAMP) return 1.0
-        }
-        return 0.0
-    }
+    
 
 
     fun isNautilusExtraEquipment(stack: ItemStack): Boolean {
@@ -191,35 +186,184 @@ object ModUtilities {
         return stack.typeHolder().`is`(ModTags.Items.NAUTILUS_EQUIPMENT)
     }
 
-    fun getNautilusLampInfluence(level: Level, pos: BlockPos, maxRange: Double, maxInfluence: Double): Double {
-        val aabb = AABB(
-            pos.x - maxRange, pos.y - maxRange, pos.z - maxRange,
-            pos.x + maxRange, pos.y + maxRange, pos.z + maxRange
+    fun getFogRepellerInfluence(
+        entity: LivingEntity?,
+        level: Level,
+        pos: BlockPos,
+        maxRange: Double,
+        maxInfluence: Double
+    ): Double {
+        return maxOf(
+            entity?.let(::getFogRepellerInfluence) ?: 0.0,
+            getFogRepellerInfluence(level, pos, maxRange, maxInfluence)
         )
-        val nautili = level.getEntitiesOfClass(AbstractNautilus::class.java, aabb)
+    }
+
+    private fun distanceFalloffInfluence(
+        distanceSquared: Double,
+        rangeSquared: Double,
+        maxRange: Double,
+        maxInfluence: Double
+    ): Double {
+        if (distanceSquared > rangeSquared) return 0.0
+        val distance = kotlin.math.sqrt(distanceSquared)
+        return (1.0 - distance / maxRange).coerceIn(0.0, 1.0) * maxInfluence
+    }
+
+    fun getFogRepellerInfluence(
+        level: Level,
+        pos: BlockPos,
+        maxRange: Double,
+        maxInfluence: Double
+    ): Double {
+        val center = Vec3.atCenterOf(pos)
+        val rangeSquared = maxRange * maxRange
+
         var maxFound = 0.0
-        for (entity in nautili) {
-            val extra = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-            if (extra.item == NautilusLayerItems.LAMP) {
-                val dist = entity.position().distanceTo(Vec3(pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble()))
-                val influence = (1.0 - dist / maxRange).coerceIn(0.0, 1.0) * maxInfluence
-                if (influence > maxFound) maxFound = influence
+
+        val aabb = AABB(
+            pos.x - maxRange,
+            pos.y - maxRange,
+            pos.z - maxRange,
+            pos.x + maxRange,
+            pos.y + maxRange,
+            pos.z + maxRange
+        )
+
+        for (nautilus in level.getEntitiesOfClass(AbstractNautilus::class.java, aabb)) {
+            val extra = nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+
+            if (!extra.isEmpty && extra.item == NautilusLayerItems.LAMP) {
+                val distanceSquared = nautilus.position().distanceToSqr(center)
+                maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
             }
         }
+
+        if (ModCompat.hasDynLights) {
+            for (itemEntity in level.getEntitiesOfClass(ItemEntity::class.java, aabb)) {
+                if (!itemEntity.item.`is`(ModTags.Items.FOG_REPELLER)) continue
+                val distanceSquared = itemEntity.position().distanceToSqr(center)
+                maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
+            }
+
+            for (itemFrame in level.getEntitiesOfClass(ItemFrame::class.java, aabb)) {
+                if (!itemFrame.item.`is`(ModTags.Items.FOG_REPELLER)) continue
+                val distanceSquared = itemFrame.position().distanceToSqr(center)
+                maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
+            }
+        }
+
+        if (maxFound >= maxInfluence) return maxInfluence
+
+        val blockRange = kotlin.math.ceil(maxRange).toInt()
+        return scanFogRepellerBlocks(level, center, pos, blockRange, rangeSquared, maxRange, maxInfluence, maxFound)
+    }
+
+    private fun scanFogRepellerBlocks(
+        level: Level,
+        center: Vec3,
+        pos: BlockPos,
+        blockRange: Int,
+        rangeSquared: Double,
+        maxRange: Double,
+        maxInfluence: Double,
+        initial: Double
+    ): Double {
+        var maxFound = initial
+
+        val minX = pos.x - blockRange
+        val maxX = pos.x + blockRange
+        val minY = (pos.y - blockRange).coerceAtLeast(level.minY)
+        val maxY = (pos.y + blockRange).coerceAtMost(level.maxY - 1)
+        val minZ = pos.z - blockRange
+        val maxZ = pos.z + blockRange
+
+        if (minY > maxY) return maxFound
+
+        val chunkSource = level.chunkSource
+
+        for (chunkX in (minX shr 4)..(maxX shr 4)) {
+            for (chunkZ in (minZ shr 4)..(maxZ shr 4)) {
+                val chunk = chunkSource.getChunkNow(chunkX, chunkZ) ?: continue
+                val chunkMinBlockX = chunk.pos.minBlockX
+                val chunkMinBlockZ = chunk.pos.minBlockZ
+
+                val loX = (minX - chunkMinBlockX).coerceAtLeast(0)
+                val hiX = (maxX - chunkMinBlockX).coerceAtMost(15)
+                val loZ = (minZ - chunkMinBlockZ).coerceAtLeast(0)
+                val hiZ = (maxZ - chunkMinBlockZ).coerceAtMost(15)
+                if (loX > hiX || loZ > hiZ) continue
+
+                val sections = chunk.sections
+                val minSectionIndex = chunk.getSectionIndex(minY).coerceAtLeast(0)
+                val maxSectionIndex = chunk.getSectionIndex(maxY).coerceAtMost(sections.size - 1)
+
+                for (sectionIndex in minSectionIndex..maxSectionIndex) {
+                    val section = sections[sectionIndex]
+                    if (section.hasOnlyAir()) continue
+                    if (!section.maybeHas { it.`is`(ModTags.Blocks.FOG_REPELLER) }) continue
+
+                    val sectionWorldMinY = chunk.getSectionYFromSectionIndex(sectionIndex) shl 4
+                    val loY = (minY - sectionWorldMinY).coerceAtLeast(0)
+                    val hiY = (maxY - sectionWorldMinY).coerceAtMost(15)
+                    if (loY > hiY) continue
+
+                    for (localX in loX..hiX) {
+                        for (localY in loY..hiY) {
+                            for (localZ in loZ..hiZ) {
+                                val state = section.getBlockState(localX, localY, localZ)
+                                if (!state.`is`(ModTags.Blocks.FOG_REPELLER)) continue
+
+                                val lampPos = BlockPos(
+                                    chunkMinBlockX + localX,
+                                    sectionWorldMinY + localY,
+                                    chunkMinBlockZ + localZ
+                                )
+                                val distanceSquared = center.distanceToSqr(Vec3.atCenterOf(lampPos))
+                                val influence = distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence)
+
+                                maxFound = maxOf(maxFound, influence)
+                                if (maxFound >= maxInfluence) return maxInfluence
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         return maxFound
+    }
+
+    fun getFogRepellerInfluence(entity: LivingEntity): Double {
+        val mainHand = entity.mainHandItem
+        val offHand = entity.offhandItem
+
+        if ( ModCompat.hasDynLights && (mainHand.`is`(ModTags.Items.FOG_REPELLER) || offHand.`is`(ModTags.Items.FOG_REPELLER))) return 1.0
+
+        val vehicle = entity.vehicle
+
+        if (vehicle is AbstractNautilus) {
+            val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+
+            if (!extra.isEmpty && extra.item == NautilusLayerItems.LAMP) {
+                return 1.0
+            }
+        }
+
+        return 0.0
     }
 
     fun preferWaterWalkTarget(pos: BlockPos, level: LevelReader, fallback: () -> Float): Float {
         return if (level.getFluidState(pos).`is`(FluidTags.WATER)) 10.0f else fallback()
     }
-
-    fun getCombinedLampInfluence(entity: LivingEntity?, level: Level, pos: BlockPos, maxRange: Double, maxInfluence: Double): Double {
-        entity ?: return 0.0
-        return maxOf(getRiderLampInfluence(entity), getNautilusLampInfluence(level, pos, maxRange, maxInfluence))
-    }
+    
 
     fun smoothstep(t: Double): Double {
         return t * t * (3.0 - 2.0 * t)
+    }
+
+    fun smoothTowards(current: Double, target: Double, dt: Double, rate: Double = 2.0): Double {
+        return current + (target - current) * (rate * dt)
     }
 
     fun minOfPositive(first: Long, second: Long): Long {
@@ -231,7 +375,7 @@ object ModUtilities {
     fun sweepStaleUuidTicks(map: MutableMap<UUID, Long>, now: Long, maxAge: Long) {
         map.entries.removeIf { (_, tick) ->
             val age = now - tick
-            age < 0L || age > maxAge
+            age !in 0L..maxAge
         }
     }
 

@@ -8,7 +8,7 @@ import net.minecraft.client.model.geom.PartPose
 import net.minecraft.client.model.geom.builders.*
 import net.minecraft.client.renderer.entity.state.EntityRenderState
 import net.minecraft.resources.Identifier
-import net.minecraft.world.entity.AnimationState
+import net.minecraft.util.Mth
 
 class NautilusLampModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(modelPart) {
 
@@ -63,9 +63,11 @@ class NautilusLampModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(m
         val LAYER_LOCATION: ModelLayerLocation =
             ModelLayerLocation(Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "nautilus_lamp"), "main")
 
-        val LAMP_ANIMATION: net.minecraft.client.animation.AnimationDefinition =
-            net.minecraft.client.animation.AnimationDefinition.Builder.withLength(2.0f).looping()
-                .build()
+        private const val SWAY_AMPLITUDE = 0.0873f // ~5 degrees
+        private const val SWAY_SPEED = 0.1f
+        private val ARM_PHASE_STEP = (Math.PI / 3.0).toFloat()
+        private val PRINCIPAL_PHASE_OFFSET = (Math.PI / 2.0).toFloat()
+        private val OPPOSITE_SIDE_PHASE = Math.PI.toFloat()
 
         fun createBodyLayer(): LayerDefinition {
             val meshdefinition: MeshDefinition = MeshDefinition()
@@ -311,14 +313,28 @@ class NautilusLampModel(modelPart: ModelPart) : EntityModel<EntityRenderState>(m
 
     }
 
-    private val idleAnimation = NautilusLampAnimation.idle.bake(modelPart)
-    private val idleAnimationState = AnimationState()
+    private fun sway(time: Float, phase: Float): Float =
+        SWAY_AMPLITUDE * Mth.sin((SWAY_SPEED * time + phase).toDouble())
 
     override fun setupAnim(state: EntityRenderState) {
         super.setupAnim(state)
 
-        idleAnimationState.startIfStopped(state.ageInTicks.toInt())
+        val time = state.ageInTicks
 
-        this.idleAnimation.apply(idleAnimationState, state.ageInTicks)
+        lantern_right1.zRot = sway(time, 0f)
+        lantern_right2.zRot = sway(time, ARM_PHASE_STEP)
+        lantern_right3.zRot = sway(time, 2f * ARM_PHASE_STEP)
+
+        lantern_left1.zRot = sway(time, OPPOSITE_SIDE_PHASE)
+        lantern_left2.zRot = sway(time, OPPOSITE_SIDE_PHASE + ARM_PHASE_STEP)
+        lantern_left3.zRot = sway(time, OPPOSITE_SIDE_PHASE + 2f * ARM_PHASE_STEP)
+
+        principal1.zRot = sway(time, PRINCIPAL_PHASE_OFFSET)
+        principal2.zRot = sway(time, ARM_PHASE_STEP + PRINCIPAL_PHASE_OFFSET)
+        principal3.zRot = sway(time, 2f * ARM_PHASE_STEP + PRINCIPAL_PHASE_OFFSET)
+
+        principal4.zRot = sway(time, OPPOSITE_SIDE_PHASE + PRINCIPAL_PHASE_OFFSET)
+        principal5.zRot = sway(time, OPPOSITE_SIDE_PHASE + ARM_PHASE_STEP + PRINCIPAL_PHASE_OFFSET)
+        principal6.zRot = sway(time, OPPOSITE_SIDE_PHASE + 2f * ARM_PHASE_STEP + PRINCIPAL_PHASE_OFFSET)
     }
 }

@@ -67,6 +67,12 @@ object SurfaceAbyssOccluder {
     private var cachedUnderCeiling = false
     private const val CEILING_CHECK_INTERVAL = 5L
 
+    private var lastLampCheckTick = -1L
+    private var cachedRawLampInfluence = 0.0
+    private const val LAMP_CHECK_INTERVAL = 5L
+
+    private var smoothedLampInfluence = 0.0
+
     private fun reset() {
         cachedBands = emptyList()
         cachedRenderDist = -1
@@ -76,6 +82,9 @@ object SurfaceAbyssOccluder {
         lastFrameNanos = 0L
         lastCeilingCheckTick = -1L
         cachedUnderCeiling = false
+        lastLampCheckTick = -1L
+        cachedRawLampInfluence = 0.0
+        smoothedLampInfluence = 0.0
         SurfaceHeightCache.clear()
     }
 
@@ -188,8 +197,12 @@ object SurfaceAbyssOccluder {
         val entity = camera.entity() as? LivingEntity
         if (entity != null && entity.hasEffect(MobEffects.NIGHT_VISION)) return
 
-        val lampInfluence = ModUtilities.getCombinedLampInfluence(entity, level, BlockPos.containing(camPos), 16.0, 1.0).toFloat()
-        val lampReduction = lampInfluence * ModConfig.nautilusLampInfluence.toFloat() * LAMP_REDUCTION_MULTIPLIER
+        if (gameTick < lastLampCheckTick || gameTick - lastLampCheckTick >= LAMP_CHECK_INTERVAL) {
+            cachedRawLampInfluence = ModUtilities.getFogRepellerInfluence(entity, level, BlockPos.containing(camPos), 16.0, 1.0)
+            lastLampCheckTick = gameTick
+        }
+        smoothedLampInfluence = ModUtilities.smoothTowards(smoothedLampInfluence, cachedRawLampInfluence, dt.toDouble())
+        val lampReduction = smoothedLampInfluence.toFloat() * ModConfig.fogRepellerInfluence.toFloat() * LAMP_REDUCTION_MULTIPLIER
 
         val alphaMin = ModConfig.surfaceOccluderAlphaMin.toFloat()
         val alphaRange = (ModConfig.surfaceOccluderAlphaMax - ModConfig.surfaceOccluderAlphaMin).toFloat()

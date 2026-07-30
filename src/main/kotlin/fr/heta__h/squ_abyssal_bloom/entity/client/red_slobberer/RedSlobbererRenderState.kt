@@ -5,7 +5,6 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState
 import net.minecraft.world.entity.AnimationState
 
 class RedSlobbererRenderState : LivingEntityRenderState() {
-    var isBaby: Boolean = false
     var terrainPitch: Float = 0.0f
     var terrainRoll: Float = 0.0f
     var stepRenderOffset: Double = 0.0

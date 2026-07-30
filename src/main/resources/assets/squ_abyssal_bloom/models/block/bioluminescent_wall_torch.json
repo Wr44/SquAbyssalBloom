@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_torch_wall",
+  "textures": {
+    "torch": "squ_abyssal_bloom:block/bioluminescent_torch"
+  }
+}

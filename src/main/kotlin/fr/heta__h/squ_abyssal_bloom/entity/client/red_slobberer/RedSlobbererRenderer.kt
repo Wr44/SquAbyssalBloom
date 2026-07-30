@@ -88,7 +88,6 @@ class RedSlobbererRenderer(context: EntityRendererProvider.Context) :
     ) {
         super.extractRenderState(entity, state, partialTicks)
 
-        state.isBaby = entity.isBaby
         state.stepRenderOffset = entity.getStepRenderOffset(partialTicks)
 
         val terrainNormal = entity.getTerrainNormal(partialTicks)

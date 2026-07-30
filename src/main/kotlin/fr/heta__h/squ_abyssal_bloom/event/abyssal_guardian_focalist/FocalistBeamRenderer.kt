@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.abyssal_guardian_focalist.GuardianBeamDynamicLightCompat
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.ClientBeamData
@@ -35,12 +36,8 @@ object FocalistBeamRenderer {
     private val playersShootingLastFrame = mutableSetOf<Int>()
     private val lastBubbleTickByPlayer = mutableMapOf<Int, Long>()
 
-    private val hasDynLights: Boolean by lazy {
-        ModList.get().mods.any { it.modId.contains("lambdynlights", ignoreCase = true) }
-    }
-
     private fun reset() {
-        if (hasDynLights) GuardianBeamDynamicLightCompat.clearBeamLights()
+        if (ModCompat.hasDynLights) GuardianBeamDynamicLightCompat.clearBeamLights()
         playersShootingLastFrame.clear()
         lastBubbleTickByPlayer.clear()
         ClientBeamData.clear()
@@ -150,12 +147,12 @@ object FocalistBeamRenderer {
 
             poseStack.popPose()
 
-            if (hasDynLights) {
+            if (ModCompat.hasDynLights) {
                 GuardianBeamDynamicLightCompat.updateBeamLight(player, endPos.x, endPos.y, endPos.z, scale)
             }
         }
 
-        if (hasDynLights) {
+        if (ModCompat.hasDynLights) {
             val stoppedShooting = playersShootingLastFrame.subtract(currentlyShooting)
             for (playerId in stoppedShooting) {
                 GuardianBeamDynamicLightCompat.removeBeamLight(playerId)

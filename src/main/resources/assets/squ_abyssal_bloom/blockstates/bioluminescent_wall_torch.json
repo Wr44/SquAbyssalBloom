@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=east": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_wall_torch"
+    },
+    "facing=north": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_wall_torch",
+      "y": 270
+    },
+    "facing=south": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_wall_torch",
+      "y": 90
+    },
+    "facing=west": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_wall_torch",
+      "y": 180
+    }
+  }
+}

@@ -1,7 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.item
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.CreativeModeTab
@@ -41,6 +40,10 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.ABYSSAL_GUARDIAN_FOCALIST.get())
                 output.accept(ModItems.BUBBLE_SPITTER.get())
                 output.accept(ModItems.MOBILE_CONDUIT.get())
+
+                output.accept(ModItems.BIOLUMINESCENT_CRYSTAL.get())
+                output.accept(ModItems.BIOLUMINESCENT_TORCH.get())
+                output.accept(ModItems.BIOLUMINESCENT_LANTERN.get())
 
                 output.accept(ModItems.ASTRAL_PRISMARINE.get())
                 output.accept(ModItems.RHODOPHYTA.get())

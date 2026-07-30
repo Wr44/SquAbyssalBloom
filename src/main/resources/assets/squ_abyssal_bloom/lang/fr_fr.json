@@ -5,6 +5,8 @@
   "block.squ_abyssal_bloom.rhodophyta": "Rhodophyta",
   "block.squ_abyssal_bloom.dead_rhodophyta": "Rhodophyta mort",
   "block.squ_abyssal_bloom.calcareous_deposit": "Dépôt calcaire",
+  "block.squ_abyssal_bloom.bioluminescent_torch": "Torche bioluminescente",
+  "block.squ_abyssal_bloom.bioluminescent_lantern": "Lanterne bioluminescent",
   "block.squ_abyssal_bloom.marine_bricks": "Briques Marines",
   "block.squ_abyssal_bloom.chiseled_marine_bricks": "Briques Marines scultées",
   "block.squ_abyssal_bloom.marine_bricks_stairs": "Escalier en Briques Marines",
@@ -20,8 +22,6 @@
   "block.squ_abyssal_bloom.rhodophyta_infested_marine_bricks_wall": "Mur en Briques Marines Infestées de Rhodophyta",
 
   "creativetab.squ_abyssal_bloom.spawn_eggs": "Oeufs d'apparition de l'Abyssal Bloom",
-
-  "config.squ_abyssal_bloom.category": "Configuration de Abyssal Bloom",
 
   "config.squ_abyssal_bloom.server": "Paramètres Serveur",
   "config.squ_abyssal_bloom.server.tooltip": "Ces paramètres sont synchronisés avec le serveur et nécessitent des permissions opérateur pour être modifiés (il faut être OP).",
@@ -63,13 +63,13 @@
   "config.squ_abyssal_bloom.marineSnowSpawnHeightAbove": "Hauteur d'apparition de la neige",
   "config.squ_abyssal_bloom.marineSnowSpawnHeightAbove.desc": "Définit la hauteur au-dessus du joueur à laquelle la neige marine commence à apparaître",
 
-  "config.squ_abyssal_bloom.group.nautilusLamp": "Lampe Nautile",
-  "config.squ_abyssal_bloom.nautilusLampInfluence": "Influence de la lampe du Nautile",
-  "config.squ_abyssal_bloom.nautilusLampInfluence.tooltip": "Dans quelle mesure un Nautile proche avec une lampe réduit l'obscurité de l'abysse",
-  "config.squ_abyssal_bloom.lampNearPlaneMultiplier": "Influence de la lampe du Nautile à courte distance",
-  "config.squ_abyssal_bloom.lampNearPlaneMultiplier.desc": "Détermine la puissance avec laquelle la Lampe de Nautilus repousse le brouillard abyssal près de vous",
-  "config.squ_abyssal_bloom.lampFarPlaneMultiplier": "Influence de la lampe du Nautile à longue distance",
-  "config.squ_abyssal_bloom.lampFarPlaneMultiplier.desc": "Détermine la puissance avec laquelle la Lampe de Nautilus repousse la limite d'opacité du brouillard abyssal au loin",
+  "config.squ_abyssal_bloom.group.fogRepeller": "Répulseur de brouillard",
+  "config.squ_abyssal_bloom.fogRepellerInfluence": "Influence du répulseur de brouillard",
+  "config.squ_abyssal_bloom.fogRepellerInfluence.tooltip": "Détermine dans quelle mesure un répulseur de brouillard proche réduit l'obscurité abyssale",
+  "config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier": "Influence du répulseur à courte portée",
+  "config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier.desc": "Détermine avec quelle intensité un répulseur de brouillard repousse le brouillard abyssal à courte portée",
+  "config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier": "Influence du répulseur à longue portée",
+  "config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier.desc": "Détermine avec quelle intensité un répulseur de brouillard réduit l'opacité maximale du brouillard abyssal à longue portée",
 
   "config.squ_abyssal_bloom.group.conduit": "Domaine du Conduit",
   "config.squ_abyssal_bloom.group.conduit.desc": "Paramètres des particules indiquant la limite de la portée d’effet d’un conduit",
@@ -416,6 +416,7 @@
   "item.squ_abyssal_bloom.lifeline_bubble": "Bulle de sauvetage",
   "item.squ_abyssal_bloom.respiration_bubble": "Bulle de respiration",
   "item.squ_abyssal_bloom.mobile_conduit": "Conduit mobile",
+  "item.squ_abyssal_bloom.bioluminescent_crystal": "Cristal bioluminescent",
 
   "item.minecraft.potion.effect.guardian_s_redistribution": "Potion de Redistribution du Gardien",
   "item.minecraft.splash_potion.effect.guardian_s_redistribution": "Potion de Redistribution du Gardien jetable",

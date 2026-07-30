@@ -7,6 +7,7 @@ import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardi
 import fr.heta__h.squ_abyssal_bloom.item.bubble_spitter.BubbleSpitterItem
 import fr.heta__h.squ_abyssal_bloom.item.respiration_bubble.RespirationBubbleItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
+import net.minecraft.core.Direction
 import net.minecraft.core.component.DataComponents
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.world.food.FoodProperties
@@ -14,6 +15,7 @@ import net.minecraft.world.item.Item
 import net.minecraft.world.item.MobBucketItem
 import net.minecraft.world.item.Rarity
 import net.minecraft.world.item.SpawnEggItem
+import net.minecraft.world.item.StandingAndWallBlockItem
 import net.minecraft.world.item.component.CustomData
 import net.minecraft.world.level.material.Fluids
 import net.neoforged.bus.api.IEventBus
@@ -86,6 +88,10 @@ object ModItems {
         "prismarine_bulb"
     ) { properties -> Item(properties) }
 
+    val BIOLUMINESCENT_CRYSTAL: DeferredItem<Item> = ITEMS.registerItem(
+    "bioluminescent_crystal"
+    ) { properties -> Item(properties) }
+
     val PRISMARINE_SPIKE : DeferredItem<Item> = ITEMS.registerItem(
         "prismarine_spike"
     ) { properties -> Item(properties) }
@@ -155,6 +161,19 @@ object ModItems {
 
 
     // Blocks
+    val BIOLUMINESCENT_TORCH = ITEMS.registerItem(
+        "bioluminescent_torch"
+    ) { properties ->
+        StandingAndWallBlockItem(
+            ModBlocks.BIOLUMINESCENT_TORCH.get(),
+            ModBlocks.BIOLUMINESCENT_WALL_TORCH.get(),
+            Direction.DOWN,
+            properties.useBlockDescriptionPrefix()
+        )
+    }
+
+    val BIOLUMINESCENT_LANTERN = ITEMS.registerSimpleBlockItem(ModBlocks.BIOLUMINESCENT_LANTERN)
+
     val ASTRAL_PRISMARINE = ITEMS.registerSimpleBlockItem(ModBlocks.ASTRAL_PRISMARINE)
 
     val RHODOPHYTA = ITEMS.registerSimpleBlockItem(ModBlocks.RHODOPHYTA)

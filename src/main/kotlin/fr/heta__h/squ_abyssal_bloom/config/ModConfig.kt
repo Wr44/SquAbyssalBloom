@@ -36,7 +36,7 @@ object ModConfig {
     var abyssMaxDepth: Double = 80.0
     var maxMarinSnowParticles: Int = 75
     var fogDarknessIntensity: Double = 1.0
-    var nautilusLampInfluence: Double = 0.5
+    var fogRepellerInfluence: Double = 0.5
     var marineSnowDensity: Double = 0.5
     var marineSnowVisibilityRange: Int = 20
     var marineSnowSwayAmplitude: Double = 1.0
@@ -45,8 +45,8 @@ object ModConfig {
     var vignetteIntensity: Double = 1.0
     var lightDimmingStrength: Double = 0.7
     var abyssColorRetention: Double = 0.15
-    var lampNearPlaneMultiplier: Double = 12.0
-    var lampFarPlaneMultiplier: Double = 60.0
+    var fogRepellerNearPlaneMultiplier: Double = 12.0
+    var fogRepellerFarPlaneMultiplier: Double = 60.0
     var conduitBoundaryTriggerDistance: Double = 5.0
     var conduitBoundaryRingRadius: Double = 2.5
     var conduitBoundaryRingPoints: Int = 24
@@ -69,7 +69,7 @@ object ModConfig {
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
             maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
             fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
-            nautilusLampInfluence = json.get("nautilusLampInfluence")?.asDouble ?: 0.5
+            fogRepellerInfluence = json.get("fogRepellerInfluence")?.asDouble ?: 0.5
             marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 0.5
             marineSnowVisibilityRange = json.get("marineSnowVisibilityRange")?.asInt ?: 20
             marineSnowSwayAmplitude = json.get("marineSnowSwayAmplitude")?.asDouble ?: 1.0
@@ -78,8 +78,8 @@ object ModConfig {
             vignetteIntensity = json.get("vignetteIntensity")?.asDouble ?: 1.0
             lightDimmingStrength = json.get("lightDimmingStrength")?.asDouble ?: 0.7
             abyssColorRetention = json.get("abyssColorRetention")?.asDouble ?: 0.15
-            lampNearPlaneMultiplier = json.get("lampNearPlaneMultiplier")?.asDouble ?: 12.0
-            lampFarPlaneMultiplier = json.get("lampFarPlaneMultiplier")?.asDouble ?: 60.0
+            fogRepellerNearPlaneMultiplier = json.get("fogRepellerNearPlaneMultiplier")?.asDouble ?: 12.0
+            fogRepellerFarPlaneMultiplier = json.get("fogRepellerFarPlaneMultiplier")?.asDouble ?: 60.0
             conduitBoundaryTriggerDistance = json.get("conduitBoundaryTriggerDistance")?.asDouble ?: 5.0
             conduitBoundaryRingRadius = json.get("conduitBoundaryRingRadius")?.asDouble ?: 2.5
             conduitBoundaryRingPoints = json.get("conduitBoundaryRingPoints")?.asInt ?: 24
@@ -105,7 +105,7 @@ object ModConfig {
                 addProperty("abyssMaxDepth", abyssMaxDepth)
                 addProperty("maxMarinSnowParticles", maxMarinSnowParticles)
                 addProperty("fogDarknessIntensity", fogDarknessIntensity)
-                addProperty("nautilusLampInfluence", nautilusLampInfluence)
+                addProperty("fogRepellerInfluence", fogRepellerInfluence)
                 addProperty("marineSnowDensity", marineSnowDensity)
                 addProperty("marineSnowVisibilityRange", marineSnowVisibilityRange)
                 addProperty("marineSnowSwayAmplitude", marineSnowSwayAmplitude)
@@ -114,8 +114,8 @@ object ModConfig {
                 addProperty("vignetteIntensity", vignetteIntensity)
                 addProperty("lightDimmingStrength", lightDimmingStrength)
                 addProperty("abyssColorRetention", abyssColorRetention)
-                addProperty("lampNearPlaneMultiplier", lampNearPlaneMultiplier)
-                addProperty("lampFarPlaneMultiplier", lampFarPlaneMultiplier)
+                addProperty("fogRepellerNearPlaneMultiplier", fogRepellerNearPlaneMultiplier)
+                addProperty("fogRepellerFarPlaneMultiplier", fogRepellerFarPlaneMultiplier)
                 addProperty("conduitBoundaryTriggerDistance", conduitBoundaryTriggerDistance)
                 addProperty("conduitBoundaryRingRadius", conduitBoundaryRingRadius)
                 addProperty("conduitBoundaryRingPoints", conduitBoundaryRingPoints)
@@ -248,21 +248,21 @@ object ModConfig {
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
                         .build())
                     .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.nautilusLampInfluence"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.nautilusLampInfluence.tooltip")))
-                        .binding(Binding.generic(0.5, { nautilusLampInfluence }, { nautilusLampInfluence = it }))
+                        .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence.tooltip")))
+                        .binding(Binding.generic(0.5, { fogRepellerInfluence }, { fogRepellerInfluence = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
                         .build())
                     .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier.desc")))
-                        .binding(Binding.generic(12.0, { lampNearPlaneMultiplier }, { lampNearPlaneMultiplier = it }))
+                        .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier.desc")))
+                        .binding(Binding.generic(12.0, { fogRepellerNearPlaneMultiplier }, { fogRepellerNearPlaneMultiplier = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 50.0).step(1.0) }
                         .build())
                     .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier.desc")))
-                        .binding(Binding.generic(60.0, { lampFarPlaneMultiplier }, { lampFarPlaneMultiplier = it }))
+                        .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier.desc")))
+                        .binding(Binding.generic(60.0, { fogRepellerFarPlaneMultiplier }, { fogRepellerFarPlaneMultiplier = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0) }
                         .build())
                     .option(Option.createBuilder<Boolean>()

@@ -15,6 +15,11 @@ object ModTags {
             Registries.BLOCK,
             Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "calcareous_deposit_supports")
         )
+
+        val FOG_REPELLER: TagKey<Block> = TagKey.create(
+            Registries.BLOCK,
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "fog_repeller")
+        )
     }
 
     object EntityTypes {
@@ -33,6 +38,11 @@ object ModTags {
         val NAUTILUS_EQUIPMENT: TagKey<Item> = TagKey.create(
             Registries.ITEM,
             Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "nautilus_equipment")
+        )
+
+        val FOG_REPELLER: TagKey<Item> = TagKey.create(
+            Registries.ITEM,
+            Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "fog_repeller")
         )
     }
 

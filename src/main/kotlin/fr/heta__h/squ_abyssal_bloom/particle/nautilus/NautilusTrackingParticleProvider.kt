@@ -9,6 +9,7 @@ import net.minecraft.core.particles.SimpleParticleType
 import net.minecraft.util.RandomSource
 
 class NautilusTrackingParticleProvider(private val sprites: SpriteSet) : ParticleProvider<SimpleParticleType> {
+
     override fun createParticle(
         type: SimpleParticleType,
         level: ClientLevel,

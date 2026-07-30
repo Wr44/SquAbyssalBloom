@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "#squ_abyssal_bloom:is_dried_algea" ,
+    "minecraft:prismarine_crystals"
+  ],
+  "result": {
+    "id": "squ_abyssal_bloom:bioluminescent_crystal",
+    "count": 2
+  }
+}
