@@ -2,7 +2,7 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "A": "minecraft:amethyst_shard",
+    "A": "squ_abyssal_bloom:bioluminescent_crystal",
     "B": "minecraft:prismarine_shard",
     "C": "minecraft:obsidian"
   },

@@ -211,7 +211,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         val verticalOffset = sin((orbitAngle * VERTICAL_PERIODS).toDouble()).toFloat() * VERTICAL_AMPLITUDE
 
         var f1 = sin((animTime * 0.1f).toDouble()).toFloat() / 2f + 0.5f
-        f1 = f1 * f1 + f1
+        f1 += f1 * f1
 
         poseStack.pushPose()
 

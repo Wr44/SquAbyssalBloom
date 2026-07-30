@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.state.level.CameraRenderState
 import net.minecraft.resources.Identifier
 import net.minecraft.util.ARGB
+import net.minecraft.world.entity.Pose
 
 class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
     MobRenderer<GhostChimaeraEntity, GhostChimaeraRenderState, GhostChimaeraModel>(
@@ -41,7 +42,6 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
         return RenderTypes.entityTranslucent(texture)
     }
 
-    // Appliquer l'alpha du corps à la couleur de rendu
     override fun getModelTint(renderState: GhostChimaeraRenderState): Int {
         val alpha = (renderState.bodyAlpha * 255).toInt().coerceIn(0, 255)
         return ARGB.color(alpha, 255, 255, 255)
@@ -54,13 +54,16 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
         cameraRenderState: CameraRenderState
     ) {
         poseStack.pushPose()
-        poseStack.scale(5f,5f,5f)
 
         model.eyes.visible = false
         super.submit(renderState, poseStack, nodeCollector, cameraRenderState)
         model.eyes.visible = true
 
         poseStack.popPose()
+    }
+
+    override fun scale(state: GhostChimaeraRenderState, poseStack: PoseStack) {
+        poseStack.scale(5f, 5f, 5f)
     }
 
     override fun createRenderState(): GhostChimaeraRenderState = GhostChimaeraRenderState()
@@ -75,6 +78,14 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
     ) {
         super.setupRotations(state, poseStack, rotationYaw, partialTicks)
 
+        if (
+            state.deathTime > 0.0f ||
+            state.isUpsideDown ||
+            state.isAutoSpinAttack ||
+            state.hasPose(Pose.SLEEPING)
+        ) {
+            return
+        }
         poseStack.mulPose(Axis.XP.rotationDegrees(-state.xRot))
     }
 
@@ -85,8 +96,6 @@ class GhostChimaeraRenderer(context: EntityRendererProvider.Context) :
     ) {
         super.extractRenderState(entity, state, partialTicks)
 
-        state.xRot = entity.getViewXRot(partialTicks)
-        state.yRot = entity.getViewYRot(partialTicks)
         state.bodyAlpha = entity.bodyAlpha
     }
 

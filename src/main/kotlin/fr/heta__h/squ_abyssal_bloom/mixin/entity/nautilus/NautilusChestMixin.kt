@@ -10,7 +10,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 
 @Mixin(AbstractNautilus::class)
 abstract class NautilusChestMixin {
-    private val self get() = this as AbstractNautilus
+
+    private val self
+        get() = this as AbstractNautilus
+
     private fun hasChest() = self.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).`is`(NautilusLayerItems.CHEST)
 
     @Inject(method = ["getInventoryColumns"], at = [At("HEAD")], cancellable = true)

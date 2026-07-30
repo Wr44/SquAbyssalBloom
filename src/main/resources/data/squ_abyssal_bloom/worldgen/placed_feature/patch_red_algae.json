@@ -1,0 +1,10 @@
+{
+  "feature": "squ_abyssal_bloom:patch_red_algae",
+  "placement": [
+    { "type": "minecraft:rarity_filter", "chance": 2 },
+    { "type": "minecraft:count", "count": 80 },
+    { "type": "minecraft:in_square" },
+    { "type": "minecraft:heightmap", "heightmap": "OCEAN_FLOOR_WG" },
+    { "type": "minecraft:biome" }
+  ]
+}

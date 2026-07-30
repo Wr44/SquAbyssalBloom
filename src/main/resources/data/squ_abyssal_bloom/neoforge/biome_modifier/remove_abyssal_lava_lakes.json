@@ -1,0 +1,8 @@
+{
+  "type": "neoforge:remove_features",
+  "biomes": "#squ_abyssal_bloom:is_abyssal",
+  "features": [
+    "minecraft:lake_lava_underground",
+    "minecraft:lake_lava_surface"
+  ]
+}

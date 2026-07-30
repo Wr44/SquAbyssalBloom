@@ -9,6 +9,7 @@ import net.minecraft.util.RandomSource
 import kotlin.math.PI
 
 class MarineSnowParticleProvider(private val sprites: SpriteSet) : ParticleProvider<SimpleParticleType> {
+
     override fun createParticle(
         type: SimpleParticleType,
         level: ClientLevel,

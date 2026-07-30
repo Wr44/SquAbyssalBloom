@@ -3,7 +3,6 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssDepthCache
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.core.BlockPos
@@ -36,11 +35,8 @@ object AbyssVignetteOverlay {
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
         val rawFactor = AbyssDepthCache.displayedDepthFactor
-        val lampInfluence = maxOf(
-            ModUtilities.getRiderLampInfluence(entity),
-            ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
-        )
-        val effectiveFactor = rawFactor * (1.0 - lampInfluence * ModConfig.nautilusLampInfluence)
+        val lampInfluence = AbyssDepthCache.displayedAmbientFogRepellerInfluence
+        val effectiveFactor = rawFactor * (1.0 - lampInfluence * ModConfig.fogRepellerInfluence)
 
         val alpha = (effectiveFactor.pow(0.8) * ModConfig.vignetteIntensity).toFloat().coerceIn(0f, 0.7f)
         if (alpha < 0.02f) return

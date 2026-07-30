@@ -1,7 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.network.config
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.config.ServerConfigData
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
 import net.minecraft.ChatFormatting
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.chat.Component
@@ -41,6 +42,7 @@ data class C2SServerConfigPacket(val data: ServerConfigData) : CustomPacketPaylo
                 }
 
                 payload.data.applyToSpec()
+                ServerConfigCache.syncFromSpec()
                 PacketDistributor.sendToAllPlayers(S2CServerConfigPacket(ServerConfigData.fromSpec()))
             }
         }

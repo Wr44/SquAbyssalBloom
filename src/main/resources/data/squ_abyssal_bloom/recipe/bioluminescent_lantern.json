@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    "AAA",
+    "ABA",
+    "AAA"
+  ],
+  "key": {
+    "A": "minecraft:iron_nugget",
+    "B": "squ_abyssal_bloom:bioluminescent_torch"
+  },
+  "result": {
+    "id": "squ_abyssal_bloom:bioluminescent_lantern",
+    "count": 1
+  }
+}

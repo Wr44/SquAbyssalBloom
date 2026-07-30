@@ -32,6 +32,31 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val BARNACLE_SHOOT = SOUNDS.register("barnacle_shoot") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BARNACLE_FLOP = SOUNDS.register("barnacle_flop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    // Mackerel
+    val MACKEREL_AMBIENT = SOUNDS.register("mackerel_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val MACKEREL_HURT = SOUNDS.register("mackerel_hurt") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val MACKEREL_DEATH = SOUNDS.register("mackerel_death") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val MACKEREL_FLOP = SOUNDS.register("mackerel_flop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
     // Brine
     val BRINE_AMBIENT = SOUNDS.register("brine_ambient") { id ->
         SoundEvent.createVariableRangeEvent(id)
@@ -42,6 +67,43 @@ object ModSounds {
     }
 
     val BRINE_HURT = SOUNDS.register("brine_hurt") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    // Red Slobberer
+    val RED_SLOBBERER_AMBIENT = SOUNDS.register("red_slobberer_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_MOVING = SOUNDS.register("red_slobberer_moving") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_DEATH = SOUNDS.register("red_slobberer_death") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_HIT = SOUNDS.register("red_slobberer_hit") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_HIT_HIDE = SOUNDS.register("red_slobberer_hit_hide") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_HIDE = SOUNDS.register("red_slobberer_hide") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_SHOW = SOUNDS.register("red_slobberer_show") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_ENTITY_ENTER = SOUNDS.register("red_slobberer_entity_enter") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val RED_SLOBBERER_ENTITY_LEAVE = SOUNDS.register("red_slobberer_entity_leave") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 
@@ -65,8 +127,6 @@ object ModSounds {
 
     // Item
 
-    // Abyssal Guardian Focalist
-
     val ABYSSAL_GUARDIAN_FOCALIST_READY = SOUNDS.register("abyssal_guardian_focalist_ready") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
@@ -76,6 +136,10 @@ object ModSounds {
     }
 
     val POTION_BUBBLE_SPITTER = SOUNDS.register("potion_bubble_spitter") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BABY_RED_SLOBBERER_CAPTURED = SOUNDS.register("fill_baby_red_slobberer_bucket") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 
@@ -105,6 +169,7 @@ object ModSounds {
     val PRESSURE_DAMAGE = SOUNDS.register("pressure_damage") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
+
 
     fun register(eventBus: IEventBus) {
         SOUNDS.register(eventBus)

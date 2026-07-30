@@ -9,6 +9,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.resources.Identifier
 import net.minecraft.server.level.ServerLevel
@@ -56,6 +57,9 @@ object C2SBubbleChargeStartPacket : CustomPacketPayload {
             if (splatter != null) {
                 bubble.applySplatter(splatter)
             }
+
+            val torpedoLevel = getEnchantLevel(extraStack, level, "torpedo")
+            if (torpedoLevel > 0) bubble.torpedoLevel = torpedoLevel
 
             val controller = nautilus.controllingPassenger ?: nautilus
             val yawRad = Math.toRadians(controller.yRot.toDouble())

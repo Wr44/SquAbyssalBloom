@@ -3,7 +3,6 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssDepthCache
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.world.effect.MobEffects
@@ -106,10 +105,7 @@ object AbyssOverlayRender {
         val alpha = AbyssDepthCache.displayedDepthFactor.toFloat()
         if (alpha < 0.005f) return
 
-        val lampInfluence = maxOf(
-            ModUtilities.getRiderLampInfluence(entity),
-            ModUtilities.getNautilusLampInfluence(level, camPos, 16.0, 1.0)
-        )
+        val lampInfluence = AbyssDepthCache.displayedAmbientFogRepellerInfluence
 
         val waterColor = level.getBiome(camPos).value().waterColor
         val r = ((waterColor shr 16 and 0xFF) * 0.12f).toInt().coerceIn(0, 255)
@@ -121,7 +117,7 @@ object AbyssOverlayRender {
         val screenH = mc.window.guiScaledHeight
 
         val ambientAlphaBase = alpha * 0.08f
-        val lampReduction = (lampInfluence * ModConfig.nautilusLampInfluence * 0.06).toFloat()
+        val lampReduction = (lampInfluence * ModConfig.fogRepellerInfluence * 0.06).toFloat()
         val finalAmbientAlpha = (ambientAlphaBase - lampReduction).coerceIn(0f, 0.08f)
 
         if (finalAmbientAlpha >= 0.005f) {

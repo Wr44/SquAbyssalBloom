@@ -1,0 +1,7 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "squ_abyssal_bloom:rhodophyta_infested_marine_bricks",
+  "result": {
+    "id": "squ_abyssal_bloom:rhodophyta_infested_marine_bricks_wall"
+  }
+}

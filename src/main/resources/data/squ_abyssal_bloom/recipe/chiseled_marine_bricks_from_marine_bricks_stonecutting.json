@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": "squ_abyssal_bloom:marine_bricks",
+  "result": {
+    "count": 1,
+    "id": "squ_abyssal_bloom:chiseled_marine_bricks"
+  }
+}

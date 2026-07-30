@@ -4,4 +4,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 object ClientBeamData {
     val activeBeams: ConcurrentHashMap<Int, Int> = ConcurrentHashMap()
+
+    fun clear() {
+        activeBeams.clear()
+    }
 }

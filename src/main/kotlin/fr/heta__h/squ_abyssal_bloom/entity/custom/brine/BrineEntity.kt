@@ -1,9 +1,22 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.brine
 
+import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.block.brine_bubble_column.BrineBubbleColumnBlock
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.control.BrineMoveControl
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.control.BrinePathController
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineColumnAttackBehaviorGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineDirectAttackBehaviorGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineFollowBehaviorGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineGoalPriorities
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineHoverBehaviorGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrineIdleBehaviorGoal
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.goal.BrinePlayerTargetGoal
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.network.syncher.EntityDataAccessor
@@ -13,20 +26,23 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.entity.AnimationState
+import net.minecraft.world.entity.EntitySpawnReason
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
-import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal
-import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal
+import net.minecraft.world.entity.ai.navigation.AmphibiousPathNavigation
+import net.minecraft.world.entity.ai.navigation.PathNavigation
 import net.minecraft.world.entity.monster.Monster
-import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.LevelAccessor
+import net.minecraft.world.level.LevelReader
+import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.BubbleColumnBlock
 import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.Vec3
-import java.util.EnumSet
 import kotlin.math.atan2
 import kotlin.math.ceil
 import kotlin.math.cos
@@ -35,24 +51,6 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
-
-    val idleAnimationState = AnimationState()
-    val startAttackAnimationState = AnimationState()
-    val stopAttackAnimationState = AnimationState()
-    val loopAttackAnimationState = AnimationState()
-
-    private var ticksOutOfWater = 0
-    private val activeColumnPositions = mutableSetOf<BlockPos>()
-    private val nextColumnPositions = mutableSetOf<BlockPos>()
-
-    // Timer
-    var knockbackTicks = 0
-    var climbingTicks = 0
-
-    // Animation state machine
-    private var clientAnimPhase = CANIM_IDLE
-    private var clientAnimTicks = 0
-
 
     companion object {
 
@@ -71,7 +69,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val MAX_HEALTH = 15.0
         const val ATTACK_DAMAGE = 4.0
         const val MOVEMENT_SPEED = 0.25
-        const val FOLLOW_RANGE = 24.0
+        private const val DEFAULT_FOLLOW_RANGE_ATTRIBUTE = 24.0
 
         // Float
         const val FLOAT_SPEED = 0.25
@@ -98,26 +96,17 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val ROTATION_MOVING_THRESHOLD = 0.01
 
         // Move
-        const val SHADOW_SPEED = 0.20
-        const val ATTACK_MOVE_SPEED = SHADOW_SPEED * 0.5
         const val SHADOW_STOP_DIST = 0.15
 
         // Attack zones
-        const val ATTACK_ENTER_RADIUS = 2.0
-        const val ATTACK_ENTER_RADIUS_SQR = ATTACK_ENTER_RADIUS * ATTACK_ENTER_RADIUS // Opti: Précalcul
-        const val ATTACK_EXIT_RADIUS = 5.0
-        const val ATTACK_EXIT_RADIUS_SQR = ATTACK_EXIT_RADIUS * ATTACK_EXIT_RADIUS // Opti: Précalcul
         const val DIRECT_EXIT_GRACE_TICKS = 15
         const val DIRECT_Y_GRACE_TICKS = 15
 
         // Attack thresholds
         const val COLUMN_VS_DIRECT_Y_THRESHOLD = 2.0
 
-        val CROSS_OFFSETS = listOf(0 to 0, 1 to 0, -1 to 0, 0 to 1, 0 to -1)
         const val BUBBLE_COLUMN_HEIGHT = 10
 
-        const val COLUMN_BUBBLE_COOLDOWN_TICKS = 20
-        const val DIRECT_BUBBLE_COOLDOWN_TICKS = 30
         const val BUBBLE_COLUMN_SPEED = 0.45
         const val DIRECT_SHOT_SPEED = 0.55
         const val DIRECT_SHOT_FRONT_OFFSET = 0.6
@@ -125,6 +114,8 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         const val PARTICLE_BUBBLE_COUNT = 3
         const val PARTICLE_BUBBLE_SPREAD = 0.5
         const val PARTICLE_BUBBLE_SPEED_Y = 0.08
+
+        val CROSS_OFFSETS = listOf(0 to 0, 1 to 0, -1 to 0, 0 to 1, 0 to -1)
 
         // Data parameters
         private val IS_MOVING: EntityDataAccessor<Boolean> =
@@ -138,8 +129,48 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
                 .add(Attributes.ATTACK_DAMAGE, ATTACK_DAMAGE)
                 .add(Attributes.MOVEMENT_SPEED, MOVEMENT_SPEED)
                 .add(Attributes.WATER_MOVEMENT_EFFICIENCY, 1.0)
-                .add(Attributes.FOLLOW_RANGE, FOLLOW_RANGE)
+                .add(Attributes.FOLLOW_RANGE, DEFAULT_FOLLOW_RANGE_ATTRIBUTE)
     }
+
+    val idleAnimationState = AnimationState()
+    val startAttackAnimationState = AnimationState()
+    val stopAttackAnimationState = AnimationState()
+    val loopAttackAnimationState = AnimationState()
+
+    private var ticksOutOfWater = 0
+    private val activeColumnPositions = mutableSetOf<BlockPos>()
+    private val nextColumnPositions = mutableSetOf<BlockPos>()
+    val behaviorPathController = BrinePathController(this)
+
+    // Timer
+    var knockbackTicks = 0
+    var climbingTicks = 0
+
+    // Animation state machine
+    private var clientAnimPhase = CANIM_IDLE
+    private var clientAnimTicks = 0
+
+    val followSpeed: Double
+        get() = ModServerConfig.BRINE_FOLLOW_SPEED.get()
+    val attackMoveSpeed: Double
+        get() = ModServerConfig.BRINE_ATTACK_SPEED.get()
+    val attackEnterRadius: Double
+        get() = ModServerConfig.BRINE_ATTACK_ENTER_RADIUS.get()
+    val attackEnterRadiusSqr: Double
+        get() = attackEnterRadius * attackEnterRadius
+    val attackExitRadius: Double
+        get() = ModServerConfig.BRINE_ATTACK_EXIT_RADIUS.get().coerceAtLeast(attackEnterRadius)
+    val attackExitRadiusSqr: Double
+        get() = attackExitRadius * attackExitRadius
+    val columnAttackCooldown: Int
+        get() = ModServerConfig.BRINE_COLUMN_ATTACK_COOLDOWN.get()
+    val directAttackCooldown: Int
+        get() = ModServerConfig.BRINE_DIRECT_ATTACK_COOLDOWN.get()
+
+    init {
+        moveControl = BrineMoveControl(this)
+    }
+
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         super.defineSynchedData(builder)
@@ -148,14 +179,42 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     }
 
     override fun registerGoals() {
-        goalSelector.addGoal(0, BrineHoverGoal())
-        goalSelector.addGoal(1, BrineColumnAttackGoal())
-        goalSelector.addGoal(1, BrineDirectAttackGoal())
-        goalSelector.addGoal(2, BrineFollowGoal())
-        goalSelector.addGoal(3, BrineIdleGoal())
+        goalSelector.addGoal(BrineGoalPriorities.HOVER, BrineHoverBehaviorGoal(this))
+        goalSelector.addGoal(BrineGoalPriorities.ATTACK, BrineColumnAttackBehaviorGoal(this))
+        goalSelector.addGoal(BrineGoalPriorities.ATTACK, BrineDirectAttackBehaviorGoal(this))
+        goalSelector.addGoal(BrineGoalPriorities.FOLLOW, BrineFollowBehaviorGoal(this))
+        goalSelector.addGoal(BrineGoalPriorities.IDLE, BrineIdleBehaviorGoal(this))
 
         targetSelector.addGoal(0, HurtByTargetGoal(this))
-        targetSelector.addGoal(1, NearestAttackableTargetGoal(this, Player::class.java, true))
+        targetSelector.addGoal(1, BrinePlayerTargetGoal(this))
+    }
+
+    override fun createNavigation(level: Level): PathNavigation = AmphibiousPathNavigation(this, level)
+
+    override fun getWalkTargetValue(pos: BlockPos, level: LevelReader): Float {
+        return ModUtilities.preferWaterWalkTarget(pos, level) { super.getWalkTargetValue(pos, level) }
+    }
+
+    override fun checkSpawnRules(level: LevelAccessor, spawnReason: EntitySpawnReason): Boolean {
+        if (spawnReason == EntitySpawnReason.NATURAL) {
+            val spawnPos = ModEntities.findBrineSpawnPosition(
+                level,
+                blockPosition(),
+                type
+            ) ?: return false
+
+            setPos(
+                spawnPos.x + 0.5,
+                spawnPos.y.toDouble(),
+                spawnPos.z + 0.5
+            )
+        }
+
+        return super.checkSpawnRules(level, spawnReason)
+    }
+
+    override fun checkSpawnObstruction(level: LevelReader): Boolean {
+        return level.noCollision(this) && level.isUnobstructed(this)
     }
 
     override fun hurtServer(level: ServerLevel, source: DamageSource, amount: Float): Boolean {
@@ -195,9 +254,12 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     fun moveToPlayerBlock(player: LivingEntity, xzDist: Double, speed: Double) {
         if (knockbackTicks > 0) return
         if (xzDist <= SHADOW_STOP_DIST) {
+            behaviorPathController.stop()
             brakeHorizontal()
             return
         }
+        if (behaviorPathController.moveToward(player, speed)) return
+
         val targetX = floor(player.x) + 0.5
         val targetZ = floor(player.z) + 0.5
         val dx = targetX - x
@@ -236,7 +298,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     }
 
 
-    private fun fireColumnBubble() {
+    fun fireColumnBubble() {
         val serverLevel = level() as? ServerLevel ?: return
         val stage = if (random.nextBoolean()) 0 else 1
         val (ox, oz) = CROSS_OFFSETS[random.nextInt(CROSS_OFFSETS.size)]
@@ -251,7 +313,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         playSound(ModSounds.BUBBLE_PROJECTILE_LAUNCH.get(), info.burstVolume, info.burstPitch)
     }
 
-    private fun fireDirectBubble(player: LivingEntity) {
+    fun fireDirectBubble(player: LivingEntity) {
         val serverLevel = level() as? ServerLevel ?: return
         val stage = if (random.nextBoolean()) 0 else 1
         val yawRad = Math.toRadians(yRot.toDouble())
@@ -274,10 +336,14 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
     fun placeOrUpdateBubbleColumn() {
         val serverLevel = level() as? ServerLevel ?: return
+        if (tickCount % 3 != 0) return
+
         val bx = blockPosition().x
         val bz = blockPosition().z
         val startY = ceil(boundingBox.maxY).toInt()
-        val colState = Blocks.BUBBLE_COLUMN.defaultBlockState().setValue(BubbleColumnBlock.DRAG_DOWN, false)
+        val colState = ModBlocks.BRINE_BUBBLE_COLUMN.get().defaultBlockState()
+            .setValue(BubbleColumnBlock.DRAG_DOWN, false)
+            .setValue(BrineBubbleColumnBlock.REFRESHED, true)
 
         nextColumnPositions.clear()
         val mutablePos = BlockPos.MutableBlockPos()
@@ -286,33 +352,55 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
             for (i in 0 until BUBBLE_COLUMN_HEIGHT) {
                 mutablePos.set(bx + dx, startY + i, bz + dz)
                 val current = serverLevel.getBlockState(mutablePos)
+
                 when {
-                    current.`is`(Blocks.BUBBLE_COLUMN) -> {
-                        nextColumnPositions.add(mutablePos.immutable())
-                    }
-                    current.`is`(Blocks.WATER) -> {
+                    current.`is`(ModBlocks.BRINE_BUBBLE_COLUMN.get()) -> {
                         val immutable = mutablePos.immutable()
-                        // FIX BUG 1 : Utilisation de serverLevel.setBlock avec le flag 3
-                        serverLevel.setBlock(immutable, colState, 3)
+                        refreshFiniteBubbleColumn(immutable, current, serverLevel)
+                        nextColumnPositions.add(immutable)
+                    }
+
+                    (current.`is`(Blocks.WATER) && current.fluidState.isSource) ||
+                        current.`is`(Blocks.BUBBLE_COLUMN) -> {
+                        val immutable = mutablePos.immutable()
+                        serverLevel.setBlock(immutable, colState, 66)
+                        scheduleFiniteBubbleColumnExpiry(immutable, serverLevel)
                         nextColumnPositions.add(immutable)
                     }
                     else -> break
                 }
             }
+
+            pruneOvergrowth(serverLevel, bx + dx, startY + BUBBLE_COLUMN_HEIGHT, bz + dz)
         }
 
-        val iterator = activeColumnPositions.iterator()
-        while (iterator.hasNext()) {
-            val pos = iterator.next()
-            if (!nextColumnPositions.contains(pos)) {
-                restoreToWater(pos, serverLevel)
-                iterator.remove()
-            }
+        for (pos in activeColumnPositions) {
+            if (pos !in nextColumnPositions) restoreToWater(pos, serverLevel)
         }
 
+        activeColumnPositions.clear()
         activeColumnPositions.addAll(nextColumnPositions)
 
-        if (!entityData.get(COLUMN_ACTIVE)) entityData.set(COLUMN_ACTIVE, true)
+        val active = nextColumnPositions.isNotEmpty()
+        if (entityData.get(COLUMN_ACTIVE) != active) entityData.set(COLUMN_ACTIVE, active)
+    }
+
+    private fun pruneOvergrowth(serverLevel: ServerLevel, x: Int, startY: Int, z: Int) {
+        val mutablePos = BlockPos.MutableBlockPos(x, startY, z)
+        if (!serverLevel.isLoaded(mutablePos)) return
+
+        var y = startY
+        var inspectedBlocks = 0
+        while (
+            inspectedBlocks < serverLevel.height &&
+            serverLevel.isInsideBuildHeight(mutablePos) &&
+            isBubbleColumn(serverLevel.getBlockState(mutablePos))
+        ) {
+            restoreToWater(mutablePos.immutable(), serverLevel)
+            y++
+            inspectedBlocks++
+            mutablePos.set(x, y, z)
+        }
     }
 
     fun clearBubbleColumn() {
@@ -324,10 +412,31 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
     private fun restoreToWater(pos: BlockPos, serverLevel: ServerLevel) {
         val current = serverLevel.getBlockState(pos)
-        if (!current.`is`(Blocks.BUBBLE_COLUMN)) return
+        if (!isBubbleColumn(current)) return
         val waterState = Blocks.WATER.defaultBlockState()
         serverLevel.setBlock(pos, waterState, 3)
     }
+
+    private fun refreshFiniteBubbleColumn(pos: BlockPos, state: BlockState, serverLevel: ServerLevel) {
+        if (!state.getValue(BrineBubbleColumnBlock.REFRESHED)) {
+            serverLevel.setBlock(
+                pos,
+                state.setValue(BrineBubbleColumnBlock.REFRESHED, true),
+                Block.UPDATE_NONE
+            )
+        }
+        scheduleFiniteBubbleColumnExpiry(pos, serverLevel)
+    }
+
+    private fun scheduleFiniteBubbleColumnExpiry(pos: BlockPos, serverLevel: ServerLevel) {
+        val columnBlock = ModBlocks.BRINE_BUBBLE_COLUMN.get()
+        if (!serverLevel.blockTicks.hasScheduledTick(pos, columnBlock)) {
+            serverLevel.scheduleTick(pos, columnBlock, BrineBubbleColumnBlock.STALE_CHECK_TICKS)
+        }
+    }
+
+    private fun isBubbleColumn(state: BlockState): Boolean =
+        state.`is`(Blocks.BUBBLE_COLUMN) || state.`is`(ModBlocks.BRINE_BUBBLE_COLUMN.get())
 
     override fun remove(reason: RemovalReason) {
         if (!level().isClientSide) clearBubbleColumn()
@@ -456,203 +565,5 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
         val dx = entity.x - x
         val dz = entity.z - z
         return dx * dx + dz * dz
-    }
-
-    inner class BrineHoverGoal : Goal() {
-        init { flags = EnumSet.noneOf(Flag::class.java) }
-
-        override fun canUse() = isInWater
-        override fun requiresUpdateEveryTick() = true
-
-        override fun tick() {
-            deltaMovement = Vec3(
-                deltaMovement.x,
-                deltaMovement.y + computeHoverSpringForce(),
-                deltaMovement.z
-            )
-        }
-    }
-
-
-    inner class BrineIdleGoal : Goal() {
-        private var isStillPhase = true
-        private var phaseTicks = 0
-        private var phaseDuration = 0
-        private var targetVelocity = Vec3.ZERO
-
-        init { flags = EnumSet.of(Flag.MOVE) }
-
-        override fun canUse() = isInWater && target == null
-        override fun requiresUpdateEveryTick() = true
-
-        override fun start() { enterStillPhase() }
-
-        override fun tick() {
-            if (isStillPhase) tickStill() else tickMove()
-        }
-
-        private fun enterStillPhase() {
-            isStillPhase = true; phaseTicks = 0
-            phaseDuration = STILL_MIN_TICKS + random.nextInt(STILL_MAX_TICKS - STILL_MIN_TICKS)
-        }
-
-        private fun enterMovePhase() {
-            isStillPhase = false; phaseTicks = 0
-            phaseDuration = MOVE_MIN_TICKS + random.nextInt(MOVE_MAX_TICKS - MOVE_MIN_TICKS)
-            targetVelocity = Vec3(
-                (random.nextDouble() - 0.5) * 2.0,
-                (random.nextDouble() - 0.5) * FLOAT_Y_SCALE,
-                (random.nextDouble() - 0.5) * 2.0
-            ).normalize().scale(FLOAT_SPEED)
-        }
-
-        private fun tickStill() {
-            brakeHorizontal()
-            yRot += STILL_ROTATION_SPEED; yBodyRot = yRot; yHeadRot = yRot
-            if (++phaseTicks >= phaseDuration) enterMovePhase()
-        }
-
-        private fun tickMove() {
-            if (++phaseTicks >= phaseDuration) { enterStillPhase(); return }
-            deltaMovement = Vec3(
-                deltaMovement.x + (targetVelocity.x - deltaMovement.x) * FLOAT_LERP_FACTOR,
-                deltaMovement.y,
-                deltaMovement.z + (targetVelocity.z - deltaMovement.z) * FLOAT_LERP_FACTOR
-            )
-            val h = sqrt(deltaMovement.x * deltaMovement.x + deltaMovement.z * deltaMovement.z)
-            if (h > ROTATION_MOVING_THRESHOLD) {
-                yRot = (atan2(deltaMovement.z, deltaMovement.x) * (180.0 / Math.PI)).toFloat() - 90f
-                yBodyRot = yRot; yHeadRot = yRot
-                xRot = (atan2(deltaMovement.y, h) * -(180.0 / Math.PI)).toFloat()
-            }
-        }
-
-        override fun stop() {
-            deltaMovement = Vec3.ZERO
-        }
-    }
-
-
-    inner class BrineFollowGoal : Goal() {
-        init { flags = EnumSet.of(Flag.MOVE) }
-
-        override fun canUse(): Boolean {
-            val p = target ?: return false
-            return isInWater && xzDistToSqr(p) > ATTACK_ENTER_RADIUS_SQR
-        }
-
-        override fun canContinueToUse(): Boolean {
-            val p = target ?: return false
-            return isInWater && xzDistToSqr(p) > ATTACK_ENTER_RADIUS_SQR
-        }
-
-        override fun requiresUpdateEveryTick() = true
-
-        override fun tick() {
-            val p = target ?: return
-            moveToPlayerBlock(p, xzDistTo(p), SHADOW_SPEED)
-        }
-    }
-
-
-    inner class BrineColumnAttackGoal : Goal() {
-        private var bubbleCooldown = 0
-
-        init { flags = EnumSet.of(Flag.MOVE) }
-
-        override fun canUse(): Boolean {
-            val p = target ?: return false
-            if (!isInWater) return false
-            return xzDistToSqr(p) <= ATTACK_ENTER_RADIUS_SQR && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
-        }
-
-        override fun canContinueToUse(): Boolean {
-            val p = target ?: return false
-            if (!isInWater) return false
-            return xzDistToSqr(p) <= ATTACK_EXIT_RADIUS_SQR && (p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD
-        }
-
-        override fun requiresUpdateEveryTick() = true
-
-        override fun start() {
-            bubbleCooldown = COLUMN_BUBBLE_COOLDOWN_TICKS
-        }
-
-        override fun tick() {
-            if (bubbleCooldown > 0) bubbleCooldown--
-            val p = target ?: return
-            moveToPlayerBlock(p, xzDistTo(p), ATTACK_MOVE_SPEED)
-            placeOrUpdateBubbleColumn()
-            if (bubbleCooldown <= 0) {
-                bubbleCooldown = COLUMN_BUBBLE_COOLDOWN_TICKS
-                fireColumnBubble()
-            }
-        }
-
-        override fun stop() {
-            clearBubbleColumn()
-        }
-    }
-
-
-    inner class BrineDirectAttackGoal : Goal() {
-        private var bubbleCooldown = 0
-        var directExitTimer = 0
-        var directYTimer = 0
-
-        init { flags = EnumSet.of(Flag.MOVE) }
-
-        override fun canUse(): Boolean {
-            val p = target ?: return false
-            if (!isInWater) return false
-            return xzDistToSqr(p) <= ATTACK_ENTER_RADIUS_SQR && (p.y - y) <= COLUMN_VS_DIRECT_Y_THRESHOLD
-        }
-
-        override fun canContinueToUse(): Boolean {
-            val p = target ?: return false
-            if (!isInWater) return false
-            if (xzDistToSqr(p) > ATTACK_EXIT_RADIUS_SQR && directExitTimer >= DIRECT_EXIT_GRACE_TICKS) return false
-            if ((p.y - y) > COLUMN_VS_DIRECT_Y_THRESHOLD && directYTimer >= DIRECT_Y_GRACE_TICKS) return false
-            return true
-        }
-
-        override fun requiresUpdateEveryTick() = true
-
-        override fun start() {
-            bubbleCooldown = DIRECT_BUBBLE_COOLDOWN_TICKS
-            directExitTimer = 0
-            directYTimer = 0
-        }
-
-        override fun tick() {
-            if (bubbleCooldown > 0) bubbleCooldown--
-            val p = target ?: return
-            val xzDist = xzDistTo(p)
-            val aboveY = p.y - y
-
-            if (xzDist > ATTACK_EXIT_RADIUS) { directExitTimer++
-                directYTimer = 0
-                return
-            }
-            directExitTimer = 0
-
-            if (aboveY > COLUMN_VS_DIRECT_Y_THRESHOLD) {
-                directYTimer++
-                return
-            }
-
-            directYTimer = 0
-
-            moveToPlayerBlock(p, xzDist, ATTACK_MOVE_SPEED)
-            if (bubbleCooldown <= 0) {
-                bubbleCooldown = DIRECT_BUBBLE_COOLDOWN_TICKS
-                fireDirectBubble(p)
-            }
-        }
-
-        override fun stop() {
-            directExitTimer = 0
-            directYTimer = 0
-        }
     }
 }

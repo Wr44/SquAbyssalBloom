@@ -1,7 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.item
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
 import net.minecraft.world.item.CreativeModeTab
@@ -23,10 +22,16 @@ object ModCreativeModeTabs {
             .icon { ItemStack(ModItems.BARNACLE_SPAWN_EGG.get()) }
             .title(Component.translatable("creativetab.squ_abyssal_bloom.spawn_eggs"))
             .displayItems { itemDisplayParameters, output ->
+                output.accept(ModItems.RAW_MACKEREL.get())
+                output.accept(ModItems.COOKED_MACKEREL.get())
+
                 output.accept(ModItems.BARNACLE_TOOTH.get())
                 output.accept(ModItems.GUARDIAN_EYE.get())
                 output.accept(ModItems.PRISMARINE_BULB.get())
                 output.accept(ModItems.PRISMARINE_SPIKE.get())
+                output.accept(ModItems.CALCAREOUS_FRAGMENT.get())
+                output.accept(ModItems.MARINE_CEMENT.get())
+                output.accept(ModItems.MARINE_BRICK)
                 output.accept(ModItems.BRINE_BUBBLES.get())
                 output.accept(ModItems.LIFELINE_BUBBLE.get())
                 output.accept(ModItems.RESPIRATION_BUBBLE.get())
@@ -36,10 +41,39 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.BUBBLE_SPITTER.get())
                 output.accept(ModItems.MOBILE_CONDUIT.get())
 
+                output.accept(ModItems.BIOLUMINESCENT_CRYSTAL.get())
+                output.accept(ModItems.BIOLUMINESCENT_CRYSTAL_BLOCK.get())
+                output.accept(ModItems.BIOLUMINESCENT_TORCH.get())
+                output.accept(ModItems.BIOLUMINESCENT_LANTERN.get())
+
                 output.accept(ModItems.ASTRAL_PRISMARINE.get())
+                output.accept(ModItems.RHODOPHYTA.get())
+                output.accept(ModItems.DEAD_RHODOPHYTA.get())
+
+                output.accept(ModItems.BLOOD_SEAGRASS.get())
+                output.accept(ModItems.TALL_BLOOD_SEAGRASS.get())
+
+                output.accept(ModItems.MARINE_BRICKS.get())
+                output.accept(ModItems.MARINE_BRICKS_STAIRS.get())
+                output.accept(ModItems.MARINE_BRICKS_SLAB.get())
+                output.accept(ModItems.MARINE_BRICKS_WALL.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS_STAIRS.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS_SLAB.get())
+                output.accept(ModItems.ALGEA_INFESTED_MARINE_BRICKS_WALL.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_STAIRS.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_SLAB.get())
+                output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL.get())
+                output.accept(ModItems.CHISELED_MARINE_BRICKS.get())
+
+                output.accept(ModItems.BABY_RED_SLOBBERER_BUCKET.get())
+                output.accept(ModItems.MACKEREL_BUCKET.get())
 
                 output.accept(ModItems.BARNACLE_SPAWN_EGG.get())
                 output.accept(ModItems.BRINE_SPAWN_EGG.get())
+                output.accept(ModItems.RED_SLOBBERER_SPAWN_EGG.get())
+                output.accept(ModItems.MACKEREL_SPAWN_EGG.get())
             }
             .build()
     }

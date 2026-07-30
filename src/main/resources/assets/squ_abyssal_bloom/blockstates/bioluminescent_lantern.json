@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "hanging=false": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_lantern"
+    },
+    "hanging=true": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_lantern_hanging"
+    }
+  }
+}

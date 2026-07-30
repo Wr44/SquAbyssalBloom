@@ -4,12 +4,16 @@
   "package": "fr.heta__h.squ_abyssal_bloom.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "block.sprouting_sea_grass.SeaGrassFeatureMixin",
+    "block.brine_bubble_column.BrineBubbleColumnBreathingMixin",
+    "block.sprouting_seagrass.SeaGrassFeatureMixin",
     "block.conduit.PlayerConduitMixin",
     "block.conduit.ConduitBlockEntityMixin",
     "block.conduit.PlayerSwimPoseMixin",
 
     "entity.guardian.GuardianMixin",
+    "entity.fish_school.AbstractFishSchoolMixin",
+    "entity.fish_school.FollowFlockLeaderGoalMixin",
+    "entity.fish_school.PufferfishScaryMobMixin",
     "entity.nautilus.NautilusMenuMixin",
 
     "entity.nautilus.NautilusMountMenuShiftClickMixin",
@@ -17,13 +21,23 @@
     "entity.nautilus.NautilusBubbleColumnTidal",
     "entity.nautilus.NautilusChestMixin",
     "entity.nautilus.NautilusRegenMixin",
+    "entity.red_slobberer.RedSlobbererBucketMixin",
 
     "enable.AbstractContainerMenuAccessor",
     "enable.AbstractNautilusAccessor",
     "enable.LivingEntityFluidAccessor",
-    "enable.ConduitBlockEntityAccessor"
+    "enable.ConduitBlockEntityAccessor",
+    "enable.ChunkAccessAccessor",
+
+    "item.BoneMealItemMixin",
+
+    "worldgen.AbyssalNoiseChunkMixin",
+    "worldgen.AbyssalCarverFillMixin",
+    "worldgen.OceanBiomeZoneMixin",
+    "worldgen.SurfaceSystemMixin"
   ],
   "client": [
+    "block.brine_bubble_column.BrineBubbleColumnAmbientSoundMixin",
     "block.conduit.ConduitRendererMixin",
 
     "entity.nautilus.NautilusScreenMixin",

@@ -3,7 +3,6 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.fx
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssDepthCache
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.util.Mth
 import net.minecraft.world.effect.MobEffects
@@ -87,13 +86,10 @@ object WaterFogHandler {
         val baseFogEndRaw = Mth.lerp(depthEased, FOG_END_SHALLOW, finalTargetEnd)
         val baseFogEnd = baseFogEndRaw.coerceAtLeast(baseFogStart + 2.0f)
 
-        val lampInfluence = maxOf(
-            ModUtilities.getRiderLampInfluence(entity),
-            ModUtilities.getNautilusLampInfluence(level, camPos, 32.0, 1.5)
-        )
-        val lampPower = (lampInfluence * ModConfig.nautilusLampInfluence).toFloat() * depthEased
-        val nearPlane = baseFogStart + lampPower * ModConfig.lampNearPlaneMultiplier.toFloat()
-        val farPlane = baseFogEnd + lampPower * ModConfig.lampFarPlaneMultiplier.toFloat()
+        val lampInfluence = AbyssDepthCache.displayedFogPlaneRepellerInfluence
+        val lampPower = (lampInfluence * ModConfig.fogRepellerInfluence).toFloat() * depthEased
+        val nearPlane = baseFogStart + lampPower * ModConfig.fogRepellerNearPlaneMultiplier.toFloat()
+        val farPlane = baseFogEnd + lampPower * ModConfig.fogRepellerFarPlaneMultiplier.toFloat()
 
         val fogData = event.fogData
         fogData.environmentalStart = nearPlane

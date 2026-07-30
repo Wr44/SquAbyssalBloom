@@ -14,30 +14,13 @@ object EntityDynamicLightCompat : AbstractDynamicLightCompat() {
     fun updateLight(entity: Entity, luminance: Int, yOffsetRatio: Float = 0.5f) {
         if (!isInitialized) return
 
-        val id = entity.id
         val pos = Vector3d(entity.x, entity.y + (entity.bbHeight * yOffsetRatio), entity.z)
-
-        val existingLight = activeLights[id]
-
-        if (existingLight != null) {
-            existingLight.startPoint = pos
-            existingLight.endPoint = pos
-            existingLight.luminance = luminance
-        } else {
-            val newLight = object : LineLightBehavior(pos, pos, luminance) {
-                override fun isRemoved(): Boolean = entity.isRemoved
-            }
-            activeLights[id] = newLight
-            addDynamicLight(newLight)
-        }
+        updateLineLight(activeLights, entity.id, pos, pos, luminance) { entity.isRemoved }
     }
 
     fun removeLight(entityId: Int) {
         if (!isInitialized) return
 
-        val light = activeLights.remove(entityId)
-        if (light != null) {
-            removeDynamicLight(light)
-        }
+        removeLineLight(activeLights, entityId)
     }
 }

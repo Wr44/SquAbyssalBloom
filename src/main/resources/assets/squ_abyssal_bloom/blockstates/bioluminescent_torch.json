@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "waterlogged=false": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_torch"
+    },
+    "waterlogged=true": {
+      "model": "squ_abyssal_bloom:block/bioluminescent_torch"
+    }
+  }
+}

@@ -6,18 +6,25 @@ import dev.isxander.yacl3.api.*
 import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
-import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
-import fr.heta__h.squ_abyssal_bloom.entity.client.barnacle.BarnacleAnimation
-import fr.heta__h.squ_abyssal_bloom.entity.client.brine.BrineAnimation
-import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
-import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
-import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
+import fr.heta__h.squ_abyssal_bloom.config.renderer.StaticImageRenderer
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
+import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
+import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.BrineSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.FishSchoolSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.MackerelSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.RedSlobbererSubMenu
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.persistServerConfigChanges
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.subScreenButton
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalTerrainSettings
 import net.minecraft.ChatFormatting
-import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.neoforged.fml.loading.FMLPaths
-import net.neoforged.neoforge.client.network.ClientPacketDistributor
 import java.io.File
 
 object ModConfig {
@@ -30,7 +37,7 @@ object ModConfig {
     var abyssMaxDepth: Double = 80.0
     var maxMarinSnowParticles: Int = 75
     var fogDarknessIntensity: Double = 1.0
-    var nautilusLampInfluence: Double = 0.5
+    var fogRepellerInfluence: Double = 0.5
     var marineSnowDensity: Double = 0.5
     var marineSnowVisibilityRange: Int = 20
     var marineSnowSwayAmplitude: Double = 1.0
@@ -39,8 +46,8 @@ object ModConfig {
     var vignetteIntensity: Double = 1.0
     var lightDimmingStrength: Double = 0.7
     var abyssColorRetention: Double = 0.15
-    var lampNearPlaneMultiplier: Double = 12.0
-    var lampFarPlaneMultiplier: Double = 60.0
+    var fogRepellerNearPlaneMultiplier: Double = 12.0
+    var fogRepellerFarPlaneMultiplier: Double = 60.0
     var conduitBoundaryTriggerDistance: Double = 5.0
     var conduitBoundaryRingRadius: Double = 2.5
     var conduitBoundaryRingPoints: Int = 24
@@ -63,7 +70,7 @@ object ModConfig {
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
             maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
             fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
-            nautilusLampInfluence = json.get("nautilusLampInfluence")?.asDouble ?: 0.5
+            fogRepellerInfluence = json.get("fogRepellerInfluence")?.asDouble ?: 0.5
             marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 0.5
             marineSnowVisibilityRange = json.get("marineSnowVisibilityRange")?.asInt ?: 20
             marineSnowSwayAmplitude = json.get("marineSnowSwayAmplitude")?.asDouble ?: 1.0
@@ -72,8 +79,8 @@ object ModConfig {
             vignetteIntensity = json.get("vignetteIntensity")?.asDouble ?: 1.0
             lightDimmingStrength = json.get("lightDimmingStrength")?.asDouble ?: 0.7
             abyssColorRetention = json.get("abyssColorRetention")?.asDouble ?: 0.15
-            lampNearPlaneMultiplier = json.get("lampNearPlaneMultiplier")?.asDouble ?: 12.0
-            lampFarPlaneMultiplier = json.get("lampFarPlaneMultiplier")?.asDouble ?: 60.0
+            fogRepellerNearPlaneMultiplier = json.get("fogRepellerNearPlaneMultiplier")?.asDouble ?: 12.0
+            fogRepellerFarPlaneMultiplier = json.get("fogRepellerFarPlaneMultiplier")?.asDouble ?: 60.0
             conduitBoundaryTriggerDistance = json.get("conduitBoundaryTriggerDistance")?.asDouble ?: 5.0
             conduitBoundaryRingRadius = json.get("conduitBoundaryRingRadius")?.asDouble ?: 2.5
             conduitBoundaryRingPoints = json.get("conduitBoundaryRingPoints")?.asInt ?: 24
@@ -99,7 +106,7 @@ object ModConfig {
                 addProperty("abyssMaxDepth", abyssMaxDepth)
                 addProperty("maxMarinSnowParticles", maxMarinSnowParticles)
                 addProperty("fogDarknessIntensity", fogDarknessIntensity)
-                addProperty("nautilusLampInfluence", nautilusLampInfluence)
+                addProperty("fogRepellerInfluence", fogRepellerInfluence)
                 addProperty("marineSnowDensity", marineSnowDensity)
                 addProperty("marineSnowVisibilityRange", marineSnowVisibilityRange)
                 addProperty("marineSnowSwayAmplitude", marineSnowSwayAmplitude)
@@ -108,8 +115,8 @@ object ModConfig {
                 addProperty("vignetteIntensity", vignetteIntensity)
                 addProperty("lightDimmingStrength", lightDimmingStrength)
                 addProperty("abyssColorRetention", abyssColorRetention)
-                addProperty("lampNearPlaneMultiplier", lampNearPlaneMultiplier)
-                addProperty("lampFarPlaneMultiplier", lampFarPlaneMultiplier)
+                addProperty("fogRepellerNearPlaneMultiplier", fogRepellerNearPlaneMultiplier)
+                addProperty("fogRepellerFarPlaneMultiplier", fogRepellerFarPlaneMultiplier)
                 addProperty("conduitBoundaryTriggerDistance", conduitBoundaryTriggerDistance)
                 addProperty("conduitBoundaryRingRadius", conduitBoundaryRingRadius)
                 addProperty("conduitBoundaryRingPoints", conduitBoundaryRingPoints)
@@ -132,31 +139,85 @@ object ModConfig {
 
     fun createConfigScreen(parent: Screen): Screen {
         if (ServerConfigCache.isSingleplayer()) {
-            ServerConfigCache.update(ServerConfigData(
-                strictBarnacleSpawning = ModServerConfig.STRICT_BARNACLE_SPAWNING.get(),
-            ))
+            ServerConfigCache.update(ServerConfigData.fromSpec())
         }
 
-        val initialServerConfig = ServerConfigData(
-            strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
-        )
+        val initialServerConfig = ServerConfigCache.toData()
+
+        val depthStartOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart.tooltip")))
+            .binding(Binding.generic(30.0, { abyssDepthStart }, { abyssDepthStart = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
+            .build()
+
+        val depthMaxOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth.tooltip")))
+            .binding(Binding.generic(80.0, { abyssMaxDepth }, { abyssMaxDepth = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(10.0, 200.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
+            .build()
+
+        depthStartOpt.addListener { _, newStart ->
+            if (depthMaxOpt.pendingValue() <= newStart) depthMaxOpt.requestSet(newStart + 1.0)
+        }
+        depthMaxOpt.addListener { _, newMax ->
+            if (depthStartOpt.pendingValue() >= newMax) depthStartOpt.requestSet(newMax - 1.0)
+        }
+
+        val alphaMinOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin.desc")))
+            .binding(Binding.generic(0.05, { surfaceOccluderAlphaMin }, { surfaceOccluderAlphaMin = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 0.5).step(0.01) }
+            .build()
+
+        val alphaMaxOpt = Option.createBuilder<Double>()
+            .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax"))
+            .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax.desc")))
+            .binding(Binding.generic(0.70, { surfaceOccluderAlphaMax }, { surfaceOccluderAlphaMax = it }))
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 1.0).step(0.01) }
+            .build()
+
+        alphaMinOpt.addListener { _, newMin ->
+            if (alphaMaxOpt.pendingValue() <= newMin) alphaMaxOpt.requestSet(newMin + 0.01)
+        }
+        alphaMaxOpt.addListener { _, newMax ->
+            if (alphaMinOpt.pendingValue() >= newMax) alphaMinOpt.requestSet(newMax - 0.01)
+        }
+
+        val shallowDeepOpt = serverDouble(ModServerConfig.SHALLOW_DEEP_BOUNDARY, -0.915..-0.21, 0.001) { Component.literal(String.format("%.3f", it)) }
+        val deepAbyssalOpt = serverDouble(ModServerConfig.DEEP_ABYSSAL_BOUNDARY, -0.965..-0.24, 0.001) { Component.literal(String.format("%.3f", it)) }
+
+        shallowDeepOpt.addListener { _, newShallow ->
+            val maximumDeep = newShallow - AbyssalTerrainSettings.MIN_BOUNDARY_GAP
+            if (deepAbyssalOpt.pendingValue() > maximumDeep) deepAbyssalOpt.requestSet(maximumDeep)
+        }
+        deepAbyssalOpt.addListener { _, newDeep ->
+            val minimumShallow = newDeep + AbyssalTerrainSettings.MIN_BOUNDARY_GAP
+            if (shallowDeepOpt.pendingValue() < minimumShallow) shallowDeepOpt.requestSet(minimumShallow)
+        }
+
+        val shallowFloorOpt = serverInt(ModServerConfig.SHALLOW_FLOOR_Y, -60..60) { Component.literal("Y=$it") }
+        val deepFloorOpt = serverInt(ModServerConfig.DEEP_FLOOR_TARGET, -60..60) { Component.literal("Y=$it") }
+        val abyssalFloorOpt = serverInt(ModServerConfig.TARGET_FLOOR_Y, -64..20) { Component.literal("Y=$it") }
+
+        shallowFloorOpt.addListener { _, newShallow ->
+            if (deepFloorOpt.pendingValue() >= newShallow) deepFloorOpt.requestSet(newShallow - 1)
+        }
+        deepFloorOpt.addListener { _, newDeep ->
+            if (shallowFloorOpt.pendingValue() <= newDeep) shallowFloorOpt.requestSet(newDeep + 1)
+            if (abyssalFloorOpt.pendingValue() >= newDeep) abyssalFloorOpt.requestSet(newDeep - 1)
+        }
+        abyssalFloorOpt.addListener { _, newAbyssal ->
+            if (deepFloorOpt.pendingValue() <= newAbyssal) deepFloorOpt.requestSet(newAbyssal + 1)
+        }
 
         return YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
             .save {
                 saveConfig()
-                if (ServerConfigCache.isSingleplayer()) {
-                    ModServerConfig.STRICT_BARNACLE_SPAWNING.set(ServerConfigCache.strictBarnacleSpawning)
-                    ModServerConfig.SPEC.save()
-                } else {
-                    val currentServerConfig = ServerConfigData(
-                        strictBarnacleSpawning = ServerConfigCache.strictBarnacleSpawning,
-                    )
-                    if (currentServerConfig != initialServerConfig
-                        && Minecraft.getInstance().connection != null) {
-                        ClientPacketDistributor.sendToServer(C2SServerConfigPacket(currentServerConfig))
-                    }
-                }
+                persistServerConfigChanges(initialServerConfig)
             }
 
             .category(ConfigCategory.createBuilder()
@@ -167,6 +228,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.fog").withStyle(ChatFormatting.AQUA))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.fog.desc"))
+                        .customImage(StaticImageRenderer("marine_fog", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.enableAbyssFog"))
@@ -174,18 +236,8 @@ object ModConfig {
                         .binding(Binding.generic(true, { enableAbyssFog }, { enableAbyssFog = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssDepthStart.tooltip")))
-                        .binding(Binding.generic(30.0, { abyssDepthStart }, { abyssDepthStart = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 100.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssMaxDepth.tooltip")))
-                        .binding(Binding.generic(80.0, { abyssMaxDepth }, { abyssMaxDepth = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(10.0, 200.0).step(1.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
-                        .build())
+                    .option(depthStartOpt)
+                    .option(depthMaxOpt)
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.fogDarknessIntensity"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogDarknessIntensity.tooltip")))
@@ -199,21 +251,21 @@ object ModConfig {
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
                         .build())
                     .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.nautilusLampInfluence"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.nautilusLampInfluence.tooltip")))
-                        .binding(Binding.generic(0.5, { nautilusLampInfluence }, { nautilusLampInfluence = it }))
+                        .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence.tooltip")))
+                        .binding(Binding.generic(0.5, { fogRepellerInfluence }, { fogRepellerInfluence = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
                         .build())
                     .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampNearPlaneMultiplier.desc")))
-                        .binding(Binding.generic(12.0, { lampNearPlaneMultiplier }, { lampNearPlaneMultiplier = it }))
+                        .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier.desc")))
+                        .binding(Binding.generic(12.0, { fogRepellerNearPlaneMultiplier }, { fogRepellerNearPlaneMultiplier = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 50.0).step(1.0) }
                         .build())
                     .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lampFarPlaneMultiplier.desc")))
-                        .binding(Binding.generic(60.0, { lampFarPlaneMultiplier }, { lampFarPlaneMultiplier = it }))
+                        .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier.desc")))
+                        .binding(Binding.generic(60.0, { fogRepellerFarPlaneMultiplier }, { fogRepellerFarPlaneMultiplier = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0) }
                         .build())
                     .option(Option.createBuilder<Boolean>()
@@ -240,6 +292,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.marine_snow").withStyle(ChatFormatting.GOLD))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.marine_snow.desc"))
+                        .customImage(StaticImageRenderer("marine_snow", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.maxMarinSnowParticles"))
@@ -277,6 +330,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.surface_occluder").withStyle(ChatFormatting.DARK_BLUE))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.surface_occluder.desc"))
+                        .customImage(StaticImageRenderer("surface_occluder", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.enableSurfaceOccluder"))
@@ -284,18 +338,8 @@ object ModConfig {
                         .binding(Binding.generic(true, { enableSurfaceOccluder }, { enableSurfaceOccluder = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin.desc")))
-                        .binding(Binding.generic(0.05, { surfaceOccluderAlphaMin }, { surfaceOccluderAlphaMin = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 0.5).step(0.01) }
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax.desc")))
-                        .binding(Binding.generic(0.70, { surfaceOccluderAlphaMax }, { surfaceOccluderAlphaMax = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 1.0).step(0.01) }
-                        .build())
+                    .option(alphaMinOpt)
+                    .option(alphaMaxOpt)
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers.desc")))
@@ -326,6 +370,7 @@ object ModConfig {
                     .name(Component.translatable("config.squ_abyssal_bloom.group.conduit").withStyle(ChatFormatting.DARK_AQUA))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.conduit.desc"))
+                        .customImage(StaticImageRenderer("conduit_boundary", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled"))
@@ -367,61 +412,137 @@ object ModConfig {
                 .tooltip(Component.translatable("config.squ_abyssal_bloom.server.tooltip"))
 
                 .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("entity.squ_abyssal_bloom.barnacle").withStyle(ChatFormatting.LIGHT_PURPLE))
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.ocean_territories").withStyle(ChatFormatting.BLUE))
                     .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.barnacle.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.BARNACLE.get()) { entity, tick ->
-                            if (entity is BarnacleEntity) {
-                                val durationTicks = (BarnacleAnimation.still_mouth_open.lengthInSeconds * 20).toInt()
-                                val loopTick = tick % durationTicks
-                                if (loopTick == 0 || !entity.stillMouthOpenAnimationState.isStarted)
-                                    entity.stillMouthOpenAnimationState.start(tick)
-                            }
-                        })
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_territories.desc"))
                         .build())
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.strictBarnacleSpawning"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.strictBarnacleSpawning.tooltip")))
-                        .binding(Binding.generic(
-                            true,
-                            { ServerConfigCache.strictBarnacleSpawning },
-                            { ServerConfigCache.strictBarnacleSpawning = it }
-                        ))
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
+                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS, step = 1))
+                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_DEFAULT_WEIGHT, step = 5))
+                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_OWN_WEIGHT, step = 5))
+                    .option(serverBool(ModServerConfig.OCEAN_TERRITORY_INCLUDE_VANILLA))
                     .build())
+
                 .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("entity.squ_abyssal_bloom.brine").withStyle(ChatFormatting.LIGHT_PURPLE))
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.entities").withStyle(ChatFormatting.LIGHT_PURPLE))
                     .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.brine.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.BRINE.get()) { entity, tick ->
-                            if (entity is BrineEntity) {
-                                val durationTicks = (BrineAnimation.idle.lengthInSeconds * 20).toInt()
-                                val loopTick = tick % durationTicks
-                                if (loopTick == 0 || !entity.idleAnimationState.isStarted)
-                                    entity.idleAnimationState.start(tick)
-                            }
-                        })
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.entities.desc"))
                         .build())
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.template"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.template")))
-                        .binding(Binding.generic(false, { false }, {}))
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.barnacle"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.barnacle.desc"))
+                            .customImage(BarnacleSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.barnacle"),
+                        buildGroups = BarnacleSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.brine"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.brine.desc"))
+                            .customImage(BrineSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.brine"),
+                        buildGroups = BrineSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.red_slobberer"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.red_slobberer.desc"))
+                            .customImage(RedSlobbererSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.red_slobberer"),
+                        buildGroups = RedSlobbererSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.mackerel"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.mackerel.desc"))
+                            .customImage(MackerelSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.mackerel"),
+                        buildGroups = MackerelSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("config.squ_abyssal_bloom.group.fish_schools"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.group.fish_schools.desc"))
+                            .customImage(StaticImageRenderer("fish_school", 1920, 991))
+                            .build(),
+                        screenTitle = Component.translatable("config.squ_abyssal_bloom.group.fish_schools"),
+                        buildGroups = FishSchoolSubMenu::buildGroups
+                    ))
                     .build())
+
+                .build())
+
+            .category(ConfigCategory.createBuilder()
+                .name(Component.translatable("config.squ_abyssal_bloom.worldgen")
+                    .withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_GREEN))
+                .tooltip(Component.translatable("config.squ_abyssal_bloom.worldgen.tooltip"))
+
                 .group(OptionGroup.createBuilder()
-                    .name(Component.translatable("entity.squ_abyssal_bloom.ghost_chimaera").withStyle(ChatFormatting.LIGHT_PURPLE))
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones").withStyle(ChatFormatting.DARK_AQUA))
                     .description(OptionDescription.createBuilder()
-                        .text(Component.translatable("config.squ_abyssal_bloom.ghost_chimaera.desc"))
-                        .customImage(EntityConfigRenderer(entityType = ModEntities.GHOST_CHIMAERA.get()))
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_zones.desc"))
                         .build())
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.template"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.template")))
-                        .binding(Binding.generic(false, { false }, {}))
-                        .controller(TickBoxControllerBuilder::create)
+                    .option(shallowDeepOpt)
+                    .option(deepAbyssalOpt)
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.terrain_zones").withStyle(ChatFormatting.GREEN))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.terrain_zones.desc"))
                         .build())
+                    .option(shallowFloorOpt)
+                    .option(deepFloorOpt)
+                    .option(abyssalFloorOpt)
+                    .option(serverInt(ModServerConfig.SHALLOW_CLEARANCE))
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.topo").withStyle(ChatFormatting.AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.topo.desc"))
+                        .build())
+                    .option(serverDouble(ModServerConfig.WARP_AMP, step = 5.0))
+                    .option(serverDouble(ModServerConfig.WARP2_AMP, step = 2.0))
+                    .option(serverDouble(ModServerConfig.TOPO_LARGE_AMP, step = 5.0))
+                    .option(serverDouble(ModServerConfig.TOPO_AMP, step = 2.0))
+                    .option(serverDouble(ModServerConfig.TOPO_MID_AMP, step = 1.0))
+                    .option(serverDouble(ModServerConfig.WALL_AMP, step = 2.0))
+                    .option(serverDouble(ModServerConfig.DETAIL_AMP, step = 1.0))
+                    .option(serverDouble(ModServerConfig.MICRO_AMP, step = 0.5))
+                    .option(serverDouble(ModServerConfig.WEIRDNESS_AMP, step = 1.0))
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.faults").withStyle(ChatFormatting.GOLD))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.faults.desc"))
+                        .build())
+                    .option(serverDouble(ModServerConfig.FAULT_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
+                    .option(serverDouble(ModServerConfig.FAULT_BLEND, step = 0.001) { Component.literal(String.format("%.3f", it)) })
+                    .option(serverDouble(ModServerConfig.FAULT_OFFSET_AMP, step = 1.0))
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.trenches").withStyle(ChatFormatting.DARK_RED))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.trenches.desc"))
+                        .build())
+                    .option(serverDouble(ModServerConfig.TRENCH_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
+                    .option(serverDouble(ModServerConfig.TRENCH_DEPTH_AMP, step = 1.0))
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.terraces").withStyle(ChatFormatting.YELLOW))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.terraces.desc"))
+                        .build())
+                    .option(serverDouble(ModServerConfig.TERRACE_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
+                    .option(serverDouble(ModServerConfig.TERRACE_STEP, step = 1.0))
                     .build())
 
                 .build())

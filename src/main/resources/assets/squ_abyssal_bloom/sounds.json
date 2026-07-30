@@ -19,6 +19,41 @@
     "subtitle": "subtitles.squ_abyssal_bloom.barnacle_death",
     "sounds": [ "squ_abyssal_bloom:entity/barnacle/barnacle_death" ]
   },
+  "barnacle_shoot": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_shoot",
+    "sounds": [
+      { "name": "minecraft:mob/squid/squirt1", "pitch": 0.5 },
+      { "name": "minecraft:mob/squid/squirt2", "pitch": 0.5 },
+      { "name": "minecraft:mob/squid/squirt3", "pitch": 0.5 }
+    ]
+  },
+  "barnacle_flop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_flop",
+    "sounds": [
+      { "name": "minecraft:mob/guardian/flop1", "pitch": 0.5 },
+      { "name": "minecraft:mob/guardian/flop2", "pitch": 0.5 },
+      { "name": "minecraft:mob/guardian/flop3", "pitch": 0.5 },
+      { "name": "minecraft:mob/guardian/flop4", "pitch": 0.5 }
+    ]
+  },
+
+
+
+  "mackerel_ambient": {
+    "sounds": []
+  },
+  "mackerel_hurt": {
+    "subtitle": "subtitles.squ_abyssal_bloom.mackerel_hurt",
+    "sounds": ["minecraft:entity/fish/hurt1", "minecraft:entity/fish/hurt2", "minecraft:entity/fish/hurt3", "minecraft:entity/fish/hurt4"]
+  },
+  "mackerel_death": {
+    "subtitle": "subtitles.squ_abyssal_bloom.mackerel_death",
+    "sounds": ["minecraft:entity/fish/hurt1", "minecraft:entity/fish/hurt2", "minecraft:entity/fish/hurt3", "minecraft:entity/fish/hurt4"]
+  },
+  "mackerel_flop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.mackerel_flop",
+    "sounds": ["minecraft:entity/fish/flop1", "minecraft:entity/fish/flop2", "minecraft:entity/fish/flop3", "minecraft:entity/fish/flop4"]
+  },
 
 
 
@@ -39,6 +74,46 @@
 
 
 
+  "red_slobberer_ambient": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_ambient",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambient_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_3" ]
+  },
+  "red_slobberer_moving": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_moving",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_moving_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_moving_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_moving_3" ]
+  },
+  "red_slobberer_death": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_death",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_death" ]
+  },
+  "red_slobberer_hit": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_hit",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_2" ]
+  },
+  "red_slobberer_hit_hide": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_3", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hit_hide_4" ]
+  },
+  "red_slobberer_hide": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_hide",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_hide" ]
+  },
+  "red_slobberer_show": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_show",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_show" ]
+  },
+  "red_slobberer_entity_enter": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_entity_enter" ]
+  },
+  "red_slobberer_entity_leave": {
+    "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave",
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_entity_leave" ]
+  },
+
+
+
+
   "bubble_projectile_burst": {
     "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_burst",
     "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_burst" ]
@@ -55,6 +130,8 @@
     "subtitle": "subtitles.squ_abyssal_bloom.bubble_projectile_launch",
     "sounds": [ "squ_abyssal_bloom:entity/bubble/bubble_projectile_launch" ]
   },
+
+
 
   "clean_bubble_spitter": {
     "subtitle": "subtitles.squ_abyssal_bloom.clean_bubble_spitter",
@@ -75,7 +152,10 @@
     "subtitle": "subtitles.squ_abyssal_bloom.respiration_bubble",
     "sounds": [ "squ_abyssal_bloom:item/respiration_bubble/respiration_bubble" ]
   },
-
+  "fill_baby_red_slobberer_bucket": {
+    "subtitle": "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket",
+    "sounds": [ "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_1", "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_2", "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_3" ]
+  },
 
   "conduit_entering": {
     "subtitle": "subtitles.squ_abyssal_bloom.conduit_entering",

@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "squ_abyssal_bloom:nautilus_lamp",
+    "squ_abyssal_bloom:bioluminescent_torch",
+    "squ_abyssal_bloom:bioluminescent_lantern",
+    "squ_abyssal_bloom:bioluminescent_crystal",
+    "squ_abyssal_bloom:bioluminescent_crystal_block"
+  ]
+}

@@ -163,10 +163,12 @@ public abstract class ConduitBlockEntityMixin {
                             3
                     );
 
-                    if (shouldActivate) {
-                        AstralPrismarineTracker.INSTANCE.markActive(immutablePos);
-                    } else {
-                        AstralPrismarineTracker.INSTANCE.markInactive(immutablePos);
+                    if (level instanceof ServerLevel serverLevel) {
+                        if (shouldActivate) {
+                            AstralPrismarineTracker.INSTANCE.markActive(serverLevel, immutablePos);
+                        } else {
+                            AstralPrismarineTracker.INSTANCE.markInactive(serverLevel, immutablePos);
+                        }
                     }
                 }
             }

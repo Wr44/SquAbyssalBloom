@@ -33,6 +33,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDeathEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.level.BlockDropsEvent
 import net.neoforged.neoforge.event.level.BlockEvent
+import net.neoforged.neoforge.event.level.block.BreakBlockEvent
 import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
@@ -120,6 +121,19 @@ object ConduitDomainHandler {
     }
 
     @SubscribeEvent
+    fun onConduitBreak(event: BreakBlockEvent) {
+        if (event.state.block != Blocks.CONDUIT) return
+        val level = event.level as? ServerLevel ?: return
+
+        val wasActive = (level.getBlockEntity(event.pos) as? ConduitBlockEntity)?.isActive == true
+        if (wasActive) {
+            level.playSound(event.player, event.pos, SoundEvents.CONDUIT_DEACTIVATE, SoundSource.BLOCKS, 1.0f, 1.0f)
+        }
+
+        deactivateAstralBlocks(level, event.pos)
+    }
+
+    @SubscribeEvent
     fun onChunkLoad(event: ChunkEvent.Load) {
         val level = event.level as? Level ?: return
         event.chunk.blockEntities.keys
@@ -133,6 +147,9 @@ object ConduitDomainHandler {
     fun onLevelUnload(event: LevelEvent.Unload) {
         val level = event.level as? Level ?: return
         conduitRegistry.remove(level)
+        if (level is ServerLevel) {
+            AstralPrismarineTracker.releaseLevel(level)
+        }
     }
 
     @SubscribeEvent
@@ -464,28 +481,19 @@ object ConduitDomainHandler {
     }
 
     private fun deactivateAstralBlocks(level: ServerLevel, pos: BlockPos) {
-        val allPositions = listOf(
-            pos.offset(0, 2, 0), pos.offset(0, -2, 0),
-            pos.offset(0, 0, 2), pos.offset(0, 0, -2),
-            pos.offset(2, 0, 0), pos.offset(-2, 0, 0),
-
-            pos.offset(0, 2, 2), pos.offset(0, 2, -2),
-            pos.offset(0, -2, 2), pos.offset(0, -2, -2),
-
-            pos.offset(2, 0, 2), pos.offset(2, 0, -2),
-            pos.offset(-2, 0, 2), pos.offset(-2, 0, -2),
-
-            pos.offset(2, 2, 0), pos.offset(2, -2, 0),
-            pos.offset(-2, 2, 0), pos.offset(-2, -2, 0)
-        )
+        val allPositions = AstralPrismarineTracker.nearbyOffsetPositions(pos)
 
         allPositions.forEach { checkPos ->
-            val state = level.getBlockState(checkPos)
+
+            if (!level.isLoaded(checkPos)) return@forEach
+
+            val chunk = level.getChunk(checkPos)
+            val state = chunk.getBlockState(checkPos)
             if (state.`is`(ModBlocks.ASTRAL_PRISMARINE) &&
                 state.getValue(AstralPrismarineBlock.ACTIVE)) {
                 level.setBlock(checkPos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
                 level.sendBlockUpdated(checkPos, state, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
-                AstralPrismarineTracker.markInactive(checkPos)
+                AstralPrismarineTracker.markInactive(level, checkPos)
             }
         }
     }

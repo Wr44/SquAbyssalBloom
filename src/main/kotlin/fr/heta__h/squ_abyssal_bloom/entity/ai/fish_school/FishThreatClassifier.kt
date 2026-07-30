@@ -1,0 +1,50 @@
+package fr.heta__h.squ_abyssal_bloom.entity.ai.fish_school
+
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.tags.ModTags
+import net.minecraft.core.registries.BuiltInRegistries
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.animal.Animal
+import net.minecraft.world.entity.animal.fish.AbstractFish
+import net.minecraft.world.entity.animal.fish.WaterAnimal
+import net.minecraft.world.entity.monster.Enemy
+import net.minecraft.world.entity.player.Player
+
+object FishThreatClassifier {
+
+    fun isThreat(
+        observer: AbstractFish,
+        entity: LivingEntity
+    ): Boolean {
+        if (entity === observer || !entity.isAlive) return false
+        if (entity is AbstractFish) return false
+        if (observer.isAlliedTo(entity) || entity.isAlliedTo(observer)) return false
+
+        return isPotentialThreat(entity)
+    }
+
+
+    fun isPotentialThreat(entity: LivingEntity): Boolean {
+        if (!entity.isAlive) return false
+        if (entity is AbstractFish) return false
+        if (isFriendly(entity)) return false
+
+        if (entity is Player) {
+            return !entity.isCreative && !entity.isSpectator
+        }
+        if (entity is Enemy) return true
+        if (entity.type.category.isFriendly) return false
+        if (entity is Animal || entity is WaterAnimal) return false
+
+        return true
+    }
+
+    fun isFriendly(entity: LivingEntity): Boolean {
+        return entity.typeHolder().`is`(ModTags.EntityTypes.FISH_SCHOOL_FRIENDLY) || isConfigFriendly(entity)
+    }
+
+    private fun isConfigFriendly(entity: LivingEntity): Boolean {
+        val id = BuiltInRegistries.ENTITY_TYPE.getKey(entity.type).toString()
+        return ModServerConfig.FISH_SCHOOL_FRIENDLY_ENTITIES.get().contains(id)
+    }
+}

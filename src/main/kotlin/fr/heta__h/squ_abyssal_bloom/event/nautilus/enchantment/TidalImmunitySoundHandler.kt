@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.nautilus.enchantment
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.getEnchantLevel
 import net.minecraft.client.Minecraft
@@ -66,7 +67,7 @@ object TidalImmunitySoundHandler {
         val pos = vehicle.position()
         val searchBox = AABB(pos.x - 1.0, pos.y - 1.0, pos.z - 1.0, pos.x + 1.0, pos.y + 1.0, pos.z + 1.0)
         val inBubbleColumn = level.getBlockStates(searchBox).anyMatch { state ->
-            state.`is`(Blocks.BUBBLE_COLUMN)
+            state.`is`(Blocks.BUBBLE_COLUMN) || state.`is`(ModBlocks.BRINE_BUBBLE_COLUMN.get())
         }
 
         if (inBubbleColumn) {

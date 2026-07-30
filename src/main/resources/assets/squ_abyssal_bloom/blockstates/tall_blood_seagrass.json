@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "half=lower": { "model": "squ_abyssal_bloom:block/tall_blood_seagrass_bottom" },
+    "half=upper": { "model": "squ_abyssal_bloom:block/tall_blood_seagrass_top" }
+  }
+}

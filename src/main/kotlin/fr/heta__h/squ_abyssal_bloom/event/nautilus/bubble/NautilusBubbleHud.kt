@@ -7,6 +7,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.client.Minecraft
+import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.resources.Identifier
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -15,6 +16,7 @@ import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderGuiLayerEvent
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers
+import net.neoforged.neoforge.event.level.LevelEvent
 
 @EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object NautilusBubbleHud {
@@ -36,8 +38,22 @@ object NautilusBubbleHud {
     private var cooldownEndGameTime = 0L
     private var prevDashing = false
 
+    private var cachedLevel: ClientLevel? = null
     private var cachedHeldBubble: BubbleProjectile? = null
     private var lastCacheTick = -1L
+
+    private fun reset() {
+        cooldownEndGameTime = 0L
+        prevDashing = false
+        cachedLevel = null
+        cachedHeldBubble = null
+        lastCacheTick = -1L
+    }
+
+    @SubscribeEvent
+    fun onLevelUnload(event: LevelEvent.Unload) {
+        if (event.level is ClientLevel) reset()
+    }
 
     @SubscribeEvent
     fun onRenderBar(event: RenderGuiLayerEvent.Pre) {
@@ -46,6 +62,12 @@ object NautilusBubbleHud {
         val mc = Minecraft.getInstance()
         if (mc.options.hideGui) return
 
+        val level = mc.level ?: return
+        if (cachedLevel !== level) {
+            reset()
+            cachedLevel = level
+        }
+
         val player = mc.player ?: return
         val nautilus = player.vehicle as? AbstractNautilus ?: return
         if (nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get()).item != NautilusLayerItems.BUBBLE) return
@@ -53,7 +75,7 @@ object NautilusBubbleHud {
         event.isCanceled = true
 
         val dashing = nautilus.isDashing
-        val gameTime = mc.level?.gameTime ?: 0L
+        val gameTime = level.gameTime
         if (dashing && !prevDashing) {
             cooldownEndGameTime = gameTime + COOLDOWN_TICKS
         }
@@ -67,9 +89,9 @@ object NautilusBubbleHud {
         val barY = screenH - 29
 
         if (gameTime != lastCacheTick) {
-            cachedHeldBubble = mc.level?.getEntitiesOfClass(
+            cachedHeldBubble = level.getEntitiesOfClass(
                 BubbleProjectile::class.java, nautilus.boundingBox.inflate(3.0)
-            ) { it.isHeld && !it.isRemoved }?.firstOrNull()
+            ) { it.isHeld && !it.isRemoved }.firstOrNull()
             lastCacheTick = gameTime
         }
 

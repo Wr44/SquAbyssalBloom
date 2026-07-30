@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "C": "minecraft:clay_ball",
+    "F": "squ_abyssal_bloom:calcareous_fragment"
+  },
+  "pattern": [
+    " F ",
+    "FCF",
+    " F "
+  ],
+  "result": {
+    "id": "squ_abyssal_bloom:marine_cement",
+    "count": 2
+  }
+}

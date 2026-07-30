@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "squ_abyssal_bloom:item/marine_cement"
+  }
+}
