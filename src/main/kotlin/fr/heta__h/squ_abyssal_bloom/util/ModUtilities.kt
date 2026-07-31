@@ -37,6 +37,7 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
 import net.minecraft.tags.FluidTags
+import net.minecraft.tags.TagKey
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -47,15 +48,190 @@ import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.LevelReader
 import net.minecraft.world.level.levelgen.Heightmap
+import net.minecraft.world.level.material.Fluid
+import net.minecraft.world.level.material.FluidState
 import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.abs
 import kotlin.math.min
 
 object ModUtilities {
+
+    fun isWaterBlock(level: LevelReader, pos: BlockPos): Boolean {
+        return level.getFluidState(pos).type.isSame(Fluids.WATER)
+    }
+
+    fun findNearbyWaterBlock(
+        level: LevelReader,
+        center: BlockPos,
+        horizontalRadius: Int,
+        verticalRadius: Int
+    ): BlockPos? {
+        require(horizontalRadius >= 0)
+        require(verticalRadius >= 0)
+
+        val minY = maxOf(level.minY, center.y - verticalRadius)
+        val maxY = minOf(level.maxY - 1, center.y + verticalRadius)
+        if (minY > maxY) return null
+
+        val cursor = BlockPos.MutableBlockPos()
+
+        for (radius in 0..horizontalRadius) {
+            for (offsetX in -radius..radius) {
+                for (offsetZ in -radius..radius) {
+                    if (maxOf(abs(offsetX), abs(offsetZ)) != radius) continue
+
+                    val x = center.x + offsetX
+                    val z = center.z + offsetZ
+                    if (!level.hasChunk(x shr 4, z shr 4)) continue
+
+                    for (y in minY..maxY) {
+                        cursor.set(x, y, z)
+                        if (isWaterBlock(level, cursor)) {
+                            return cursor.immutable()
+                        }
+                    }
+                }
+            }
+        }
+
+        return null
+    }
+
+    fun findTopWaterBlock(level: LevelReader, waterBlock: BlockPos): BlockPos? {
+        if (!isWaterBlock(level, waterBlock)) return null
+
+        val cursor = BlockPos.MutableBlockPos()
+        var topY = waterBlock.y
+
+        while (topY < level.maxY - 1) {
+            cursor.set(waterBlock.x, topY + 1, waterBlock.z)
+            if (!isWaterBlock(level, cursor)) break
+            topY++
+        }
+
+        return BlockPos(waterBlock.x, topY, waterBlock.z)
+    }
+
+    fun isWaterSurface(level: LevelReader, waterBlock: BlockPos): Boolean {
+        return isWaterBlock(level, waterBlock) && !isWaterBlock(level, waterBlock.above())
+    }
+
+    fun isRenderableWaterSurface(level: LevelReader, waterBlock: BlockPos): Boolean {
+        if (!isWaterSurface(level, waterBlock)) return false
+        if (level.getFluidState(waterBlock).getHeight(level, waterBlock) <= 0.0f) return false
+        if (level.getBlockState(waterBlock).isSolidRender) return false
+
+        val above = waterBlock.above()
+        if (level.getBlockState(above).isSolidRender) return false
+
+        val highestBlockingY = level.getHeight(
+            Heightmap.Types.MOTION_BLOCKING,
+            waterBlock.x,
+            waterBlock.z
+        ) - 1
+
+        if (highestBlockingY <= above.y) return true
+
+        val cursor = BlockPos.MutableBlockPos()
+        for (y in (above.y + 1)..highestBlockingY) {
+            cursor.set(waterBlock.x, y, waterBlock.z)
+            if (level.getBlockState(cursor).isSolidRender) return false
+        }
+
+        return true
+    }
+
+    fun getFluidSurfaceHeight(level: LevelReader, fluidBlock: BlockPos): Double {
+        return fluidBlock.y + level.getFluidState(fluidBlock).getHeight(level, fluidBlock).toDouble()
+    }
+
+    fun findNearbyWaterSurface(
+        level: LevelReader,
+        center: BlockPos,
+        horizontalRadius: Int,
+        verticalRadius: Int
+    ): BlockPos? {
+        val waterBlock = findNearbyWaterBlock(level, center, horizontalRadius, verticalRadius) ?: return null
+        return findTopWaterBlock(level, waterBlock)
+    }
+
+    fun findFluidBlockBelow(
+        level: LevelReader,
+        x: Int,
+        z: Int,
+        startY: Int,
+        fluidTag: TagKey<Fluid>,
+        minimumY: Int = level.minY,
+        maxConsecutiveSolidBlocks: Int? = null
+    ): BlockPos? {
+        return findMatchingFluidBlockBelow(
+            level = level,
+            x = x, z = z, startY = startY,
+            minimumY = minimumY,
+            maxConsecutiveSolidBlocks = maxConsecutiveSolidBlocks
+        ) { fluidState ->
+            fluidState.`is`(fluidTag)
+        }
+    }
+
+    fun findWaterBlockBelow(
+        level: LevelReader,
+        x: Int,
+        z: Int,
+        startY: Int,
+        minimumY: Int = level.minY
+    ): BlockPos? {
+        return findMatchingFluidBlockBelow(
+            level = level,
+            x = x, z = z, startY = startY,
+            minimumY = minimumY,
+            maxConsecutiveSolidBlocks = null
+        ) { fluidState ->
+            fluidState.type.isSame(Fluids.WATER)
+        }
+    }
+
+    private inline fun findMatchingFluidBlockBelow(
+        level: LevelReader,
+        x: Int,
+        z: Int,
+        startY: Int,
+        minimumY: Int,
+        maxConsecutiveSolidBlocks: Int?,
+        matches: (FluidState) -> Boolean
+    ): BlockPos? {
+        require(maxConsecutiveSolidBlocks == null || maxConsecutiveSolidBlocks >= 0)
+
+        val lowestY = maxOf(level.minY, minimumY)
+        if (startY < lowestY) return null
+
+        val cursor = BlockPos.MutableBlockPos()
+        var solidStreak = 0
+
+        for (y in startY downTo lowestY) {
+            cursor.set(x, y, z)
+
+            if (matches(level.getFluidState(cursor))) {
+                return cursor.immutable()
+            }
+
+            if (maxConsecutiveSolidBlocks != null) {
+                if (level.getBlockState(cursor).blocksMotion()) {
+                    solidStreak++
+                    if (solidStreak > maxConsecutiveSolidBlocks) return null
+                } else {
+                    solidStreak = 0
+                }
+            }
+        }
+
+        return null
+    }
 
     fun findWaterSurface(
         level: Level,
@@ -360,6 +536,15 @@ object ModUtilities {
 
     fun smoothstep(t: Double): Double {
         return t * t * (3.0 - 2.0 * t)
+    }
+
+    fun smoothstep(edge0: Double, edge1: Double, value: Double): Double {
+        if (edge0 == edge1) {
+            return if (value < edge0) 0.0 else 1.0
+        }
+
+        val normalized = ((value - edge0) / (edge1 - edge0)).coerceIn(0.0, 1.0)
+        return smoothstep(normalized)
     }
 
     fun smoothTowards(current: Double, target: Double, dt: Double, rate: Double = 2.0): Double {

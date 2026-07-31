@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.util.cache
 
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import it.unimi.dsi.fastutil.longs.Long2LongMap
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap
 import it.unimi.dsi.fastutil.objects.ObjectIterator
@@ -112,16 +113,15 @@ object SurfaceHeightCache {
             val isWater = level.getFluidState(mutPos).`is`(FluidTags.WATER)
 
             if (!isWater) {
-                var foundWater = false
-                for (y in searchY - 2 downTo level.minY) {
-                    mutPos.set(cx, y, cz)
-                    if (level.getFluidState(mutPos).`is`(FluidTags.WATER)) {
-                        searchY = y + 1
-                        foundWater = true
-                        break
-                    }
-                }
-                if (!foundWater) break
+                val waterBlock = ModUtilities.findFluidBlockBelow(
+                    level = level,
+                    x = cx,
+                    z = cz,
+                    startY = searchY - 2,
+                    fluidTag = FluidTags.WATER
+                ) ?: break
+
+                searchY = waterBlock.y + 1
                 continue
             }
 

@@ -130,7 +130,6 @@ object SurfaceAbyssOccluder {
     private fun findMinWaterSurface(level: Level, camPos: Vec3): Int {
         val cx = camPos.x.toInt()
         val cz = camPos.z.toInt()
-        val mutPos = BlockPos.MutableBlockPos()
 
         val beams = mutableListOf<Pair<Int, Int>>()
         val spread = intArrayOf(-16, -8, 0, 8, 16)
@@ -148,25 +147,16 @@ object SurfaceAbyssOccluder {
             if (!level.hasChunk(bx shr 4, bz shr 4)) continue
 
             val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz)
-            var solidStreak = 0
+            val waterBlock = ModUtilities.findFluidBlockBelow(
+                level = level,
+                x = bx,
+                z = bz,
+                startY = topY,
+                fluidTag = FluidTags.WATER,
+                maxConsecutiveSolidBlocks = 10
+            ) ?: continue
 
-            for (y in topY downTo level.minY) {
-                mutPos.set(bx, y, bz)
-                val fluidState = level.getFluidState(mutPos)
-
-                if (fluidState.`is`(FluidTags.WATER)) {
-                    minSurface = minOf(minSurface, y)
-                    break
-                }
-
-                val blockState = level.getBlockState(mutPos)
-                if (blockState.blocksMotion()) {
-                    solidStreak++
-                    if (solidStreak > 10) break
-                } else {
-                    solidStreak = 0
-                }
-            }
+            minSurface = minOf(minSurface, waterBlock.y)
         }
 
         return minSurface
