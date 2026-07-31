@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "squ_abyssal_bloom:bioluminescent_crystal_block"
+  ],
+  "result": {
+    "id": "squ_abyssal_bloom:bioluminescent_crystal",
+    "count": 9
+  }
+}

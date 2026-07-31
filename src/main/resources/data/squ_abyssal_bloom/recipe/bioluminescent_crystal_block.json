@@ -7,10 +7,10 @@
     "AAA"
   ],
   "key": {
-    "A": "squ_abyssal_bloom:bioluminescent_torch"
+    "A": "squ_abyssal_bloom:bioluminescent_crystal"
   },
   "result": {
-    "id": "squ_abyssal_bloom:bioluminescent_lantern",
+    "id": "squ_abyssal_bloom:bioluminescent_crystal_block",
     "count": 1
   }
 }
