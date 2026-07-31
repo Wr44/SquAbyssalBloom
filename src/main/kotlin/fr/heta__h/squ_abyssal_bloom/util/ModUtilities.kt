@@ -534,18 +534,23 @@ object ModUtilities {
     }
     
 
-    fun smoothstep(t: Double): Double {
+    fun smooth(t: Double): Double {
         return t * t * (3.0 - 2.0 * t)
     }
 
-    fun smoothstep(edge0: Double, edge1: Double, value: Double): Double {
+    fun smooth(edge0: Double, edge1: Double, value: Double): Double {
         if (edge0 == edge1) {
             return if (value < edge0) 0.0 else 1.0
         }
 
         val normalized = ((value - edge0) / (edge1 - edge0)).coerceIn(0.0, 1.0)
-        return smoothstep(normalized)
+        return smooth(normalized)
     }
+
+    fun smoothstep(t: Double): Double = smooth(t)
+
+    fun smoothstep(edge0: Double, edge1: Double, value: Double): Double =
+        smooth(edge0, edge1, value)
 
     fun smoothTowards(current: Double, target: Double, dt: Double, rate: Double = 2.0): Double {
         return current + (target - current) * (rate * dt)

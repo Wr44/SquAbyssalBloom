@@ -9,14 +9,14 @@ data class BioluminescentBloomState(
     val seed: Long,
     val createdAt: Long,
     val lifetime: Long,
-    val palette: BioluminescentPalette
+    val palette: BioluminescentPalette,
+    val pulseOriginTick: Long,
+    val colorPhase: Double,
+    val localPulseOffset: Double,
+    val brightnessScale: Float,
+    val flickerDelayTicks: Int,
+    val flickerStrengthScale: Float
 ) {
-    data class BioluminescentPalette(
-        val firstColor: Int,
-        val secondColor: Int,
-        val highlightColor: Int
-    )
-
     init {
         require(lifetime > 0L)
     }
@@ -32,13 +32,13 @@ data class BioluminescentBloomState(
 
         val progress = elapsed.toDouble() / lifetime.toDouble()
         return when {
-            progress < APPEARANCE_END -> ModUtilities.smoothstep(
+            progress < APPEARANCE_END -> ModUtilities.smooth(
                 0.0,
                 APPEARANCE_END,
                 progress
             ).toFloat()
             progress < DISAPPEARANCE_START -> 1.0f
-            else -> (1.0 - ModUtilities.smoothstep(
+            else -> (1.0 - ModUtilities.smooth(
                 DISAPPEARANCE_START,
                 1.0,
                 progress
@@ -46,10 +46,21 @@ data class BioluminescentBloomState(
         }
     }
 
-    fun pulseAt(gameTime: Long): Float {
-        val elapsed = elapsedTicks(gameTime).toDouble()
-        val phase = ((seed ushr 16) and 0xFFFFL).toDouble() / 65535.0 * PI * 2.0
-        return (0.92 + 0.08 * sin(phase + elapsed * PI * 2.0 / PULSE_PERIOD_TICKS)).toFloat()
+    fun lifecyclePhaseAt(gameTime: Long): BioluminescentLifecyclePhase {
+        val elapsed = elapsedTicks(gameTime)
+        if (elapsed >= lifetime) return BioluminescentLifecyclePhase.COMPLETE
+        val progress = elapsed.toDouble() / lifetime.toDouble()
+        return when {
+            progress < APPEARANCE_END -> BioluminescentLifecyclePhase.APPEARING
+            progress < DISAPPEARANCE_START -> BioluminescentLifecyclePhase.STABLE
+            else -> BioluminescentLifecyclePhase.DISAPPEARING
+        }
+    }
+
+    fun localPulseAt(gameTime: Long): Float {
+        val elapsed = if (gameTime <= pulseOriginTick) 0.0 else (gameTime - pulseOriginTick).toDouble()
+        val phase = colorPhase + elapsed * PI * 2.0 / PULSE_PERIOD_TICKS
+        return (0.995 + 0.005 * sin(phase + localPulseOffset)).toFloat()
     }
 
     private fun elapsedTicks(gameTime: Long): Long {
@@ -60,27 +71,38 @@ data class BioluminescentBloomState(
     companion object {
         private const val APPEARANCE_END = 0.2
         private const val DISAPPEARANCE_START = 0.8
-        private const val PULSE_PERIOD_TICKS = 120.0
+        private const val PULSE_PERIOD_TICKS = 200.0
 
-        private val PALETTES = listOf(
-            BioluminescentPalette(0x18DDE3, 0x78F5AE, 0xEFFFF8),
-            BioluminescentPalette(0x20D9EC, 0x966CFF, 0xF5EDFF),
-            BioluminescentPalette(0x895FF4, 0xFF62B8, 0xFFF0FB),
-            BioluminescentPalette(0x20DFC1, 0xE957D6, 0xFFF0FC)
-        )
-
-        fun create(seed: Long, createdAt: Long, lifetime: Long): BioluminescentBloomState {
-            val paletteIndex = Math.floorMod(
-                RandomSupport.mixStafford13(seed),
-                PALETTES.size.toLong()
-            ).toInt()
+        fun create(
+            seed: Long,
+            createdAt: Long,
+            lifetime: Long,
+            palette: BioluminescentPalette = BioluminescentPalettes.select(seed),
+            pulseOriginTick: Long = createdAt,
+            colorPhase: Double = phaseFromSeed(seed)
+        ): BioluminescentBloomState {
+            val mixedSeed = RandomSupport.mixStafford13(seed)
+            val localPulseOffset = (((mixedSeed ushr 24) and 0xFFFFL).toDouble() / 65535.0 - 0.5) * 0.24
+            val brightnessScale = (0.99 + ((mixedSeed ushr 40) and 0xFFFFL).toDouble() / 65535.0 * 0.02).toFloat()
+            val flickerDelayTicks = ((mixedSeed ushr 12) and 0x1L).toInt()
+            val flickerStrengthScale = (0.99 + ((mixedSeed ushr 4) and 0xFFL).toDouble() / 255.0 * 0.02).toFloat()
 
             return BioluminescentBloomState(
                 seed = seed,
                 createdAt = createdAt,
                 lifetime = lifetime,
-                palette = PALETTES[paletteIndex]
+                palette = palette,
+                pulseOriginTick = pulseOriginTick,
+                colorPhase = colorPhase,
+                localPulseOffset = localPulseOffset,
+                brightnessScale = brightnessScale,
+                flickerDelayTicks = flickerDelayTicks,
+                flickerStrengthScale = flickerStrengthScale
             )
+        }
+
+        fun phaseFromSeed(seed: Long): Double {
+            return ((seed ushr 16) and 0xFFFFL).toDouble() / 65535.0 * PI * 2.0
         }
     }
 }

@@ -6,7 +6,8 @@ import net.minecraft.world.level.levelgen.XoroshiroRandomSource
 import net.minecraft.world.level.levelgen.synth.NormalNoise
 
 internal class BioluminescentNoiseSampler(
-    seed: Long
+    seed: Long,
+    colorSeed: Long = seed
 ) {
    companion object {
         const val LARGE_SEED_SALT = 0x243F6A8885A308D3L
@@ -16,7 +17,7 @@ internal class BioluminescentNoiseSampler(
 
     private val largeNoise = createNoise(ModNoises.ABYSSAL_TOPO_PARAMETERS, seed, LARGE_SEED_SALT)
     private val detailNoise = createNoise(ModNoises.ABYSSAL_DETAIL_PARAMETERS, seed, DETAIL_SEED_SALT)
-    private val colorNoise = createNoise(ModNoises.ABYSSAL_WALL_PARAMETERS, seed, COLOR_SEED_SALT)
+    private val colorNoise = createNoise(ModNoises.ABYSSAL_WALL_PARAMETERS, colorSeed, COLOR_SEED_SALT)
 
     fun sampleLarge(x: Double, z: Double): Double = sample2d(largeNoise, x, z)
 
