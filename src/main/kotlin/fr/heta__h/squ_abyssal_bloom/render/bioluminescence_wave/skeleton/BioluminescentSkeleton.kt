@@ -23,6 +23,6 @@ class BioluminescentSkeleton internal constructor(
     }
 
     private companion object {
-        const val CONNECTION_FALLOFF = 1.35
+        const val CONNECTION_FALLOFF = 0.95
     }
 }

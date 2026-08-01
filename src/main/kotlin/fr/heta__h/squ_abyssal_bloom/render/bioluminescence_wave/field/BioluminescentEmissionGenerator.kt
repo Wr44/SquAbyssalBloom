@@ -7,6 +7,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.Biolumin
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
 import net.minecraft.world.level.levelgen.RandomSupport
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -29,10 +30,10 @@ class BioluminescentEmissionGenerator(
         const val PIXELS_PER_CELL =
             BioluminescentEmissionField.PIXELS_PER_BLOCK * BioluminescentEmissionField.PIXELS_PER_BLOCK
         const val MACRO_SUPPORT_MINIMUM = 0.035
-        const val CONCENTRATION_NOISE_SCALE = 0.42
-        const val LARGE_NOISE_SCALE = 1.16
-        const val MEDIUM_NOISE_SCALE = 2.18
-        const val MICRO_CLUSTER_NOISE_SCALE = 3.05
+        const val CONCENTRATION_NOISE_SCALE = 0.30
+        const val LARGE_NOISE_SCALE = 0.88
+        const val MEDIUM_NOISE_SCALE = 1.72
+        const val MICRO_CLUSTER_NOISE_SCALE = 2.45
         const val DETAIL_NOISE_SCALE = 2.35
         const val FINE_NOISE_SCALE = 3.35
         const val HOLE_DETAIL_NOISE_SCALE = 2.85
@@ -49,22 +50,28 @@ class BioluminescentEmissionGenerator(
         const val HOLE_START_POROSITY_INFLUENCE = 0.22
         const val HOLE_TRANSITION = 0.15
         const val POROUS_FEATHER = 0.065
-        const val CONNECTION_VARIATION = 0.22
-        const val CONNECTION_PATTERN_FLOOR = 0.14
-        const val CONNECTION_PATTERN_LOW = 0.30
-        const val CONNECTION_PATTERN_HIGH = 0.72
-        const val CONNECTION_HOLE_FLOOR = 0.18
+        const val CORE_POROSITY_BIAS = 0.09
+        const val CONNECTION_VARIATION = 0.20
+        const val CONNECTION_PATTERN_FLOOR = 0.10
+        const val CONNECTION_PATTERN_LOW = 0.32
+        const val CONNECTION_PATTERN_HIGH = 0.74
+        const val CONNECTION_HOLE_FLOOR = 0.14
+        const val CONNECTION_SPINE_EXPONENT = 1.55
         const val VISIBLE_EMISSION_THRESHOLD = 0.032
         const val HIGHLIGHT_MEASUREMENT_THRESHOLD = 0.72
         const val MINIMUM_STORED_EMISSION = 0.006
-        const val ALPHA_CURVE = 0.52
+        const val ALPHA_EXPOSURE = 2.55
+        const val COLOR_EXPOSURE = 1.75
+        const val ALPHA_CURVE = 0.62
         const val CALIBRATION_STEPS = 8
         const val COVERAGE_TOLERANCE = 0.035
-        const val COLOR_NOISE_SCALE = 0.52
-        const val COLOR_SECONDARY_SCALE = 0.23
-        const val HIGHLIGHT_START = 0.48
-        const val HIGHLIGHT_END = 0.92
-        const val HIGHLIGHT_MIX_MAXIMUM = 0.88
+        const val COLOR_NOISE_SCALE = 0.34
+        const val COLOR_SECONDARY_SCALE = 0.16
+        const val COLOR_ACCENT_SCALE = 0.09
+        const val COLOR_ACCENT_MIX = 0.72
+        const val HIGHLIGHT_START = 0.62
+        const val HIGHLIGHT_END = 0.84
+        const val HIGHLIGHT_MIX_MAXIMUM = 0.72
         const val CELLULAR_SEED_SALT = 0x1F83D9ABFB41BD6BL
         const val CELLULAR_SECONDARY_SEED_SALT = 0x254FF53A5F1D36F1L
         const val COLOR_SEED_SALT = 0x510E527FADE682D1L
@@ -76,6 +83,7 @@ class BioluminescentEmissionGenerator(
     private val organicPattern = FloatArray(pixelCount)
     private val holeAvailability = FloatArray(pixelCount)
     private val connectionSupport = FloatArray(pixelCount)
+    private val coreSupport = FloatArray(pixelCount)
     private val concentration = FloatArray(pixelCount)
     private val finalAlpha = FloatArray(pixelCount)
     private val finalColors = IntArray(pixelCount)
@@ -207,10 +215,11 @@ class BioluminescentEmissionGenerator(
             holeAvailability[pixelIndex] = hole.toFloat()
 
             val core = macroField.coreInfluenceAt(sample.worldX, sample.worldZ)
+            coreSupport[pixelIndex] = core.toFloat()
             val connection = macroField.connectionInfluenceAt(sample.worldX, sample.worldZ, sample.cellIndex)
             val broadConcentration = ModUtilities.smooth(
-                0.24,
-                0.80,
+                0.18,
+                0.76,
                 concentrationNoise * 0.62 + largeNoise * 0.38
             )
             val sparkle = ModUtilities.smooth(
@@ -219,10 +228,10 @@ class BioluminescentEmissionGenerator(
                 detailNoise * 0.78 + secondaryCellular.nearest * 0.22
             )
             concentration[pixelIndex] = (
-                0.20 + broadConcentration * 0.58 + reaction * 0.16 +
-                    sparkle * 0.38 + core * 0.08
-                ).coerceIn(0.0, 1.28).toFloat()
-            connectionSupport[pixelIndex] = (macro * connection).toFloat()
+                0.18 + broadConcentration * 0.66 + reaction * 0.16 +
+                    sparkle * 0.38 + core * 0.22
+                ).coerceIn(0.0, 1.36).toFloat()
+            connectionSupport[pixelIndex] = (macro * connection.pow(CONNECTION_SPINE_EXPONENT)).toFloat()
         }
         samplingCursor = end
         if (samplingCursor >= pixelCount) {
@@ -262,15 +271,17 @@ class BioluminescentEmissionGenerator(
         for (index in finalizationCursor until end) {
             val emission = emissionAt(index, porousThreshold)
             if (emission < MINIMUM_STORED_EMISSION) continue
-            val alpha = emission.pow(ALPHA_CURVE).coerceIn(0.0, 1.0)
+            val alphaEmission = exposedEmission(emission, ALPHA_EXPOSURE)
+            val colorEmission = exposedEmission(emission, COLOR_EXPOSURE)
+            val alpha = alphaEmission.pow(ALPHA_CURVE).coerceIn(0.0, 1.0)
             finalAlpha[index] = alpha.toFloat()
             val sample = worldSample(index)
-            finalColors[index] = colorAt(sample.worldX, sample.worldZ, emission)
+            finalColors[index] = colorAt(sample.worldX, sample.worldZ, colorEmission)
             luminousCells[sample.cellIndex] = true
             if (emission >= VISIBLE_EMISSION_THRESHOLD) {
                 luminousPixels++
                 visibleAlphaSum += alpha
-                if (emission >= HIGHLIGHT_MEASUREMENT_THRESHOLD) highlightPixels++
+                if (colorEmission >= HIGHLIGHT_MEASUREMENT_THRESHOLD) highlightPixels++
             }
         }
         finalizationCursor = end
@@ -282,9 +293,10 @@ class BioluminescentEmissionGenerator(
         if (macro < MACRO_SUPPORT_MINIMUM) return 0.0
         val organic = organicPattern[index].toDouble()
         val holes = holeAvailability[index].toDouble()
+        val localThreshold = threshold - coreSupport[index] * CORE_POROSITY_BIAS
         val porousMask = ModUtilities.smooth(
-            threshold - POROUS_FEATHER,
-            threshold + POROUS_FEATHER,
+            localThreshold - POROUS_FEATHER,
+            localThreshold + POROUS_FEATHER,
             organic * holes
         )
         val baseEmission = macro * porousMask * holes * concentration[index].toDouble()
@@ -300,6 +312,10 @@ class BioluminescentEmissionGenerator(
         return maxOf(baseEmission, connectionEmission).coerceIn(0.0, 1.0)
     }
 
+    private fun exposedEmission(emission: Double, exposure: Double): Double {
+        return (1.0 - exp(-emission * exposure)).coerceIn(0.0, 1.0)
+    }
+
     private fun colorAt(worldX: Double, worldZ: Double, emission: Double): Int {
         val primaryNoise = noiseSampler.sampleColor(
             worldX * COLOR_NOISE_SCALE,
@@ -309,10 +325,16 @@ class BioluminescentEmissionGenerator(
             (worldX + 211.0) * COLOR_SECONDARY_SCALE,
             (worldZ - 179.0) * COLOR_SECONDARY_SCALE
         )
-        val mix = ModUtilities.smooth(0.12, 0.88, primaryNoise * 0.72 + secondaryNoise * 0.28)
+        val accentNoise = noiseSampler.sampleColor(
+            (worldX - 347.0) * COLOR_ACCENT_SCALE,
+            (worldZ + 281.0) * COLOR_ACCENT_SCALE
+        )
+        val mix = ModUtilities.smooth(0.28, 0.72, primaryNoise * 0.68 + secondaryNoise * 0.32)
         val base = lerpColor(palette.firstColor, palette.secondColor, mix)
-        val brightness = 0.46 + ModUtilities.smooth(0.015, 0.68, emission) * 0.54
-        val shaded = scaleColor(base, brightness)
+        val accentMix = ModUtilities.smooth(0.48, 0.82, accentNoise) * COLOR_ACCENT_MIX
+        val accented = lerpColor(base, palette.accentColor, accentMix)
+        val chromaticStrength = 0.18 + ModUtilities.smooth(0.015, 0.66, emission) * 0.82
+        val shaded = lerpColor(palette.shadowColor, accented, chromaticStrength)
         val highlight = ModUtilities.smooth(HIGHLIGHT_START, HIGHLIGHT_END, emission) *
             HIGHLIGHT_MIX_MAXIMUM
         return lerpColor(shaded, palette.highlightColor, highlight)
@@ -341,13 +363,6 @@ class BioluminescentEmissionGenerator(
         val red = lerpChannel(first shr 16 and 0xFF, second shr 16 and 0xFF, amount)
         val green = lerpChannel(first shr 8 and 0xFF, second shr 8 and 0xFF, amount)
         val blue = lerpChannel(first and 0xFF, second and 0xFF, amount)
-        return (red shl 16) or (green shl 8) or blue
-    }
-
-    private fun scaleColor(color: Int, scale: Double): Int {
-        val red = ((color shr 16 and 0xFF) * scale).roundToInt().coerceIn(0, 255)
-        val green = ((color shr 8 and 0xFF) * scale).roundToInt().coerceIn(0, 255)
-        val blue = ((color and 0xFF) * scale).roundToInt().coerceIn(0, 255)
         return (red shl 16) or (green shl 8) or blue
     }
 

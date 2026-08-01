@@ -3,10 +3,10 @@ package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise.BioluminescentNoiseSampler
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.skeleton.BioluminescentTopology
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sin
@@ -18,7 +18,6 @@ class BioluminescentMacroField internal constructor(
     val achievedCoverage: Double,
     val threshold: Double,
     private val macroCells: BooleanArray,
-    private val preset: BioluminescentZonePreset,
     private val noiseSampler: BioluminescentNoiseSampler,
     private val centerX: Double,
     private val centerZ: Double,
@@ -27,16 +26,34 @@ class BioluminescentMacroField internal constructor(
     private val envelopeExponent: Double,
     private val curvePhase: Double
 ) {
+    private val anchorWorldX = domain.cells[domain.anchorIndex].waterPos.x + 0.5
+    private val anchorWorldZ = domain.cells[domain.anchorIndex].waterPos.z + 0.5
+    private val radialFadeStart = domain.geodesicRadius * RADIAL_FADE_START_RATIO
+    private val radialFadeEnd = minOf(
+        domain.analysisGeodesicRadius - RADIAL_DOMAIN_MARGIN,
+        domain.geodesicRadius * RADIAL_FADE_END_RATIO
+    ).coerceAtLeast(radialFadeStart + RADIAL_MINIMUM_FADE_WIDTH)
+
     val macroCellCount: Int
         get() = macroCells.count { it }
 
     companion object {
-        const val CONNECTION_FIELD_STRENGTH = 0.96
-        const val SKELETON_ENVELOPE_LIFT = 1.0
+        const val CONNECTION_FIELD_STRENGTH = 0.74
+        const val SKELETON_ENVELOPE_LIFT = 0.82
         const val CORE_VARIATION_SCALE = 0.74
         const val CORE_VARIATION_MINIMUM = 0.70
         const val CORE_VARIATION_RANGE = 0.42
         const val CONNECTION_NOISE_SCALE = 0.34
+        const val CONNECTION_NOISE_MINIMUM = 0.74
+        const val CONNECTION_NOISE_RANGE = 0.34
+        const val COLONY_BODY_NOISE_SCALE = 0.105
+        const val COLONY_BODY_DETAIL_SCALE = 0.235
+        const val COLONY_BODY_NOISE_MINIMUM = 0.18
+        const val COLONY_BODY_NOISE_MAXIMUM = 0.82
+        const val COLONY_BODY_MINIMUM = 0.16
+        const val COLONY_BODY_VARIATION = 0.48
+        const val COLONY_BODY_RIDGE_WEIGHT = 0.12
+        const val COLONY_BODY_CORE_WEIGHT = 0.24
         const val ENVELOPE_NOISE_SCALE = 0.22
         const val ENVELOPE_DETAIL_SCALE = 0.46
         const val ENVELOPE_NOISE_STRENGTH = 0.20
@@ -45,21 +62,33 @@ class BioluminescentMacroField internal constructor(
         const val ENVELOPE_FADE_END = 1.06
         const val CURVE_STRENGTH = 0.11
         const val THRESHOLD_FEATHER_RATIO = 0.28
-        const val BOUNDARY_FADE_NOISE_SCALE = 0.31
-        const val BOUNDARY_FADE_WARP = 2.4
+        const val RADIAL_FADE_START_RATIO = 0.66
+        const val RADIAL_FADE_END_RATIO = 1.10
+        const val RADIAL_DOMAIN_MARGIN = 2.0
+        const val RADIAL_MINIMUM_FADE_WIDTH = 4.0
+        const val RADIAL_NOISE_SCALE = 0.075
+        const val RADIAL_NOISE_WARP = 0.24
+        const val RADIAL_RAW_MINIMUM = 0.30
     }
 
     fun containsCell(cellIndex: Int): Boolean = macroCells[cellIndex]
 
     fun supportAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
-        val raw = rawAt(worldX, worldZ, cellIndex)
+        val radialAttenuation = radialAttenuationAt(worldX, worldZ)
+        if (radialAttenuation <= 0.0) return 0.0
+        val raw = baseFieldAt(worldX, worldZ, cellIndex) * radialRawBias(radialAttenuation)
         if (raw <= 0.0) return 0.0
         val feather = max(Math.ulp(threshold) * 8.0, threshold * THRESHOLD_FEATHER_RATIO)
-        return ModUtilities.smooth(threshold - feather, threshold + feather, raw)
+        return ModUtilities.smooth(threshold - feather, threshold + feather, raw) * radialAttenuation
     }
 
     fun rawAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
-        val envelope = envelopeAt(worldX, worldZ, cellIndex)
+        val radialAttenuation = radialAttenuationAt(worldX, worldZ)
+        return baseFieldAt(worldX, worldZ, cellIndex) * radialRawBias(radialAttenuation)
+    }
+
+    private fun baseFieldAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
+        val envelope = envelopeAt(worldX, worldZ)
         val core = coreInfluenceAt(worldX, worldZ)
         val coreVariation = noiseSampler.sampleLarge(
             (worldX - 61.0) * CORE_VARIATION_SCALE,
@@ -68,13 +97,30 @@ class BioluminescentMacroField internal constructor(
         val variedCore = (core * (CORE_VARIATION_MINIMUM + coreVariation * CORE_VARIATION_RANGE))
             .coerceIn(0.0, 1.0)
         val connection = connectionInfluenceAt(worldX, worldZ, cellIndex)
-        val connectedCores = boundedUnion(variedCore, connection * CONNECTION_FIELD_STRENGTH)
-        val artificialBoundaryFade = artificialBoundaryFadeAt(cellIndex)
+        val colonyBody = colonyBodyAt(worldX, worldZ, core)
+        val connectedCores = boundedUnion(
+            boundedUnion(variedCore, colonyBody),
+            connection * CONNECTION_FIELD_STRENGTH
+        )
         val reinforcedEnvelope = maxOf(
             envelope,
-            connection * SKELETON_ENVELOPE_LIFT * artificialBoundaryFade
+            connection * SKELETON_ENVELOPE_LIFT
         )
         return reinforcedEnvelope * connectedCores
+    }
+
+    private fun radialAttenuationAt(worldX: Double, worldZ: Double): Double {
+        val distance = hypot(worldX - anchorWorldX, worldZ - anchorWorldZ)
+        val radialNoise = noiseSampler.sampleLarge(
+            (worldX + 617.0) * RADIAL_NOISE_SCALE,
+            (worldZ - 541.0) * RADIAL_NOISE_SCALE
+        )
+        val warpedDistance = distance * (1.0 + (radialNoise - 0.5) * RADIAL_NOISE_WARP)
+        return 1.0 - ModUtilities.smooth(radialFadeStart, radialFadeEnd, warpedDistance)
+    }
+
+    private fun radialRawBias(radialAttenuation: Double): Double {
+        return RADIAL_RAW_MINIMUM + radialAttenuation * (1.0 - RADIAL_RAW_MINIMUM)
     }
 
     fun coreInfluenceAt(worldX: Double, worldZ: Double): Double {
@@ -92,10 +138,35 @@ class BioluminescentMacroField internal constructor(
             (worldX + 173.0) * CONNECTION_NOISE_SCALE,
             (worldZ - 211.0) * CONNECTION_NOISE_SCALE
         )
-        return skeletonInfluence * (0.86 + slowNoise * 0.14)
+        val modulation = CONNECTION_NOISE_MINIMUM + ModUtilities.smooth(0.18, 0.82, slowNoise) *
+            CONNECTION_NOISE_RANGE
+        return (skeletonInfluence * modulation).coerceIn(0.0, 1.0)
     }
 
-    private fun envelopeAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
+    private fun colonyBodyAt(worldX: Double, worldZ: Double, core: Double): Double {
+        val broadNoise = noiseSampler.sampleLarge(
+            (worldX - 419.0) * COLONY_BODY_NOISE_SCALE,
+            (worldZ + 367.0) * COLONY_BODY_NOISE_SCALE
+        )
+        val detailNoise = noiseSampler.sampleLarge(
+            (worldX + 251.0) * COLONY_BODY_DETAIL_SCALE,
+            (worldZ - 307.0) * COLONY_BODY_DETAIL_SCALE
+        )
+        val bodyNoise = broadNoise * 0.68 + detailNoise * 0.32
+        val organicMass = ModUtilities.smooth(
+            COLONY_BODY_NOISE_MINIMUM,
+            COLONY_BODY_NOISE_MAXIMUM,
+            bodyNoise
+        )
+        val ridge = 1.0 - abs(detailNoise * 2.0 - 1.0)
+        val coreHalo = ModUtilities.smooth(0.02, 0.55, core)
+        return (
+            COLONY_BODY_MINIMUM + organicMass * COLONY_BODY_VARIATION +
+                ridge * COLONY_BODY_RIDGE_WEIGHT + coreHalo * COLONY_BODY_CORE_WEIGHT
+            ).coerceIn(0.0, 1.0)
+    }
+
+    private fun envelopeAt(worldX: Double, worldZ: Double): Double {
         val directionX = topology.coastDirectionX
         val directionZ = topology.coastDirectionZ
         val deltaX = worldX - centerX
@@ -122,25 +193,7 @@ class BioluminescentMacroField internal constructor(
             ENVELOPE_FADE_END + edgeShift,
             normalized
         )
-        return organicEnvelope * artificialBoundaryFadeAt(cellIndex)
-    }
-
-    private fun artificialBoundaryFadeAt(cellIndex: Int): Double {
-        val distance = domain.artificialBoundaryDistance[cellIndex].toDouble()
-        if (distance <= 0.0) return 0.0
-        val position = domain.cells[cellIndex].waterPos
-        val boundaryNoise = noiseSampler.sampleLarge(
-            (position.x - 283.0) * BOUNDARY_FADE_NOISE_SCALE,
-            (position.z + 229.0) * BOUNDARY_FADE_NOISE_SCALE
-        )
-        val interiorProgress = ModUtilities.smooth(0.0, preset.artificialBoundaryFade, distance)
-        val warpedDistance = distance +
-            (boundaryNoise - 0.5) * BOUNDARY_FADE_WARP * interiorProgress
-        return ModUtilities.smooth(
-            0.0,
-            preset.artificialBoundaryFade,
-            warpedDistance
-        )
+        return organicEnvelope
     }
 
     private fun boundedUnion(first: Double, second: Double): Double {

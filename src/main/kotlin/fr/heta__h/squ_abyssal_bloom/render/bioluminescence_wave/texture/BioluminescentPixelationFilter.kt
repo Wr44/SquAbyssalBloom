@@ -66,9 +66,11 @@ internal object BioluminescentPixelationFilter {
                 blueSum += (sampleColor and 0xFF) * sampleAlpha
             }
         }
-
-        val filteredAlpha = (alphaSum / SAMPLE_COUNT).toFloat()
-        val filteredColor = if (alphaSum <= 0.0) 0 else {
+        val averagedAlpha = alphaSum / SAMPLE_COUNT
+        val filteredAlpha = (
+            averagedAlpha * (ALPHA_LEVEL_COUNT - 1)
+            ).roundToInt().toFloat() / (ALPHA_LEVEL_COUNT - 1)
+        val filteredColor = if (alphaSum <= 0.0 || filteredAlpha <= 0.0f) 0 else {
             val red = (redSum / alphaSum).roundToInt().coerceIn(0, 255)
             val green = (greenSum / alphaSum).roundToInt().coerceIn(0, 255)
             val blue = (blueSum / alphaSum).roundToInt().coerceIn(0, 255)
@@ -93,6 +95,7 @@ internal object BioluminescentPixelationFilter {
         }
     }
 
-    private const val PIXEL_SIZE = 2
-    private const val SAMPLE_COUNT = 4.0
+    private const val PIXEL_SIZE = 1
+    private const val SAMPLE_COUNT = 1.0
+    private const val ALPHA_LEVEL_COUNT = 16
 }

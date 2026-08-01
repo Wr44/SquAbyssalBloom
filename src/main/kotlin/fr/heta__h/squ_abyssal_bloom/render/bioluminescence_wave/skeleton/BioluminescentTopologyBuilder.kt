@@ -13,7 +13,6 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.ceil
 import kotlin.math.hypot
 import kotlin.math.sin
 
@@ -100,26 +99,18 @@ class BioluminescentTopologyBuilder(
 
     private fun selectFirstCore(): Int {
         val searchDistance = maxOf(4, domain.geodesicRadius / 3)
-        val artificialSafety = ceil(preset.artificialBoundaryFade).toInt() + 1
-        val safeCandidateExists = domain.localCellIndices.any { index ->
-            domain.geodesicDistanceFromAnchor[index] <= searchDistance &&
-                domain.artificialBoundaryDistance[index] >= artificialSafety
-        }
         var bestIndex = domain.anchorIndex
         var bestScore = Double.NEGATIVE_INFINITY
         for (index in domain.localCellIndices) {
             val distance = domain.geodesicDistanceFromAnchor[index]
             if (distance > searchDistance) continue
-            if (safeCandidateExists && domain.artificialBoundaryDistance[index] < artificialSafety) continue
             val cell = domain.cells[index]
             val tie = stableUnitValue(
                 RandomSupport.mixStafford13(
                     zoneSeed xor ModUtilities.bioluminescentCellKey(cell.waterPos.x, cell.waterPos.z)
                 )
             )
-            val score = domain.boundaryDepth[index] * 3.0 +
-                minOf(domain.artificialBoundaryDistance[index], 8) * 0.55 -
-                distance * 0.28 + tie
+            val score = domain.boundaryDepth[index] * 3.0 - distance * 0.28 + tie
             if (score > bestScore) {
                 bestScore = score
                 bestIndex = index
@@ -131,17 +122,11 @@ class BioluminescentTopologyBuilder(
     private fun selectFarthestCore(distances: IntArray): Int {
         val minimumDistance = (preset.coreRadiusRange.start * MINIMUM_CORE_SPACING_FACTOR).toInt()
             .coerceAtLeast(3)
-        val artificialSafety = ceil(preset.artificialBoundaryFade).toInt() + 1
-        val safeCandidateExists = domain.localCellIndices.any { index ->
-            distances[index] >= minimumDistance &&
-                domain.artificialBoundaryDistance[index] >= artificialSafety
-        }
         var bestIndex = -1
         var bestScore = Double.NEGATIVE_INFINITY
         var bestTie = Long.MIN_VALUE
         for (index in domain.localCellIndices) {
             if (index in selectedIndices || distances[index] < minimumDistance) continue
-            if (safeCandidateExists && domain.artificialBoundaryDistance[index] < artificialSafety) continue
             val position = domain.cells[index].waterPos
             val interior = 0.62 + ModUtilities.smooth(
                 0.0,
@@ -153,12 +138,7 @@ class BioluminescentTopologyBuilder(
                     (position.z - domain.cells[domain.anchorIndex].waterPos.z) * coastDirection.second
             )
             val coastSpread = 0.92 + 0.16 * (projection / domain.geodesicRadius).coerceIn(0.0, 1.0)
-            val artificialInterior = 0.30 + ModUtilities.smooth(
-                0.0,
-                artificialSafety.toDouble(),
-                domain.artificialBoundaryDistance[index].toDouble()
-            ) * 0.70
-            val score = distances[index] * interior * coastSpread * artificialInterior
+            val score = distances[index] * interior * coastSpread
             val tie = RandomSupport.mixStafford13(
                 zoneSeed xor CORE_SELECTION_SALT xor
                     ModUtilities.bioluminescentCellKey(position.x, position.z)
@@ -225,7 +205,7 @@ class BioluminescentTopologyBuilder(
 
     private fun createSkeleton(): BioluminescentSkeleton {
         val pathPairs = minimumSpanningPairs().toMutableList()
-        optionalLoopPair(pathPairs)?.let(pathPairs::add)
+        pathPairs.addAll(additionalConnectionPairs(pathPairs))
         val sampler = BioluminescentNoiseSampler(zoneSeed)
         val paths = pathPairs.map { pair ->
             BioluminescentSkeletonPath(pair.first, pair.second, reconstructPath(pair.first, pair.second))
@@ -239,18 +219,33 @@ class BioluminescentTopologyBuilder(
                 RandomSupport.mixStafford13(zoneSeed xor PATH_WIDTH_SALT xor pathIndex.toLong())
             )
             val baseWidth = randomBetween(widthRandom, preset.connectionWidthRange)
+            val widthNoiseOffsetX = (widthRandom.nextDouble() - 0.5) * PATH_WIDTH_NOISE_OFFSET_RANGE
+            val widthNoiseOffsetZ = (widthRandom.nextDouble() - 0.5) * PATH_WIDTH_NOISE_OFFSET_RANGE
             path.cellIndices.forEachIndexed { index, cellIndex ->
                 skeletonCells.add(cellIndex)
                 val progress = if (path.cellIndices.size <= 1) 0.0 else {
                     index.toDouble() / (path.cellIndices.size - 1)
                 }
-                val middleTaper = 1.0 - sin(progress * PI) * 0.34
                 val position = domain.cells[cellIndex].waterPos
-                val widthNoise = sampler.sampleLarge(
-                    position.x * PATH_WIDTH_NOISE_SCALE,
-                    position.z * PATH_WIDTH_NOISE_SCALE
+                val broadWidthNoise = sampler.sampleLarge(
+                    (position.x + widthNoiseOffsetX) * PATH_WIDTH_BROAD_NOISE_SCALE,
+                    (position.z + widthNoiseOffsetZ) * PATH_WIDTH_BROAD_NOISE_SCALE
                 )
-                val width = baseWidth * middleTaper * (0.78 + widthNoise * 0.44)
+                val detailWidthNoise = sampler.sampleLarge(
+                    (position.x - widthNoiseOffsetZ) * PATH_WIDTH_DETAIL_NOISE_SCALE,
+                    (position.z + widthNoiseOffsetX) * PATH_WIDTH_DETAIL_NOISE_SCALE
+                )
+                val endpointDistance = minOf(progress, 1.0 - progress)
+                val endpointBlend = 1.0 - ModUtilities.smooth(
+                    0.0,
+                    PATH_ENDPOINT_BLEND_DISTANCE,
+                    endpointDistance
+                )
+                val widthProfile = PATH_WIDTH_MINIMUM_FACTOR +
+                    broadWidthNoise * PATH_WIDTH_BROAD_WEIGHT +
+                    detailWidthNoise * PATH_WIDTH_DETAIL_WEIGHT +
+                    endpointBlend * PATH_WIDTH_ENDPOINT_WEIGHT
+                val width = baseWidth * widthProfile
                 widths[cellIndex] = maxOf(widths[cellIndex], width.toFloat())
             }
         }
@@ -297,11 +292,17 @@ class BioluminescentTopologyBuilder(
         return result
     }
 
-    private fun optionalLoopPair(existing: List<Pair<Int, Int>>): Pair<Int, Int>? {
-        if (selectedIndices.size < 4 || stableUnitValue(
-                RandomSupport.mixStafford13(zoneSeed xor OPTIONAL_LOOP_SALT)
-            ) > OPTIONAL_LOOP_CHANCE
-        ) return null
+    private fun additionalConnectionPairs(existing: List<Pair<Int, Int>>): List<Pair<Int, Int>> {
+        if (selectedIndices.size < 3 || preset.additionalConnectionCountRange.last <= 0) {
+            return emptyList()
+        }
+        val mixed = RandomSupport.mixStafford13(zoneSeed xor ADDITIONAL_CONNECTION_SALT)
+        val range = preset.additionalConnectionCountRange
+        val requested = range.first + Math.floorMod(
+            mixed,
+            (range.last - range.first + 1).toLong()
+        ).toInt()
+        if (requested <= 0) return emptyList()
         val used = existing.flatMap { pair -> listOf(pair, pair.second to pair.first) }.toHashSet()
         return selectedIndices.indices.asSequence()
             .flatMap { source ->
@@ -309,7 +310,18 @@ class BioluminescentTopologyBuilder(
             }
             .filterNot(used::contains)
             .filter { pair -> shortestPaths[pair.first].distances[selectedIndices[pair.second]] > 0 }
-            .minByOrNull { pair -> shortestPaths[pair.first].distances[selectedIndices[pair.second]] }
+            .sortedBy { pair ->
+                val pairKey = (pair.first.toLong() shl 32) xor pair.second.toLong()
+                val variation = stableUnitValue(
+                    RandomSupport.mixStafford13(
+                        zoneSeed xor ADDITIONAL_CONNECTION_SALT xor pairKey
+                    )
+                )
+                shortestPaths[pair.first].distances[selectedIndices[pair.second]] *
+                    (0.84 + variation * 0.32)
+            }
+            .take(requested)
+            .toList()
     }
 
     private fun reconstructPath(sourceCore: Int, destinationCore: Int): IntArray {
@@ -337,7 +349,7 @@ class BioluminescentTopologyBuilder(
             val index = entry.cellIndex
             if (entry.distance != distances[index]) continue
             domain.forEachNeighbor(index) { neighbor ->
-                val distance = distances[index] + 1 + artificialBoundaryPenalty(neighbor)
+                val distance = distances[index] + 1
                 if (distances[neighbor] >= 0 && distances[neighbor] <= distance) return@forEachNeighbor
                 distances[neighbor] = distance
                 parents[neighbor] = index
@@ -345,12 +357,6 @@ class BioluminescentTopologyBuilder(
             }
         }
         return PathSearch(distances, parents)
-    }
-
-    private fun artificialBoundaryPenalty(cellIndex: Int): Int {
-        val safety = ceil(preset.artificialBoundaryFade).toInt() + 1
-        return (safety - domain.artificialBoundaryDistance[cellIndex]).coerceAtLeast(0) *
-            ARTIFICIAL_BOUNDARY_PATH_PENALTY
     }
 
     private fun multiSourceDistances(sources: Collection<Int>): IntArray {
@@ -448,16 +454,21 @@ class BioluminescentTopologyBuilder(
     private companion object {
         const val CELLS_PER_CORE = 360
         const val CORE_REDUCTION_CHANCE = 0.16
-        const val ARTIFICIAL_BOUNDARY_PATH_PENALTY = 6
         const val MINIMUM_CORE_SPACING_FACTOR = 0.72
         const val MINIMUM_DIRECTION_ANISOTROPY = 0.08
-        const val OPTIONAL_LOOP_CHANCE = 0.48
-        const val PATH_WIDTH_NOISE_SCALE = 0.32
+        const val PATH_WIDTH_BROAD_NOISE_SCALE = 0.10
+        const val PATH_WIDTH_DETAIL_NOISE_SCALE = 0.27
+        const val PATH_WIDTH_NOISE_OFFSET_RANGE = 512.0
+        const val PATH_ENDPOINT_BLEND_DISTANCE = 0.18
+        const val PATH_WIDTH_MINIMUM_FACTOR = 0.48
+        const val PATH_WIDTH_BROAD_WEIGHT = 0.58
+        const val PATH_WIDTH_DETAIL_WEIGHT = 0.30
+        const val PATH_WIDTH_ENDPOINT_WEIGHT = 0.18
         const val TOPOLOGY_SALT = 0x6A09E667F3BCC909L
         const val CORE_SELECTION_SALT = 0x510E527FADE682D1L
         const val CORE_SHAPE_SALT = 0x1F83D9ABFB41BD6BL
         const val PATH_WIDTH_SALT = 0x5BE0CD19137E2179L
-        const val OPTIONAL_LOOP_SALT = 0x243F6A8885A308D3L
+        const val ADDITIONAL_CONNECTION_SALT = 0x243F6A8885A308D3L
         const val DIRECTION_SALT = 0x13198A2E03707344L
     }
 }

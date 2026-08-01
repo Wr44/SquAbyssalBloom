@@ -8,7 +8,6 @@ class BioluminescentWaterDomain internal constructor(
     private val neighbors: IntArray,
     val geodesicDistanceFromAnchor: IntArray,
     val boundaryDepth: IntArray,
-    val artificialBoundaryDistance: IntArray,
     val bounds: BioluminescentWaterBounds,
     val anchorIndex: Int,
     val geodesicRadius: Int,

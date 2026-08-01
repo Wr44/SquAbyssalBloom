@@ -89,7 +89,7 @@ class BioluminescentZoneTile private constructor(
         const val GUTTER_PIXELS = 1
         const val INNER_TEXTURE_SIZE = TILE_SIZE * PIXELS_PER_BLOCK
         const val TEXTURE_SIZE = INNER_TEXTURE_SIZE + GUTTER_PIXELS * 2
-        private const val MAXIMUM_TEXTURE_ALPHA = 244.0
+        private const val MAXIMUM_TEXTURE_ALPHA = 255.0
 
         internal fun prepare(
             textureManager: TextureManager,

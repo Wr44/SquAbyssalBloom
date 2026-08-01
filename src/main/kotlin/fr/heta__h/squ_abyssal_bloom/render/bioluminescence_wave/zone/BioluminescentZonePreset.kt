@@ -11,9 +11,9 @@ data class BioluminescentZonePreset(
     val visiblePixelCoverageRange: ClosedFloatingPointRange<Double>,
     val coreRadiusRange: ClosedFloatingPointRange<Double>,
     val connectionWidthRange: ClosedFloatingPointRange<Double>,
+    val additionalConnectionCountRange: IntRange,
     val reactionDiffusionScale: Int,
     val reactionDiffusionIterations: Int,
     val porosityRange: ClosedFloatingPointRange<Double>,
-    val artificialBoundaryFade: Double,
     val minimumConnectionEmission: Double
 )

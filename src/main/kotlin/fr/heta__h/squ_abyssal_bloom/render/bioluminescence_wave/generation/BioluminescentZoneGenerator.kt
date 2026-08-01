@@ -351,14 +351,14 @@ class BioluminescentZoneGenerator(
     }
 
     private companion object {
-        const val WATER_CELL_BUDGET = 384
-        const val MACRO_CELL_BUDGET = 1024
-        const val REACTION_ITERATION_BUDGET = 8
-        const val EMISSION_SAMPLE_BUDGET = 4096
-        const val EMISSION_CALIBRATION_BUDGET = 32768
-        const val EMISSION_FINALIZATION_BUDGET = 4096
-        const val TILE_PREPARATION_BUDGET = 2
-        const val TILE_UPLOAD_BUDGET = 2
+        const val WATER_CELL_BUDGET = 768
+        const val MACRO_CELL_BUDGET = 2048
+        const val REACTION_ITERATION_BUDGET = 16
+        const val EMISSION_SAMPLE_BUDGET = 8192
+        const val EMISSION_CALIBRATION_BUDGET = 65536
+        const val EMISSION_FINALIZATION_BUDGET = 8192
+        const val TILE_PREPARATION_BUDGET = 4
+        const val TILE_UPLOAD_BUDGET = 4
         const val MINIMUM_MACRO_COMPONENT_RATIO = 0.95
         const val RADIUS_SALT = 0x7137449123EF65CDL
         const val MACRO_COVERAGE_SALT = 0x428A2F98D728AE22L

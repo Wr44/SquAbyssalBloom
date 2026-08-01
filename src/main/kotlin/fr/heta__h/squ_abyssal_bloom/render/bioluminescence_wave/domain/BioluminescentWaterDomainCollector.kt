@@ -18,7 +18,6 @@ class BioluminescentWaterDomainCollector(
     private val distances = ArrayList<Int>()
     private val indexByKey = HashMap<Long, Int>()
     private val scanned = HashSet<Long>()
-    private val artificialBoundaryKeys = HashSet<Long>()
     private val queue = java.util.ArrayDeque<Int>()
 
     companion object {
@@ -55,19 +54,13 @@ class BioluminescentWaterDomainCollector(
             val cell = cells[index]
             val distance = distances[index]
             processed++
-            if (distance >= analysisGeodesicRadius) {
-                artificialBoundaryKeys.add(cellKey(cell))
-                continue
-            }
+            if (distance >= analysisGeodesicRadius) continue
             for (offset in CARDINAL_OFFSETS) {
                 val worldX = cell.waterPos.x + offset[0]
                 val worldZ = cell.waterPos.z + offset[1]
                 val key = ModUtilities.bioluminescentCellKey(worldX, worldZ)
                 if (!scanned.add(key)) continue
-                if (!level.hasChunk(worldX shr 4, worldZ shr 4)) {
-                    artificialBoundaryKeys.add(cellKey(cell))
-                    continue
-                }
+                if (!level.hasChunk(worldX shr 4, worldZ shr 4)) continue
                 val waterCell = findWaterCell(level, worldX, worldZ, cell.waterPos.y) ?: continue
                 if (abs(waterCell.waterPos.y - anchor.y) > WATER_LEVEL_TOLERANCE) continue
                 val newIndex = cells.size
@@ -77,9 +70,6 @@ class BioluminescentWaterDomainCollector(
                 queue.addLast(newIndex)
                 if (cells.size >= maximumWaterCells) break
             }
-        }
-        if (cells.size >= maximumWaterCells) {
-            queue.forEach { index -> artificialBoundaryKeys.add(cellKey(cells[index])) }
         }
         complete = queue.isEmpty() || cells.size >= maximumWaterCells
     }
@@ -101,20 +91,13 @@ class BioluminescentWaterDomainCollector(
         val naturalBoundarySeeds = immutableCells.indices.filter { index ->
             (0 until 4).any { direction -> neighbors[index * 4 + direction] < 0 }
         }
-        val artificialSeeds = artificialBoundaryKeys.mapNotNull(immutableIndex::get)
         val boundaryDepth = graphDistances(immutableCells.size, neighbors, naturalBoundarySeeds)
-        val artificialDistance = if (artificialSeeds.isEmpty()) {
-            IntArray(immutableCells.size) { analysisGeodesicRadius + 1 }
-        } else {
-            graphDistances(immutableCells.size, neighbors, artificialSeeds)
-        }
         return BioluminescentWaterDomain(
             cells = immutableCells,
             indexByKey = immutableIndex,
             neighbors = neighbors,
             geodesicDistanceFromAnchor = distances.toIntArray(),
             boundaryDepth = boundaryDepth,
-            artificialBoundaryDistance = artificialDistance,
             bounds = createBounds(immutableCells),
             anchorIndex = immutableIndex[ModUtilities.bioluminescentCellKey(anchor.x, anchor.z)] ?: 0,
             geodesicRadius = localGeodesicRadius,
@@ -141,10 +124,6 @@ class BioluminescentWaterDomainCollector(
             topWaterBlock,
             ModUtilities.getFluidSurfaceHeight(level, topWaterBlock)
         )
-    }
-
-    private fun cellKey(cell: BioluminescentWaterCell): Long {
-        return ModUtilities.bioluminescentCellKey(cell.waterPos.x, cell.waterPos.z)
     }
 
     private fun graphDistances(size: Int, neighbors: IntArray, seeds: Collection<Int>): IntArray {

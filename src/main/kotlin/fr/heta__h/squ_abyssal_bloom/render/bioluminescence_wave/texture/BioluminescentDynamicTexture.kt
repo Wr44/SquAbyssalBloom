@@ -11,6 +11,6 @@ internal class BioluminescentDynamicTexture(
     zero: Boolean
 ) : DynamicTexture(label, width, height, zero) {
     init {
-        sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+        sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST)
     }
 }

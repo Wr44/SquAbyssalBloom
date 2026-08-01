@@ -20,6 +20,9 @@ class BioluminescentMacroFieldBuilder(
     private val rawCellValues = DoubleArray(domain.size)
     private val centerX = topology.cores.sumOf(BioluminescentCore::worldX) / topology.cores.size
     private val centerZ = topology.cores.sumOf(BioluminescentCore::worldZ) / topology.cores.size
+    private val maximumEnvelopeRadius =
+        (domain.analysisGeodesicRadius - ENVELOPE_DOMAIN_MARGIN).coerceAtLeast(1.0) /
+            BioluminescentMacroField.ENVELOPE_FADE_END
     private var envelopeRadiusAlong: Double
     private var envelopeRadiusAcross: Double
     private val envelopeExponent: Double
@@ -40,6 +43,7 @@ class BioluminescentMacroFieldBuilder(
         const val CURVE_SALT = 0x510E527FADE682D1L
         const val MAXIMUM_ENVELOPE_EXPANSIONS = 3
         const val ENVELOPE_EXPANSION_FACTOR = 1.18
+        const val ENVELOPE_DOMAIN_MARGIN = 2.0
     }
 
     init {
@@ -47,8 +51,14 @@ class BioluminescentMacroFieldBuilder(
         val first = stableUnitValue(mixed)
         val second = stableUnitValue(RandomSupport.mixStafford13(mixed))
         val coverageExpansion = 0.82 + targetCoverage * 0.45
-        envelopeRadiusAlong = domain.geodesicRadius * (0.92 + first * 0.18) * coverageExpansion
-        envelopeRadiusAcross = domain.geodesicRadius * (0.78 + second * 0.20) * coverageExpansion
+        envelopeRadiusAlong = minOf(
+            domain.geodesicRadius * (0.92 + first * 0.18) * coverageExpansion,
+            maximumEnvelopeRadius
+        )
+        envelopeRadiusAcross = minOf(
+            domain.geodesicRadius * (0.78 + second * 0.20) * coverageExpansion,
+            maximumEnvelopeRadius
+        )
         envelopeExponent = 2.2 + stableUnitValue(RandomSupport.mixStafford13(mixed xor EXPONENT_SALT)) * 2.4
         curvePhase = stableUnitValue(RandomSupport.mixStafford13(mixed xor CURVE_SALT)) * PI * 2.0
         probeField = provisionalField(0.0, 0.0, BooleanArray(domain.size))
@@ -75,14 +85,34 @@ class BioluminescentMacroFieldBuilder(
                 "${(positiveCount.toDouble() / domain.localSize * 100.0).toInt()}% du domaine local"
         }
         val targetCount = minOf(requestedTargetCount, positiveCount)
-        val sorted = domain.localCellIndices
-            .map { index -> rawCellValues[index] }
-            .sortedDescending()
-        val threshold = sorted[targetCount - 1]
+        val skeletonMask = BooleanArray(domain.size)
+        topology.skeleton.cellIndices.forEach { index -> skeletonMask[index] = true }
+        val mask = skeletonMask.copyOf()
+        val mandatoryLocalCount = topology.skeleton.cellIndices.count(domain::isLocalCell)
+        val remainingTargetCount = (targetCount - mandatoryLocalCount).coerceAtLeast(0)
+        val rankedCandidates = domain.localCellIndices
+            .asSequence()
+            .filter { index -> !skeletonMask[index] && rawCellValues[index] > 0.0 }
+            .sortedWith(compareByDescending<Int> { index -> rawCellValues[index] }.thenBy { it })
+            .toList()
+        check(rankedCandidates.size >= remainingTargetCount) {
+            "support macroscopique insuffisant hors squelette"
+        }
+        for (candidateIndex in 0 until remainingTargetCount) {
+            mask[rankedCandidates[candidateIndex]] = true
+        }
+        val threshold = if (remainingTargetCount > 0) {
+            rawCellValues[rankedCandidates[remainingTargetCount - 1]]
+        } else {
+            topology.skeleton.cellIndices
+                .asSequence()
+                .map { index -> rawCellValues[index] }
+                .filter { value -> value > 0.0 }
+                .minOrNull() ?: Double.MIN_VALUE
+        }
         check(threshold > 0.0) {
             "enveloppe macroscopique trop petite pour ${(targetCoverage * 100.0).toInt()}%"
         }
-        val mask = BooleanArray(domain.size) { index -> rawCellValues[index] >= threshold }
         val achieved = domain.localCellIndices.count { index -> mask[index] }.toDouble() / domain.localSize
         return provisionalField(threshold, achieved, mask)
     }
@@ -94,8 +124,14 @@ class BioluminescentMacroFieldBuilder(
             return
         }
         expansionPass++
-        envelopeRadiusAlong *= ENVELOPE_EXPANSION_FACTOR
-        envelopeRadiusAcross *= ENVELOPE_EXPANSION_FACTOR
+        envelopeRadiusAlong = minOf(
+            envelopeRadiusAlong * ENVELOPE_EXPANSION_FACTOR,
+            maximumEnvelopeRadius
+        )
+        envelopeRadiusAcross = minOf(
+            envelopeRadiusAcross * ENVELOPE_EXPANSION_FACTOR,
+            maximumEnvelopeRadius
+        )
         rawCellValues.fill(0.0)
         cursor = 0
         probeField = provisionalField(0.0, 0.0, BooleanArray(domain.size))
@@ -113,7 +149,6 @@ class BioluminescentMacroFieldBuilder(
             achievedCoverage,
             threshold,
             mask,
-            preset,
             sampler,
             centerX,
             centerZ,
