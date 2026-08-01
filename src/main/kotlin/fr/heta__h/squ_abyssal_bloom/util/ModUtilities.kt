@@ -61,6 +61,10 @@ import kotlin.math.min
 
 object ModUtilities {
 
+    fun bioluminescentCellKey(worldX: Int, worldZ: Int): Long {
+        return (worldX.toLong() shl 32) xor (worldZ.toLong() and 0xFFFFFFFFL)
+    }
+
     fun isWaterBlock(level: LevelReader, pos: BlockPos): Boolean {
         return level.getFluidState(pos).type.isSame(Fluids.WATER)
     }

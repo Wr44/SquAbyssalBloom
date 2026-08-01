@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.util.cache
+package fr.heta__h.squ_abyssal_bloom.render.surface_occluder
 
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import it.unimi.dsi.fastutil.longs.Long2LongMap

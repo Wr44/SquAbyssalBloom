@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.util.bioluminescence
+package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise
 
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModNoises
 import net.minecraft.world.level.levelgen.RandomSupport

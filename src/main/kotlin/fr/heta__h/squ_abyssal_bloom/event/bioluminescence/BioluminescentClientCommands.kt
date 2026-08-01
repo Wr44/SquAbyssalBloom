@@ -1,8 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence.BioluminescentBloomSize
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence.BioluminescentPaletteFamily
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPaletteFamily
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneSize
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.network.chat.Component
@@ -24,17 +24,16 @@ object BioluminescentClientCommands {
             .executes { context ->
                 executeSpawn(
                     context.source,
-                    BioluminescentBloomSize.MEDIUM,
+                    BioluminescentZoneSize.MEDIUM,
                     BioluminescentPaletteFamily.RANDOM
                 )
             }
 
-        for (size in BioluminescentBloomSize.entries) {
+        for (size in BioluminescentZoneSize.entries) {
             val sizeNode = Commands.literal(size.commandName)
                 .executes { context ->
                     executeSpawn(context.source, size, BioluminescentPaletteFamily.RANDOM)
                 }
-
             for (family in BioluminescentPaletteFamily.entries) {
                 sizeNode.then(
                     Commands.literal(family.commandName)
@@ -46,55 +45,60 @@ object BioluminescentClientCommands {
 
         root.then(spawn)
         root.then(
+            Commands.literal("debug")
+                .executes { context ->
+                    val report = BioluminescentZoneManager.debugReport()
+                    report.forEach { line ->
+                        context.source.sendSuccess({ Component.literal(line) }, false)
+                    }
+                    report.size
+                }
+        )
+        root.then(
             Commands.literal("clear")
                 .executes { context ->
-                    val removedZones = BioluminescentBloomManager.clearDebugZones()
+                    val count = BioluminescentZoneManager.clearDebugZones()
                     context.source.sendSuccess(
-                        { Component.literal("$removedZones zone(s) de bioluminescence supprimée(s).") },
+                        { Component.literal("$count zone(s) de bioluminescence supprimee(s).") },
                         false
                     )
                     1
                 }
         )
-
         event.dispatcher.register(root)
     }
 
     private fun executeSpawn(
         source: CommandSourceStack,
-        size: BioluminescentBloomSize,
+        size: BioluminescentZoneSize,
         family: BioluminescentPaletteFamily
     ): Int {
-        return when (val result = BioluminescentBloomManager.spawnDebugZone(size, family)) {
-            is BioluminescentBloomManager.SpawnResult.Created -> {
+        return when (val result = BioluminescentZoneManager.spawnDebugZone(size, family)) {
+            is BioluminescentZoneManager.SpawnResult.Created -> {
                 source.sendSuccess(
                     {
                         Component.literal(
-                            "Zone de bioluminescence créée à ${result.distance.roundToInt()} blocs " +
-                                "(${result.plannedBloomCount} nappes prévues)."
+                            "Generation ${result.size.commandName} lancee a " +
+                                "${result.distance.roundToInt()} blocs."
                         )
                     },
                     false
                 )
                 1
             }
-            BioluminescentBloomManager.SpawnResult.NoCoastalSurface -> failure(
+            BioluminescentZoneManager.SpawnResult.NoCoastalSurface -> failure(
                 source,
-                "Aucune surface côtière valide trouvée à proximité."
+                "Aucune surface d'eau cotiere valide trouvee a proximite."
             )
-            BioluminescentBloomManager.SpawnResult.ZoneLimitReached -> failure(
+            BioluminescentZoneManager.SpawnResult.ZoneLimitReached -> failure(
                 source,
-                "Limite maximale de zones déjà atteinte."
+                "La limite de zones actives est deja atteinte."
             )
-            BioluminescentBloomManager.SpawnResult.BloomLimitReached -> failure(
+            BioluminescentZoneManager.SpawnResult.DimensionNotAllowed -> failure(
                 source,
-                "Limite maximale de nappes déjà atteinte."
+                "La bioluminescence cotiere n'est pas autorisee dans cette dimension."
             )
-            BioluminescentBloomManager.SpawnResult.DimensionNotAllowed -> failure(
-                source,
-                "La bioluminescence côtière n'est pas autorisée dans cette dimension."
-            )
-            BioluminescentBloomManager.SpawnResult.NoLevel -> failure(
+            BioluminescentZoneManager.SpawnResult.NoLevel -> failure(
                 source,
                 "Aucun niveau client actif."
             )

@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.util.cache
+package fr.heta__h.squ_abyssal_bloom.render.abyssal_depth
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities

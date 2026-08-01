@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.util.bioluminescence
+package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain
 
 import net.minecraft.core.BlockPos
 

@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.util.cache.SurfaceHeightCache
+import fr.heta__h.squ_abyssal_bloom.render.surface_occluder.SurfaceHeightCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap
 import net.minecraft.client.Minecraft
