@@ -88,6 +88,8 @@ class BioluminescentEmissionGenerator(
     private val finalAlpha = FloatArray(pixelCount)
     private val finalColors = IntArray(pixelCount)
     private val luminousCells = BooleanArray(macroField.domain.size)
+    private val domainCells = macroField.domain.cells
+    private val macroSample = BioluminescentMacroSample()
     private val noiseSampler = BioluminescentNoiseSampler(zoneSeed, zoneSeed xor COLOR_SEED_SALT)
     private val cellularNoise = BioluminescentCellularNoise(
         zoneSeed xor CELLULAR_SEED_SALT,
@@ -154,52 +156,61 @@ class BioluminescentEmissionGenerator(
     private fun samplePatterns(budget: Int) {
         val end = minOf(pixelCount, samplingCursor + budget)
         for (pixelIndex in samplingCursor until end) {
-            val sample = worldSample(pixelIndex)
-            val macro = macroField.supportAt(sample.worldX, sample.worldZ, sample.cellIndex)
+            val cellIndex = pixelIndex / PIXELS_PER_CELL
+            val cellPixel = pixelIndex % PIXELS_PER_CELL
+            val localX = cellPixel % BioluminescentEmissionField.PIXELS_PER_BLOCK
+            val localZ = cellPixel / BioluminescentEmissionField.PIXELS_PER_BLOCK
+            val position = domainCells[cellIndex].waterPos
+            val worldX = position.x +
+                (localX + 0.5) / BioluminescentEmissionField.PIXELS_PER_BLOCK
+            val worldZ = position.z +
+                (localZ + 0.5) / BioluminescentEmissionField.PIXELS_PER_BLOCK
+            macroField.sampleAt(worldX, worldZ, cellIndex, macroSample)
+            val macro = macroSample.support
             macroSupport[pixelIndex] = macro.toFloat()
             if (macro < MACRO_SUPPORT_MINIMUM) continue
             supportPixels++
             val concentrationNoise = noiseSampler.sampleLarge(
-                (sample.worldX - 137.0) * CONCENTRATION_NOISE_SCALE,
-                (sample.worldZ + 193.0) * CONCENTRATION_NOISE_SCALE
+                (worldX - 137.0) * CONCENTRATION_NOISE_SCALE,
+                (worldZ + 193.0) * CONCENTRATION_NOISE_SCALE
             )
             val largeNoise = noiseSampler.sampleLarge(
-                sample.worldX * LARGE_NOISE_SCALE,
-                sample.worldZ * LARGE_NOISE_SCALE
+                worldX * LARGE_NOISE_SCALE,
+                worldZ * LARGE_NOISE_SCALE
             ) * 0.62 + noiseSampler.sampleLarge(
-                (sample.worldX + 47.0) * MEDIUM_NOISE_SCALE,
-                (sample.worldZ - 83.0) * MEDIUM_NOISE_SCALE
+                (worldX + 47.0) * MEDIUM_NOISE_SCALE,
+                (worldZ - 83.0) * MEDIUM_NOISE_SCALE
             ) * 0.38
             val mediumNoise = noiseSampler.sampleLarge(
-                (sample.worldX - 241.0) * MICRO_CLUSTER_NOISE_SCALE,
-                (sample.worldZ + 157.0) * MICRO_CLUSTER_NOISE_SCALE
+                (worldX - 241.0) * MICRO_CLUSTER_NOISE_SCALE,
+                (worldZ + 157.0) * MICRO_CLUSTER_NOISE_SCALE
             )
             val detailNoise = noiseSampler.sampleDetail(
-                sample.worldX * DETAIL_NOISE_SCALE,
-                sample.worldZ * DETAIL_NOISE_SCALE
+                worldX * DETAIL_NOISE_SCALE,
+                worldZ * DETAIL_NOISE_SCALE
             ) * 0.64 + noiseSampler.sampleDetail(
-                (sample.worldX + 73.0) * FINE_NOISE_SCALE,
-                (sample.worldZ - 109.0) * FINE_NOISE_SCALE
+                (worldX + 73.0) * FINE_NOISE_SCALE,
+                (worldZ - 109.0) * FINE_NOISE_SCALE
             ) * 0.36
             val holeDetail = noiseSampler.sampleDetail(
-                (sample.worldX - 313.0) * HOLE_DETAIL_NOISE_SCALE,
-                (sample.worldZ + 269.0) * HOLE_DETAIL_NOISE_SCALE
+                (worldX - 313.0) * HOLE_DETAIL_NOISE_SCALE,
+                (worldZ + 269.0) * HOLE_DETAIL_NOISE_SCALE
             )
             val fractalNoise = concentrationNoise * 0.24 + largeNoise * 0.28 +
                 mediumNoise * 0.25 + detailNoise * 0.23
             val warpX = (concentrationNoise * 2.0 - 1.0) * CELLULAR_WARP_AMPLITUDE
             val warpZ = (largeNoise * 2.0 - 1.0) * CELLULAR_WARP_AMPLITUDE
             val reaction = reactionDiffusion.patternAt(
-                sample.worldX + warpX * REACTION_WARP_FACTOR,
-                sample.worldZ + warpZ * REACTION_WARP_FACTOR
+                worldX + warpX * REACTION_WARP_FACTOR,
+                worldZ + warpZ * REACTION_WARP_FACTOR
             )
-            val cellular = cellularNoise.sample(sample.worldX + warpX, sample.worldZ + warpZ)
+            val cellular = cellularNoise.sample(worldX + warpX, worldZ + warpZ)
             val secondaryCellular = secondaryCellularNoise.sample(
-                sample.worldX - warpZ * SECONDARY_WARP_FACTOR,
-                sample.worldZ + warpX * SECONDARY_WARP_FACTOR
+                worldX - warpZ * SECONDARY_WARP_FACTOR,
+                worldZ + warpX * SECONDARY_WARP_FACTOR
             )
             val cellularPattern = (
-                cellular.nearest * 0.62 + secondaryCellular.nearest * 0.38
+                cellular * 0.62 + secondaryCellular * 0.38
                 ) * (0.68 + detailNoise * 0.32)
             val microRidge = 1.0 - abs(detailNoise * 2.0 - 1.0)
             val reactionPattern = reaction * (0.48 + largeNoise * 0.28 + detailNoise * 0.24)
@@ -214,9 +225,9 @@ class BioluminescentEmissionGenerator(
             val hole = 1.0 - ModUtilities.smooth(holeStart, holeStart + HOLE_TRANSITION, holeNoise)
             holeAvailability[pixelIndex] = hole.toFloat()
 
-            val core = macroField.coreInfluenceAt(sample.worldX, sample.worldZ)
+            val core = macroSample.core
             coreSupport[pixelIndex] = core.toFloat()
-            val connection = macroField.connectionInfluenceAt(sample.worldX, sample.worldZ, sample.cellIndex)
+            val connection = macroSample.connection
             val broadConcentration = ModUtilities.smooth(
                 0.18,
                 0.76,
@@ -225,7 +236,7 @@ class BioluminescentEmissionGenerator(
             val sparkle = ModUtilities.smooth(
                 0.66,
                 0.90,
-                detailNoise * 0.78 + secondaryCellular.nearest * 0.22
+                detailNoise * 0.78 + secondaryCellular * 0.22
             )
             concentration[pixelIndex] = (
                 0.18 + broadConcentration * 0.66 + reaction * 0.16 +
@@ -275,9 +286,17 @@ class BioluminescentEmissionGenerator(
             val colorEmission = exposedEmission(emission, COLOR_EXPOSURE)
             val alpha = alphaEmission.pow(ALPHA_CURVE).coerceIn(0.0, 1.0)
             finalAlpha[index] = alpha.toFloat()
-            val sample = worldSample(index)
-            finalColors[index] = colorAt(sample.worldX, sample.worldZ, colorEmission)
-            luminousCells[sample.cellIndex] = true
+            val cellIndex = index / PIXELS_PER_CELL
+            val cellPixel = index % PIXELS_PER_CELL
+            val localX = cellPixel % BioluminescentEmissionField.PIXELS_PER_BLOCK
+            val localZ = cellPixel / BioluminescentEmissionField.PIXELS_PER_BLOCK
+            val position = domainCells[cellIndex].waterPos
+            val worldX = position.x +
+                (localX + 0.5) / BioluminescentEmissionField.PIXELS_PER_BLOCK
+            val worldZ = position.z +
+                (localZ + 0.5) / BioluminescentEmissionField.PIXELS_PER_BLOCK
+            finalColors[index] = colorAt(worldX, worldZ, colorEmission)
+            luminousCells[cellIndex] = true
             if (emission >= VISIBLE_EMISSION_THRESHOLD) {
                 luminousPixels++
                 visibleAlphaSum += alpha
@@ -340,19 +359,6 @@ class BioluminescentEmissionGenerator(
         return lerpColor(shaded, palette.highlightColor, highlight)
     }
 
-    private fun worldSample(pixelIndex: Int): PixelSample {
-        val cellIndex = pixelIndex / PIXELS_PER_CELL
-        val cellPixel = pixelIndex % PIXELS_PER_CELL
-        val localX = cellPixel % BioluminescentEmissionField.PIXELS_PER_BLOCK
-        val localZ = cellPixel / BioluminescentEmissionField.PIXELS_PER_BLOCK
-        val position = macroField.domain.cells[cellIndex].waterPos
-        return PixelSample(
-            cellIndex,
-            position.x + (localX + 0.5) / BioluminescentEmissionField.PIXELS_PER_BLOCK,
-            position.z + (localZ + 0.5) / BioluminescentEmissionField.PIXELS_PER_BLOCK
-        )
-    }
-
     private fun choosePorosity(): Double {
         val value = stableUnitValue(RandomSupport.mixStafford13(zoneSeed xor POROSITY_SEED_SALT))
         return preset.porosityRange.start +
@@ -374,6 +380,4 @@ class BioluminescentEmissionGenerator(
     private fun stableUnitValue(value: Long): Double {
         return ((value ushr 40) and 0xFFFFFFL).toDouble() / 0xFFFFFFL.toDouble()
     }
-
-    private data class PixelSample(val cellIndex: Int, val worldX: Double, val worldZ: Double)
 }

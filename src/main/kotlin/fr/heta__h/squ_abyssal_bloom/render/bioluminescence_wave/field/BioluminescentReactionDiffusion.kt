@@ -24,6 +24,8 @@ class BioluminescentReactionDiffusion(
     private var v = FloatArray(width * length)
     private var nextU = FloatArray(width * length) { 1.0f }
     private var nextV = FloatArray(width * length)
+    private val activeIndices: IntArray
+    private val neighborIndices: IntArray
 
     var completedIterations: Int = 0
         private set
@@ -53,6 +55,7 @@ class BioluminescentReactionDiffusion(
         const val MINIMUM_SEED_AMOUNT = 0.002
         const val PATTERN_LOW = 0.065
         const val PATTERN_HIGH = 0.64
+        const val NEIGHBOR_COUNT = 8
         const val PARAMETER_SALT = 0x5BE0CD19137E2179L
         const val INITIALIZATION_SALT = 0x243F6A8885A308D3L
     }
@@ -63,6 +66,8 @@ class BioluminescentReactionDiffusion(
         kill = KILL_MINIMUM + stableUnitValue(RandomSupport.mixStafford13(parameterSeed)) *
             (KILL_MAXIMUM - KILL_MINIMUM)
         initialize()
+        activeIndices = createActiveIndices()
+        neighborIndices = createNeighborIndices()
     }
 
     fun advance(iterationBudget: Int) {
@@ -86,18 +91,20 @@ class BioluminescentReactionDiffusion(
     }
 
     private fun initialize() {
+        val macroSample = BioluminescentMacroSample()
         for (gridZ in 0 until length) {
             for (gridX in 0 until width) {
                 val worldX = macroField.domain.bounds.minimumX + (gridX + 0.5) / scale
                 val worldZ = macroField.domain.bounds.minimumZ + (gridZ + 0.5) / scale
                 val cellIndex = macroField.domain.cellIndexAt(floor(worldX).toInt(), floor(worldZ).toInt())
                     ?: continue
-                val support = macroField.supportAt(worldX, worldZ, cellIndex)
+                macroField.sampleAt(worldX, worldZ, cellIndex, macroSample)
+                val support = macroSample.support
                 if (support <= REACTION_MASK_MINIMUM) continue
                 val index = gridZ * width + gridX
                 mask[index] = true
-                val core = macroField.coreInfluenceAt(worldX, worldZ)
-                val connection = macroField.connectionInfluenceAt(worldX, worldZ, cellIndex)
+                val core = macroSample.core
+                val connection = macroSample.connection
                 val seedLarge = seedNoiseSampler.sampleLarge(
                     (worldX + 181.0) * SEED_LARGE_NOISE_SCALE,
                     (worldZ - 223.0) * SEED_LARGE_NOISE_SCALE
@@ -124,26 +131,20 @@ class BioluminescentReactionDiffusion(
     }
 
     private fun iterate() {
-        for (z in 0 until length) {
-            for (x in 0 until width) {
-                val index = z * width + x
-                if (!mask[index]) {
-                    nextU[index] = 1.0f
-                    nextV[index] = 0.0f
-                    continue
-                }
-                val currentU = u[index].toDouble()
-                val currentV = v[index].toDouble()
-                val laplacianU = laplacian(u, x, z, currentU)
-                val laplacianV = laplacian(v, x, z, currentV)
-                val reaction = currentU * currentV * currentV
-                nextU[index] = (
-                    currentU + DIFFUSION_U * laplacianU - reaction + feed * (1.0 - currentU)
-                    ).coerceIn(0.0, 1.0).toFloat()
-                nextV[index] = (
-                    currentV + DIFFUSION_V * laplacianV + reaction - (feed + kill) * currentV
-                    ).coerceIn(0.0, 1.0).toFloat()
-            }
+        for (activeOffset in activeIndices.indices) {
+            val index = activeIndices[activeOffset]
+            val currentU = u[index].toDouble()
+            val currentV = v[index].toDouble()
+            val neighborOffset = activeOffset * NEIGHBOR_COUNT
+            val laplacianU = laplacian(u, neighborOffset, currentU)
+            val laplacianV = laplacian(v, neighborOffset, currentV)
+            val reaction = currentU * currentV * currentV
+            nextU[index] = (
+                currentU + DIFFUSION_U * laplacianU - reaction + feed * (1.0 - currentU)
+                ).coerceIn(0.0, 1.0).toFloat()
+            nextV[index] = (
+                currentV + DIFFUSION_V * laplacianV + reaction - (feed + kill) * currentV
+                ).coerceIn(0.0, 1.0).toFloat()
         }
         val previousU = u
         u = nextU
@@ -153,24 +154,51 @@ class BioluminescentReactionDiffusion(
         nextV = previousV
     }
 
-    private fun laplacian(values: FloatArray, x: Int, z: Int, center: Double): Double {
+    private fun laplacian(values: FloatArray, neighborOffset: Int, center: Double): Double {
         var result = -center
-        result += sample(values, x - 1, z, center) * CARDINAL_WEIGHT
-        result += sample(values, x + 1, z, center) * CARDINAL_WEIGHT
-        result += sample(values, x, z - 1, center) * CARDINAL_WEIGHT
-        result += sample(values, x, z + 1, center) * CARDINAL_WEIGHT
-        result += sample(values, x - 1, z - 1, center) * DIAGONAL_WEIGHT
-        result += sample(values, x + 1, z - 1, center) * DIAGONAL_WEIGHT
-        result += sample(values, x - 1, z + 1, center) * DIAGONAL_WEIGHT
-        result += sample(values, x + 1, z + 1, center) * DIAGONAL_WEIGHT
+        result += values[neighborIndices[neighborOffset]].toDouble() * CARDINAL_WEIGHT
+        result += values[neighborIndices[neighborOffset + 1]].toDouble() * CARDINAL_WEIGHT
+        result += values[neighborIndices[neighborOffset + 2]].toDouble() * CARDINAL_WEIGHT
+        result += values[neighborIndices[neighborOffset + 3]].toDouble() * CARDINAL_WEIGHT
+        result += values[neighborIndices[neighborOffset + 4]].toDouble() * DIAGONAL_WEIGHT
+        result += values[neighborIndices[neighborOffset + 5]].toDouble() * DIAGONAL_WEIGHT
+        result += values[neighborIndices[neighborOffset + 6]].toDouble() * DIAGONAL_WEIGHT
+        result += values[neighborIndices[neighborOffset + 7]].toDouble() * DIAGONAL_WEIGHT
         return result
     }
 
-    private fun sample(values: FloatArray, x: Int, z: Int, fallback: Double): Double {
+    private fun createNeighborIndices(): IntArray {
+        val result = IntArray(activeIndices.size * NEIGHBOR_COUNT)
+        for (activeOffset in activeIndices.indices) {
+            val index = activeIndices[activeOffset]
+            val x = index % width
+            val z = index / width
+            val offset = activeOffset * NEIGHBOR_COUNT
+            result[offset] = neighborIndex(x - 1, z, index)
+            result[offset + 1] = neighborIndex(x + 1, z, index)
+            result[offset + 2] = neighborIndex(x, z - 1, index)
+            result[offset + 3] = neighborIndex(x, z + 1, index)
+            result[offset + 4] = neighborIndex(x - 1, z - 1, index)
+            result[offset + 5] = neighborIndex(x + 1, z - 1, index)
+            result[offset + 6] = neighborIndex(x - 1, z + 1, index)
+            result[offset + 7] = neighborIndex(x + 1, z + 1, index)
+        }
+        return result
+    }
+
+    private fun createActiveIndices(): IntArray {
+        var count = 0
+        for (active in mask) if (active) count++
+        val result = IntArray(count)
+        var cursor = 0
+        for (index in mask.indices) if (mask[index]) result[cursor++] = index
+        return result
+    }
+
+    private fun neighborIndex(x: Int, z: Int, fallback: Int): Int {
         if (x !in 0 until width || z !in 0 until length) return fallback
         val index = z * width + x
-        if (!mask[index]) return fallback
-        return values[index].toDouble()
+        return if (mask[index]) index else fallback
     }
 
     private fun samplePattern(x: Int, z: Int): Double {

@@ -1,10 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain
 
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import it.unimi.dsi.fastutil.longs.Long2IntMap
 
 class BioluminescentWaterDomain internal constructor(
     val cells: List<BioluminescentWaterCell>,
-    private val indexByKey: Map<Long, Int>,
+    private val indexByKey: Long2IntMap,
     private val neighbors: IntArray,
     val geodesicDistanceFromAnchor: IntArray,
     val boundaryDepth: IntArray,
@@ -13,9 +14,7 @@ class BioluminescentWaterDomain internal constructor(
     val geodesicRadius: Int,
     val analysisGeodesicRadius: Int
 ) {
-    val localCellIndices: IntArray = geodesicDistanceFromAnchor.indices
-        .filter { index -> geodesicDistanceFromAnchor[index] <= geodesicRadius }
-        .toIntArray()
+    val localCellIndices: IntArray = createLocalCellIndices()
 
     val size: Int
         get() = cells.size
@@ -28,7 +27,8 @@ class BioluminescentWaterDomain internal constructor(
     }
 
     fun cellIndexAt(worldX: Int, worldZ: Int): Int? {
-        return indexByKey[ModUtilities.bioluminescentCellKey(worldX, worldZ)]
+        val index = indexByKey.get(ModUtilities.bioluminescentCellKey(worldX, worldZ))
+        return if (index >= 0) index else null
     }
 
     fun neighbor(index: Int, direction: Int): Int = neighbors[index * 4 + direction]
@@ -38,5 +38,18 @@ class BioluminescentWaterDomain internal constructor(
             val neighbor = neighbor(index, direction)
             if (neighbor >= 0) action(neighbor)
         }
+    }
+
+    private fun createLocalCellIndices(): IntArray {
+        var count = 0
+        for (distance in geodesicDistanceFromAnchor) {
+            if (distance <= geodesicRadius) count++
+        }
+        val result = IntArray(count)
+        var cursor = 0
+        for (index in geodesicDistanceFromAnchor.indices) {
+            if (geodesicDistanceFromAnchor[index] <= geodesicRadius) result[cursor++] = index
+        }
+        return result
     }
 }

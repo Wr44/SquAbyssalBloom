@@ -9,13 +9,11 @@ class BioluminescentCellularNoise(
     private val seed: Long,
     private val cellSize: Double
 ) {
-    data class Sample(val nearest: Double)
-
     init {
         require(cellSize > 0.0)
     }
 
-    fun sample(worldX: Double, worldZ: Double): Sample {
+    fun sample(worldX: Double, worldZ: Double): Double {
         val gridX = floor(worldX / cellSize).toInt()
         val gridZ = floor(worldZ / cellSize).toInt()
         var firstDistanceSquared = Double.POSITIVE_INFINITY
@@ -34,7 +32,7 @@ class BioluminescentCellularNoise(
             }
         }
         val first = sqrt(firstDistanceSquared) / cellSize
-        return Sample(1.0 - ModUtilities.smooth(0.08, 0.82, first))
+        return 1.0 - ModUtilities.smooth(0.08, 0.82, first)
     }
 
     private fun featureOffset(cellX: Int, cellZ: Int, salt: Long): Double {

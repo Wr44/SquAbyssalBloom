@@ -77,29 +77,45 @@ class BioluminescentZoneGenerator(
         if (isTerminal) return
         val startedAt = System.nanoTime()
         try {
-            when (stage) {
-                BioluminescentZoneGenerationStage.COLLECT_WATER_DOMAIN -> collectDomain(level)
-                BioluminescentZoneGenerationStage.SELECT_CORES -> selectCores()
-                BioluminescentZoneGenerationStage.BUILD_GEODESIC_DISTANCES -> buildDistances()
-                BioluminescentZoneGenerationStage.BUILD_SKELETON -> buildSkeleton()
-                BioluminescentZoneGenerationStage.BUILD_MACRO_FIELD -> buildMacroField()
-                BioluminescentZoneGenerationStage.INITIALIZE_REACTION_DIFFUSION -> initializeReactionDiffusion()
-                BioluminescentZoneGenerationStage.RUN_REACTION_DIFFUSION -> runReactionDiffusion()
-                BioluminescentZoneGenerationStage.GENERATE_EMISSION,
-                BioluminescentZoneGenerationStage.CALIBRATE_VISIBLE_COVERAGE -> generateEmission()
-                BioluminescentZoneGenerationStage.CREATE_TILES -> createTile(
-                    textureManager,
-                    identifierFactory,
-                    maximumTileCount
-                )
-                BioluminescentZoneGenerationStage.UPLOAD_TILES -> uploadTiles()
-                BioluminescentZoneGenerationStage.READY,
-                BioluminescentZoneGenerationStage.FAILED -> Unit
-            }
+            var workSteps = 0
+            do {
+                advanceCurrentStage(level, textureManager, identifierFactory, maximumTileCount)
+                workSteps++
+            } while (!isTerminal &&
+                workSteps < MAXIMUM_WORK_STEPS_PER_TICK &&
+                System.nanoTime() - startedAt < GENERATION_TIME_SLICE_NANOS
+            )
         } catch (exception: RuntimeException) {
             fail(exception.message ?: exception.javaClass.simpleName)
         } finally {
             cpuNanos += System.nanoTime() - startedAt
+        }
+    }
+
+    private fun advanceCurrentStage(
+        level: ClientLevel,
+        textureManager: TextureManager,
+        identifierFactory: () -> Identifier,
+        maximumTileCount: Int
+    ) {
+        when (stage) {
+            BioluminescentZoneGenerationStage.COLLECT_WATER_DOMAIN -> collectDomain(level)
+            BioluminescentZoneGenerationStage.SELECT_CORES -> selectCores()
+            BioluminescentZoneGenerationStage.BUILD_GEODESIC_DISTANCES -> buildDistances()
+            BioluminescentZoneGenerationStage.BUILD_SKELETON -> buildSkeleton()
+            BioluminescentZoneGenerationStage.BUILD_MACRO_FIELD -> buildMacroField()
+            BioluminescentZoneGenerationStage.INITIALIZE_REACTION_DIFFUSION -> initializeReactionDiffusion()
+            BioluminescentZoneGenerationStage.RUN_REACTION_DIFFUSION -> runReactionDiffusion()
+            BioluminescentZoneGenerationStage.GENERATE_EMISSION,
+            BioluminescentZoneGenerationStage.CALIBRATE_VISIBLE_COVERAGE -> generateEmission()
+            BioluminescentZoneGenerationStage.CREATE_TILES -> createTile(
+                textureManager,
+                identifierFactory,
+                maximumTileCount
+            )
+            BioluminescentZoneGenerationStage.UPLOAD_TILES -> uploadTiles()
+            BioluminescentZoneGenerationStage.READY,
+            BioluminescentZoneGenerationStage.FAILED -> Unit
         }
     }
 
@@ -257,7 +273,8 @@ class BioluminescentZoneGenerator(
                     identifierFactory(),
                     checkNotNull(emissionField),
                     originX,
-                    originZ
+                    originZ,
+                    zoneSeed
                 )?.let(preparedTiles::add)
             }
         }
@@ -357,8 +374,10 @@ class BioluminescentZoneGenerator(
         const val EMISSION_SAMPLE_BUDGET = 8192
         const val EMISSION_CALIBRATION_BUDGET = 65536
         const val EMISSION_FINALIZATION_BUDGET = 8192
-        const val TILE_PREPARATION_BUDGET = 4
-        const val TILE_UPLOAD_BUDGET = 4
+        const val TILE_PREPARATION_BUDGET = 1
+        const val TILE_UPLOAD_BUDGET = 1
+        const val MAXIMUM_WORK_STEPS_PER_TICK = 4
+        const val GENERATION_TIME_SLICE_NANOS = 8_000_000L
         const val MINIMUM_MACRO_COMPONENT_RATIO = 0.95
         const val RADIUS_SALT = 0x7137449123EF65CDL
         const val MACRO_COVERAGE_SALT = 0x428A2F98D728AE22L

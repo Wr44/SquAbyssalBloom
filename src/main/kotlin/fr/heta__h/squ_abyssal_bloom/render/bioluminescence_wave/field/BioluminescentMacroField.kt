@@ -74,9 +74,30 @@ class BioluminescentMacroField internal constructor(
     fun containsCell(cellIndex: Int): Boolean = macroCells[cellIndex]
 
     fun supportAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
+        return calculateSupport(worldX, worldZ, cellIndex, null)
+    }
+
+    internal fun sampleAt(
+        worldX: Double,
+        worldZ: Double,
+        cellIndex: Int,
+        result: BioluminescentMacroSample
+    ) {
+        result.support = calculateSupport(worldX, worldZ, cellIndex, result)
+    }
+
+    private fun calculateSupport(
+        worldX: Double,
+        worldZ: Double,
+        cellIndex: Int,
+        result: BioluminescentMacroSample?
+    ): Double {
         val radialAttenuation = radialAttenuationAt(worldX, worldZ)
-        if (radialAttenuation <= 0.0) return 0.0
-        val raw = baseFieldAt(worldX, worldZ, cellIndex) * radialRawBias(radialAttenuation)
+        if (radialAttenuation <= 0.0) {
+            result?.clear()
+            return 0.0
+        }
+        val raw = baseFieldAt(worldX, worldZ, cellIndex, result) * radialRawBias(radialAttenuation)
         if (raw <= 0.0) return 0.0
         val feather = max(Math.ulp(threshold) * 8.0, threshold * THRESHOLD_FEATHER_RATIO)
         return ModUtilities.smooth(threshold - feather, threshold + feather, raw) * radialAttenuation
@@ -84,10 +105,15 @@ class BioluminescentMacroField internal constructor(
 
     fun rawAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
         val radialAttenuation = radialAttenuationAt(worldX, worldZ)
-        return baseFieldAt(worldX, worldZ, cellIndex) * radialRawBias(radialAttenuation)
+        return baseFieldAt(worldX, worldZ, cellIndex, null) * radialRawBias(radialAttenuation)
     }
 
-    private fun baseFieldAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
+    private fun baseFieldAt(
+        worldX: Double,
+        worldZ: Double,
+        cellIndex: Int,
+        result: BioluminescentMacroSample?
+    ): Double {
         val envelope = envelopeAt(worldX, worldZ)
         val core = coreInfluenceAt(worldX, worldZ)
         val coreVariation = noiseSampler.sampleLarge(
@@ -97,6 +123,8 @@ class BioluminescentMacroField internal constructor(
         val variedCore = (core * (CORE_VARIATION_MINIMUM + coreVariation * CORE_VARIATION_RANGE))
             .coerceIn(0.0, 1.0)
         val connection = connectionInfluenceAt(worldX, worldZ, cellIndex)
+        result?.core = core
+        result?.connection = connection
         val colonyBody = colonyBodyAt(worldX, worldZ, core)
         val connectedCores = boundedUnion(
             boundedUnion(variedCore, colonyBody),

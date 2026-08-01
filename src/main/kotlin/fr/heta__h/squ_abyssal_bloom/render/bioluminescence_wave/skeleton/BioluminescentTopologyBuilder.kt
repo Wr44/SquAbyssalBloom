@@ -341,19 +341,17 @@ class BioluminescentTopologyBuilder(
     private fun shortestPathsFrom(source: Int): PathSearch {
         val distances = IntArray(domain.size) { -1 }
         val parents = IntArray(domain.size) { -1 }
-        val queue = java.util.PriorityQueue<PathQueueEntry>(compareBy(PathQueueEntry::distance))
+        val queue = java.util.ArrayDeque<Int>()
         distances[source] = 0
-        queue.add(PathQueueEntry(source, 0))
+        queue.addLast(source)
         while (queue.isNotEmpty()) {
-            val entry = queue.remove()
-            val index = entry.cellIndex
-            if (entry.distance != distances[index]) continue
+            val index = queue.removeFirst()
+            val distance = distances[index] + 1
             domain.forEachNeighbor(index) { neighbor ->
-                val distance = distances[index] + 1
-                if (distances[neighbor] >= 0 && distances[neighbor] <= distance) return@forEachNeighbor
+                if (distances[neighbor] >= 0) return@forEachNeighbor
                 distances[neighbor] = distance
                 parents[neighbor] = index
-                queue.add(PathQueueEntry(neighbor, distance))
+                queue.addLast(neighbor)
             }
         }
         return PathSearch(distances, parents)
@@ -448,8 +446,6 @@ class BioluminescentTopologyBuilder(
     }
 
     private data class PathSearch(val distances: IntArray, val parents: IntArray)
-
-    private data class PathQueueEntry(val cellIndex: Int, val distance: Int)
 
     private companion object {
         const val CELLS_PER_CORE = 360

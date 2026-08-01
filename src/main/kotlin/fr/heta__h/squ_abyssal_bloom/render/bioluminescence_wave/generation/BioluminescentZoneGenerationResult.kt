@@ -21,4 +21,7 @@ data class BioluminescentZoneGenerationResult(
 
     val texturePixelCount: Int
         get() = tiles.sumOf(BioluminescentZoneTile::pixelCount)
+
+    val renderQuadCount: Int
+        get() = tiles.sumOf { tile -> tile.renderQuads.size }
 }

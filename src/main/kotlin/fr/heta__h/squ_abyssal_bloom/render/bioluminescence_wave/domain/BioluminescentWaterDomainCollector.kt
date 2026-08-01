@@ -1,6 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain
 
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import it.unimi.dsi.fastutil.ints.IntArrayList
+import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
 import kotlin.math.abs
@@ -15,9 +18,9 @@ class BioluminescentWaterDomainCollector(
 
     private val analysisGeodesicRadius = localGeodesicRadius + analysisMargin
     private val cells = ArrayList<BioluminescentWaterCell>()
-    private val distances = ArrayList<Int>()
-    private val indexByKey = HashMap<Long, Int>()
-    private val scanned = HashSet<Long>()
+    private val distances = IntArrayList()
+    private val indexByKey = Long2IntOpenHashMap()
+    private val scanned = LongOpenHashSet()
     private val queue = java.util.ArrayDeque<Int>()
 
     companion object {
@@ -38,10 +41,11 @@ class BioluminescentWaterDomainCollector(
         get() = cells.size
 
     init {
+        indexByKey.defaultReturnValue(-1)
         val key = ModUtilities.bioluminescentCellKey(initialCell.waterPos.x, initialCell.waterPos.z)
         cells.add(initialCell)
         distances.add(0)
-        indexByKey[key] = 0
+        indexByKey.put(key, 0)
         scanned.add(key)
         queue.addLast(0)
     }
@@ -52,7 +56,7 @@ class BioluminescentWaterDomainCollector(
         while (queue.isNotEmpty() && cells.size < maximumWaterCells && processed < budget) {
             val index = queue.removeFirst()
             val cell = cells[index]
-            val distance = distances[index]
+            val distance = distances.getInt(index)
             processed++
             if (distance >= analysisGeodesicRadius) continue
             for (offset in CARDINAL_OFFSETS) {
@@ -66,7 +70,7 @@ class BioluminescentWaterDomainCollector(
                 val newIndex = cells.size
                 cells.add(waterCell)
                 distances.add(distance + 1)
-                indexByKey[key] = newIndex
+                indexByKey.put(key, newIndex)
                 queue.addLast(newIndex)
                 if (cells.size >= maximumWaterCells) break
             }
@@ -77,32 +81,41 @@ class BioluminescentWaterDomainCollector(
     fun build(): BioluminescentWaterDomain {
         check(complete)
         val immutableCells = cells.toList()
-        val immutableIndex = HashMap(indexByKey)
+        val immutableIndex = Long2IntOpenHashMap(indexByKey)
+        immutableIndex.defaultReturnValue(-1)
+        immutableIndex.trim()
         val neighbors = IntArray(immutableCells.size * 4) { -1 }
         for (index in immutableCells.indices) {
             val position = immutableCells[index].waterPos
             for (direction in CARDINAL_OFFSETS.indices) {
                 val offset = CARDINAL_OFFSETS[direction]
-                neighbors[index * 4 + direction] = immutableIndex[
+                neighbors[index * 4 + direction] = immutableIndex.get(
                     ModUtilities.bioluminescentCellKey(position.x + offset[0], position.z + offset[1])
-                ] ?: -1
+                )
             }
         }
         val naturalBoundarySeeds = immutableCells.indices.filter { index ->
             (0 until 4).any { direction -> neighbors[index * 4 + direction] < 0 }
         }
         val boundaryDepth = graphDistances(immutableCells.size, neighbors, naturalBoundarySeeds)
-        return BioluminescentWaterDomain(
+        val domain = BioluminescentWaterDomain(
             cells = immutableCells,
             indexByKey = immutableIndex,
             neighbors = neighbors,
             geodesicDistanceFromAnchor = distances.toIntArray(),
             boundaryDepth = boundaryDepth,
             bounds = createBounds(immutableCells),
-            anchorIndex = immutableIndex[ModUtilities.bioluminescentCellKey(anchor.x, anchor.z)] ?: 0,
+            anchorIndex = immutableIndex.get(ModUtilities.bioluminescentCellKey(anchor.x, anchor.z))
+                .coerceAtLeast(0),
             geodesicRadius = localGeodesicRadius,
             analysisGeodesicRadius = analysisGeodesicRadius
         )
+        cells.clear()
+        distances.clear()
+        indexByKey.clear()
+        scanned.clear()
+        queue.clear()
+        return domain
     }
 
     private fun findWaterCell(

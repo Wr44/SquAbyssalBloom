@@ -220,7 +220,8 @@ object BioluminescentZoneManager {
             )
             report.add(
                 "[Bio Debug]   tuiles=${data.tiles.size}, pixels=${data.preparedPixelCount}, " +
-                    "pixelsTexture=${data.texturePixelCount}, uploads=${data.uploadCount}"
+                    "pixelsTexture=${data.texturePixelCount}, quads=${data.renderQuadCount}, " +
+                    "uploads=${data.uploadCount}"
             )
             report.add(
                 "[Bio Debug]   alphaVisible=${percent(data.emissionField.averageVisibleAlpha)}, " +

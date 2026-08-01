@@ -1,28 +1,28 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture
 
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
+import net.minecraft.client.renderer.RenderPipelines
+import net.minecraft.client.renderer.rendertype.RenderSetup
 import net.minecraft.client.renderer.rendertype.RenderType
-import net.minecraft.client.renderer.rendertype.RenderTypes
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.client.renderer.texture.TextureManager
 import net.minecraft.resources.Identifier
+import net.minecraft.world.level.levelgen.RandomSupport
 import net.minecraft.world.phys.AABB
-import kotlin.math.roundToInt
+import kotlin.math.PI
+import kotlin.math.sin
 
 class BioluminescentZoneTile private constructor(
     private val textureManager: TextureManager,
     private val identifier: Identifier,
     val originX: Int,
     val originZ: Int,
-    private val surfaceHeights: DoubleArray,
-    val renderableCellIndices: IntArray,
-    private val spatialAlpha: FloatArray,
-    private val spatialColors: IntArray,
-    private val waterMask: BooleanArray,
+    val renderQuads: List<RenderQuad>,
     val bounds: AABB,
-    private val texture: DynamicTexture
+    private val texture: DynamicTexture,
+    private var preparedPixels: IntArray?
 ) : AutoCloseable {
-    val renderType: RenderType = RenderTypes.eyes(identifier)
+    val renderType: RenderType = createRenderType(identifier)
     val pixelCount: Int = TEXTURE_SIZE * TEXTURE_SIZE
 
     var uploaded: Boolean = false
@@ -33,22 +33,12 @@ class BioluminescentZoneTile private constructor(
 
     private var closed = false
 
-    fun surfaceYAt(localCellIndex: Int): Double = surfaceHeights[localCellIndex]
-
-    fun minimumU(localX: Int): Float {
-        return (GUTTER_PIXELS + localX * PIXELS_PER_BLOCK).toFloat() / TEXTURE_SIZE
+    fun uAt(localBlockX: Int): Float {
+        return (GUTTER_PIXELS + localBlockX * PIXELS_PER_BLOCK).toFloat() / TEXTURE_SIZE
     }
 
-    fun maximumU(localX: Int): Float {
-        return (GUTTER_PIXELS + (localX + 1) * PIXELS_PER_BLOCK).toFloat() / TEXTURE_SIZE
-    }
-
-    fun minimumV(localZ: Int): Float {
-        return (GUTTER_PIXELS + localZ * PIXELS_PER_BLOCK).toFloat() / TEXTURE_SIZE
-    }
-
-    fun maximumV(localZ: Int): Float {
-        return (GUTTER_PIXELS + (localZ + 1) * PIXELS_PER_BLOCK).toFloat() / TEXTURE_SIZE
+    fun vAt(localBlockZ: Int): Float {
+        return (GUTTER_PIXELS + localBlockZ * PIXELS_PER_BLOCK).toFloat() / TEXTURE_SIZE
     }
 
     fun horizontalDistanceSquared(worldX: Double, worldZ: Double): Double {
@@ -60,47 +50,56 @@ class BioluminescentZoneTile private constructor(
     fun upload() {
         check(!closed)
         if (uploaded) return
+        val source = checkNotNull(preparedPixels)
         val pixels = texture.pixels
         for (pixelZ in 0 until TEXTURE_SIZE) {
+            val rowOffset = pixelZ * TEXTURE_SIZE
             for (pixelX in 0 until TEXTURE_SIZE) {
-                val index = pixelZ * TEXTURE_SIZE + pixelX
-                val alpha = (spatialAlpha[index] * MAXIMUM_TEXTURE_ALPHA)
-                    .roundToInt().coerceIn(0, 255)
-                val color = if (!waterMask[index] || alpha == 0) 0 else {
-                    (alpha shl 24) or spatialColors[index]
-                }
-                pixels.setPixel(pixelX, pixelZ, color)
+                pixels.setPixel(pixelX, pixelZ, source[rowOffset + pixelX])
             }
         }
         texture.upload()
+        preparedPixels = null
         uploaded = true
         uploadCount++
     }
 
     override fun close() {
         if (closed) return
+        preparedPixels = null
         textureManager.release(identifier)
         closed = true
     }
 
+    class RenderQuad internal constructor(
+        val minimumLocalX: Int,
+        val minimumLocalZ: Int,
+        val maximumLocalX: Int,
+        val maximumLocalZ: Int,
+        val surfaceY: Double,
+        val northWestPulsePhase: Double,
+        val southWestPulsePhase: Double,
+        val southEastPulsePhase: Double,
+        val northEastPulsePhase: Double
+    )
+
     companion object {
-        const val TILE_SIZE = 16
+        const val TILE_SIZE = 32
         const val PIXELS_PER_BLOCK = BioluminescentEmissionField.PIXELS_PER_BLOCK
         const val GUTTER_PIXELS = 1
         const val INNER_TEXTURE_SIZE = TILE_SIZE * PIXELS_PER_BLOCK
         const val TEXTURE_SIZE = INNER_TEXTURE_SIZE + GUTTER_PIXELS * 2
-        private const val MAXIMUM_TEXTURE_ALPHA = 255.0
 
         internal fun prepare(
             textureManager: TextureManager,
             identifier: Identifier,
             emission: BioluminescentEmissionField,
             originX: Int,
-            originZ: Int
+            originZ: Int,
+            zoneSeed: Long
         ): BioluminescentZoneTile? {
             val domain = emission.domain
             val surfaceHeights = DoubleArray(TILE_SIZE * TILE_SIZE) { Double.NaN }
-            val renderableCells = ArrayList<Int>()
             var minimumY = Double.POSITIVE_INFINITY
             var maximumY = Double.NEGATIVE_INFINITY
 
@@ -108,32 +107,22 @@ class BioluminescentZoneTile private constructor(
                 for (localX in 0 until TILE_SIZE) {
                     val domainIndex = domain.cellIndexAt(originX + localX, originZ + localZ) ?: continue
                     if (!emission.hasLuminousCell(domainIndex)) continue
-                    val localIndex = localZ * TILE_SIZE + localX
                     val surfaceY = domain.cells[domainIndex].surfaceY
+                    val localIndex = localZ * TILE_SIZE + localX
                     surfaceHeights[localIndex] = surfaceY
-                    renderableCells.add(localIndex)
                     minimumY = minOf(minimumY, surfaceY)
                     maximumY = maxOf(maximumY, surfaceY)
                 }
             }
-            if (renderableCells.isEmpty()) return null
+            val renderQuads = createRenderQuads(
+                surfaceHeights,
+                originX,
+                originZ,
+                zoneSeed
+            )
+            if (renderQuads.isEmpty()) return null
 
-            val alpha = FloatArray(TEXTURE_SIZE * TEXTURE_SIZE)
-            val colors = IntArray(TEXTURE_SIZE * TEXTURE_SIZE)
-            val water = BooleanArray(TEXTURE_SIZE * TEXTURE_SIZE)
-            for (pixelZ in 0 until TEXTURE_SIZE) {
-                for (pixelX in 0 until TEXTURE_SIZE) {
-                    val worldX = originX +
-                        (pixelX - GUTTER_PIXELS + 0.5) / PIXELS_PER_BLOCK
-                    val worldZ = originZ +
-                        (pixelZ - GUTTER_PIXELS + 0.5) / PIXELS_PER_BLOCK
-                    val index = pixelZ * TEXTURE_SIZE + pixelX
-                    water[index] = domain.cellIndexAt(
-                        kotlin.math.floor(worldX).toInt(),
-                        kotlin.math.floor(worldZ).toInt()
-                    ) != null
-                }
-            }
+            val preparedPixels = IntArray(TEXTURE_SIZE * TEXTURE_SIZE)
             BioluminescentPixelationFilter.apply(
                 emission,
                 originX,
@@ -141,8 +130,7 @@ class BioluminescentZoneTile private constructor(
                 TEXTURE_SIZE,
                 GUTTER_PIXELS,
                 PIXELS_PER_BLOCK,
-                alpha,
-                colors
+                preparedPixels
             )
 
             val texture = BioluminescentDynamicTexture(
@@ -158,11 +146,7 @@ class BioluminescentZoneTile private constructor(
                     identifier,
                     originX,
                     originZ,
-                    surfaceHeights,
-                    renderableCells.toIntArray(),
-                    alpha,
-                    colors,
-                    water,
+                    renderQuads,
                     AABB(
                         originX.toDouble(),
                         minimumY - 0.1,
@@ -171,12 +155,135 @@ class BioluminescentZoneTile private constructor(
                         maximumY + 0.1,
                         (originZ + TILE_SIZE).toDouble()
                     ),
-                    texture
+                    texture,
+                    preparedPixels
                 )
             } catch (exception: RuntimeException) {
                 textureManager.release(identifier)
                 throw exception
             }
         }
+
+        private fun createRenderQuads(
+            surfaceHeights: DoubleArray,
+            originX: Int,
+            originZ: Int,
+            zoneSeed: Long
+        ): List<RenderQuad> {
+            val consumed = BooleanArray(surfaceHeights.size)
+            val result = ArrayList<RenderQuad>()
+            val zonePhase = phaseFromSeed(zoneSeed xor PULSE_PHASE_SEED_SALT)
+            val warpPhase = phaseFromSeed(zoneSeed xor PULSE_WARP_SEED_SALT)
+            for (meshOriginZ in 0 until TILE_SIZE step PULSE_MESH_SIZE) {
+                val meshMaximumZ = minOf(meshOriginZ + PULSE_MESH_SIZE, TILE_SIZE)
+                for (meshOriginX in 0 until TILE_SIZE step PULSE_MESH_SIZE) {
+                    val meshMaximumX = minOf(meshOriginX + PULSE_MESH_SIZE, TILE_SIZE)
+                    for (minimumZ in meshOriginZ until meshMaximumZ) {
+                        for (minimumX in meshOriginX until meshMaximumX) {
+                            val firstIndex = minimumZ * TILE_SIZE + minimumX
+                            val surfaceY = surfaceHeights[firstIndex]
+                            if (consumed[firstIndex] || surfaceY.isNaN()) continue
+
+                            var width = 1
+                            while (minimumX + width < meshMaximumX) {
+                                val index = minimumZ * TILE_SIZE + minimumX + width
+                                if (consumed[index] ||
+                                    surfaceHeights[index].toBits() != surfaceY.toBits()
+                                ) break
+                                width++
+                            }
+                            var height = 1
+                            rows@ while (minimumZ + height < meshMaximumZ) {
+                                val rowOffset = (minimumZ + height) * TILE_SIZE + minimumX
+                                for (offsetX in 0 until width) {
+                                    val index = rowOffset + offsetX
+                                    if (consumed[index] ||
+                                        surfaceHeights[index].toBits() != surfaceY.toBits()
+                                    ) break@rows
+                                }
+                                height++
+                            }
+                            for (offsetZ in 0 until height) {
+                                val rowOffset = (minimumZ + offsetZ) * TILE_SIZE + minimumX
+                                for (offsetX in 0 until width) consumed[rowOffset + offsetX] = true
+                            }
+                            result.add(
+                                createRenderQuad(
+                                    minimumX,
+                                    minimumZ,
+                                    width,
+                                    height,
+                                    surfaceY,
+                                    originX,
+                                    originZ,
+                                    zonePhase,
+                                    warpPhase
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+            return result
+        }
+
+        private fun createRenderQuad(
+            minimumX: Int,
+            minimumZ: Int,
+            width: Int,
+            height: Int,
+            surfaceY: Double,
+            originX: Int,
+            originZ: Int,
+            zonePhase: Double,
+            warpPhase: Double
+        ): RenderQuad {
+            val maximumX = minimumX + width
+            val maximumZ = minimumZ + height
+            return RenderQuad(
+                minimumX,
+                minimumZ,
+                maximumX,
+                maximumZ,
+                surfaceY,
+                pulsePhaseAt(originX + minimumX, originZ + minimumZ, zonePhase, warpPhase),
+                pulsePhaseAt(originX + minimumX, originZ + maximumZ, zonePhase, warpPhase),
+                pulsePhaseAt(originX + maximumX, originZ + maximumZ, zonePhase, warpPhase),
+                pulsePhaseAt(originX + maximumX, originZ + minimumZ, zonePhase, warpPhase)
+            )
+        }
+
+        private fun pulsePhaseAt(
+            worldX: Int,
+            worldZ: Int,
+            zonePhase: Double,
+            warpPhase: Double
+        ): Double {
+            val x = worldX.toDouble()
+            val z = worldZ.toDouble()
+            val broadWarp = sin(x * 0.024 - z * 0.019 + warpPhase) * 0.95
+            val crossWarp = sin(x * 0.013 + z * 0.027 - warpPhase * 0.63) * 0.55
+            return zonePhase + x * 0.087 + z * 0.063 + broadWarp + crossWarp
+        }
+
+        private fun phaseFromSeed(seed: Long): Double {
+            val mixed = RandomSupport.mixStafford13(seed)
+            val unit = ((mixed ushr 40) and 0xFFFFFFL).toDouble() / 0xFFFFFFL.toDouble()
+            return unit * PI * 2.0
+        }
+
+        private fun createRenderType(identifier: Identifier): RenderType {
+            return RenderType.create(
+                "squ_bioluminescent_wave",
+                RenderSetup.builder(RenderPipelines.EYES)
+                    .withTexture("Sampler0", identifier)
+                    .sortOnUpload()
+                    .createRenderSetup()
+            )
+        }
+
+        private const val PULSE_PHASE_SEED_SALT = 0x510E527FADE682D1L
+        private const val PULSE_WARP_SEED_SALT = 0x1F83D9ABFB41BD6BL
+        private const val PULSE_MESH_SIZE = 4
     }
 }

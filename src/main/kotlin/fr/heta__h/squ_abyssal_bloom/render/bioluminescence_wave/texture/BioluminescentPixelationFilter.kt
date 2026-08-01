@@ -11,91 +11,30 @@ internal object BioluminescentPixelationFilter {
         textureSize: Int,
         gutterPixels: Int,
         pixelsPerBlock: Int,
-        alpha: FloatArray,
-        colors: IntArray
+        destination: IntArray
     ) {
+        require(destination.size == textureSize * textureSize)
         val minimumWorldPixelX = originX * pixelsPerBlock - gutterPixels
         val minimumWorldPixelZ = originZ * pixelsPerBlock - gutterPixels
-        val maximumWorldPixelX = minimumWorldPixelX + textureSize - 1
-        val maximumWorldPixelZ = minimumWorldPixelZ + textureSize - 1
-        var groupWorldZ = Math.floorDiv(minimumWorldPixelZ, PIXEL_SIZE) * PIXEL_SIZE
-        while (groupWorldZ <= maximumWorldPixelZ) {
-            var groupWorldX = Math.floorDiv(minimumWorldPixelX, PIXEL_SIZE) * PIXEL_SIZE
-            while (groupWorldX <= maximumWorldPixelX) {
-                sampleGroup(
-                    emission,
-                    groupWorldX,
-                    groupWorldZ,
-                    pixelsPerBlock,
-                    minimumWorldPixelX,
-                    minimumWorldPixelZ,
-                    textureSize,
-                    alpha,
-                    colors
-                )
-                groupWorldX += PIXEL_SIZE
-            }
-            groupWorldZ += PIXEL_SIZE
-        }
-    }
-
-    private fun sampleGroup(
-        emission: BioluminescentEmissionField,
-        groupWorldX: Int,
-        groupWorldZ: Int,
-        pixelsPerBlock: Int,
-        minimumWorldPixelX: Int,
-        minimumWorldPixelZ: Int,
-        textureSize: Int,
-        alpha: FloatArray,
-        colors: IntArray
-    ) {
-        var alphaSum = 0.0
-        var redSum = 0.0
-        var greenSum = 0.0
-        var blueSum = 0.0
-        for (offsetZ in 0 until PIXEL_SIZE) {
-            for (offsetX in 0 until PIXEL_SIZE) {
-                val worldX = (groupWorldX + offsetX + 0.5) / pixelsPerBlock
-                val worldZ = (groupWorldZ + offsetZ + 0.5) / pixelsPerBlock
-                val sampleAlpha = emission.sampleAlpha(worldX, worldZ).toDouble()
-                val sampleColor = emission.sampleColor(worldX, worldZ)
-                alphaSum += sampleAlpha
-                redSum += ((sampleColor ushr 16) and 0xFF) * sampleAlpha
-                greenSum += ((sampleColor ushr 8) and 0xFF) * sampleAlpha
-                blueSum += (sampleColor and 0xFF) * sampleAlpha
-            }
-        }
-        val averagedAlpha = alphaSum / SAMPLE_COUNT
-        val filteredAlpha = (
-            averagedAlpha * (ALPHA_LEVEL_COUNT - 1)
-            ).roundToInt().toFloat() / (ALPHA_LEVEL_COUNT - 1)
-        val filteredColor = if (alphaSum <= 0.0 || filteredAlpha <= 0.0f) 0 else {
-            val red = (redSum / alphaSum).roundToInt().coerceIn(0, 255)
-            val green = (greenSum / alphaSum).roundToInt().coerceIn(0, 255)
-            val blue = (blueSum / alphaSum).roundToInt().coerceIn(0, 255)
-            (red shl 16) or (green shl 8) or blue
-        }
-        val minimumLocalX = maxOf(0, groupWorldX - minimumWorldPixelX)
-        val minimumLocalZ = maxOf(0, groupWorldZ - minimumWorldPixelZ)
-        val maximumLocalX = minOf(
-            textureSize,
-            groupWorldX + PIXEL_SIZE - minimumWorldPixelX
-        )
-        val maximumLocalZ = minOf(
-            textureSize,
-            groupWorldZ + PIXEL_SIZE - minimumWorldPixelZ
-        )
-        for (localZ in minimumLocalZ until maximumLocalZ) {
-            for (localX in minimumLocalX until maximumLocalX) {
-                val index = localZ * textureSize + localX
-                alpha[index] = filteredAlpha
-                colors[index] = filteredColor
+        for (pixelZ in 0 until textureSize) {
+            val worldPixelZ = minimumWorldPixelZ + pixelZ
+            val cellZ = Math.floorDiv(worldPixelZ, pixelsPerBlock)
+            val localPixelZ = Math.floorMod(worldPixelZ, pixelsPerBlock)
+            for (pixelX in 0 until textureSize) {
+                val worldPixelX = minimumWorldPixelX + pixelX
+                val cellX = Math.floorDiv(worldPixelX, pixelsPerBlock)
+                val cellIndex = emission.domain.cellIndexAt(cellX, cellZ) ?: continue
+                val localPixelX = Math.floorMod(worldPixelX, pixelsPerBlock)
+                val alphaLevel = (
+                    emission.alphaAt(cellIndex, localPixelX, localPixelZ) * MAXIMUM_ALPHA_LEVEL
+                    ).roundToInt().coerceIn(0, MAXIMUM_ALPHA_LEVEL)
+                if (alphaLevel == 0) continue
+                val alpha = alphaLevel * 255 / MAXIMUM_ALPHA_LEVEL
+                destination[pixelZ * textureSize + pixelX] =
+                    (alpha shl 24) or emission.colorAt(cellIndex, localPixelX, localPixelZ)
             }
         }
     }
 
-    private const val PIXEL_SIZE = 1
-    private const val SAMPLE_COUNT = 1.0
-    private const val ALPHA_LEVEL_COUNT = 16
+    private const val MAXIMUM_ALPHA_LEVEL = 15
 }
