@@ -1,10 +1,12 @@
 package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights
 
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.lighting.BioluminescentSurfaceLight
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.bioluminescent_wave.BioluminescentSurfaceLight
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 
 object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
+
     private const val UPDATE_INTERVAL_TICKS = 4L
     private const val VISIBILITY_EPSILON = 0.01
     private const val ACTIVE_BASE_FACTOR = 0.60
@@ -105,9 +107,9 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
                 val base = lifecycle * ACTIVE_BASE_FACTOR
                 val boosted = base + lifecycle * waveIntensity * ACTIVE_WAVE_BOOST_FACTOR
                 val waveFloor = lifecycle * waveIntensity * ACTIVE_WAVE_MIN_FACTOR
-                maxOf(boosted, waveFloor)
+                maxOf(boosted, waveFloor) * ModConfig.dynamicLightsBioluminescenceActiveIntensity
             } else {
-                lifecycle * waveIntensity * INACTIVE_WAVE_FACTOR
+                lifecycle * waveIntensity * INACTIVE_WAVE_FACTOR * ModConfig.dynamicLightsBioluminescenceInactiveIntensity
             }
             light.setIntensityFactor(factor)
         }

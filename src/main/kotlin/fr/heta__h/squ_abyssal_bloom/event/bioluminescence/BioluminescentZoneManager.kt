@@ -1,8 +1,10 @@
 package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.compat.iris.IrisRenderState
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.BioluminescentZoneDynamicLights
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomainCollector
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise.BioluminescentRegionalNoiseSampler
@@ -204,6 +206,7 @@ object BioluminescentZoneManager {
         val report = ArrayList<String>()
         val globalTiles = zones.sumOf { it.generationSnapshot().preparedTiles }
         report.add("[Bio Debug] ${zones.size} zone(s), $globalTiles/$MAX_GLOBAL_TILES tuiles")
+        report.addAll(IrisRenderState.debugLines())
         report.add(
             "[Bio Debug] lumieres dynamiques: ${BioluminescentZoneDynamicLights.totalRegisteredLightCount()}"
         )
@@ -429,7 +432,8 @@ object BioluminescentZoneManager {
         if (!level.getBiome(waterSurface).`is`(BiomeTags.IS_BEACH)) return null
         val initialCell = BioluminescentWaterCell(
             waterSurface,
-            ModUtilities.getFluidSurfaceHeight(level, waterSurface)
+            ModUtilities.getFluidSurfaceHeight(level, waterSurface),
+            BioluminescentWaterDomainCollector.scanWaterDepth(level, waterSurface)
         )
         val nearbyWater = countNearbyWaterCells(level, waterSurface)
         if (nearbyWater < MIN_NEARBY_WATER_CELLS) return null

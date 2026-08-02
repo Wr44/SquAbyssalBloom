@@ -32,6 +32,11 @@ repositories {
         name = "Forge Maven"
         url = "https://maven.minecraftforge.net/"
     }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+        content { includeGroup "maven.modrinth" }
+    }
     mavenCentral()
 }
 
@@ -109,6 +114,7 @@ dependencies {
     runtimeOnly "dev.isxander:yet-another-config-lib:${project.yacl_version}"
     compileOnly "com.github.glitchfiend:TerraBlender-neoforge:${project.terrablender_version}"
     runtimeOnly "com.github.glitchfiend:TerraBlender-neoforge:${project.terrablender_version}"
+    compileOnly "maven.modrinth:iris:${project.iris_version}"
     compileOnly("dev.lambdaurora.lambdynamiclights:lambdynamiclights-api:${project.lamb_dynamic_version}") {
         attributes {
             attribute(mappingsAttribute, "mojmap")

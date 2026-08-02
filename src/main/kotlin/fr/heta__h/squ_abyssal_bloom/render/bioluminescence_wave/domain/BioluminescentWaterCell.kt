@@ -4,5 +4,6 @@ import net.minecraft.core.BlockPos
 
 data class BioluminescentWaterCell(
     val waterPos: BlockPos,
-    val surfaceY: Double
+    val surfaceY: Double,
+    val waterDepth: Double
 )

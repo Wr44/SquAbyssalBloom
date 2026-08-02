@@ -767,7 +767,8 @@ object ModUtilities {
         name: Component,
         description: OptionDescription,
         screenTitle: Component,
-        buildGroups: (ConfigCategory.Builder) -> Unit
+        buildGroups: (ConfigCategory.Builder) -> Unit,
+        onSave: () -> Unit = {}
     ): Option<*> =
         ButtonOption.createBuilder()
             .name(name)
@@ -779,7 +780,10 @@ object ModUtilities {
                 buildGroups(categoryBuilder)
                 val subScreen = YetAnotherConfigLib.createBuilder()
                     .title(screenTitle)
-                    .save { persistServerConfigChanges(initialServerConfig) }
+                    .save {
+                        persistServerConfigChanges(initialServerConfig)
+                        onSave()
+                    }
                     .category(categoryBuilder.build())
                     .build()
                     .generateScreen(screen)

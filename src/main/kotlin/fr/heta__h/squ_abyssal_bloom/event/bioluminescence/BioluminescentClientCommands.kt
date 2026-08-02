@@ -1,5 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
 
+import com.mojang.brigadier.arguments.DoubleArgumentType
+import com.mojang.brigadier.arguments.StringArgumentType
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPaletteFamily
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
@@ -92,7 +94,72 @@ object BioluminescentClientCommands {
                     1
                 }
         )
+        root.then(
+            Commands.literal("irisdebug")
+                .then(
+                    Commands.literal("mode")
+                        .executes { context ->
+                            context.source.sendSuccess(
+                                { Component.literal("Mode debug Iris actuel: ${BioluminescentIrisDebugState.mode}") },
+                                false
+                            )
+                            1
+                        }
+                        .then(
+                            Commands.argument("name", StringArgumentType.word())
+                                .executes { context -> executeIrisDebugMode(context.source, StringArgumentType.getString(context, "name")) }
+                        )
+                )
+                .then(
+                    Commands.literal("offset")
+                        .then(
+                            Commands.literal("reset")
+                                .executes { context ->
+                                    BioluminescentIrisDebugState.compensationOffsetOverride = null
+                                    context.source.sendSuccess(
+                                        { Component.literal("Offset de compensation reinitialise.") },
+                                        false
+                                    )
+                                    1
+                                }
+                        )
+                        .then(
+                            Commands.argument("value", DoubleArgumentType.doubleArg())
+                                .executes { context ->
+                                    val value = DoubleArgumentType.getDouble(context, "value")
+                                    BioluminescentIrisDebugState.compensationOffsetOverride = value
+                                    context.source.sendSuccess(
+                                        { Component.literal("Offset de compensation regle sur $value") },
+                                        false
+                                    )
+                                    1
+                                }
+                        )
+                )
+                .then(
+                    Commands.literal("reset")
+                        .executes { context ->
+                            BioluminescentIrisDebugState.reset()
+                            context.source.sendSuccess(
+                                { Component.literal("Debug Iris reinitialise (mode NORMAL, offset par defaut).") },
+                                false
+                            )
+                            1
+                        }
+                )
+        )
         event.dispatcher.register(root)
+    }
+
+    private fun executeIrisDebugMode(source: CommandSourceStack, name: String): Int {
+        val mode = BioluminescentIrisDebugMode.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }
+            ?: return failure(
+                source,
+                "Mode inconnu. Modes valides: ${BioluminescentIrisDebugMode.entries.joinToString { it.name }}"
+            )
+        BioluminescentIrisDebugState.mode = mode
+        source.sendSuccess({ Component.literal("Mode debug Iris regle sur $mode") }, false)
+        return 1
     }
 
     private fun executeSpawn(

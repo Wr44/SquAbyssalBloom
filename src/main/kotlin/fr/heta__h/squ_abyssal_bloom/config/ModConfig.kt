@@ -6,6 +6,7 @@ import dev.isxander.yacl3.api.*
 import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
+import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.config.renderer.StaticImageRenderer
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
@@ -14,6 +15,8 @@ import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BrineSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.FishSchoolSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.MackerelSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.mods.DynamicLightSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.mods.IrisSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.RedSlobbererSubMenu
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.persistServerConfigChanges
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
@@ -60,6 +63,16 @@ object ModConfig {
     var surfaceOccluderFadeSpeed: Double = 2.5
     var surfaceOccluderLodBandWidth: Int = 64
     var surfaceOccluderTargetDepth: Double = 0.5
+    var irisCompatibilityEnabled: Boolean = true
+    var shaderBioluminescencePrimaryAlphaMultiplier: Double = 1.6
+    var shaderBioluminescenceVisibilityCompensation: Double = 0.12
+    var shaderBioluminescenceDeepWaterBoost: Double = 1.45
+    var shaderBioluminescenceGrazingStrength: Double = 0.20
+    var shaderBioluminescenceUnderwaterCompensation: Double = 0.45
+    var dynamicLightsEnabled: Boolean = true
+    var dynamicLightsNautilusIntensity: Double = 1.0
+    var dynamicLightsBioluminescenceActiveIntensity: Double = 1.0
+    var dynamicLightsBioluminescenceInactiveIntensity: Double = 1.0
 
     fun loadConfig() {
         if (!configFile.exists()) { saveConfig(); return }
@@ -93,6 +106,24 @@ object ModConfig {
             surfaceOccluderFadeSpeed = json.get("surfaceOccluderFadeSpeed")?.asDouble ?: 2.5
             surfaceOccluderLodBandWidth = json.get("surfaceOccluderLodBandWidth")?.asInt ?: 64
             surfaceOccluderTargetDepth = json.get("surfaceOccluderTargetDepth")?.asDouble ?: 0.5
+            irisCompatibilityEnabled = json.get("irisCompatibilityEnabled")?.asBoolean ?: true
+            shaderBioluminescencePrimaryAlphaMultiplier =
+                json.get("shaderBioluminescencePrimaryAlphaMultiplier")?.asDouble ?: 1.6
+            shaderBioluminescenceVisibilityCompensation =
+                json.get("shaderBioluminescenceVisibilityCompensation")?.asDouble ?: 0.12
+            shaderBioluminescenceDeepWaterBoost =
+                json.get("shaderBioluminescenceDeepWaterBoost")?.asDouble ?: 1.45
+            shaderBioluminescenceGrazingStrength =
+                json.get("shaderBioluminescenceGrazingStrength")?.asDouble ?: 0.20
+            shaderBioluminescenceUnderwaterCompensation =
+                json.get("shaderBioluminescenceUnderwaterCompensation")?.asDouble ?: 0.45
+            dynamicLightsEnabled = json.get("dynamicLightsEnabled")?.asBoolean ?: true
+            dynamicLightsNautilusIntensity =
+                json.get("dynamicLightsNautilusIntensity")?.asDouble ?: 1.0
+            dynamicLightsBioluminescenceActiveIntensity =
+                json.get("dynamicLightsBioluminescenceActiveIntensity")?.asDouble ?: 1.0
+            dynamicLightsBioluminescenceInactiveIntensity =
+                json.get("dynamicLightsBioluminescenceInactiveIntensity")?.asDouble ?: 1.0
         } catch (e: Exception) {
             println("Erreur config : ${e.message}")
         }
@@ -129,6 +160,16 @@ object ModConfig {
                 addProperty("surfaceOccluderFadeSpeed", surfaceOccluderFadeSpeed)
                 addProperty("surfaceOccluderLodBandWidth", surfaceOccluderLodBandWidth)
                 addProperty("surfaceOccluderTargetDepth", surfaceOccluderTargetDepth)
+                addProperty("irisCompatibilityEnabled", irisCompatibilityEnabled)
+                addProperty("shaderBioluminescencePrimaryAlphaMultiplier", shaderBioluminescencePrimaryAlphaMultiplier)
+                addProperty("shaderBioluminescenceVisibilityCompensation", shaderBioluminescenceVisibilityCompensation)
+                addProperty("shaderBioluminescenceDeepWaterBoost", shaderBioluminescenceDeepWaterBoost)
+                addProperty("shaderBioluminescenceGrazingStrength", shaderBioluminescenceGrazingStrength)
+                addProperty("shaderBioluminescenceUnderwaterCompensation", shaderBioluminescenceUnderwaterCompensation)
+                addProperty("dynamicLightsEnabled", dynamicLightsEnabled)
+                addProperty("dynamicLightsNautilusIntensity", dynamicLightsNautilusIntensity)
+                addProperty("dynamicLightsBioluminescenceActiveIntensity", dynamicLightsBioluminescenceActiveIntensity)
+                addProperty("dynamicLightsBioluminescenceInactiveIntensity", dynamicLightsBioluminescenceInactiveIntensity)
             }
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))
@@ -213,7 +254,47 @@ object ModConfig {
             if (deepFloorOpt.pendingValue() <= newAbyssal) deepFloorOpt.requestSet(newAbyssal + 1)
         }
 
-        return YetAnotherConfigLib.createBuilder()
+        val hasAnyCompatMod = ModCompat.hasIris || ModCompat.hasDynLights
+        val compatCategory = if (hasAnyCompatMod) {
+            val compatModsGroup = OptionGroup.createBuilder()
+                .name(Component.translatable("config.squ_abyssal_bloom.group.compat_mods").withStyle(ChatFormatting.LIGHT_PURPLE))
+                .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.group.compat_mods.desc")))
+
+            if (ModCompat.hasIris) {
+                compatModsGroup.option(subScreenButton(
+                    name = IrisSubMenu.displayName,
+                    description = OptionDescription.createBuilder()
+                        .text(IrisSubMenu.displayDescription)
+                        .customImage(IrisSubMenu.previewRenderer())
+                        .build(),
+                    screenTitle = IrisSubMenu.displayName,
+                    buildGroups = IrisSubMenu::buildGroups,
+                    onSave = { saveConfig() }
+                ))
+            }
+            if (ModCompat.hasDynLights) {
+                compatModsGroup.option(subScreenButton(
+                    name = DynamicLightSubMenu.displayName,
+                    description = OptionDescription.createBuilder()
+                        .text(DynamicLightSubMenu.displayDescription)
+                        .customImage(DynamicLightSubMenu.previewRenderer())
+                        .build(),
+                    screenTitle = DynamicLightSubMenu.displayName,
+                    buildGroups = DynamicLightSubMenu::buildGroups,
+                    onSave = { saveConfig() }
+                ))
+            }
+
+            ConfigCategory.createBuilder()
+                .name(Component.translatable("config.squ_abyssal_bloom.compat").withStyle(ChatFormatting.BOLD, ChatFormatting.LIGHT_PURPLE))
+                .tooltip(Component.translatable("config.squ_abyssal_bloom.compat.tooltip"))
+                .group(compatModsGroup.build())
+                .build()
+        } else {
+            null
+        }
+
+        val libraryBuilder = YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
             .save {
                 saveConfig()
@@ -547,6 +628,11 @@ object ModConfig {
 
                 .build())
 
+        if (compatCategory != null) {
+            libraryBuilder.category(compatCategory)
+        }
+
+        return libraryBuilder
             .build()
             .generateScreen(parent)
     }

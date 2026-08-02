@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights
 
 import dev.lambdaurora.lambdynlights.api.behavior.DynamicLightBehavior
 import dev.lambdaurora.lambdynlights.api.behavior.LineLightBehavior
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import org.joml.Vector3d
 
 abstract class AbstractDynamicLightCompat {
@@ -38,7 +39,7 @@ abstract class AbstractDynamicLightCompat {
     }
 
     protected fun addDynamicLight(light: DynamicLightBehavior) {
-        if (isInitialized) {
+        if (isInitialized && ModConfig.dynamicLightsEnabled) {
             try { addMethod?.invoke(managerInstance, light) } catch (e: Exception) {}
         }
     }

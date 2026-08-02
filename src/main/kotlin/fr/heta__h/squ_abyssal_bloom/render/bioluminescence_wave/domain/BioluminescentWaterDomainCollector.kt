@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
+import net.minecraft.tags.FluidTags
 import java.util.ArrayDeque
 import kotlin.math.abs
 
@@ -18,12 +19,26 @@ class BioluminescentWaterDomainCollector(
 ) {
     companion object {
         const val WATER_LEVEL_TOLERANCE = 3
+        const val MAX_DEPTH_SCAN = 32
         val CARDINAL_OFFSETS = arrayOf(
             intArrayOf(1, 0),
             intArrayOf(-1, 0),
             intArrayOf(0, 1),
             intArrayOf(0, -1)
         )
+
+        fun scanWaterDepth(level: ClientLevel, surfaceBlock: BlockPos): Double {
+            val limitY = maxOf(level.minY, surfaceBlock.y - MAX_DEPTH_SCAN)
+            var y = surfaceBlock.y
+            var depth = 0
+            while (y > limitY) {
+                val pos = BlockPos(surfaceBlock.x, y - 1, surfaceBlock.z)
+                if (!level.getFluidState(pos).`is`(FluidTags.WATER)) break
+                y--
+                depth++
+            }
+            return depth.toDouble()
+        }
     }
 
     private val analysisGeodesicRadius = localGeodesicRadius + analysisMargin
@@ -137,7 +152,8 @@ class BioluminescentWaterDomainCollector(
         if (!ModUtilities.isRenderableWaterSurface(level, surfaceBlock)) return null
         return BioluminescentWaterCell(
             surfaceBlock,
-            ModUtilities.getFluidSurfaceHeight(level, surfaceBlock)
+            ModUtilities.getFluidSurfaceHeight(level, surfaceBlock),
+            scanWaterDepth(level, surfaceBlock)
         )
     }
 

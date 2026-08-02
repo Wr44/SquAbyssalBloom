@@ -1,8 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture
 
+import com.mojang.blaze3d.pipeline.RenderPipeline
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.pipeline.BioluminescentRenderPipelines
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
-import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.renderer.rendertype.RenderSetup
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.texture.TextureManager
@@ -45,6 +46,7 @@ class BioluminescentZoneTile private constructor(
         ): BioluminescentZoneTile? {
             val domain = emission.domain
             val surfaceHeights = DoubleArray(TILE_SIZE * TILE_SIZE) { Double.NaN }
+            val waterDepths = DoubleArray(TILE_SIZE * TILE_SIZE)
             var minY = Double.POSITIVE_INFINITY
             var maxY = Double.NEGATIVE_INFINITY
 
@@ -52,15 +54,17 @@ class BioluminescentZoneTile private constructor(
                 for (localX in 0 until TILE_SIZE) {
                     val domainIndex = domain.cellIndexAt(originX + localX, originZ + localZ) ?: continue
                     if (!emission.hasLuminousCell(domainIndex)) continue
-                    val surfaceY = domain.cells[domainIndex].surfaceY
+                    val cell = domain.cells[domainIndex]
                     val localIndex = localZ * TILE_SIZE + localX
-                    surfaceHeights[localIndex] = surfaceY
-                    minY = minOf(minY, surfaceY)
-                    maxY = maxOf(maxY, surfaceY)
+                    surfaceHeights[localIndex] = cell.surfaceY
+                    waterDepths[localIndex] = cell.waterDepth
+                    minY = minOf(minY, cell.surfaceY)
+                    maxY = maxOf(maxY, cell.surfaceY)
                 }
             }
             val renderQuads = createRenderQuads(
                 surfaceHeights,
+                waterDepths,
                 originX,
                 originZ,
                 zoneSeed
@@ -112,6 +116,7 @@ class BioluminescentZoneTile private constructor(
 
         private fun createRenderQuads(
             surfaceHeights: DoubleArray,
+            waterDepths: DoubleArray,
             originX: Int,
             originZ: Int,
             zoneSeed: Long
@@ -163,7 +168,8 @@ class BioluminescentZoneTile private constructor(
                                     originX,
                                     originZ,
                                     zonePhase,
-                                    warpPhase
+                                    warpPhase,
+                                    waterDepths
                                 )
                             )
                         }
@@ -182,7 +188,8 @@ class BioluminescentZoneTile private constructor(
             originX: Int,
             originZ: Int,
             zonePhase: Double,
-            warpPhase: Double
+            warpPhase: Double,
+            waterDepths: DoubleArray
         ): RenderQuad {
             val maxX = minX + width
             val maxZ = minZ + height
@@ -195,8 +202,18 @@ class BioluminescentZoneTile private constructor(
                 pulsePhaseAt(originX + minX, originZ + minZ, zonePhase, warpPhase),
                 pulsePhaseAt(originX + minX, originZ + maxZ, zonePhase, warpPhase),
                 pulsePhaseAt(originX + maxX, originZ + maxZ, zonePhase, warpPhase),
-                pulsePhaseAt(originX + maxX, originZ + minZ, zonePhase, warpPhase)
+                pulsePhaseAt(originX + maxX, originZ + minZ, zonePhase, warpPhase),
+                waterDepthAt(waterDepths, minX, minZ),
+                waterDepthAt(waterDepths, minX, maxZ - 1),
+                waterDepthAt(waterDepths, maxX - 1, maxZ - 1),
+                waterDepthAt(waterDepths, maxX - 1, minZ)
             )
+        }
+
+        private fun waterDepthAt(waterDepths: DoubleArray, localX: Int, localZ: Int): Double {
+            val clampedX = localX.coerceIn(0, TILE_SIZE - 1)
+            val clampedZ = localZ.coerceIn(0, TILE_SIZE - 1)
+            return waterDepths[clampedZ * TILE_SIZE + clampedX]
         }
 
         private fun pulsePhaseAt(
@@ -217,10 +234,10 @@ class BioluminescentZoneTile private constructor(
             return ModUtilities.stableUnitValue(mixed) * PI * 2.0
         }
 
-        private fun createRenderType(identifier: Identifier): RenderType {
+        private fun createRenderType(name: String, pipeline: RenderPipeline, identifier: Identifier): RenderType {
             return RenderType.create(
-                "squ_bioluminescent_wave",
-                RenderSetup.builder(RenderPipelines.EYES)
+                name,
+                RenderSetup.builder(pipeline)
                     .withTexture("Sampler0", identifier)
                     .sortOnUpload()
                     .createRenderSetup()
@@ -234,7 +251,21 @@ class BioluminescentZoneTile private constructor(
         }
     }
 
-    val renderType: RenderType = createRenderType(identifier)
+    val renderTypeVanilla: RenderType = createRenderType(
+        "squ_bioluminescent_wave",
+        BioluminescentRenderPipelines.VANILLA_SURFACE,
+        identifier
+    )
+    val renderTypeShaderUnderwater: RenderType = createRenderType(
+        "squ_bioluminescent_wave_shader_underwater",
+        BioluminescentRenderPipelines.SHADER_UNDERWATER_SURFACE,
+        identifier
+    )
+    val renderTypeShaderCompensation: RenderType = createRenderType(
+        "squ_bioluminescent_wave_shader_compensation",
+        BioluminescentRenderPipelines.SHADER_VISIBILITY_COMPENSATION,
+        identifier
+    )
     val pixelCount: Int = texture.pixelCount
 
     var uploaded: Boolean = false
@@ -325,7 +356,11 @@ class BioluminescentZoneTile private constructor(
         val northWestPulsePhase: Double,
         val southWestPulsePhase: Double,
         val southEastPulsePhase: Double,
-        val northEastPulsePhase: Double
+        val northEastPulsePhase: Double,
+        val northWestWaterDepth: Double,
+        val southWestWaterDepth: Double,
+        val southEastWaterDepth: Double,
+        val northEastWaterDepth: Double
     ) {
         var lastRenderTop: Boolean? = null
     }

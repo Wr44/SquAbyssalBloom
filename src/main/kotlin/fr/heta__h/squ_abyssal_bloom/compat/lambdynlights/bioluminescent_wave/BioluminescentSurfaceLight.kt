@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.lighting
+package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.bioluminescent_wave
 
 import dev.lambdaurora.lambdynlights.api.behavior.DynamicLightBehavior
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
