@@ -349,32 +349,20 @@ class BioluminescentEmissionGenerator(
             (worldZ + 281.0) * COLOR_ACCENT_SCALE
         )
         val mix = ModUtilities.smooth(0.28, 0.72, primaryNoise * 0.68 + secondaryNoise * 0.32)
-        val base = lerpColor(palette.firstColor, palette.secondColor, mix)
+        val base = ModUtilities.lerpColor(palette.firstColor, palette.secondColor, mix)
         val accentMix = ModUtilities.smooth(0.48, 0.82, accentNoise) * COLOR_ACCENT_MIX
-        val accented = lerpColor(base, palette.accentColor, accentMix)
+        val accented = ModUtilities.lerpColor(base, palette.accentColor, accentMix)
         val chromaticStrength = 0.18 + ModUtilities.smooth(0.015, 0.66, emission) * 0.82
-        val shaded = lerpColor(palette.shadowColor, accented, chromaticStrength)
+        val shaded = ModUtilities.lerpColor(palette.shadowColor, accented, chromaticStrength)
         val highlight = ModUtilities.smooth(HIGHLIGHT_START, HIGHLIGHT_END, emission) *
             HIGHLIGHT_MIX_MAXIMUM
-        return lerpColor(shaded, palette.highlightColor, highlight)
+        return ModUtilities.lerpColor(shaded, palette.highlightColor, highlight)
     }
 
     private fun choosePorosity(): Double {
         val value = stableUnitValue(RandomSupport.mixStafford13(zoneSeed xor POROSITY_SEED_SALT))
         return preset.porosityRange.start +
             value * (preset.porosityRange.endInclusive - preset.porosityRange.start)
-    }
-
-    private fun lerpColor(first: Int, second: Int, amount: Double): Int {
-        val red = lerpChannel(first shr 16 and 0xFF, second shr 16 and 0xFF, amount)
-        val green = lerpChannel(first shr 8 and 0xFF, second shr 8 and 0xFF, amount)
-        val blue = lerpChannel(first and 0xFF, second and 0xFF, amount)
-        return (red shl 16) or (green shl 8) or blue
-    }
-
-    private fun lerpChannel(first: Int, second: Int, amount: Double): Int {
-        return (first + (second - first) * amount.coerceIn(0.0, 1.0))
-            .roundToInt().coerceIn(0, 255)
     }
 
     private fun stableUnitValue(value: Long): Double {

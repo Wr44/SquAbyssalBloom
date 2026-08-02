@@ -58,6 +58,7 @@ import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 object ModUtilities {
 
@@ -558,6 +559,18 @@ object ModUtilities {
 
     fun smoothTowards(current: Double, target: Double, dt: Double, rate: Double = 2.0): Double {
         return current + (target - current) * (rate * dt)
+    }
+
+    fun lerpColor(first: Int, second: Int, amount: Double): Int {
+        val red = lerpChannel(first shr 16 and 0xFF, second shr 16 and 0xFF, amount)
+        val green = lerpChannel(first shr 8 and 0xFF, second shr 8 and 0xFF, amount)
+        val blue = lerpChannel(first and 0xFF, second and 0xFF, amount)
+        return (red shl 16) or (green shl 8) or blue
+    }
+
+    fun lerpChannel(first: Int, second: Int, amount: Double): Int {
+        return (first + (second - first) * amount.coerceIn(0.0, 1.0))
+            .roundToInt().coerceIn(0, 255)
     }
 
     fun minOfPositive(first: Long, second: Long): Long {

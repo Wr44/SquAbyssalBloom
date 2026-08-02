@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.Biolu
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationSnapshot
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWaveField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -21,6 +22,7 @@ class BioluminescentZone(
     val anchor: BlockPos,
     val palette: BioluminescentPalette,
     val preset: BioluminescentZonePreset,
+    val activity: BioluminescentZoneActivity,
     initialCell: BioluminescentWaterCell,
     val createdAt: Long,
     val lifetime: Long,
@@ -35,6 +37,7 @@ class BioluminescentZone(
         palette
     )
     private val brightnessScale = brightnessScaleFromSeed()
+    private val movementWaves = BioluminescentMovementWaveField()
 
     var spatialData: BioluminescentZoneGenerationResult? = null
         private set
@@ -65,6 +68,12 @@ class BioluminescentZone(
 
     val targetVisibleCoverage: Double
         get() = generator?.targetVisibleCoverage ?: spatialData?.emissionField?.targetVisibleCoverage ?: 0.0
+
+    val activeMovementWaveCount: Int
+        get() = movementWaves.activeWaveCount
+
+    val movingEntityCount: Int
+        get() = movementWaves.movingSourceCount
 
     fun advanceGeneration(
         level: ClientLevel,
@@ -107,12 +116,16 @@ class BioluminescentZone(
     }
 
     fun temporalIntensityAt(renderGameTime: Double): Float {
-        val start = activatedAt ?: return 0.0f
-        val elapsed = (renderGameTime - start).coerceAtLeast(0.0)
-        val lifecycle = lifecycleIntensity(elapsed)
-        if (lifecycle <= 0.0) return 0.0f
+        val lifecycle = lifecycleIntensityAt(renderGameTime)
+        if (lifecycle <= 0.0f) return 0.0f
         return (lifecycle * brightnessScale)
             .toFloat().coerceIn(0.0f, MAXIMUM_RENDER_INTENSITY)
+    }
+
+    fun lifecycleIntensityAt(renderGameTime: Double): Float {
+        val start = activatedAt ?: return 0.0f
+        val elapsed = (renderGameTime - start).coerceAtLeast(0.0)
+        return lifecycleIntensity(elapsed).toFloat().coerceIn(0.0f, 1.0f)
     }
 
     fun localPulseIntensityAt(renderGameTime: Double, spatialPhase: Double): Float {
@@ -123,6 +136,29 @@ class BioluminescentZone(
         val easedWave = ModUtilities.smooth(0.0, 1.0, wave)
         return (MINIMUM_PULSE_INTENSITY +
             (MAXIMUM_PULSE_INTENSITY - MINIMUM_PULSE_INTENSITY) * easedWave).toFloat()
+    }
+
+    fun updateMovementWaves(level: ClientLevel, gameTime: Long) {
+        val data = spatialData ?: return
+        movementWaves.tick(level, data, gameTime)
+    }
+
+    fun movementWaveIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float {
+        return movementWaves.intensityAt(worldX, worldZ, renderGameTime)
+    }
+
+    fun movementWavesAffect(
+        minimumX: Double,
+        minimumZ: Double,
+        maximumX: Double,
+        maximumZ: Double,
+        renderGameTime: Double
+    ): Boolean {
+        return movementWaves.affects(minimumX, minimumZ, maximumX, maximumZ, renderGameTime)
+    }
+
+    fun movementWaveVisibilityStrength(): Double {
+        return movementWaves.visibilityStrength
     }
 
     fun isCompleteAt(gameTime: Long): Boolean {
@@ -142,6 +178,7 @@ class BioluminescentZone(
         spatialData?.tiles?.forEach(BioluminescentZoneTile::close)
         spatialData = null
         activatedAt = null
+        movementWaves.clear()
     }
 
     private fun lifecycleIntensity(elapsedTicks: Double): Double {
@@ -162,7 +199,7 @@ class BioluminescentZone(
     private companion object {
         const val PULSE_PERIOD_TICKS = 320.0
         const val MINIMUM_PULSE_INTENSITY = 0.30
-        const val MAXIMUM_PULSE_INTENSITY = 0.80
+        const val MAXIMUM_PULSE_INTENSITY = 0.70
         const val APPEARANCE_END = 0.20
         const val DISAPPEARANCE_START = 0.80
         const val MAXIMUM_RENDER_INTENSITY = 1.15f

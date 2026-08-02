@@ -3,11 +3,14 @@ package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise.BioluminescentRegionalNoiseSampler
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPaletteFamily
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalettes
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePresets
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneSize
 import net.minecraft.client.Minecraft
@@ -46,7 +49,8 @@ object BioluminescentZoneManager {
         data class Created(
             val anchor: BlockPos,
             val distance: Double,
-            val size: BioluminescentZoneSize
+            val size: BioluminescentZoneSize,
+            val activity: BioluminescentZoneActivity
         ) : SpawnResult
 
         data object NoCoastalSurface : SpawnResult
@@ -95,6 +99,9 @@ object BioluminescentZoneManager {
         val gameTime = level.gameTime
         removeFinishedAndDistantZones(player.x, player.z, gameTime)
         val generationAdvanced = advanceOneGeneration(level, gameTime)
+        zones.forEach { zone ->
+            if (zone.isReady) zone.updateMovementWaves(level, gameTime)
+        }
 
         if (isSpawnScanDue(gameTime)) {
             lastSpawnScanTick = gameTime
@@ -118,7 +125,8 @@ object BioluminescentZoneManager {
 
     fun spawnDebugZone(
         size: BioluminescentZoneSize,
-        paletteFamily: BioluminescentPaletteFamily
+        paletteFamily: BioluminescentPaletteFamily,
+        activity: BioluminescentZoneActivity = BioluminescentZoneActivity.ACTIVE
     ): SpawnResult {
         val minecraft = Minecraft.getInstance()
         val level = minecraft.level ?: return SpawnResult.NoLevel
@@ -156,8 +164,8 @@ object BioluminescentZoneManager {
             }
         }
         val candidate = bestCandidate ?: return SpawnResult.NoCoastalSurface
-        createZone(level, candidate, size, paletteFamily, level.gameTime, true)
-        return SpawnResult.Created(candidate.waterSurface, sqrt(bestDistanceSquared), size)
+        createZone(level, candidate, size, paletteFamily, activity, level.gameTime, true)
+        return SpawnResult.Created(candidate.waterSurface, sqrt(bestDistanceSquared), size, activity)
     }
 
     fun clearDebugZones(): Int {
@@ -172,6 +180,10 @@ object BioluminescentZoneManager {
         val report = ArrayList<String>()
         val globalTiles = zones.sumOf { it.generationSnapshot().preparedTiles }
         report.add("[Bio Debug] ${zones.size} zone(s), $globalTiles/$MAX_GLOBAL_TILES tuiles")
+        report.add(
+            "[Bio Debug] LOD=${BioluminescentZoneTile.lodDebugText()} px/bloc auto GPU progressif, " +
+                "champ=${BioluminescentEmissionField.PIXELS_PER_BLOCK} echantillons/bloc, statique"
+        )
         zones.forEachIndexed { index, zone ->
             val snapshot = zone.generationSnapshot()
             val data = zone.spatialData
@@ -184,7 +196,8 @@ object BioluminescentZoneManager {
             } ?: "${snapshot.geodesicRadius}/${snapshot.geodesicRadius + zone.preset.analysisMargin}"
             report.add(
                 "[Bio Debug] Z$index seed=$identifier ${zone.preset.size.commandName} " +
-                    "etat=${snapshot.stage} domaineLocal/analyse=$domainText rayonLocal/analyse=$radiusText " +
+                    "activite=${zone.activity.commandName} etat=${snapshot.stage} " +
+                    "domaineLocal/analyse=$domainText rayonLocal/analyse=$radiusText " +
                     "cpu=${formatMilliseconds(snapshot.cpuNanos)}ms"
             )
             if (data == null) {
@@ -226,6 +239,10 @@ object BioluminescentZoneManager {
             report.add(
                 "[Bio Debug]   alphaVisible=${percent(data.emissionField.averageVisibleAlpha)}, " +
                     "highlights=${percent(data.emissionField.highlightCoverage)}"
+            )
+            report.add(
+                "[Bio Debug]   interactions: sourcesMobiles=${zone.movingEntityCount}, " +
+                    "ondes=${zone.activeMovementWaveCount}"
             )
         }
         recentFailures.forEach { report.add("[Bio Debug] echec recent: $it") }
@@ -270,10 +287,11 @@ object BioluminescentZoneManager {
         } else if (zone.isReady && previousStage != BioluminescentZoneGenerationStage.READY) {
             val data = checkNotNull(zone.spatialData)
             SquAbyssalBloom.LOGGER.info(
-                "[Bioluminescence] Zone {} {} prete: {}/{} cellules locales/analysees, " +
+                "[Bioluminescence] Zone {} {} {} prete: {}/{} cellules locales/analysees, " +
                     "macro {}%, visible {}%, {} tuiles",
                 java.lang.Long.toUnsignedString(zone.zoneSeed, 16),
                 zone.preset.size.commandName,
+                zone.activity.commandName,
                 data.domain.localSize,
                 data.domain.size,
                 (data.macroField.achievedCoverage * 100.0).roundToInt(),
@@ -282,7 +300,8 @@ object BioluminescentZoneManager {
             )
             if (zone.requestedByCommand) {
                 displayGenerationMessage(
-                    "Zone ${zone.preset.size.commandName} prete: ${data.domain.localSize}/" +
+                    "Zone ${zone.preset.size.commandName} ${zone.activity.commandName} prete: " +
+                        "${data.domain.localSize}/" +
                         "${data.domain.size} cellules locales/analysees, " +
                         "${data.tiles.size} tuiles."
                 )
@@ -317,6 +336,7 @@ object BioluminescentZoneManager {
             candidate,
             chooseNaturalSize(random),
             BioluminescentPaletteFamily.RANDOM,
+            chooseNaturalActivity(random),
             gameTime,
             false
         )
@@ -327,6 +347,7 @@ object BioluminescentZoneManager {
         candidate: CoastalCandidate,
         size: BioluminescentZoneSize,
         paletteFamily: BioluminescentPaletteFamily,
+        activity: BioluminescentZoneActivity,
         gameTime: Long,
         requestedByCommand: Boolean
     ): BioluminescentZone {
@@ -344,6 +365,7 @@ object BioluminescentZoneManager {
             candidate.waterSurface,
             BioluminescentPalettes.select(zoneSeed, paletteFamily),
             BioluminescentZonePresets.forSize(size),
+            activity,
             candidate.initialCell,
             gameTime,
             lifetime,
@@ -352,9 +374,10 @@ object BioluminescentZoneManager {
         )
         zones.add(zone)
         SquAbyssalBloom.LOGGER.info(
-            "[Bioluminescence] Generation {} {} lancee a {} ({} cellules d'eau proches)",
+            "[Bioluminescence] Generation {} {} {} lancee a {} ({} cellules d'eau proches)",
             java.lang.Long.toUnsignedString(zoneSeed, 16),
             size.commandName,
+            activity.commandName,
             candidate.waterSurface,
             candidate.nearbyWaterCells
         )
@@ -489,6 +512,14 @@ object BioluminescentZoneManager {
         }
     }
 
+    private fun chooseNaturalActivity(random: XoroshiroRandomSource): BioluminescentZoneActivity {
+        return if (random.nextDouble() < NATURAL_INACTIVE_CHANCE) {
+            BioluminescentZoneActivity.INACTIVE
+        } else {
+            BioluminescentZoneActivity.ACTIVE
+        }
+    }
+
     private fun randomRingPosition(
         center: BlockPos,
         minimumDistance: Double,
@@ -533,6 +564,7 @@ object BioluminescentZoneManager {
     private const val SPAWN_SCAN_INTERVAL = 40L
     private const val NATURAL_SPAWN_ATTEMPTS = 8
     private const val BASE_SPAWN_CHANCE = 0.018
+    private const val NATURAL_INACTIVE_CHANCE = 0.45
     private const val SPAWN_SEARCH_MIN_DISTANCE = 8.0
     private const val SPAWN_SEARCH_MAX_DISTANCE = 48.0
     private const val DEBUG_SEARCH_MIN_DISTANCE = 4.0

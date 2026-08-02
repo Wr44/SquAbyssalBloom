@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPaletteFamily
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneSize
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
@@ -25,20 +26,46 @@ object BioluminescentClientCommands {
                 executeSpawn(
                     context.source,
                     BioluminescentZoneSize.MEDIUM,
-                    BioluminescentPaletteFamily.RANDOM
+                    BioluminescentPaletteFamily.RANDOM,
+                    BioluminescentZoneActivity.ACTIVE
                 )
             }
 
         for (size in BioluminescentZoneSize.entries) {
             val sizeNode = Commands.literal(size.commandName)
                 .executes { context ->
-                    executeSpawn(context.source, size, BioluminescentPaletteFamily.RANDOM)
+                    executeSpawn(
+                        context.source,
+                        size,
+                        BioluminescentPaletteFamily.RANDOM,
+                        BioluminescentZoneActivity.ACTIVE
+                    )
                 }
+            for (activity in BioluminescentZoneActivity.entries) {
+                val activityNode = Commands.literal(activity.commandName)
+                    .executes { context ->
+                        executeSpawn(context.source, size, BioluminescentPaletteFamily.RANDOM, activity)
+                    }
+                for (family in BioluminescentPaletteFamily.entries) {
+                    activityNode.then(
+                        Commands.literal(family.commandName)
+                            .executes { context -> executeSpawn(context.source, size, family, activity) }
+                    )
+                }
+                sizeNode.then(activityNode)
+            }
             for (family in BioluminescentPaletteFamily.entries) {
-                sizeNode.then(
-                    Commands.literal(family.commandName)
-                        .executes { context -> executeSpawn(context.source, size, family) }
-                )
+                val familyNode = Commands.literal(family.commandName)
+                    .executes { context ->
+                        executeSpawn(context.source, size, family, BioluminescentZoneActivity.ACTIVE)
+                    }
+                for (activity in BioluminescentZoneActivity.entries) {
+                    familyNode.then(
+                        Commands.literal(activity.commandName)
+                            .executes { context -> executeSpawn(context.source, size, family, activity) }
+                    )
+                }
+                sizeNode.then(familyNode)
             }
             spawn.then(sizeNode)
         }
@@ -71,14 +98,15 @@ object BioluminescentClientCommands {
     private fun executeSpawn(
         source: CommandSourceStack,
         size: BioluminescentZoneSize,
-        family: BioluminescentPaletteFamily
+        family: BioluminescentPaletteFamily,
+        activity: BioluminescentZoneActivity
     ): Int {
-        return when (val result = BioluminescentZoneManager.spawnDebugZone(size, family)) {
+        return when (val result = BioluminescentZoneManager.spawnDebugZone(size, family, activity)) {
             is BioluminescentZoneManager.SpawnResult.Created -> {
                 source.sendSuccess(
                     {
                         Component.literal(
-                            "Generation ${result.size.commandName} lancee a " +
+                            "Generation ${result.size.commandName} ${result.activity.commandName} lancee a " +
                                 "${result.distance.roundToInt()} blocs."
                         )
                     },

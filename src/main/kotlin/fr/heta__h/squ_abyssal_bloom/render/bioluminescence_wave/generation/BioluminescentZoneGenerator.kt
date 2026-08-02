@@ -377,7 +377,7 @@ class BioluminescentZoneGenerator(
         const val TILE_PREPARATION_BUDGET = 1
         const val TILE_UPLOAD_BUDGET = 1
         const val MAXIMUM_WORK_STEPS_PER_TICK = 4
-        const val GENERATION_TIME_SLICE_NANOS = 8_000_000L
+        const val GENERATION_TIME_SLICE_NANOS = 4_000_000L
         const val MINIMUM_MACRO_COMPONENT_RATIO = 0.95
         const val RADIUS_SALT = 0x7137449123EF65CDL
         const val MACRO_COVERAGE_SALT = 0x428A2F98D728AE22L

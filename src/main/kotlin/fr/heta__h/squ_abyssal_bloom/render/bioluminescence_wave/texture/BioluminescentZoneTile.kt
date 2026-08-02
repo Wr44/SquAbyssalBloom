@@ -1,10 +1,10 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture
 
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.renderer.rendertype.RenderSetup
 import net.minecraft.client.renderer.rendertype.RenderType
-import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.client.renderer.texture.TextureManager
 import net.minecraft.resources.Identifier
 import net.minecraft.world.level.levelgen.RandomSupport
@@ -19,11 +19,11 @@ class BioluminescentZoneTile private constructor(
     val originZ: Int,
     val renderQuads: List<RenderQuad>,
     val bounds: AABB,
-    private val texture: DynamicTexture,
+    private val texture: BioluminescentDynamicTexture,
     private var preparedPixels: IntArray?
 ) : AutoCloseable {
     val renderType: RenderType = createRenderType(identifier)
-    val pixelCount: Int = TEXTURE_SIZE * TEXTURE_SIZE
+    val pixelCount: Int = texture.pixelCount
 
     var uploaded: Boolean = false
         private set
@@ -32,6 +32,26 @@ class BioluminescentZoneTile private constructor(
         private set
 
     private var closed = false
+    private var movementFadeStrength: Double = 0.0
+    private var lastMovementFadeNanos: Long = 0L
+
+    fun updateMovementFade(targetVisible: Boolean): Float {
+        val now = System.nanoTime()
+        val dt = if (lastMovementFadeNanos == 0L) {
+            0.0
+        } else {
+            ((now - lastMovementFadeNanos) / 1_000_000_000.0).coerceAtMost(0.1)
+        }
+        lastMovementFadeNanos = now
+        val target = if (targetVisible) 1.0 else 0.0
+        movementFadeStrength = ModUtilities.smoothTowards(
+            movementFadeStrength,
+            target,
+            dt,
+            MOVEMENT_FADE_RATE
+        ).coerceIn(0.0, 1.0)
+        return movementFadeStrength.toFloat()
+    }
 
     fun uAt(localBlockX: Int): Float {
         return (GUTTER_PIXELS + localBlockX * PIXELS_PER_BLOCK).toFloat() / TEXTURE_SIZE
@@ -51,14 +71,7 @@ class BioluminescentZoneTile private constructor(
         check(!closed)
         if (uploaded) return
         val source = checkNotNull(preparedPixels)
-        val pixels = texture.pixels
-        for (pixelZ in 0 until TEXTURE_SIZE) {
-            val rowOffset = pixelZ * TEXTURE_SIZE
-            for (pixelX in 0 until TEXTURE_SIZE) {
-                pixels.setPixel(pixelX, pixelZ, source[rowOffset + pixelX])
-            }
-        }
-        texture.upload()
+        texture.upload(source)
         preparedPixels = null
         uploaded = true
         uploadCount++
@@ -81,12 +94,15 @@ class BioluminescentZoneTile private constructor(
         val southWestPulsePhase: Double,
         val southEastPulsePhase: Double,
         val northEastPulsePhase: Double
-    )
+    ) {
+        var lastRenderTop: Boolean? = null
+    }
 
     companion object {
         const val TILE_SIZE = 32
-        const val PIXELS_PER_BLOCK = BioluminescentEmissionField.PIXELS_PER_BLOCK
-        const val GUTTER_PIXELS = 1
+        const val PIXELS_PER_BLOCK = 8
+        const val MIP_LEVELS = 4
+        const val GUTTER_PIXELS = 1 shl (MIP_LEVELS - 1)
         const val INNER_TEXTURE_SIZE = TILE_SIZE * PIXELS_PER_BLOCK
         const val TEXTURE_SIZE = INNER_TEXTURE_SIZE + GUTTER_PIXELS * 2
 
@@ -285,5 +301,12 @@ class BioluminescentZoneTile private constructor(
         private const val PULSE_PHASE_SEED_SALT = 0x510E527FADE682D1L
         private const val PULSE_WARP_SEED_SALT = 0x1F83D9ABFB41BD6BL
         private const val PULSE_MESH_SIZE = 4
+        private const val MOVEMENT_FADE_RATE = 3.0
+
+        fun lodDebugText(): String {
+            return (0 until MIP_LEVELS).joinToString(">") { level ->
+                maxOf(1, PIXELS_PER_BLOCK shr level).toString()
+            }
+        }
     }
 }
