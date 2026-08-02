@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field
 
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
+
 class BioluminescentEmissionField internal constructor(
     val domain: BioluminescentWaterDomain,
     val macroField: BioluminescentMacroField,
@@ -15,6 +16,11 @@ class BioluminescentEmissionField internal constructor(
     private val spatialColors: IntArray,
     private val luminousCells: BooleanArray
 ) {
+    companion object {
+        const val PIXELS_PER_BLOCK = 4
+        private const val PIXELS_PER_CELL = PIXELS_PER_BLOCK * PIXELS_PER_BLOCK
+    }
+
     val pixelCount: Int
         get() = spatialAlpha.size
 
@@ -22,11 +28,6 @@ class BioluminescentEmissionField internal constructor(
         get() = if (luminousPixelCount == 0) 0.0 else {
             highlightPixelCount.toDouble() / luminousPixelCount
         }
-
-    companion object {
-        const val PIXELS_PER_BLOCK = 4
-        private const val PIXELS_PER_CELL = PIXELS_PER_BLOCK * PIXELS_PER_BLOCK
-    }
 
     fun hasLuminousCell(cellIndex: Int): Boolean = luminousCells[cellIndex]
 

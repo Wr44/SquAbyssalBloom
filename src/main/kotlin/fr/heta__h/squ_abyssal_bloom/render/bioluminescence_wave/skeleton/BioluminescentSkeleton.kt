@@ -10,6 +10,10 @@ class BioluminescentSkeleton internal constructor(
     private val nearestWorldZ: IntArray,
     private val nearestWidth: FloatArray
 ) {
+    companion object {
+        const val CONNECTION_FALLOFF = 0.95
+    }
+
     val connectionCount: Int
         get() = paths.size
 
@@ -18,11 +22,8 @@ class BioluminescentSkeleton internal constructor(
         val width = nearestWidth[cellIndex].toDouble().coerceAtLeast(0.25)
         val deltaX = worldX - (nearestWorldX[cellIndex] + 0.5)
         val deltaZ = worldZ - (nearestWorldZ[cellIndex] + 0.5)
-        val distanceSquared = deltaX * deltaX + deltaZ * deltaZ
-        return exp(-CONNECTION_FALLOFF * distanceSquared / (width * width))
+        val distanceSqr = deltaX * deltaX + deltaZ * deltaZ
+        return exp(-CONNECTION_FALLOFF * distanceSqr / (width * width))
     }
 
-    private companion object {
-        const val CONNECTION_FALLOFF = 0.95
-    }
 }

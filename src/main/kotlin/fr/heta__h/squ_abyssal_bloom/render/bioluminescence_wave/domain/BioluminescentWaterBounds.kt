@@ -1,19 +1,19 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain
 
 data class BioluminescentWaterBounds(
-    val minimumX: Int,
-    val minimumY: Int,
-    val minimumZ: Int,
-    val maximumX: Int,
-    val maximumY: Int,
-    val maximumZ: Int
+    val minX: Int,
+    val minY: Int,
+    val minZ: Int,
+    val maxX: Int,
+    val maxY: Int,
+    val maxZ: Int
 ) {
     val width: Int
-        get() = maximumX - minimumX + 1
+        get() = maxX - minX + 1
 
     val length: Int
-        get() = maximumZ - minimumZ + 1
+        get() = maxZ - minZ + 1
 
     val debugText: String
-        get() = "$minimumX,$minimumY,$minimumZ -> $maximumX,$maximumY,$maximumZ"
+        get() = "$minX,$minY,$minZ -> $maxX,$maxY,$maxZ"
 }

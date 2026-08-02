@@ -89,10 +89,16 @@ object AbyssDepthCache {
             return
         }
 
-        val targetFactor = smoothedDepthFactor + ((cachedRawDepthFactor - smoothedDepthFactor) * (2.0 * dt))
-        smoothedDepthFactor = targetFactor.coerceIn(0.0, 1.0)
-
-        smoothedPhysicalDepth += (cachedPhysicalDepth - smoothedPhysicalDepth) * (2.0 * dt)
+        smoothedDepthFactor = ModUtilities.smoothTowards(
+            smoothedDepthFactor,
+            cachedRawDepthFactor,
+            dt
+        ).coerceIn(0.0, 1.0)
+        smoothedPhysicalDepth = ModUtilities.smoothTowards(
+            smoothedPhysicalDepth,
+            cachedPhysicalDepth,
+            dt
+        )
         smoothedAmbientFogRepellerInfluence = ModUtilities.smoothTowards(smoothedAmbientFogRepellerInfluence, cachedAmbientFogRepellerInfluence, dt)
         smoothedFogPlaneRepellerInfluence = ModUtilities.smoothTowards(smoothedFogPlaneRepellerInfluence, cachedFogPlaneRepellerInfluence, dt)
 

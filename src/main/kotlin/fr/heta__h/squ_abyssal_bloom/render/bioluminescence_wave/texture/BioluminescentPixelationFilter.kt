@@ -5,7 +5,10 @@ import kotlin.math.floor
 import kotlin.math.roundToInt
 
 internal object BioluminescentPixelationFilter {
-    fun apply(
+    private const val MAX_ALPHA_LEVEL = 15
+    private const val MIN_COLOR_WEIGHT = 1.0e-6
+
+    fun begin(
         emission: BioluminescentEmissionField,
         originX: Int,
         originZ: Int,
@@ -13,59 +16,55 @@ internal object BioluminescentPixelationFilter {
         gutterPixels: Int,
         pixelsPerBlock: Int,
         destination: IntArray
-    ) {
+    ): BioluminescentPixelationContext {
         require(destination.size == textureSize * textureSize)
-        val minimumWorldPixelX = originX * pixelsPerBlock - gutterPixels
-        val minimumWorldPixelZ = originZ * pixelsPerBlock - gutterPixels
+        val minWorldPixelX = originX * pixelsPerBlock - gutterPixels
+        val minWorldPixelZ = originZ * pixelsPerBlock - gutterPixels
         val sourcePixelsPerBlock = BioluminescentEmissionField.PIXELS_PER_BLOCK
         val sourceScale = sourcePixelsPerBlock.toDouble() / pixelsPerBlock
         val lowerSampleX = IntArray(textureSize)
         val lowerSampleZ = IntArray(textureSize)
         val fractionX = DoubleArray(textureSize)
         val fractionZ = DoubleArray(textureSize)
-        prepareCoordinates(minimumWorldPixelX, sourceScale, lowerSampleX, fractionX)
-        prepareCoordinates(minimumWorldPixelZ, sourceScale, lowerSampleZ, fractionZ)
+        prepareCoordinates(minWorldPixelX, sourceScale, lowerSampleX, fractionX)
+        prepareCoordinates(minWorldPixelZ, sourceScale, lowerSampleZ, fractionZ)
 
-        val minimumSampleX = lowerSampleX.min()
-        val minimumSampleZ = lowerSampleZ.min()
-        val maximumSampleX = lowerSampleX.max() + 1
-        val maximumSampleZ = lowerSampleZ.max() + 1
-        val sampleWidth = maximumSampleX - minimumSampleX + 1
-        val sampleHeight = maximumSampleZ - minimumSampleZ + 1
+        val minSampleX = lowerSampleX.min()
+        val minSampleZ = lowerSampleZ.min()
+        val maxSampleX = lowerSampleX.max() + 1
+        val maxSampleZ = lowerSampleZ.max() + 1
+        val sampleWidth = maxSampleX - minSampleX + 1
+        val sampleHeight = maxSampleZ - minSampleZ + 1
         val samples = LongArray(sampleWidth * sampleHeight)
-        for (sampleZ in minimumSampleZ..maximumSampleZ) {
-            val rowOffset = (sampleZ - minimumSampleZ) * sampleWidth
-            for (sampleX in minimumSampleX..maximumSampleX) {
-                samples[rowOffset + sampleX - minimumSampleX] = sampleAt(emission, sampleX, sampleZ)
+        for (sampleZ in minSampleZ..maxSampleZ) {
+            val rowOffset = (sampleZ - minSampleZ) * sampleWidth
+            for (sampleX in minSampleX..maxSampleX) {
+                samples[rowOffset + sampleX - minSampleX] = sampleAt(emission, sampleX, sampleZ)
             }
         }
 
-        for (pixelZ in 0 until textureSize) {
-            val sampleZ = lowerSampleZ[pixelZ] - minimumSampleZ
-            val sampleRow = sampleZ * sampleWidth
-            val nextSampleRow = sampleRow + sampleWidth
-            for (pixelX in 0 until textureSize) {
-                val sampleX = lowerSampleX[pixelX] - minimumSampleX
-                destination[pixelZ * textureSize + pixelX] = interpolate(
-                    samples[sampleRow + sampleX],
-                    samples[sampleRow + sampleX + 1],
-                    samples[nextSampleRow + sampleX],
-                    samples[nextSampleRow + sampleX + 1],
-                    fractionX[pixelX],
-                    fractionZ[pixelZ]
-                )
-            }
-        }
+        return BioluminescentPixelationContext(
+            samples,
+            sampleWidth,
+            minSampleX,
+            minSampleZ,
+            lowerSampleX,
+            lowerSampleZ,
+            fractionX,
+            fractionZ,
+            textureSize,
+            destination
+        )
     }
 
     private fun prepareCoordinates(
-        minimumWorldPixel: Int,
+        minWorldPixel: Int,
         sourceScale: Double,
         lowerSamples: IntArray,
         fractions: DoubleArray
     ) {
         for (pixel in lowerSamples.indices) {
-            val sourceCoordinate = (minimumWorldPixel + pixel + 0.5) * sourceScale - 0.5
+            val sourceCoordinate = (minWorldPixel + pixel + 0.5) * sourceScale - 0.5
             val lower = floor(sourceCoordinate).toInt()
             lowerSamples[pixel] = lower
             fractions[pixel] = sourceCoordinate - lower
@@ -88,7 +87,7 @@ internal object BioluminescentPixelationFilter {
         return (alphaBits shl 32) or color
     }
 
-    private fun interpolate(
+    internal fun interpolate(
         northWest: Long,
         northEast: Long,
         southWest: Long,
@@ -110,10 +109,10 @@ internal object BioluminescentPixelationFilter {
             northEastAlpha * northEastWeight +
             southWestAlpha * southWestWeight +
             southEastAlpha * southEastWeight
-        val alphaLevel = (weightedAlpha * MAXIMUM_ALPHA_LEVEL)
-            .roundToInt().coerceIn(0, MAXIMUM_ALPHA_LEVEL)
+        val alphaLevel = (weightedAlpha * MAX_ALPHA_LEVEL)
+            .roundToInt().coerceIn(0, MAX_ALPHA_LEVEL)
         if (alphaLevel == 0) return 0
-        val colorWeight = weightedAlpha.coerceAtLeast(MINIMUM_COLOR_WEIGHT)
+        val colorWeight = weightedAlpha.coerceAtLeast(MIN_COLOR_WEIGHT)
         val red = weightedChannel(
             northWest,
             northEast,
@@ -150,7 +149,7 @@ internal object BioluminescentPixelationFilter {
             0,
             colorWeight
         )
-        val outputAlpha = alphaLevel * 255 / MAXIMUM_ALPHA_LEVEL
+        val outputAlpha = alphaLevel * 255 / MAX_ALPHA_LEVEL
         return (outputAlpha shl 24) or (red shl 16) or (green shl 8) or blue
     }
 
@@ -181,6 +180,4 @@ internal object BioluminescentPixelationFilter {
         return (sample ushr shift).toInt() and 0xFF
     }
 
-    private const val MAXIMUM_ALPHA_LEVEL = 15
-    private const val MINIMUM_COLOR_WEIGHT = 1.0e-6
 }

@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.BioluminescentZoneDynamicLights
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
@@ -13,6 +13,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.Bioluminesc
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePresets
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneSize
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
@@ -29,7 +30,9 @@ import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.client.event.lifecycle.ClientStoppingEvent
 import net.neoforged.neoforge.event.level.LevelEvent
+import java.util.ArrayDeque
 import kotlin.math.PI
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -40,10 +43,30 @@ import kotlin.math.sqrt
     value = [Dist.CLIENT]
 )
 object BioluminescentZoneManager {
-    const val MAX_ACTIVE_ZONES = 2
-    const val MAX_GLOBAL_TILES = 128
-    const val MIN_DISTANCE_BETWEEN_ZONES = 48.0
-    const val REMOVAL_DISTANCE = 96.0
+    private const val MAX_ACTIVE_ZONES = 2
+    private const val MAX_GLOBAL_TILES = 128
+    private const val MIN_DISTANCE_BETWEEN_ZONES = 48.0
+    private const val REMOVAL_DISTANCE = 96.0
+    private const val SPAWN_SCAN_INTERVAL = 40L
+    private const val NATURAL_SPAWN_ATTEMPTS = 8
+    private const val BASE_SPAWN_CHANCE = 0.018
+    private const val NATURAL_INACTIVE_CHANCE = 0.45
+    private const val SPAWN_SEARCH_MIN_DISTANCE = 8.0
+    private const val SPAWN_SEARCH_MAX_DISTANCE = 48.0
+    private const val DEBUG_SEARCH_MIN_DISTANCE = 4.0
+    private const val DEBUG_SPAWN_ATTEMPTS = 20
+    private const val CANDIDATE_SEARCH_RADIUS = 4
+    private const val CANDIDATE_VERTICAL_RADIUS = 8
+    private const val CANDIDATE_SAMPLE_RADIUS = 8
+    private const val MIN_NEARBY_WATER_CELLS = 16
+    private const val WATER_LEVEL_TOLERANCE = 3
+    private const val MIN_ZONE_LIFETIME = 600L
+    private const val MAX_ZONE_LIFETIME = 1200L
+    private const val MAX_RETAINED_FAILURES = 6
+    private const val TEMPORAL_RANDOM_SALT = 0x5BE0CD19137E2179L
+    private const val ZONE_SEED_SALT = 0x428A2F98D728AE22L
+    private const val LIFETIME_SALT = 0x7137449123EF65CDL
+    private const val COLOR_PHASE_SALT = 0x3956C25BF348B538L
 
     sealed interface SpawnResult {
         data class Created(
@@ -66,7 +89,7 @@ object BioluminescentZoneManager {
     )
 
     private val zones = mutableListOf<BioluminescentZone>()
-    private val recentFailures = java.util.ArrayDeque<String>()
+    private val recentFailures = ArrayDeque<String>()
 
     val activeZones: List<BioluminescentZone>
         get() = zones
@@ -102,6 +125,7 @@ object BioluminescentZoneManager {
         zones.forEach { zone ->
             if (zone.isReady) zone.updateMovementWaves(level, gameTime)
         }
+        BioluminescentZoneDynamicLights.updateDynamicState(zones, gameTime)
 
         if (isSpawnScanDue(gameTime)) {
             lastSpawnScanTick = gameTime
@@ -141,8 +165,8 @@ object BioluminescentZoneManager {
             player.blockPosition().x,
             player.blockPosition().z
         )?.takeIf(::isFarEnoughFromOtherZones)
-        var bestDistanceSquared = bestCandidate?.let { candidate ->
-            horizontalDistanceSquared(candidate.waterSurface, player.x, player.z)
+        var bestDistanceSqr = bestCandidate?.let { candidate ->
+            horizontalDistanceSqr(candidate.waterSurface, player.x, player.z)
         } ?: Double.POSITIVE_INFINITY
         var bestWaterCellCount = bestCandidate?.nearbyWaterCells ?: -1
         repeat(DEBUG_SPAWN_ATTEMPTS) {
@@ -153,19 +177,19 @@ object BioluminescentZoneManager {
                 random
             )
             val candidate = findCoastalCandidateNear(level, position.x, position.z) ?: return@repeat
-            val distanceSquared = horizontalDistanceSquared(candidate.waterSurface, player.x, player.z)
+            val distanceSqr = horizontalDistanceSqr(candidate.waterSurface, player.x, player.z)
             if (isFarEnoughFromOtherZones(candidate) &&
                 (candidate.nearbyWaterCells > bestWaterCellCount ||
-                    candidate.nearbyWaterCells == bestWaterCellCount && distanceSquared < bestDistanceSquared)
+                    candidate.nearbyWaterCells == bestWaterCellCount && distanceSqr < bestDistanceSqr)
             ) {
                 bestCandidate = candidate
-                bestDistanceSquared = distanceSquared
+                bestDistanceSqr = distanceSqr
                 bestWaterCellCount = candidate.nearbyWaterCells
             }
         }
         val candidate = bestCandidate ?: return SpawnResult.NoCoastalSurface
         createZone(level, candidate, size, paletteFamily, activity, level.gameTime, true)
-        return SpawnResult.Created(candidate.waterSurface, sqrt(bestDistanceSquared), size, activity)
+        return SpawnResult.Created(candidate.waterSurface, sqrt(bestDistanceSqr), size, activity)
     }
 
     fun clearDebugZones(): Int {
@@ -180,6 +204,9 @@ object BioluminescentZoneManager {
         val report = ArrayList<String>()
         val globalTiles = zones.sumOf { it.generationSnapshot().preparedTiles }
         report.add("[Bio Debug] ${zones.size} zone(s), $globalTiles/$MAX_GLOBAL_TILES tuiles")
+        report.add(
+            "[Bio Debug] lumieres dynamiques: ${BioluminescentZoneDynamicLights.totalRegisteredLightCount()}"
+        )
         report.add(
             "[Bio Debug] LOD=${BioluminescentZoneTile.lodDebugText()} px/bloc auto GPU progressif, " +
                 "champ=${BioluminescentEmissionField.PIXELS_PER_BLOCK} echantillons/bloc, statique"
@@ -242,7 +269,8 @@ object BioluminescentZoneManager {
             )
             report.add(
                 "[Bio Debug]   interactions: sourcesMobiles=${zone.movingEntityCount}, " +
-                    "ondes=${zone.activeMovementWaveCount}"
+                    "ondes=${zone.activeMovementWaveCount}, " +
+                    "lumieres=${BioluminescentZoneDynamicLights.registeredLightCount(zone)}"
             )
         }
         recentFailures.forEach { report.add("[Bio Debug] echec recent: $it") }
@@ -281,10 +309,12 @@ object BioluminescentZoneManager {
                     "Echec de la generation ${zone.preset.size.commandName}: $reason"
                 )
             }
+            BioluminescentZoneDynamicLights.onZoneRemoved(zone)
             zones.remove(zone)
             zone.close()
             generationRoundRobin = 0
         } else if (zone.isReady && previousStage != BioluminescentZoneGenerationStage.READY) {
+            BioluminescentZoneDynamicLights.onZoneReady(zone)
             val data = checkNotNull(zone.spatialData)
             SquAbyssalBloom.LOGGER.info(
                 "[Bioluminescence] Zone {} {} {} prete: {}/{} cellules locales/analysees, " +
@@ -357,9 +387,11 @@ object BioluminescentZoneManager {
                 RandomSupport.mixStafford13(spawnCounter xor ZONE_SEED_SALT)
         )
         val random = XoroshiroRandomSource(RandomSupport.mixStafford13(zoneSeed xor LIFETIME_SALT))
-        val lifetime = MINIMUM_ZONE_LIFETIME +
-            random.nextInt((MAXIMUM_ZONE_LIFETIME - MINIMUM_ZONE_LIFETIME + 1L).toInt())
-        val colorPhase = stableUnitValue(RandomSupport.mixStafford13(zoneSeed xor COLOR_PHASE_SALT)) * PI * 2.0
+        val lifetime = MIN_ZONE_LIFETIME +
+            random.nextInt((MAX_ZONE_LIFETIME - MIN_ZONE_LIFETIME + 1L).toInt())
+        val colorPhase = ModUtilities.stableUnitValue(
+            RandomSupport.mixStafford13(zoneSeed xor COLOR_PHASE_SALT)
+        ) * PI * 2.0
         val zone = BioluminescentZone(
             zoneSeed,
             candidate.waterSurface,
@@ -400,7 +432,7 @@ object BioluminescentZoneManager {
             ModUtilities.getFluidSurfaceHeight(level, waterSurface)
         )
         val nearbyWater = countNearbyWaterCells(level, waterSurface)
-        if (nearbyWater < MINIMUM_NEARBY_WATER_CELLS) return null
+        if (nearbyWater < MIN_NEARBY_WATER_CELLS) return null
         return CoastalCandidate(waterSurface, initialCell, nearbyWater)
     }
 
@@ -419,7 +451,7 @@ object BioluminescentZoneManager {
                     maxOf(level.minY, anchor.y - WATER_LEVEL_TOLERANCE)
                 ) ?: continue
                 val top = ModUtilities.findTopWaterBlock(level, water) ?: continue
-                if (kotlin.math.abs(top.y - anchor.y) <= WATER_LEVEL_TOLERANCE &&
+                if (abs(top.y - anchor.y) <= WATER_LEVEL_TOLERANCE &&
                     ModUtilities.isRenderableWaterSurface(level, top)
                 ) count++
             }
@@ -432,12 +464,13 @@ object BioluminescentZoneManager {
         playerZ: Double,
         gameTime: Long
     ) {
-        val maximumDistanceSquared = REMOVAL_DISTANCE * REMOVAL_DISTANCE
+        val maxDistanceSqr = REMOVAL_DISTANCE * REMOVAL_DISTANCE
         for (index in zones.indices.reversed()) {
             val zone = zones[index]
-            if (zone.horizontalDistanceSquared(playerX, playerZ) <= maximumDistanceSquared &&
+            if (zone.horizontalDistanceSqr(playerX, playerZ) <= maxDistanceSqr &&
                 !zone.isCompleteAt(gameTime)
             ) continue
+            BioluminescentZoneDynamicLights.onZoneRemoved(zone)
             zones.removeAt(index)
             zone.close()
         }
@@ -474,6 +507,7 @@ object BioluminescentZoneManager {
         if (zones.isEmpty()) return
         zones.forEach(BioluminescentZone::close)
         zones.clear()
+        BioluminescentZoneDynamicLights.clear()
         generationRoundRobin = 0
         SquAbyssalBloom.LOGGER.debug("[Bioluminescence] Toutes les zones supprimees ({})", reason)
     }
@@ -496,10 +530,10 @@ object BioluminescentZoneManager {
     }
 
     private fun isFarEnoughFromOtherZones(candidate: CoastalCandidate): Boolean {
-        val minimumDistanceSquared = MIN_DISTANCE_BETWEEN_ZONES * MIN_DISTANCE_BETWEEN_ZONES
+        val minDistanceSqr = MIN_DISTANCE_BETWEEN_ZONES * MIN_DISTANCE_BETWEEN_ZONES
         return zones.all { zone ->
-            horizontalDistanceSquared(candidate.waterSurface, zone.anchor.x + 0.5, zone.anchor.z + 0.5) >=
-                minimumDistanceSquared
+            horizontalDistanceSqr(candidate.waterSurface, zone.anchor.x + 0.5, zone.anchor.z + 0.5) >=
+                minDistanceSqr
         }
     }
 
@@ -522,14 +556,14 @@ object BioluminescentZoneManager {
 
     private fun randomRingPosition(
         center: BlockPos,
-        minimumDistance: Double,
-        maximumDistance: Double,
+        minDistance: Double,
+        maxDistance: Double,
         random: XoroshiroRandomSource
     ): BlockPos {
         val angle = random.nextDouble() * PI * 2.0
-        val minimumSquared = minimumDistance * minimumDistance
-        val maximumSquared = maximumDistance * maximumDistance
-        val distance = sqrt(minimumSquared + random.nextDouble() * (maximumSquared - minimumSquared))
+        val minSqr = minDistance * minDistance
+        val maxSqr = maxDistance * maxDistance
+        val distance = sqrt(minSqr + random.nextDouble() * (maxSqr - minSqr))
         return BlockPos(
             (center.x + cos(angle) * distance).roundToInt(),
             center.y,
@@ -537,10 +571,13 @@ object BioluminescentZoneManager {
         )
     }
 
-    private fun horizontalDistanceSquared(position: BlockPos, worldX: Double, worldZ: Double): Double {
-        val deltaX = position.x + 0.5 - worldX
-        val deltaZ = position.z + 0.5 - worldZ
-        return deltaX * deltaX + deltaZ * deltaZ
+    private fun horizontalDistanceSqr(position: BlockPos, worldX: Double, worldZ: Double): Double {
+        return ModUtilities.horizontalDistanceSqr(
+            position.x + 0.5,
+            position.z + 0.5,
+            worldX,
+            worldZ
+        )
     }
 
     private fun nextTextureIdentifier(): Identifier {
@@ -551,34 +588,10 @@ object BioluminescentZoneManager {
         )
     }
 
-    private fun stableUnitValue(value: Long): Double {
-        return ((value ushr 40) and 0xFFFFFFL).toDouble() / 0xFFFFFFL.toDouble()
-    }
-
     private fun percent(value: Double): String = "${(value * 100.0).roundToInt()}%"
 
     private fun formatMilliseconds(nanos: Long): String = "%.2f".format(nanos / 1_000_000.0)
 
     private fun formatDecimal(value: Double): String = "%.4f".format(value)
 
-    private const val SPAWN_SCAN_INTERVAL = 40L
-    private const val NATURAL_SPAWN_ATTEMPTS = 8
-    private const val BASE_SPAWN_CHANCE = 0.018
-    private const val NATURAL_INACTIVE_CHANCE = 0.45
-    private const val SPAWN_SEARCH_MIN_DISTANCE = 8.0
-    private const val SPAWN_SEARCH_MAX_DISTANCE = 48.0
-    private const val DEBUG_SEARCH_MIN_DISTANCE = 4.0
-    private const val DEBUG_SPAWN_ATTEMPTS = 20
-    private const val CANDIDATE_SEARCH_RADIUS = 4
-    private const val CANDIDATE_VERTICAL_RADIUS = 8
-    private const val CANDIDATE_SAMPLE_RADIUS = 8
-    private const val MINIMUM_NEARBY_WATER_CELLS = 16
-    private const val WATER_LEVEL_TOLERANCE = 3
-    private const val MINIMUM_ZONE_LIFETIME = 600L
-    private const val MAXIMUM_ZONE_LIFETIME = 1200L
-    private const val MAX_RETAINED_FAILURES = 6
-    private const val TEMPORAL_RANDOM_SALT = 0x5BE0CD19137E2179L
-    private const val ZONE_SEED_SALT = 0x428A2F98D728AE22L
-    private const val LIFETIME_SALT = 0x7137449123EF65CDL
-    private const val COLOR_PHASE_SALT = 0x3956C25BF348B538L
 }

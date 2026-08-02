@@ -1,9 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.core
 
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.pow
+import kotlin.math.sin
 
 class BioluminescentCore internal constructor(
     val cellIndex: Int,
@@ -23,9 +25,10 @@ class BioluminescentCore internal constructor(
         const val CRESCENT_CUT_STRENGTH = 0.92
     }
 
+    private val cosine = cos(rotationRadians)
+    private val sine = sin(rotationRadians)
+
     fun influenceAt(sampleX: Double, sampleZ: Double): Double {
-        val cosine = kotlin.math.cos(rotationRadians)
-        val sine = kotlin.math.sin(rotationRadians)
         val deltaX = sampleX - worldX
         val deltaZ = sampleZ - worldZ
         val localX = deltaX * cosine + deltaZ * sine
@@ -41,8 +44,8 @@ class BioluminescentCore internal constructor(
     }
 
     private fun gaussianEllipse(x: Double, z: Double, xRadius: Double, zRadius: Double): Double {
-        val distanceSquared = x * x / (xRadius * xRadius) + z * z / (zRadius * zRadius)
-        return exp(-falloff * distanceSquared)
+        val distanceSqr = x * x / (xRadius * xRadius) + z * z / (zRadius * zRadius)
+        return exp(-falloff * distanceSqr)
     }
 
     private fun superellipse(x: Double, z: Double): Double {
@@ -54,9 +57,9 @@ class BioluminescentCore internal constructor(
     private fun elongated(x: Double, z: Double): Double {
         val straightLength = radiusX * 0.58
         val axialDistance = max(abs(x) - straightLength, 0.0)
-        val distanceSquared = axialDistance * axialDistance / (radiusX * radiusX * 0.20) +
+        val distanceSqr = axialDistance * axialDistance / (radiusX * radiusX * 0.20) +
             z * z / (radiusZ * radiusZ)
-        return exp(-falloff * distanceSquared)
+        return exp(-falloff * distanceSqr)
     }
 
     private fun clustered(x: Double, z: Double): Double {
@@ -83,4 +86,5 @@ class BioluminescentCore internal constructor(
         )
         return outer * (1.0 - inner * CRESCENT_CUT_STRENGTH)
     }
+
 }

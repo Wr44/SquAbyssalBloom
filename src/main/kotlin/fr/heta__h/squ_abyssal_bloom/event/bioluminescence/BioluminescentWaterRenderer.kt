@@ -20,11 +20,22 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent
     value = [Dist.CLIENT]
 )
 object BioluminescentWaterRenderer {
+
     private const val SURFACE_OFFSET = 0.004
     private const val FULL_BRIGHT_LIGHTMAP = 15728880
     private const val RENDER_DISTANCE = 96.0
-    private const val MAXIMUM_TEMPORAL_ALPHA = 179
+    private const val MAX_TEMPORAL_ALPHA = 179
     private const val VISIBILITY_EPSILON = 0.01
+    private const val WHITE_COLOR = 0xFFFFFF
+    private const val WAVE_HIGHLIGHT_COLOR = 0x8A2BE2
+    private const val HIGHLIGHT_COLOR_STRENGTH = 0.7
+    private const val RENDER_SIDE_HYSTERESIS = 0.05
+    private const val ACTIVE_BASE_MAX_OPACITY = 0.60f
+    private const val ACTIVE_MOVEMENT_WAVE_OPACITY = 0.20f
+    private const val ACTIVE_WAVE_MIN_OPACITY = 0.60f
+    private const val INACTIVE_MOVEMENT_WAVE_OPACITY = 0.45f
+
+    private class VertexShade(val color: Int, val alpha: Int)
 
     @SubscribeEvent
     fun onRenderLevel(event: RenderLevelStageEvent.AfterTranslucentBlocks) {
@@ -37,7 +48,7 @@ object BioluminescentWaterRenderer {
         val frustum = camera.cullFrustum
         val poseStack = event.poseStack
         val bufferSource = minecraft.renderBuffers().bufferSource()
-        val maximumDistanceSquared = RENDER_DISTANCE * RENDER_DISTANCE
+        val maxDistanceSqr = RENDER_DISTANCE * RENDER_DISTANCE
         val renderGameTime = level.gameTime + minecraft.deltaTracker.gameTimeDeltaTicks.toDouble()
 
         poseStack.pushPose()
@@ -52,8 +63,8 @@ object BioluminescentWaterRenderer {
             ) continue
             for (tile in zone.tiles) {
                 if (!tile.uploaded) continue
-                if (tile.horizontalDistanceSquared(cameraPosition.x, cameraPosition.z) >
-                    maximumDistanceSquared
+                if (tile.horizontalDistanceSqr(cameraPosition.x, cameraPosition.z) >
+                    maxDistanceSqr
                 ) continue
                 if (!frustum.isVisible(tile.bounds)) continue
                 val movementWavesAffectTile = zone.movementWavesAffect(
@@ -97,25 +108,25 @@ object BioluminescentWaterRenderer {
         movementFadeStrength: Float
     ) {
         for (quad in tile.renderQuads) {
-            val minimumX = (tile.originX + quad.minimumLocalX - cameraPosition.x).toFloat()
-            val maximumX = (tile.originX + quad.maximumLocalX - cameraPosition.x).toFloat()
-            val minimumZ = (tile.originZ + quad.minimumLocalZ - cameraPosition.z).toFloat()
-            val maximumZ = (tile.originZ + quad.maximumLocalZ - cameraPosition.z).toFloat()
+            val minX = (tile.originX + quad.minLocalX - cameraPosition.x).toFloat()
+            val maxX = (tile.originX + quad.maxLocalX - cameraPosition.x).toFloat()
+            val minZ = (tile.originZ + quad.minLocalZ - cameraPosition.z).toFloat()
+            val maxZ = (tile.originZ + quad.maxLocalZ - cameraPosition.z).toFloat()
             val renderTop = resolveRenderTop(quad, cameraPosition.y)
             val surfaceOffset = if (renderTop) SURFACE_OFFSET else -SURFACE_OFFSET
             val y = (quad.surfaceY + surfaceOffset - cameraPosition.y).toFloat()
-            val minimumU = tile.uAt(quad.minimumLocalX)
-            val maximumU = tile.uAt(quad.maximumLocalX)
-            val minimumV = tile.vAt(quad.minimumLocalZ)
-            val maximumV = tile.vAt(quad.maximumLocalZ)
+            val minU = tile.uAt(quad.minLocalX)
+            val maxU = tile.uAt(quad.maxLocalX)
+            val minV = tile.vAt(quad.minLocalZ)
+            val maxV = tile.vAt(quad.maxLocalZ)
             val northWest = vertexShadeAt(
                 zone,
                 renderGameTime,
                 lifecycleIntensity,
                 temporalIntensity,
                 quad.northWestPulsePhase,
-                tile.originX + quad.minimumLocalX.toDouble(),
-                tile.originZ + quad.minimumLocalZ.toDouble(),
+                tile.originX + quad.minLocalX.toDouble(),
+                tile.originZ + quad.minLocalZ.toDouble(),
                 movementFadeStrength
             )
             val southWest = vertexShadeAt(
@@ -124,8 +135,8 @@ object BioluminescentWaterRenderer {
                 lifecycleIntensity,
                 temporalIntensity,
                 quad.southWestPulsePhase,
-                tile.originX + quad.minimumLocalX.toDouble(),
-                tile.originZ + quad.maximumLocalZ.toDouble(),
+                tile.originX + quad.minLocalX.toDouble(),
+                tile.originZ + quad.maxLocalZ.toDouble(),
                 movementFadeStrength
             )
             val southEast = vertexShadeAt(
@@ -134,8 +145,8 @@ object BioluminescentWaterRenderer {
                 lifecycleIntensity,
                 temporalIntensity,
                 quad.southEastPulsePhase,
-                tile.originX + quad.maximumLocalX.toDouble(),
-                tile.originZ + quad.maximumLocalZ.toDouble(),
+                tile.originX + quad.maxLocalX.toDouble(),
+                tile.originZ + quad.maxLocalZ.toDouble(),
                 movementFadeStrength
             )
             val northEast = vertexShadeAt(
@@ -144,21 +155,21 @@ object BioluminescentWaterRenderer {
                 lifecycleIntensity,
                 temporalIntensity,
                 quad.northEastPulsePhase,
-                tile.originX + quad.maximumLocalX.toDouble(),
-                tile.originZ + quad.minimumLocalZ.toDouble(),
+                tile.originX + quad.maxLocalX.toDouble(),
+                tile.originZ + quad.minLocalZ.toDouble(),
                 movementFadeStrength
             )
 
             if (renderTop) {
-                vertex(consumer, pose, minimumX, y, minimumZ, minimumU, minimumV, 1.0f, northWest)
-                vertex(consumer, pose, minimumX, y, maximumZ, minimumU, maximumV, 1.0f, southWest)
-                vertex(consumer, pose, maximumX, y, maximumZ, maximumU, maximumV, 1.0f, southEast)
-                vertex(consumer, pose, maximumX, y, minimumZ, maximumU, minimumV, 1.0f, northEast)
+                vertex(consumer, pose, minX, y, minZ, minU, minV, 1.0f, northWest)
+                vertex(consumer, pose, minX, y, maxZ, minU, maxV, 1.0f, southWest)
+                vertex(consumer, pose, maxX, y, maxZ, maxU, maxV, 1.0f, southEast)
+                vertex(consumer, pose, maxX, y, minZ, maxU, minV, 1.0f, northEast)
             } else {
-                vertex(consumer, pose, minimumX, y, minimumZ, minimumU, minimumV, -1.0f, northWest)
-                vertex(consumer, pose, maximumX, y, minimumZ, maximumU, minimumV, -1.0f, northEast)
-                vertex(consumer, pose, maximumX, y, maximumZ, maximumU, maximumV, -1.0f, southEast)
-                vertex(consumer, pose, minimumX, y, maximumZ, minimumU, maximumV, -1.0f, southWest)
+                vertex(consumer, pose, minX, y, minZ, minU, minV, -1.0f, northWest)
+                vertex(consumer, pose, maxX, y, minZ, maxU, minV, -1.0f, northEast)
+                vertex(consumer, pose, maxX, y, maxZ, maxU, maxV, -1.0f, southEast)
+                vertex(consumer, pose, minX, y, maxZ, minU, maxV, -1.0f, southWest)
             }
         }
     }
@@ -175,8 +186,6 @@ object BioluminescentWaterRenderer {
         return resolved
     }
 
-    private class VertexShade(val color: Int, val alpha: Int)
-
     private fun vertexShadeAt(
         zone: BioluminescentZone,
         renderGameTime: Double,
@@ -189,7 +198,7 @@ object BioluminescentWaterRenderer {
     ): VertexShade {
         val baseOpacity = if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
             val rawBaseOpacity = temporalIntensity * zone.localPulseIntensityAt(renderGameTime, spatialPhase)
-            rawBaseOpacity.coerceAtMost(lifecycleIntensity * ACTIVE_BASE_MAXIMUM_OPACITY)
+            rawBaseOpacity.coerceAtMost(lifecycleIntensity * ACTIVE_BASE_MAX_OPACITY)
         } else {
             0.0f
         }
@@ -204,11 +213,11 @@ object BioluminescentWaterRenderer {
             INACTIVE_MOVEMENT_WAVE_OPACITY
         }
         val waveOpacity = lifecycleIntensity * waveStrength * waveIntensity
-        val baseAlpha = (baseOpacity * 255.0f).toInt().coerceIn(0, MAXIMUM_TEMPORAL_ALPHA)
+        val baseAlpha = (baseOpacity * 255.0f).toInt().coerceIn(0, MAX_TEMPORAL_ALPHA)
         val waveAlpha = (waveOpacity * 255.0f).toInt()
         var alpha = (baseAlpha + waveAlpha).coerceIn(0, 255)
         if (zone.activity == BioluminescentZoneActivity.ACTIVE && waveIntensity > 0.0f) {
-            val floorAlpha = (lifecycleIntensity * ACTIVE_WAVE_MINIMUM_OPACITY * waveIntensity * 255.0f).toInt()
+            val floorAlpha = (lifecycleIntensity * ACTIVE_WAVE_MIN_OPACITY * waveIntensity * 255.0f).toInt()
             alpha = maxOf(alpha, floorAlpha).coerceIn(0, 255)
         }
 
@@ -246,12 +255,4 @@ object BioluminescentWaterRenderer {
             .setNormal(pose, 0.0f, normalY, 0.0f)
     }
 
-    private const val WHITE_COLOR = 0xFFFFFF
-    private const val WAVE_HIGHLIGHT_COLOR = 0x8A2BE2
-    private const val HIGHLIGHT_COLOR_STRENGTH = 0.7
-    private const val RENDER_SIDE_HYSTERESIS = 0.05
-    private const val ACTIVE_BASE_MAXIMUM_OPACITY = 0.60f
-    private const val ACTIVE_MOVEMENT_WAVE_OPACITY = 0.20f
-    private const val ACTIVE_WAVE_MINIMUM_OPACITY = 0.60f
-    private const val INACTIVE_MOVEMENT_WAVE_OPACITY = 0.45f
 }

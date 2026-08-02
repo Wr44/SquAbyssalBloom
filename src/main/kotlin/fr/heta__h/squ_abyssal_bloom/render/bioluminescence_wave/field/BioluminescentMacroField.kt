@@ -26,50 +26,51 @@ class BioluminescentMacroField internal constructor(
     private val envelopeExponent: Double,
     private val curvePhase: Double
 ) {
+    companion object {
+        internal const val ENVELOPE_FADE_END = 1.06
+        private const val CONNECTION_FIELD_STRENGTH = 0.74
+        private const val SKELETON_ENVELOPE_LIFT = 0.82
+        private const val CORE_VARIATION_SCALE = 0.74
+        private const val CORE_VARIATION_MIN = 0.70
+        private const val CORE_VARIATION_RANGE = 0.42
+        private const val CONNECTION_NOISE_SCALE = 0.34
+        private const val CONNECTION_NOISE_MIN = 0.74
+        private const val CONNECTION_NOISE_RANGE = 0.34
+        private const val COLONY_BODY_NOISE_SCALE = 0.105
+        private const val COLONY_BODY_DETAIL_SCALE = 0.235
+        private const val COLONY_BODY_NOISE_MIN = 0.18
+        private const val COLONY_BODY_NOISE_MAX = 0.82
+        private const val COLONY_BODY_MIN = 0.16
+        private const val COLONY_BODY_VARIATION = 0.48
+        private const val COLONY_BODY_RIDGE_WEIGHT = 0.12
+        private const val COLONY_BODY_CORE_WEIGHT = 0.24
+        private const val ENVELOPE_NOISE_SCALE = 0.22
+        private const val ENVELOPE_DETAIL_SCALE = 0.46
+        private const val ENVELOPE_NOISE_STRENGTH = 0.20
+        private const val ENVELOPE_DETAIL_STRENGTH = 0.07
+        private const val ENVELOPE_FADE_START = 0.68
+        private const val CURVE_STRENGTH = 0.11
+        private const val THRESHOLD_FEATHER_RATIO = 0.28
+        private const val RADIAL_FADE_START_RATIO = 0.66
+        private const val RADIAL_FADE_END_RATIO = 1.10
+        private const val RADIAL_DOMAIN_MARGIN = 2.0
+        private const val RADIAL_MIN_FADE_WIDTH = 4.0
+        private const val RADIAL_NOISE_SCALE = 0.075
+        private const val RADIAL_NOISE_WARP = 0.24
+        private const val RADIAL_RAW_MIN = 0.30
+    }
+
     private val anchorWorldX = domain.cells[domain.anchorIndex].waterPos.x + 0.5
     private val anchorWorldZ = domain.cells[domain.anchorIndex].waterPos.z + 0.5
     private val radialFadeStart = domain.geodesicRadius * RADIAL_FADE_START_RATIO
     private val radialFadeEnd = minOf(
         domain.analysisGeodesicRadius - RADIAL_DOMAIN_MARGIN,
         domain.geodesicRadius * RADIAL_FADE_END_RATIO
-    ).coerceAtLeast(radialFadeStart + RADIAL_MINIMUM_FADE_WIDTH)
+    ).coerceAtLeast(radialFadeStart + RADIAL_MIN_FADE_WIDTH)
+
 
     val macroCellCount: Int
         get() = macroCells.count { it }
-
-    companion object {
-        const val CONNECTION_FIELD_STRENGTH = 0.74
-        const val SKELETON_ENVELOPE_LIFT = 0.82
-        const val CORE_VARIATION_SCALE = 0.74
-        const val CORE_VARIATION_MINIMUM = 0.70
-        const val CORE_VARIATION_RANGE = 0.42
-        const val CONNECTION_NOISE_SCALE = 0.34
-        const val CONNECTION_NOISE_MINIMUM = 0.74
-        const val CONNECTION_NOISE_RANGE = 0.34
-        const val COLONY_BODY_NOISE_SCALE = 0.105
-        const val COLONY_BODY_DETAIL_SCALE = 0.235
-        const val COLONY_BODY_NOISE_MINIMUM = 0.18
-        const val COLONY_BODY_NOISE_MAXIMUM = 0.82
-        const val COLONY_BODY_MINIMUM = 0.16
-        const val COLONY_BODY_VARIATION = 0.48
-        const val COLONY_BODY_RIDGE_WEIGHT = 0.12
-        const val COLONY_BODY_CORE_WEIGHT = 0.24
-        const val ENVELOPE_NOISE_SCALE = 0.22
-        const val ENVELOPE_DETAIL_SCALE = 0.46
-        const val ENVELOPE_NOISE_STRENGTH = 0.20
-        const val ENVELOPE_DETAIL_STRENGTH = 0.07
-        const val ENVELOPE_FADE_START = 0.68
-        const val ENVELOPE_FADE_END = 1.06
-        const val CURVE_STRENGTH = 0.11
-        const val THRESHOLD_FEATHER_RATIO = 0.28
-        const val RADIAL_FADE_START_RATIO = 0.66
-        const val RADIAL_FADE_END_RATIO = 1.10
-        const val RADIAL_DOMAIN_MARGIN = 2.0
-        const val RADIAL_MINIMUM_FADE_WIDTH = 4.0
-        const val RADIAL_NOISE_SCALE = 0.075
-        const val RADIAL_NOISE_WARP = 0.24
-        const val RADIAL_RAW_MINIMUM = 0.30
-    }
 
     fun containsCell(cellIndex: Int): Boolean = macroCells[cellIndex]
 
@@ -120,7 +121,7 @@ class BioluminescentMacroField internal constructor(
             (worldX - 61.0) * CORE_VARIATION_SCALE,
             (worldZ + 43.0) * CORE_VARIATION_SCALE
         )
-        val variedCore = (core * (CORE_VARIATION_MINIMUM + coreVariation * CORE_VARIATION_RANGE))
+        val variedCore = (core * (CORE_VARIATION_MIN + coreVariation * CORE_VARIATION_RANGE))
             .coerceIn(0.0, 1.0)
         val connection = connectionInfluenceAt(worldX, worldZ, cellIndex)
         result?.core = core
@@ -148,7 +149,7 @@ class BioluminescentMacroField internal constructor(
     }
 
     private fun radialRawBias(radialAttenuation: Double): Double {
-        return RADIAL_RAW_MINIMUM + radialAttenuation * (1.0 - RADIAL_RAW_MINIMUM)
+        return RADIAL_RAW_MIN + radialAttenuation * (1.0 - RADIAL_RAW_MIN)
     }
 
     fun coreInfluenceAt(worldX: Double, worldZ: Double): Double {
@@ -166,7 +167,7 @@ class BioluminescentMacroField internal constructor(
             (worldX + 173.0) * CONNECTION_NOISE_SCALE,
             (worldZ - 211.0) * CONNECTION_NOISE_SCALE
         )
-        val modulation = CONNECTION_NOISE_MINIMUM + ModUtilities.smooth(0.18, 0.82, slowNoise) *
+        val modulation = CONNECTION_NOISE_MIN + ModUtilities.smooth(0.18, 0.82, slowNoise) *
             CONNECTION_NOISE_RANGE
         return (skeletonInfluence * modulation).coerceIn(0.0, 1.0)
     }
@@ -182,14 +183,14 @@ class BioluminescentMacroField internal constructor(
         )
         val bodyNoise = broadNoise * 0.68 + detailNoise * 0.32
         val organicMass = ModUtilities.smooth(
-            COLONY_BODY_NOISE_MINIMUM,
-            COLONY_BODY_NOISE_MAXIMUM,
+            COLONY_BODY_NOISE_MIN,
+            COLONY_BODY_NOISE_MAX,
             bodyNoise
         )
         val ridge = 1.0 - abs(detailNoise * 2.0 - 1.0)
         val coreHalo = ModUtilities.smooth(0.02, 0.55, core)
         return (
-            COLONY_BODY_MINIMUM + organicMass * COLONY_BODY_VARIATION +
+            COLONY_BODY_MIN + organicMass * COLONY_BODY_VARIATION +
                 ridge * COLONY_BODY_RIDGE_WEIGHT + coreHalo * COLONY_BODY_CORE_WEIGHT
             ).coerceIn(0.0, 1.0)
     }

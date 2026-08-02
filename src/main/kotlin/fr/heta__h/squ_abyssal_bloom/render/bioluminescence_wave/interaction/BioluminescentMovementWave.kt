@@ -10,7 +10,6 @@ class BioluminescentMovementWave internal constructor(
     private val amplitude: Double,
     private val radius: Double
 ) {
-
     companion object {
         const val CORE_RADIUS_FRACTION = 0.75
         const val ATTACK_TICKS = 3.0
@@ -32,16 +31,16 @@ class BioluminescentMovementWave internal constructor(
     }
 
     fun affects(
-        minimumX: Double,
-        minimumZ: Double,
-        maximumX: Double,
-        maximumZ: Double,
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
         renderGameTime: Double
     ): Boolean {
         val age = renderGameTime - startedAt
         if (age < 0.0 || age >= LIFETIME_TICKS) return false
-        val nearestX = originX.coerceIn(minimumX, maximumX)
-        val nearestZ = originZ.coerceIn(minimumZ, maximumZ)
+        val nearestX = originX.coerceIn(minX, maxX)
+        val nearestZ = originZ.coerceIn(minZ, maxZ)
         val deltaX = originX - nearestX
         val deltaZ = originZ - nearestZ
         return deltaX * deltaX + deltaZ * deltaZ <= radius * radius
@@ -62,4 +61,5 @@ class BioluminescentMovementWave internal constructor(
             )
         }
     }
+
 }

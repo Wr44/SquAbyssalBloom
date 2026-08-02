@@ -48,12 +48,16 @@ import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.LevelReader
 import net.minecraft.world.level.levelgen.Heightmap
+import net.minecraft.world.level.levelgen.RandomSupport
+import net.minecraft.world.level.levelgen.XoroshiroRandomSource
+import net.minecraft.world.level.levelgen.synth.NormalNoise
 import net.minecraft.world.level.material.Fluid
 import net.minecraft.world.level.material.FluidState
 import net.minecraft.world.level.material.Fluids
 import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
+import java.util.ArrayDeque
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
@@ -62,8 +66,44 @@ import kotlin.math.roundToInt
 
 object ModUtilities {
 
-    fun bioluminescentCellKey(worldX: Int, worldZ: Int): Long {
-        return (worldX.toLong() shl 32) xor (worldZ.toLong() and 0xFFFFFFFFL)
+    fun horizontalPositionKey(x: Int, z: Int): Long {
+        return (x.toLong() shl 32) xor (z.toLong() and 0xFFFFFFFFL)
+    }
+
+    fun horizontalDistanceSqr(
+        firstX: Double,
+        firstZ: Double,
+        secondX: Double,
+        secondZ: Double
+    ): Double {
+        val deltaX = firstX - secondX
+        val deltaZ = firstZ - secondZ
+        return deltaX * deltaX + deltaZ * deltaZ
+    }
+
+    fun graphDistances(
+        size: Int,
+        neighbors: IntArray,
+        sources: Collection<Int>,
+        neighborCount: Int = 4
+    ): IntArray {
+        val distances = IntArray(size) { -1 }
+        val queue = ArrayDeque<Int>()
+        for (source in sources) {
+            if (distances[source] >= 0) continue
+            distances[source] = 0
+            queue.addLast(source)
+        }
+        while (queue.isNotEmpty()) {
+            val index = queue.removeFirst()
+            for (direction in 0 until neighborCount) {
+                val neighbor = neighbors[index * neighborCount + direction]
+                if (neighbor < 0 || distances[neighbor] >= 0) continue
+                distances[neighbor] = distances[index] + 1
+                queue.addLast(neighbor)
+            }
+        }
+        return distances
     }
 
     fun isWaterBlock(level: LevelReader, pos: BlockPos): Boolean {
@@ -539,6 +579,10 @@ object ModUtilities {
     }
     
 
+    fun smooth(t: Float): Float {
+        return t * t * (3.0f - 2.0f * t)
+    }
+
     fun smooth(t: Double): Double {
         return t * t * (3.0 - 2.0 * t)
     }
@@ -588,6 +632,23 @@ object ModUtilities {
 
     fun mixedUuidBits(uuid: UUID): Long {
         return uuid.mostSignificantBits xor uuid.leastSignificantBits
+    }
+
+    fun stableUnitValue(value: Long): Double {
+        return ((value ushr 40) and 0xFFFFFFL).toDouble() / 0xFFFFFFL.toDouble()
+    }
+
+    fun createNormalNoise(
+        parameters: NormalNoise.NoiseParameters,
+        seed: Long,
+        salt: Long
+    ): NormalNoise {
+        val random = XoroshiroRandomSource(RandomSupport.mixStafford13(seed xor salt))
+        return NormalNoise.create(random, parameters)
+    }
+
+    fun sampleNoise2d(noise: NormalNoise, x: Double, z: Double): Double {
+        return (0.5 + noise.getValue(x, 0.0, z) * 0.5).coerceIn(0.0, 1.0)
     }
 
     fun normalizedUuidFraction(bits: Long, shift: Int = 0, mask: Long = 0xFFFFL): Double {

@@ -8,41 +8,19 @@ import kotlin.math.floor
 
 class BioluminescentReactionDiffusion(
     private val macroField: BioluminescentMacroField,
-    private val preset: BioluminescentZonePreset,
-    private val zoneSeed: Long
+    preset: BioluminescentZonePreset,
+    zoneSeed: Long
 ) {
-    val scale = preset.reactionDiffusionScale
-    val width = macroField.domain.bounds.width * scale
-    val length = macroField.domain.bounds.length * scale
-    val feed: Double
-    val kill: Double
-    val targetIterations = preset.reactionDiffusionIterations
-
-    private val mask = BooleanArray(width * length)
-    private val seedNoiseSampler = BioluminescentNoiseSampler(zoneSeed xor INITIALIZATION_SALT)
-    private var u = FloatArray(width * length) { 1.0f }
-    private var v = FloatArray(width * length)
-    private var nextU = FloatArray(width * length) { 1.0f }
-    private var nextV = FloatArray(width * length)
-    private val activeIndices: IntArray
-    private val neighborIndices: IntArray
-
-    var completedIterations: Int = 0
-        private set
-
-    val complete: Boolean
-        get() = completedIterations >= targetIterations
-
     companion object {
         const val DIFFUSION_U = 0.16
         const val DIFFUSION_V = 0.08
-        const val FEED_MINIMUM = 0.028
-        const val FEED_MAXIMUM = 0.040
-        const val KILL_MINIMUM = 0.058
-        const val KILL_MAXIMUM = 0.066
+        const val FEED_MIN = 0.028
+        const val FEED_MAX = 0.040
+        const val KILL_MIN = 0.058
+        const val KILL_MAX = 0.066
         const val CARDINAL_WEIGHT = 0.20
         const val DIAGONAL_WEIGHT = 0.05
-        const val REACTION_MASK_MINIMUM = 0.025
+        const val REACTION_MASK_MIN = 0.025
         const val SEED_LARGE_NOISE_SCALE = 0.78
         const val SEED_DETAIL_NOISE_SCALE = 0.62
         const val SEED_LARGE_WEIGHT = 0.56
@@ -52,7 +30,7 @@ class BioluminescentReactionDiffusion(
         const val SUPPORT_SEED_BIAS = 0.03
         const val SEED_FIELD_LOW = 0.47
         const val SEED_FIELD_HIGH = 0.65
-        const val MINIMUM_SEED_AMOUNT = 0.002
+        const val MIN_SEED_AMOUNT = 0.002
         const val PATTERN_LOW = 0.065
         const val PATTERN_HIGH = 0.64
         const val NEIGHBOR_COUNT = 8
@@ -60,14 +38,51 @@ class BioluminescentReactionDiffusion(
         const val INITIALIZATION_SALT = 0x243F6A8885A308D3L
     }
 
+    val scale = preset.reactionDiffusionScale
+    val width = macroField.domain.bounds.width * scale
+    val length = macroField.domain.bounds.length * scale
+    val feed: Double
+    val kill: Double
+    val targetIterations = preset.reactionDiffusionIterations
+
+    private val mask = BooleanArray(width * length)
+    private val seedNoiseSampler = BioluminescentNoiseSampler(zoneSeed xor INITIALIZATION_SALT)
+    private val macroSample = BioluminescentMacroSample()
+    private var u = FloatArray(width * length) { 1.0f }
+    private var v = FloatArray(width * length)
+    private var nextU = FloatArray(width * length) { 1.0f }
+    private var nextV = FloatArray(width * length)
+    private lateinit var activeIndices: IntArray
+    private lateinit var neighborIndices: IntArray
+    private var initializationCursor = 0
+
+    var completedIterations: Int = 0
+        private set
+
+    val initializationComplete: Boolean
+        get() = initializationCursor >= width * length
+
+    val complete: Boolean
+        get() = completedIterations >= targetIterations
+
     init {
         val parameterSeed = RandomSupport.mixStafford13(zoneSeed xor PARAMETER_SALT)
-        feed = FEED_MINIMUM + stableUnitValue(parameterSeed) * (FEED_MAXIMUM - FEED_MINIMUM)
-        kill = KILL_MINIMUM + stableUnitValue(RandomSupport.mixStafford13(parameterSeed)) *
-            (KILL_MAXIMUM - KILL_MINIMUM)
-        initialize()
+        feed = FEED_MIN + ModUtilities.stableUnitValue(parameterSeed) * (FEED_MAX - FEED_MIN)
+        kill = KILL_MIN + ModUtilities.stableUnitValue(RandomSupport.mixStafford13(parameterSeed)) *
+            (KILL_MAX - KILL_MIN)
+    }
+
+    fun advanceInitialization(cellBudget: Int): Boolean {
+        if (initializationComplete) return true
+        val end = minOf(width * length, initializationCursor + cellBudget)
+        while (initializationCursor < end) {
+            initializeCell(initializationCursor % width, initializationCursor / width)
+            initializationCursor++
+        }
+        if (!initializationComplete) return false
         activeIndices = createActiveIndices()
         neighborIndices = createNeighborIndices()
+        return true
     }
 
     fun advance(iterationBudget: Int) {
@@ -79,8 +94,8 @@ class BioluminescentReactionDiffusion(
     }
 
     fun patternAt(worldX: Double, worldZ: Double): Double {
-        val gridX = (worldX - macroField.domain.bounds.minimumX) * scale - 0.5
-        val gridZ = (worldZ - macroField.domain.bounds.minimumZ) * scale - 0.5
+        val gridX = (worldX - macroField.domain.bounds.minX) * scale - 0.5
+        val gridZ = (worldZ - macroField.domain.bounds.minZ) * scale - 0.5
         val x0 = floor(gridX).toInt()
         val z0 = floor(gridZ).toInt()
         val fractionX = gridX - x0
@@ -90,44 +105,39 @@ class BioluminescentReactionDiffusion(
         return mix(first, second, fractionZ)
     }
 
-    private fun initialize() {
-        val macroSample = BioluminescentMacroSample()
-        for (gridZ in 0 until length) {
-            for (gridX in 0 until width) {
-                val worldX = macroField.domain.bounds.minimumX + (gridX + 0.5) / scale
-                val worldZ = macroField.domain.bounds.minimumZ + (gridZ + 0.5) / scale
-                val cellIndex = macroField.domain.cellIndexAt(floor(worldX).toInt(), floor(worldZ).toInt())
-                    ?: continue
-                macroField.sampleAt(worldX, worldZ, cellIndex, macroSample)
-                val support = macroSample.support
-                if (support <= REACTION_MASK_MINIMUM) continue
-                val index = gridZ * width + gridX
-                mask[index] = true
-                val core = macroSample.core
-                val connection = macroSample.connection
-                val seedLarge = seedNoiseSampler.sampleLarge(
-                    (worldX + 181.0) * SEED_LARGE_NOISE_SCALE,
-                    (worldZ - 223.0) * SEED_LARGE_NOISE_SCALE
-                )
-                val seedDetail = seedNoiseSampler.sampleDetail(
-                    (worldX - 79.0) * SEED_DETAIL_NOISE_SCALE,
-                    (worldZ + 131.0) * SEED_DETAIL_NOISE_SCALE
-                )
-                val structuralBias = ModUtilities.smooth(0.03, 0.78, core) * CORE_SEED_BIAS +
-                    ModUtilities.smooth(0.08, 0.82, connection) * CONNECTION_SEED_BIAS +
-                    support * SUPPORT_SEED_BIAS
-                val seedField = seedLarge * SEED_LARGE_WEIGHT +
-                    seedDetail * SEED_DETAIL_WEIGHT + structuralBias
-                val seedAmount = ModUtilities.smooth(SEED_FIELD_LOW, SEED_FIELD_HIGH, seedField)
-                if (seedAmount <= MINIMUM_SEED_AMOUNT) continue
-                val concentration = (
-                    core * 0.40 + connection * 0.22 + seedLarge * 0.22 + seedDetail * 0.16
-                    ).coerceIn(0.0, 1.0)
-                v[index] = (0.17 + seedAmount * 0.34 + concentration * 0.10)
-                    .coerceIn(0.0, 0.68).toFloat()
-                u[index] = (1.0f - v[index] * 0.48f).coerceIn(0.0f, 1.0f)
-            }
-        }
+    private fun initializeCell(gridX: Int, gridZ: Int) {
+        val worldX = macroField.domain.bounds.minX + (gridX + 0.5) / scale
+        val worldZ = macroField.domain.bounds.minZ + (gridZ + 0.5) / scale
+        val cellIndex = macroField.domain.cellIndexAt(floor(worldX).toInt(), floor(worldZ).toInt())
+            ?: return
+        macroField.sampleAt(worldX, worldZ, cellIndex, macroSample)
+        val support = macroSample.support
+        if (support <= REACTION_MASK_MIN) return
+        val index = gridZ * width + gridX
+        mask[index] = true
+        val core = macroSample.core
+        val connection = macroSample.connection
+        val seedLarge = seedNoiseSampler.sampleLarge(
+            (worldX + 181.0) * SEED_LARGE_NOISE_SCALE,
+            (worldZ - 223.0) * SEED_LARGE_NOISE_SCALE
+        )
+        val seedDetail = seedNoiseSampler.sampleDetail(
+            (worldX - 79.0) * SEED_DETAIL_NOISE_SCALE,
+            (worldZ + 131.0) * SEED_DETAIL_NOISE_SCALE
+        )
+        val structuralBias = ModUtilities.smooth(0.03, 0.78, core) * CORE_SEED_BIAS +
+            ModUtilities.smooth(0.08, 0.82, connection) * CONNECTION_SEED_BIAS +
+            support * SUPPORT_SEED_BIAS
+        val seedField = seedLarge * SEED_LARGE_WEIGHT +
+            seedDetail * SEED_DETAIL_WEIGHT + structuralBias
+        val seedAmount = ModUtilities.smooth(SEED_FIELD_LOW, SEED_FIELD_HIGH, seedField)
+        if (seedAmount <= MIN_SEED_AMOUNT) return
+        val concentration = (
+            core * 0.40 + connection * 0.22 + seedLarge * 0.22 + seedDetail * 0.16
+            ).coerceIn(0.0, 1.0)
+        v[index] = (0.17 + seedAmount * 0.34 + concentration * 0.10)
+            .coerceIn(0.0, 0.68).toFloat()
+        u[index] = (1.0f - v[index] * 0.48f).coerceIn(0.0f, 1.0f)
     }
 
     private fun iterate() {
@@ -213,7 +223,4 @@ class BioluminescentReactionDiffusion(
         return first + (second - first) * amount.coerceIn(0.0, 1.0)
     }
 
-    private fun stableUnitValue(value: Long): Double {
-        return ((value ushr 40) and 0xFFFFFFL).toDouble() / 0xFFFFFFL.toDouble()
-    }
 }

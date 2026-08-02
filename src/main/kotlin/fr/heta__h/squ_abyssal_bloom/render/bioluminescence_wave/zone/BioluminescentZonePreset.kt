@@ -4,8 +4,8 @@ data class BioluminescentZonePreset(
     val size: BioluminescentZoneSize,
     val geodesicRadiusRange: IntRange,
     val analysisMargin: Int,
-    val maximumWaterCells: Int,
-    val minimumWaterCells: Int,
+    val maxWaterCells: Int,
+    val minWaterCells: Int,
     val coreCountRange: IntRange,
     val macroCoverageRange: ClosedFloatingPointRange<Double>,
     val visiblePixelCoverageRange: ClosedFloatingPointRange<Double>,
@@ -15,5 +15,5 @@ data class BioluminescentZonePreset(
     val reactionDiffusionScale: Int,
     val reactionDiffusionIterations: Int,
     val porosityRange: ClosedFloatingPointRange<Double>,
-    val minimumConnectionEmission: Double
+    val minConnectionEmission: Double
 )

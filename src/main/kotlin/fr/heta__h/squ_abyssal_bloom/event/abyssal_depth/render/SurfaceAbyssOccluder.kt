@@ -262,13 +262,13 @@ object SurfaceAbyssOccluder {
                         ) ?: true)
                     ) continue
 
-                    val key = chunkKey(cx, cz)
+                    val key = ModUtilities.horizontalPositionKey(cx shr 4, cz shr 4)
                     val rawFade = chunkFadeProgress.get(key)
                     val newFade = (rawFade + dt * fadeSpeed).coerceAtMost(1.0f)
                     chunkFadeProgress.put(key, newFade)
                     activeKeysThisFrame.add(key)
 
-                    val fadeFactor = newFade * newFade * (3f - 2f * newFade)
+                    val fadeFactor = ModUtilities.smooth(newFade)
 
                     val size = step.toFloat()
                     val rx = x.toFloat() - camPos.x.toFloat()
@@ -303,12 +303,6 @@ object SurfaceAbyssOccluder {
             val entry = iter.next()
             if (!activeKeysThisFrame.contains(entry.longKey)) iter.remove()
         }
-    }
-
-    private fun chunkKey(cx: Int, cz: Int): Long {
-        val chunkX = cx shr 4
-        val chunkZ = cz shr 4
-        return (chunkX.toLong() shl 32) or (chunkZ.toLong() and 0xFFFFFFFFL)
     }
 
     private fun snapToGrid(value: Int, snap: Int): Int {

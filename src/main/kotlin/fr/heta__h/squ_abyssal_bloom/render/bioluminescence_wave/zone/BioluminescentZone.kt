@@ -29,6 +29,16 @@ class BioluminescentZone(
     val colorPhase: Double,
     val requestedByCommand: Boolean
 ) : AutoCloseable {
+    companion object {
+        const val PULSE_PERIOD_TICKS = 320.0
+        const val MIN_PULSE_INTENSITY = 0.30
+        const val MAX_PULSE_INTENSITY = 0.70
+        const val APPEARANCE_END = 0.20
+        const val DISAPPEARANCE_START = 0.80
+        const val MAX_RENDER_INTENSITY = 1.15f
+        const val BRIGHTNESS_SEED_SALT = 0x6A09E667F3BCC909L
+    }
+
     private var generator: BioluminescentZoneGenerator? = BioluminescentZoneGenerator(
         anchor,
         initialCell,
@@ -79,11 +89,11 @@ class BioluminescentZone(
         level: ClientLevel,
         textureManager: TextureManager,
         identifierFactory: () -> Identifier,
-        maximumTileCount: Int,
+        maxTileCount: Int,
         gameTime: Long
     ) {
         val activeGenerator = generator ?: return
-        activeGenerator.advance(level, textureManager, identifierFactory, maximumTileCount)
+        activeGenerator.advance(level, textureManager, identifierFactory, maxTileCount)
         generationStage = activeGenerator.stage
         generationCpuNanos = activeGenerator.cpuNanos
         if (activeGenerator.stage == BioluminescentZoneGenerationStage.READY) {
@@ -119,7 +129,7 @@ class BioluminescentZone(
         val lifecycle = lifecycleIntensityAt(renderGameTime)
         if (lifecycle <= 0.0f) return 0.0f
         return (lifecycle * brightnessScale)
-            .toFloat().coerceIn(0.0f, MAXIMUM_RENDER_INTENSITY)
+            .toFloat().coerceIn(0.0f, MAX_RENDER_INTENSITY)
     }
 
     fun lifecycleIntensityAt(renderGameTime: Double): Float {
@@ -134,8 +144,8 @@ class BioluminescentZone(
         val phase = colorPhase + spatialPhase + elapsed * PI * 2.0 / PULSE_PERIOD_TICKS
         val wave = 0.5 + 0.5 * sin(phase)
         val easedWave = ModUtilities.smooth(0.0, 1.0, wave)
-        return (MINIMUM_PULSE_INTENSITY +
-            (MAXIMUM_PULSE_INTENSITY - MINIMUM_PULSE_INTENSITY) * easedWave).toFloat()
+        return (MIN_PULSE_INTENSITY +
+            (MAX_PULSE_INTENSITY - MIN_PULSE_INTENSITY) * easedWave).toFloat()
     }
 
     fun updateMovementWaves(level: ClientLevel, gameTime: Long) {
@@ -143,33 +153,31 @@ class BioluminescentZone(
         movementWaves.tick(level, data, gameTime)
     }
 
-    fun movementWaveIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float {
-        return movementWaves.intensityAt(worldX, worldZ, renderGameTime)
-    }
+    fun movementWaveIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float =
+        movementWaves.intensityAt(worldX, worldZ, renderGameTime)
 
     fun movementWavesAffect(
-        minimumX: Double,
-        minimumZ: Double,
-        maximumX: Double,
-        maximumZ: Double,
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
         renderGameTime: Double
-    ): Boolean {
-        return movementWaves.affects(minimumX, minimumZ, maximumX, maximumZ, renderGameTime)
-    }
+    ): Boolean = movementWaves.affects(minX, minZ, maxX, maxZ, renderGameTime)
 
-    fun movementWaveVisibilityStrength(): Double {
-        return movementWaves.visibilityStrength
-    }
+    fun movementWaveVisibilityStrength(): Double = movementWaves.visibilityStrength
 
     fun isCompleteAt(gameTime: Long): Boolean {
         val start = activatedAt ?: return false
         return gameTime - start >= lifetime
     }
 
-    fun horizontalDistanceSquared(worldX: Double, worldZ: Double): Double {
-        val deltaX = anchor.x + 0.5 - worldX
-        val deltaZ = anchor.z + 0.5 - worldZ
-        return deltaX * deltaX + deltaZ * deltaZ
+    fun horizontalDistanceSqr(worldX: Double, worldZ: Double): Double {
+        return ModUtilities.horizontalDistanceSqr(
+            anchor.x + 0.5,
+            anchor.z + 0.5,
+            worldX,
+            worldZ
+        )
     }
 
     override fun close() {
@@ -196,13 +204,4 @@ class BioluminescentZone(
         return 0.97 + ((mixed ushr 40) and 0xFFFFL).toDouble() / 65535.0 * 0.06
     }
 
-    private companion object {
-        const val PULSE_PERIOD_TICKS = 320.0
-        const val MINIMUM_PULSE_INTENSITY = 0.30
-        const val MAXIMUM_PULSE_INTENSITY = 0.70
-        const val APPEARANCE_END = 0.20
-        const val DISAPPEARANCE_START = 0.80
-        const val MAXIMUM_RENDER_INTENSITY = 1.15f
-        const val BRIGHTNESS_SEED_SALT = 0x6A09E667F3BCC909L
-    }
 }

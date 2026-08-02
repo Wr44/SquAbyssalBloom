@@ -18,6 +18,10 @@ internal class BioluminescentDynamicTexture(
         NativeImage(max(1, width shr level), max(1, height shr level), zero || level > 0)
     }
     private var closed = false
+    private var sourcePixels: IntArray? = null
+    private var sourceWidth = 0
+    private var sourceHeight = 0
+    private var nextMipLevel = 0
 
     val pixelCount: Int = mipImages.sumOf { it.width * it.height }
 
@@ -36,27 +40,35 @@ internal class BioluminescentDynamicTexture(
         sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.NEAREST, true)
     }
 
-    fun upload(basePixels: IntArray) {
+    fun beginUpload(basePixels: IntArray): Boolean {
         require(basePixels.size == mipImages[0].width * mipImages[0].height)
         writePixels(mipImages[0], basePixels)
-        rebuildMipLevels(basePixels)
-        val destination = checkNotNull(texture)
-        val encoder = RenderSystem.getDevice().createCommandEncoder()
-        for (level in mipImages.indices) {
-            val image = mipImages[level]
-            encoder.writeToTexture(
-                destination,
-                image,
-                level,
-                0,
-                0,
-                0,
-                image.width,
-                image.height,
-                0,
-                0
-            )
-        }
+        writeLevelToGpu(0)
+        sourcePixels = basePixels
+        sourceWidth = mipImages[0].width
+        sourceHeight = mipImages[0].height
+        nextMipLevel = 1
+        return nextMipLevel >= mipImages.size
+    }
+
+    fun uploadNextMipLevel(): Boolean {
+        if (nextMipLevel >= mipImages.size) return true
+        val level = nextMipLevel
+        val destination = mipImages[level]
+        val destinationPixels = downsample(
+            checkNotNull(sourcePixels),
+            sourceWidth,
+            sourceHeight,
+            destination.width,
+            destination.height
+        )
+        writePixels(destination, destinationPixels)
+        writeLevelToGpu(level)
+        sourcePixels = destinationPixels
+        sourceWidth = destination.width
+        sourceHeight = destination.height
+        nextMipLevel++
+        return nextMipLevel >= mipImages.size
     }
 
     override fun close() {
@@ -66,24 +78,22 @@ internal class BioluminescentDynamicTexture(
         super.close()
     }
 
-    private fun rebuildMipLevels(basePixels: IntArray) {
-        var sourcePixels = basePixels
-        var sourceWidth = mipImages[0].width
-        var sourceHeight = mipImages[0].height
-        for (level in 1 until mipImages.size) {
-            val destination = mipImages[level]
-            val destinationPixels = downsample(
-                sourcePixels,
-                sourceWidth,
-                sourceHeight,
-                destination.width,
-                destination.height
-            )
-            writePixels(destination, destinationPixels)
-            sourcePixels = destinationPixels
-            sourceWidth = destination.width
-            sourceHeight = destination.height
-        }
+    private fun writeLevelToGpu(level: Int) {
+        val image = mipImages[level]
+        val destination = checkNotNull(texture)
+        val encoder = RenderSystem.getDevice().createCommandEncoder()
+        encoder.writeToTexture(
+            destination,
+            image,
+            level,
+            0,
+            0,
+            0,
+            image.width,
+            image.height,
+            0,
+            0
+        )
     }
 
     private fun writePixels(image: NativeImage, pixels: IntArray) {

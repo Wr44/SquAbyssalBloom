@@ -11,11 +11,30 @@ import net.minecraft.world.entity.animal.squid.Squid
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat
 import net.minecraft.world.phys.AABB
 import java.util.ArrayDeque
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.sqrt
 
 class BioluminescentMovementWaveField {
+    companion object {
+        const val SCAN_INTERVAL_TICKS = 2L
+        const val DUPLICATE_WINDOW_TICKS = 2L
+        const val MAX_MOVING_SOURCES = 16
+        const val MAX_ACTIVE_WAVES = 96
+        const val WATER_CELL_SEARCH_RADIUS = 0
+        const val HORIZONTAL_SEARCH_MARGIN = 0.5
+        const val VERTICAL_SEARCH_RANGE = 4.0
+        const val BOAT_SURFACE_TOLERANCE = 1.75
+        const val DUPLICATE_DISTANCE = 0.6
+        const val MIN_MOVEMENT_SPEED = 0.012
+        const val FULL_MOVEMENT_SPEED = 0.22
+        const val MIN_RADIUS = 6.0
+        const val MAX_RADIUS = 11.0
+        const val VISIBILITY_TICK_DT = 1.0 / 20.0
+        const val VISIBILITY_FADE_RATE = 4.0
+    }
+
     private val waves = ArrayDeque<BioluminescentMovementWave>()
     private var lastScanTick = Long.MIN_VALUE
 
@@ -27,24 +46,6 @@ class BioluminescentMovementWaveField {
 
     val activeWaveCount: Int
         get() = waves.size
-
-    companion object {
-        const val SCAN_INTERVAL_TICKS = 2L
-        const val DUPLICATE_WINDOW_TICKS = 2L
-        const val MAXIMUM_MOVING_SOURCES = 16
-        const val MAXIMUM_ACTIVE_WAVES = 96
-        const val WATER_CELL_SEARCH_RADIUS = 0
-        const val HORIZONTAL_SEARCH_MARGIN = 0.5
-        const val VERTICAL_SEARCH_RANGE = 4.0
-        const val BOAT_SURFACE_TOLERANCE = 1.75
-        const val DUPLICATE_DISTANCE = 0.6
-        const val MINIMUM_MOVEMENT_SPEED = 0.012
-        const val FULL_MOVEMENT_SPEED = 0.22
-        const val MINIMUM_RADIUS = 6.0
-        const val MAXIMUM_RADIUS = 11.0
-        const val VISIBILITY_TICK_DT = 1.0 / 20.0
-        const val VISIBILITY_FADE_RATE = 4.0
-    }
 
     fun tick(level: ClientLevel, data: BioluminescentZoneGenerationResult, gameTime: Long) {
         if (lastScanTick != Long.MIN_VALUE && gameTime < lastScanTick) clear()
@@ -61,12 +62,12 @@ class BioluminescentMovementWaveField {
 
         val bounds = data.domain.bounds
         val searchBounds = AABB(
-            bounds.minimumX - HORIZONTAL_SEARCH_MARGIN,
-            bounds.minimumY - VERTICAL_SEARCH_RANGE,
-            bounds.minimumZ - HORIZONTAL_SEARCH_MARGIN,
-            bounds.maximumX + 1.0 + HORIZONTAL_SEARCH_MARGIN,
-            bounds.maximumY + 1.0 + VERTICAL_SEARCH_RANGE,
-            bounds.maximumZ + 1.0 + HORIZONTAL_SEARCH_MARGIN
+            bounds.minX - HORIZONTAL_SEARCH_MARGIN,
+            bounds.minY - VERTICAL_SEARCH_RANGE,
+            bounds.minZ - HORIZONTAL_SEARCH_MARGIN,
+            bounds.maxX + 1.0 + HORIZONTAL_SEARCH_MARGIN,
+            bounds.maxY + 1.0 + VERTICAL_SEARCH_RANGE,
+            bounds.maxZ + 1.0 + HORIZONTAL_SEARCH_MARGIN
         )
         val candidates = level.getEntitiesOfClass(Entity::class.java, searchBounds) { entity ->
             entity.isAlive && !entity.isSpectator && !entity.isPassenger &&
@@ -76,9 +77,9 @@ class BioluminescentMovementWaveField {
 
         var acceptedSources = 0
         for (entity in candidates) {
-            if (acceptedSources >= MAXIMUM_MOVING_SOURCES) break
+            if (acceptedSources >= MAX_MOVING_SOURCES) break
             val speed = horizontalSpeed(entity)
-            if (speed < MINIMUM_MOVEMENT_SPEED) continue
+            if (speed < MIN_MOVEMENT_SPEED) continue
             val waterCell = nearestWaterCell(data.domain, entity.x, entity.z) ?: continue
             if (!isValidWaterSource(entity, waterCell)) continue
 
@@ -98,14 +99,14 @@ class BioluminescentMovementWaveField {
     }
 
     fun affects(
-        minimumX: Double,
-        minimumZ: Double,
-        maximumX: Double,
-        maximumZ: Double,
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
         renderGameTime: Double
     ): Boolean {
         return waves.any { wave ->
-            wave.affects(minimumX, minimumZ, maximumX, maximumZ, renderGameTime)
+            wave.affects(minX, minZ, maxX, maxZ, renderGameTime)
         }
     }
 
@@ -127,20 +128,20 @@ class BioluminescentMovementWaveField {
     private fun emitWave(worldX: Double, worldZ: Double, speed: Double, gameTime: Long) {
         val recentDuplicate = waves.any { wave ->
             gameTime - wave.startedAt <= DUPLICATE_WINDOW_TICKS &&
-                squaredDistance(wave.originX, wave.originZ, worldX, worldZ) <=
+                ModUtilities.horizontalDistanceSqr(wave.originX, wave.originZ, worldX, worldZ) <=
                 DUPLICATE_DISTANCE * DUPLICATE_DISTANCE
         }
         if (recentDuplicate) return
-        while (waves.size >= MAXIMUM_ACTIVE_WAVES) waves.removeFirst()
+        while (waves.size >= MAX_ACTIVE_WAVES) waves.removeFirst()
 
-        val movement = ModUtilities.smooth(MINIMUM_MOVEMENT_SPEED, FULL_MOVEMENT_SPEED, speed)
+        val movement = ModUtilities.smooth(MIN_MOVEMENT_SPEED, FULL_MOVEMENT_SPEED, speed)
         waves.addLast(
             BioluminescentMovementWave(
                 worldX,
                 worldZ,
                 gameTime,
                 1.0,
-                MINIMUM_RADIUS + (MAXIMUM_RADIUS - MINIMUM_RADIUS) * movement
+                MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * movement
             )
         )
     }
@@ -153,20 +154,20 @@ class BioluminescentMovementWaveField {
         val blockX = floor(worldX).toInt()
         val blockZ = floor(worldZ).toInt()
         var nearest: BioluminescentWaterCell? = null
-        var nearestDistanceSquared = Double.POSITIVE_INFINITY
+        var nearestDistanceSqr = Double.POSITIVE_INFINITY
         for (offsetX in -WATER_CELL_SEARCH_RADIUS..WATER_CELL_SEARCH_RADIUS) {
             for (offsetZ in -WATER_CELL_SEARCH_RADIUS..WATER_CELL_SEARCH_RADIUS) {
                 val index = domain.cellIndexAt(blockX + offsetX, blockZ + offsetZ) ?: continue
                 if (!domain.isLocalCell(index)) continue
                 val cell = domain.cells[index]
-                val distanceSquared = squaredDistance(
+                val cellDistanceSqr = ModUtilities.horizontalDistanceSqr(
                     cell.waterPos.x + 0.5,
                     cell.waterPos.z + 0.5,
                     worldX,
                     worldZ
                 )
-                if (distanceSquared >= nearestDistanceSquared) continue
-                nearestDistanceSquared = distanceSquared
+                if (cellDistanceSqr >= nearestDistanceSqr) continue
+                nearestDistanceSqr = cellDistanceSqr
                 nearest = cell
             }
         }
@@ -175,9 +176,9 @@ class BioluminescentMovementWaveField {
 
     private fun isValidWaterSource(entity: Entity, waterCell: BioluminescentWaterCell): Boolean {
         return if (entity is AbstractBoat) {
-            kotlin.math.abs(entity.boundingBox.minY - waterCell.surfaceY) <= BOAT_SURFACE_TOLERANCE
+            abs(entity.boundingBox.minY - waterCell.surfaceY) <= BOAT_SURFACE_TOLERANCE
         } else {
-            entity.isInWater && kotlin.math.abs(entity.y - waterCell.surfaceY) <= VERTICAL_SEARCH_RANGE
+            entity.isInWater && abs(entity.y - waterCell.surfaceY) <= VERTICAL_SEARCH_RANGE
         }
     }
 
@@ -191,9 +192,4 @@ class BioluminescentMovementWaveField {
         )
     }
 
-    private fun squaredDistance(firstX: Double, firstZ: Double, secondX: Double, secondZ: Double): Double {
-        val deltaX = firstX - secondX
-        val deltaZ = firstZ - secondZ
-        return deltaX * deltaX + deltaZ * deltaZ
-    }
 }

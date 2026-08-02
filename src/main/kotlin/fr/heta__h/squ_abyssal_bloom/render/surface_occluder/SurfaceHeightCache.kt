@@ -28,9 +28,6 @@ object SurfaceHeightCache {
     private val mutPos = BlockPos.MutableBlockPos()
     private var cachedLevel: Level? = null
 
-    private fun key(x: Int, z: Int): Long =
-        (x.toLong() shl 32) or (z.toLong() and 0xFFFFFFFFL)
-
     private fun pack(surfaceY: Int, floorY: Int, isValid: Boolean, tick: Long): Long {
         val sy = (surfaceY + 128).toLong() and 0xFFFL
         val fy = (floorY + 128).toLong() and 0xFFFL
@@ -86,9 +83,9 @@ object SurfaceHeightCache {
             cachedLevel = level
         }
 
-        val k = key(cx, cz)
+        val key = ModUtilities.horizontalPositionKey(cx, cz)
 
-        val existing = cache.get(k)
+        val existing = cache.get(key)
         if (existing != -1L) {
             val age = gameTick - unpackTick(existing)
             val dx = (cx - camX).toFloat()
@@ -163,7 +160,7 @@ object SurfaceHeightCache {
         }
 
         val packedData = pack(finalSurfaceY, finalFloorY, isValid, gameTick)
-        cache.put(k, packedData)
+        cache.put(key, packedData)
         return packedData
     }
 }

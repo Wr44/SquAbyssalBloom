@@ -27,7 +27,7 @@ class BioluminescentWaterDomain internal constructor(
     }
 
     fun cellIndexAt(worldX: Int, worldZ: Int): Int? {
-        val index = indexByKey.get(ModUtilities.bioluminescentCellKey(worldX, worldZ))
+        val index = indexByKey.get(ModUtilities.horizontalPositionKey(worldX, worldZ))
         return if (index >= 0) index else null
     }
 
@@ -38,6 +38,10 @@ class BioluminescentWaterDomain internal constructor(
             val neighbor = neighbor(index, direction)
             if (neighbor >= 0) action(neighbor)
         }
+    }
+
+    internal fun graphDistances(sources: Collection<Int>): IntArray {
+        return ModUtilities.graphDistances(size, neighbors, sources)
     }
 
     private fun createLocalCellIndices(): IntArray {
