@@ -22,7 +22,7 @@ object MarineSnowHandler {
 
     @SubscribeEvent
     fun onClientTick(event: ClientTickEvent.Post) {
-        if (!ModConfig.enableAbyssFog) return
+        if (!ModConfig.enableAbyssFog || !ModConfig.enableMarineSnow) return
 
         val mc = Minecraft.getInstance()
         if (mc.isPaused) return

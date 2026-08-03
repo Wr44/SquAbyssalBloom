@@ -71,7 +71,7 @@ object SurfaceHeightCache {
 
             val ttl = if (distSq < NEAR_THRESHOLD_SQ) TTL_NEAR else TTL_FAR
 
-            if (age < 0L || age > ttl) {
+            if (age !in 0L..ttl) {
                 cleanupIterator!!.remove()
             }
         }

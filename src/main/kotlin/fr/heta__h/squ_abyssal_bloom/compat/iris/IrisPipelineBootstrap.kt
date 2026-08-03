@@ -16,7 +16,7 @@ object IrisPipelineBootstrap {
         attempted = true
 
         if (!ModCompat.hasIris) return
-        if (!ModConfig.irisCompatibilityEnabled) {
+        if (!ModConfig.enableIrisCompatibility) {
             SquAbyssalBloom.LOGGER.info(
                 "[Bio Debug] Iris detected but compatibility disabled in config; skipping pipeline registration"
             )

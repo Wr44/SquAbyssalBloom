@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
+package fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave
 
 enum class BioluminescentIrisDebugMode {
     NORMAL,

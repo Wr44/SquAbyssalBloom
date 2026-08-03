@@ -39,7 +39,7 @@ abstract class AbstractDynamicLightCompat {
     }
 
     protected fun addDynamicLight(light: DynamicLightBehavior) {
-        if (isInitialized && ModConfig.dynamicLightsEnabled) {
+        if (isInitialized && ModConfig.enableDynamicLights) {
             try { addMethod?.invoke(managerInstance, light) } catch (e: Exception) {}
         }
     }

@@ -5,6 +5,7 @@ import dev.isxander.yacl3.api.Option
 import dev.isxander.yacl3.api.OptionDescription
 import dev.isxander.yacl3.api.OptionGroup
 import fr.heta__h.squ_abyssal_bloom.config.renderer.ModIconRenderer
+import net.minecraft.ChatFormatting
 import net.minecraft.network.chat.Component
 
 abstract class AbstractModSubMenu(private val modId: String) {
@@ -21,7 +22,7 @@ abstract class AbstractModSubMenu(private val modId: String) {
 
     fun buildGroups(category: ConfigCategory.Builder) {
         val headerGroup = OptionGroup.createBuilder()
-            .name(displayName)
+            .name(displayName.copy().withStyle(ChatFormatting.LIGHT_PURPLE))
             .description(OptionDescription.createBuilder()
                 .text(displayDescription)
                 .customImage(previewRenderer())
@@ -32,7 +33,7 @@ abstract class AbstractModSubMenu(private val modId: String) {
         val clientOpts = clientOptions()
         if (clientOpts.isNotEmpty()) {
             val clientGroup = OptionGroup.createBuilder()
-                .name(Component.translatable("config.squ_abyssal_bloom.group.client_settings"))
+                .name(Component.translatable("config.squ_abyssal_bloom.group.client_settings").withStyle(ChatFormatting.AQUA))
                 .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.group.client_settings.desc")))
             clientOpts.forEach { clientGroup.option(it) }
             category.group(clientGroup.build())
@@ -41,7 +42,7 @@ abstract class AbstractModSubMenu(private val modId: String) {
         val serverOpts = serverOptions()
         if (serverOpts.isNotEmpty()) {
             val serverGroup = OptionGroup.createBuilder()
-                .name(Component.translatable("config.squ_abyssal_bloom.group.server_settings"))
+                .name(Component.translatable("config.squ_abyssal_bloom.group.server_settings").withStyle(ChatFormatting.GOLD))
                 .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.group.server_settings.desc")))
             serverOpts.forEach { serverGroup.option(it) }
             category.group(serverGroup.build())

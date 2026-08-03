@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.compat.iris
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence.BioluminescentIrisDebugState
+import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.BioluminescentIrisDebugState
 import net.irisshaders.iris.api.v0.IrisApi
 
 object IrisRenderState {

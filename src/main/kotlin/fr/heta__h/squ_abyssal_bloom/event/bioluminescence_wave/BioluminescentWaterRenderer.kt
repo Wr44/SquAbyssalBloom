@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.bioluminescence
+package fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave
 
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
@@ -40,7 +40,6 @@ object BioluminescentWaterRenderer {
     private const val ANGLE_VISUALIZATION_COLOR = 0x30FF60
     private const val UNDERWATER_VISUALIZATION_COLOR = 0x3060FF
     private const val FULL_BRIGHT_LIGHTMAP = 15728880
-    private const val RENDER_DISTANCE = 96.0
     private const val MAX_TEMPORAL_ALPHA = 179
     private const val VISIBILITY_EPSILON = 0.01
     private const val WHITE_COLOR = 0xFFFFFF
@@ -101,6 +100,7 @@ object BioluminescentWaterRenderer {
     fun onRenderLevelOpaque(event: RenderLevelStageEvent.AfterOpaqueBlocks) {
         IrisRenderState.beginFrame()
         framePlan = null
+        if (!ModConfig.enableBioluminescenceRendering) return
         if (BioluminescentZoneManager.activeZones.isEmpty()) return
         if (!ModCompat.hasIris) return
 
@@ -120,6 +120,7 @@ object BioluminescentWaterRenderer {
 
     @SubscribeEvent
     fun onRenderLevelTranslucent(event: RenderLevelStageEvent.AfterTranslucentBlocks) {
+        if (!ModConfig.enableBioluminescenceRendering) return
         if (BioluminescentZoneManager.activeZones.isEmpty()) return
         if (ModCompat.hasIris && IrisRenderState.shaderPackInUse) {
             val plan = framePlan
@@ -140,13 +141,14 @@ object BioluminescentWaterRenderer {
         val camera = minecraft.gameRenderer.mainCamera
         val cameraPosition = camera.position()
         val frustum = camera.cullFrustum
-        val maxDistanceSqr = RENDER_DISTANCE * RENDER_DISTANCE
+        val renderDistance = ModConfig.bioluminescenceRenderDistance.coerceIn(32.0, 256.0)
+        val maxDistanceSqr = renderDistance * renderDistance
         val level = minecraft.level ?: return null
         val renderGameTime = level.gameTime + minecraft.deltaTracker.gameTimeDeltaTicks.toDouble()
 
         val resolvedTiles = ArrayList<ResolvedTile>()
         for (zone in BioluminescentZoneManager.activeZones) {
-            if (!zone.isReady) continue
+            if (!zone.hasRenderableTiles) continue
             val lifecycleIntensity = zone.lifecycleIntensityAt(renderGameTime)
             if (lifecycleIntensity <= 0.0f) continue
             val temporalIntensity = zone.temporalIntensityAt(renderGameTime)
@@ -168,6 +170,10 @@ object BioluminescentWaterRenderer {
                 if (zone.activity == BioluminescentZoneActivity.INACTIVE &&
                     movementFadeStrength <= VISIBILITY_EPSILON
                 ) continue
+                val localLoadingIntensity = tile.localLoadingIntensityAt(renderGameTime)
+                if (localLoadingIntensity <= VISIBILITY_EPSILON) continue
+                val visibleLifecycleIntensity = lifecycleIntensity * localLoadingIntensity
+                val visibleTemporalIntensity = temporalIntensity * localLoadingIntensity
 
                 val resolvedQuads = ArrayList<ResolvedQuad>(tile.renderQuads.size)
                 for (quad in tile.renderQuads) {
@@ -185,28 +191,28 @@ object BioluminescentWaterRenderer {
                             minV = tile.vAt(quad.minLocalZ),
                             maxV = tile.vAt(quad.maxLocalZ),
                             northWest = vertexShadeAt(
-                                zone, renderGameTime, lifecycleIntensity, temporalIntensity,
+                                zone, renderGameTime, visibleLifecycleIntensity, visibleTemporalIntensity,
                                 quad.northWestPulsePhase,
                                 tile.originX + quad.minLocalX.toDouble(),
                                 tile.originZ + quad.minLocalZ.toDouble(),
                                 movementFadeStrength
                             ),
                             southWest = vertexShadeAt(
-                                zone, renderGameTime, lifecycleIntensity, temporalIntensity,
+                                zone, renderGameTime, visibleLifecycleIntensity, visibleTemporalIntensity,
                                 quad.southWestPulsePhase,
                                 tile.originX + quad.minLocalX.toDouble(),
                                 tile.originZ + quad.maxLocalZ.toDouble(),
                                 movementFadeStrength
                             ),
                             southEast = vertexShadeAt(
-                                zone, renderGameTime, lifecycleIntensity, temporalIntensity,
+                                zone, renderGameTime, visibleLifecycleIntensity, visibleTemporalIntensity,
                                 quad.southEastPulsePhase,
                                 tile.originX + quad.maxLocalX.toDouble(),
                                 tile.originZ + quad.maxLocalZ.toDouble(),
                                 movementFadeStrength
                             ),
                             northEast = vertexShadeAt(
-                                zone, renderGameTime, lifecycleIntensity, temporalIntensity,
+                                zone, renderGameTime, visibleLifecycleIntensity, visibleTemporalIntensity,
                                 quad.northEastPulsePhase,
                                 tile.originX + quad.maxLocalX.toDouble(),
                                 tile.originZ + quad.minLocalZ.toDouble(),
@@ -434,14 +440,15 @@ object BioluminescentWaterRenderer {
         val frustum = camera.cullFrustum
         val poseStack = event.poseStack
         val bufferSource = minecraft.renderBuffers().bufferSource()
-        val maxDistanceSqr = RENDER_DISTANCE * RENDER_DISTANCE
+        val renderDistance = ModConfig.bioluminescenceRenderDistance.coerceIn(32.0, 256.0)
+        val maxDistanceSqr = renderDistance * renderDistance
         val renderGameTime = level.gameTime + minecraft.deltaTracker.gameTimeDeltaTicks.toDouble()
         var quadsSubmitted = 0
 
         poseStack.pushPose()
         val pose = poseStack.last()
         for (zone in BioluminescentZoneManager.activeZones) {
-            if (!zone.isReady) continue
+            if (!zone.hasRenderableTiles) continue
             val lifecycleIntensity = zone.lifecycleIntensityAt(renderGameTime)
             if (lifecycleIntensity <= 0.0f) continue
             val temporalIntensity = zone.temporalIntensityAt(renderGameTime)
@@ -465,6 +472,8 @@ object BioluminescentWaterRenderer {
                 if (zone.activity == BioluminescentZoneActivity.INACTIVE &&
                     movementFadeStrength <= VISIBILITY_EPSILON
                 ) continue
+                val localLoadingIntensity = tile.localLoadingIntensityAt(renderGameTime)
+                if (localLoadingIntensity <= VISIBILITY_EPSILON) continue
                 val consumer = bufferSource.getBuffer(tile.renderTypeVanilla)
                 quadsSubmitted += renderVanillaTile(
                     zone,
@@ -473,8 +482,8 @@ object BioluminescentWaterRenderer {
                     pose,
                     cameraPosition,
                     renderGameTime,
-                    lifecycleIntensity,
-                    temporalIntensity,
+                    lifecycleIntensity * localLoadingIntensity,
+                    temporalIntensity * localLoadingIntensity,
                     movementFadeStrength
                 )
                 bufferSource.endBatch(tile.renderTypeVanilla)

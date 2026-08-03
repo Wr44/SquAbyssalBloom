@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone
 
+import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveMode
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationResult
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationSnapshot
@@ -16,6 +17,7 @@ import net.minecraft.resources.Identifier
 import net.minecraft.world.level.levelgen.RandomSupport
 import kotlin.math.PI
 import kotlin.math.sin
+import java.util.UUID
 
 class BioluminescentZone(
     val zoneSeed: Long,
@@ -27,7 +29,11 @@ class BioluminescentZone(
     val createdAt: Long,
     val lifetime: Long,
     val colorPhase: Double,
-    val requestedByCommand: Boolean
+    val requestedByCommand: Boolean,
+    val eventId: UUID = UUID.randomUUID(),
+    val mode: BioluminescenceWaveMode = BioluminescenceWaveMode.NORMAL,
+    val endGameTime: Long = createdAt + lifetime,
+    var serverGameTimeOffset: Long = 0L
 ) : AutoCloseable {
     companion object {
         const val PULSE_PERIOD_TICKS = 320.0
@@ -37,6 +43,8 @@ class BioluminescentZone(
         const val DISAPPEARANCE_START = 0.80
         const val MAX_RENDER_INTENSITY = 1.15f
         const val BRIGHTNESS_SEED_SALT = 0x6A09E667F3BCC909L
+        const val TOTAL_NIGHT_APPEARANCE_TICKS = 60.0
+        const val TOTAL_NIGHT_FADE_OUT_TICKS = 60.0
     }
 
     private var generator: BioluminescentZoneGenerator? = BioluminescentZoneGenerator(
@@ -52,8 +60,10 @@ class BioluminescentZone(
     var spatialData: BioluminescentZoneGenerationResult? = null
         private set
 
-    var activatedAt: Long? = null
+    var activatedAt: Long? = createdAt
         private set
+
+    private var endingAtServerGameTime: Long? = null
 
     var generationStage = BioluminescentZoneGenerationStage.COLLECT_WATER_DOMAIN
         private set
@@ -65,7 +75,13 @@ class BioluminescentZone(
         private set
 
     val tiles: List<BioluminescentZoneTile>
-        get() = spatialData?.tiles ?: emptyList()
+        get() = spatialData?.tiles ?: generator?.renderableTiles ?: emptyList()
+
+    val hasRenderableTiles: Boolean
+        get() = tiles.isNotEmpty()
+
+    val reservedTileCount: Int
+        get() = generator?.reservedTileCount ?: spatialData?.tiles?.size ?: 0
 
     val isReady: Boolean
         get() = generationStage == BioluminescentZoneGenerationStage.READY
@@ -90,15 +106,25 @@ class BioluminescentZone(
         textureManager: TextureManager,
         identifierFactory: () -> Identifier,
         maxTileCount: Int,
-        gameTime: Long
+        gameTime: Long,
+        priorityPosition: BlockPos
     ) {
         val activeGenerator = generator ?: return
-        activeGenerator.advance(level, textureManager, identifierFactory, maxTileCount)
+        activeGenerator.advance(
+            level,
+            textureManager,
+            identifierFactory,
+            maxTileCount,
+            gameTime,
+            BioluminescentZoneGenerator.GENERATION_TIME_SLICE_NANOS,
+            BioluminescentZoneGenerator.UPLOAD_STEPS_PER_ADVANCE,
+            priorityPosition.x + 0.5,
+            priorityPosition.z + 0.5
+        )
         generationStage = activeGenerator.stage
         generationCpuNanos = activeGenerator.cpuNanos
         if (activeGenerator.stage == BioluminescentZoneGenerationStage.READY) {
             spatialData = checkNotNull(activeGenerator.takeCompletedResult())
-            activatedAt = gameTime
             activeGenerator.close()
             generator = null
         } else if (activeGenerator.stage == BioluminescentZoneGenerationStage.FAILED) {
@@ -134,13 +160,29 @@ class BioluminescentZone(
 
     fun lifecycleIntensityAt(renderGameTime: Double): Float {
         val start = activatedAt ?: return 0.0f
-        val elapsed = (renderGameTime - start).coerceAtLeast(0.0)
-        return lifecycleIntensity(elapsed).toFloat().coerceIn(0.0f, 1.0f)
+        val serverTime = renderGameTime + serverGameTimeOffset
+        val elapsed = (serverTime - start).coerceAtLeast(0.0)
+        var intensity = lifecycleIntensity(elapsed)
+        val endingAt = endingAtServerGameTime
+        if (endingAt != null) {
+            val fadeOutElapsed = (serverTime - endingAt).coerceAtLeast(0.0)
+            intensity *= 1.0 - ModUtilities.smooth(0.0, TOTAL_NIGHT_FADE_OUT_TICKS, fadeOutElapsed)
+        }
+        return intensity.toFloat().coerceIn(0.0f, 1.0f)
+    }
+
+    fun beginEnding(serverGameTime: Long) {
+        if (endingAtServerGameTime == null) endingAtServerGameTime = serverGameTime
+    }
+
+    fun endingFadeComplete(renderGameTime: Double): Boolean {
+        val endingAt = endingAtServerGameTime ?: return false
+        return renderGameTime + serverGameTimeOffset - endingAt >= TOTAL_NIGHT_FADE_OUT_TICKS
     }
 
     fun localPulseIntensityAt(renderGameTime: Double, spatialPhase: Double): Float {
         val start = activatedAt ?: return 0.0f
-        val elapsed = (renderGameTime - start).coerceAtLeast(0.0)
+        val elapsed = (renderGameTime + serverGameTimeOffset - start).coerceAtLeast(0.0)
         val phase = colorPhase + spatialPhase + elapsed * PI * 2.0 / PULSE_PERIOD_TICKS
         val wave = 0.5 + 0.5 * sin(phase)
         val easedWave = ModUtilities.smooth(0.0, 1.0, wave)
@@ -167,8 +209,7 @@ class BioluminescentZone(
     fun movementWaveVisibilityStrength(): Double = movementWaves.visibilityStrength
 
     fun isCompleteAt(gameTime: Long): Boolean {
-        val start = activatedAt ?: return false
-        return gameTime - start >= lifetime
+        return mode == BioluminescenceWaveMode.NORMAL && gameTime + serverGameTimeOffset >= endGameTime
     }
 
     fun horizontalDistanceSqr(worldX: Double, worldZ: Double): Double {
@@ -186,10 +227,14 @@ class BioluminescentZone(
         spatialData?.tiles?.forEach(BioluminescentZoneTile::close)
         spatialData = null
         activatedAt = null
+        endingAtServerGameTime = null
         movementWaves.clear()
     }
 
     private fun lifecycleIntensity(elapsedTicks: Double): Double {
+        if (mode == BioluminescenceWaveMode.TOTAL_NIGHT) {
+            return ModUtilities.smooth(0.0, TOTAL_NIGHT_APPEARANCE_TICKS, elapsedTicks)
+        }
         if (elapsedTicks >= lifetime) return 0.0
         val progress = elapsedTicks / lifetime
         return when {

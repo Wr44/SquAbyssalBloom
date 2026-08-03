@@ -3,24 +3,6 @@ package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone
 object BioluminescentZonePresets {
     val SMALL = BioluminescentZonePreset(
         size = BioluminescentZoneSize.SMALL,
-        geodesicRadiusRange = 10..20,
-        analysisMargin = 4,
-        maxWaterCells = 1200,
-        minWaterCells = 32,
-        coreCountRange = 1..2,
-        macroCoverageRange = 0.15..0.30,
-        visiblePixelCoverageRange = 0.25..0.45,
-        coreRadiusRange = 4.0..8.0,
-        connectionWidthRange = 1.2..2.5,
-        additionalConnectionCountRange = 0..0,
-        reactionDiffusionScale = 1,
-        reactionDiffusionIterations = 80,
-        porosityRange = 0.55..0.75,
-        minConnectionEmission = 0.05
-    )
-
-    val MEDIUM = BioluminescentZonePreset(
-        size = BioluminescentZoneSize.MEDIUM,
         geodesicRadiusRange = 20..36,
         analysisMargin = 8,
         maxWaterCells = 4096,
@@ -57,7 +39,6 @@ object BioluminescentZonePresets {
 
     fun forSize(size: BioluminescentZoneSize): BioluminescentZonePreset = when (size) {
         BioluminescentZoneSize.SMALL -> SMALL
-        BioluminescentZoneSize.MEDIUM -> MEDIUM
         BioluminescentZoneSize.LARGE -> LARGE
     }
 }

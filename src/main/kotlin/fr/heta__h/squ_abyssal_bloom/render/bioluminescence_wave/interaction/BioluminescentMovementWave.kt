@@ -20,7 +20,7 @@ class BioluminescentMovementWave internal constructor(
 
     fun intensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Double {
         val age = renderGameTime - startedAt
-        if (age < 0.0 || age >= LIFETIME_TICKS) return 0.0
+        if (age !in 0.0..<LIFETIME_TICKS) return 0.0
         val deltaX = worldX - originX
         val deltaZ = worldZ - originZ
         val distance = sqrt(deltaX * deltaX + deltaZ * deltaZ)

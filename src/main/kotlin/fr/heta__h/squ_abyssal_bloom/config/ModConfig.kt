@@ -12,12 +12,14 @@ import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.BioluminescenceServerSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BrineSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.FishSchoolSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.MackerelSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.mods.DynamicLightSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.mods.IrisSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.RedSlobbererSubMenu
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.persistServerConfigChanges
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
@@ -38,6 +40,7 @@ object ModConfig {
     var enableAbyssFog: Boolean = true
     var abyssDepthStart: Double = 30.0
     var abyssMaxDepth: Double = 80.0
+    var enableMarineSnow: Boolean = true
     var maxMarinSnowParticles: Int = 75
     var fogDarknessIntensity: Double = 1.0
     var fogRepellerInfluence: Double = 0.5
@@ -55,7 +58,7 @@ object ModConfig {
     var conduitBoundaryRingRadius: Double = 2.5
     var conduitBoundaryRingPoints: Int = 24
     var conduitBoundaryParticleInterval: Int = 3
-    var conduitBoundaryParticlesEnabled: Boolean = true
+    var enableConduitBoundaryParticles: Boolean = true
     var enableSurfaceOccluder: Boolean = true
     var surfaceOccluderAlphaMin: Double = 0.05
     var surfaceOccluderAlphaMax: Double = 0.70
@@ -63,16 +66,19 @@ object ModConfig {
     var surfaceOccluderFadeSpeed: Double = 2.5
     var surfaceOccluderLodBandWidth: Int = 64
     var surfaceOccluderTargetDepth: Double = 0.5
-    var irisCompatibilityEnabled: Boolean = true
+    var enableIrisCompatibility: Boolean = true
     var shaderBioluminescencePrimaryAlphaMultiplier: Double = 1.6
     var shaderBioluminescenceVisibilityCompensation: Double = 0.12
     var shaderBioluminescenceDeepWaterBoost: Double = 1.45
     var shaderBioluminescenceGrazingStrength: Double = 0.20
     var shaderBioluminescenceUnderwaterCompensation: Double = 0.45
-    var dynamicLightsEnabled: Boolean = true
+    var enableDynamicLights: Boolean = true
     var dynamicLightsNautilusIntensity: Double = 1.0
     var dynamicLightsBioluminescenceActiveIntensity: Double = 1.0
     var dynamicLightsBioluminescenceInactiveIntensity: Double = 1.0
+    var enableBioluminescenceRendering: Boolean = true
+    var bioluminescenceTileFadeInTicks: Int = 20
+    var bioluminescenceRenderDistance: Double = 128.0
 
     fun loadConfig() {
         if (!configFile.exists()) { saveConfig(); return }
@@ -81,6 +87,7 @@ object ModConfig {
             enableAbyssFog = json.get("enableAbyssFog")?.asBoolean ?: true
             abyssDepthStart = json.get("abyssDepthStart")?.asDouble ?: 30.0
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
+            enableMarineSnow = json.get("enableMarineSnow")?.asBoolean ?: true
             maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
             fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
             fogRepellerInfluence = json.get("fogRepellerInfluence")?.asDouble ?: 0.5
@@ -98,7 +105,7 @@ object ModConfig {
             conduitBoundaryRingRadius = json.get("conduitBoundaryRingRadius")?.asDouble ?: 2.5
             conduitBoundaryRingPoints = json.get("conduitBoundaryRingPoints")?.asInt ?: 24
             conduitBoundaryParticleInterval = json.get("conduitBoundaryParticleInterval")?.asInt ?: 3
-            conduitBoundaryParticlesEnabled = json.get("conduitBoundaryParticlesEnabled")?.asBoolean ?: true
+            enableConduitBoundaryParticles = json.get("enableConduitBoundaryParticles")?.asBoolean ?: true
             enableSurfaceOccluder = json.get("enableSurfaceOccluder")?.asBoolean ?: true
             surfaceOccluderAlphaMin = json.get("surfaceOccluderAlphaMin")?.asDouble ?: 0.05
             surfaceOccluderAlphaMax = json.get("surfaceOccluderAlphaMax")?.asDouble ?: 0.70
@@ -106,7 +113,7 @@ object ModConfig {
             surfaceOccluderFadeSpeed = json.get("surfaceOccluderFadeSpeed")?.asDouble ?: 2.5
             surfaceOccluderLodBandWidth = json.get("surfaceOccluderLodBandWidth")?.asInt ?: 64
             surfaceOccluderTargetDepth = json.get("surfaceOccluderTargetDepth")?.asDouble ?: 0.5
-            irisCompatibilityEnabled = json.get("irisCompatibilityEnabled")?.asBoolean ?: true
+            enableIrisCompatibility = json.get("enableIrisCompatibility")?.asBoolean ?: true
             shaderBioluminescencePrimaryAlphaMultiplier =
                 json.get("shaderBioluminescencePrimaryAlphaMultiplier")?.asDouble ?: 1.6
             shaderBioluminescenceVisibilityCompensation =
@@ -117,13 +124,16 @@ object ModConfig {
                 json.get("shaderBioluminescenceGrazingStrength")?.asDouble ?: 0.20
             shaderBioluminescenceUnderwaterCompensation =
                 json.get("shaderBioluminescenceUnderwaterCompensation")?.asDouble ?: 0.45
-            dynamicLightsEnabled = json.get("dynamicLightsEnabled")?.asBoolean ?: true
+            enableDynamicLights = json.get("enableDynamicLights")?.asBoolean ?: true
             dynamicLightsNautilusIntensity =
                 json.get("dynamicLightsNautilusIntensity")?.asDouble ?: 1.0
             dynamicLightsBioluminescenceActiveIntensity =
                 json.get("dynamicLightsBioluminescenceActiveIntensity")?.asDouble ?: 1.0
             dynamicLightsBioluminescenceInactiveIntensity =
                 json.get("dynamicLightsBioluminescenceInactiveIntensity")?.asDouble ?: 1.0
+            enableBioluminescenceRendering = json.get("enableBioluminescenceRendering")?.asBoolean ?: true
+            bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 20
+            bioluminescenceRenderDistance = json.get("bioluminescenceRenderDistance")?.asDouble ?: 128.0
         } catch (e: Exception) {
             println("Erreur config : ${e.message}")
         }
@@ -135,6 +145,7 @@ object ModConfig {
                 addProperty("enableAbyssFog", enableAbyssFog)
                 addProperty("abyssDepthStart", abyssDepthStart)
                 addProperty("abyssMaxDepth", abyssMaxDepth)
+                addProperty("enableMarineSnow", enableMarineSnow)
                 addProperty("maxMarinSnowParticles", maxMarinSnowParticles)
                 addProperty("fogDarknessIntensity", fogDarknessIntensity)
                 addProperty("fogRepellerInfluence", fogRepellerInfluence)
@@ -152,7 +163,7 @@ object ModConfig {
                 addProperty("conduitBoundaryRingRadius", conduitBoundaryRingRadius)
                 addProperty("conduitBoundaryRingPoints", conduitBoundaryRingPoints)
                 addProperty("conduitBoundaryParticleInterval", conduitBoundaryParticleInterval)
-                addProperty("conduitBoundaryParticlesEnabled", conduitBoundaryParticlesEnabled)
+                addProperty("enableConduitBoundaryParticles", enableConduitBoundaryParticles)
                 addProperty("enableSurfaceOccluder", enableSurfaceOccluder)
                 addProperty("surfaceOccluderAlphaMin", surfaceOccluderAlphaMin)
                 addProperty("surfaceOccluderAlphaMax", surfaceOccluderAlphaMax)
@@ -160,16 +171,19 @@ object ModConfig {
                 addProperty("surfaceOccluderFadeSpeed", surfaceOccluderFadeSpeed)
                 addProperty("surfaceOccluderLodBandWidth", surfaceOccluderLodBandWidth)
                 addProperty("surfaceOccluderTargetDepth", surfaceOccluderTargetDepth)
-                addProperty("irisCompatibilityEnabled", irisCompatibilityEnabled)
+                addProperty("enableIrisCompatibility", enableIrisCompatibility)
                 addProperty("shaderBioluminescencePrimaryAlphaMultiplier", shaderBioluminescencePrimaryAlphaMultiplier)
                 addProperty("shaderBioluminescenceVisibilityCompensation", shaderBioluminescenceVisibilityCompensation)
                 addProperty("shaderBioluminescenceDeepWaterBoost", shaderBioluminescenceDeepWaterBoost)
                 addProperty("shaderBioluminescenceGrazingStrength", shaderBioluminescenceGrazingStrength)
                 addProperty("shaderBioluminescenceUnderwaterCompensation", shaderBioluminescenceUnderwaterCompensation)
-                addProperty("dynamicLightsEnabled", dynamicLightsEnabled)
+                addProperty("enableDynamicLights", enableDynamicLights)
                 addProperty("dynamicLightsNautilusIntensity", dynamicLightsNautilusIntensity)
                 addProperty("dynamicLightsBioluminescenceActiveIntensity", dynamicLightsBioluminescenceActiveIntensity)
                 addProperty("dynamicLightsBioluminescenceInactiveIntensity", dynamicLightsBioluminescenceInactiveIntensity)
+                addProperty("enableBioluminescenceRendering", enableBioluminescenceRendering)
+                addProperty("bioluminescenceTileFadeInTicks", bioluminescenceTileFadeInTicks)
+                addProperty("bioluminescenceRenderDistance", bioluminescenceRenderDistance)
             }
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))
@@ -210,14 +224,14 @@ object ModConfig {
             .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin"))
             .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMin.desc")))
             .binding(Binding.generic(0.05, { surfaceOccluderAlphaMin }, { surfaceOccluderAlphaMin = it }))
-            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 0.5).step(0.01) }
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 0.5).step(0.01).formatValue { v -> Component.literal(String.format("%.0f%%", v * 100.0)) } }
             .build()
 
         val alphaMaxOpt = Option.createBuilder<Double>()
             .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax"))
             .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderAlphaMax.desc")))
             .binding(Binding.generic(0.70, { surfaceOccluderAlphaMax }, { surfaceOccluderAlphaMax = it }))
-            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 1.0).step(0.01) }
+            .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 1.0).step(0.01).formatValue { v -> Component.literal(String.format("%.0f%%", v * 100.0)) } }
             .build()
 
         alphaMinOpt.addListener { _, newMin ->
@@ -323,31 +337,31 @@ object ModConfig {
                         .name(Component.translatable("config.squ_abyssal_bloom.fogDarknessIntensity"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogDarknessIntensity.tooltip")))
                         .binding(Binding.generic(1.0, { fogDarknessIntensity }, { fogDarknessIntensity = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue { v -> Component.literal(String.format("%.1fx", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.abyssColorRetention.desc")))
                         .binding(Binding.generic(0.15, { abyssColorRetention }, { abyssColorRetention = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05).formatValue { v -> Component.literal(String.format("%.0f%%", v * 100.0)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence.tooltip")))
                         .binding(Binding.generic(0.5, { fogRepellerInfluence }, { fogRepellerInfluence = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05).formatValue { v -> Component.literal(String.format("%.0f%%", v * 100.0)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerNearPlaneMultiplier.desc")))
                         .binding(Binding.generic(12.0, { fogRepellerNearPlaneMultiplier }, { fogRepellerNearPlaneMultiplier = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 50.0).step(1.0) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 50.0).step(1.0).formatValue { v -> Component.literal(String.format("%.1fx", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier.desc")))
                         .binding(Binding.generic(60.0, { fogRepellerFarPlaneMultiplier }, { fogRepellerFarPlaneMultiplier = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0).formatValue { v -> Component.literal(String.format("%.1fx", v)) } }
                         .build())
                     .option(Option.createBuilder<Boolean>()
                         .name(Component.translatable("config.squ_abyssal_bloom.enableDepthVignette"))
@@ -359,13 +373,13 @@ object ModConfig {
                         .name(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity.desc")))
                         .binding(Binding.generic(1.0, { vignetteIntensity }, { vignetteIntensity = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue { v -> Component.literal(String.format("%.1fx", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.lightDimmingStrength"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lightDimmingStrength.desc")))
                         .binding(Binding.generic(0.7, { lightDimmingStrength }, { lightDimmingStrength = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue { v -> Component.literal(String.format("%.1fx", v)) } }
                         .build())
                     .build())
 
@@ -374,6 +388,12 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.marine_snow.desc"))
                         .customImage(StaticImageRenderer("marine_snow", 1920, 991))
+                        .build())
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.enableMarineSnow"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableMarineSnow.desc")))
+                        .binding(Binding.generic(true, { enableMarineSnow }, { enableMarineSnow = it }))
+                        .controller(TickBoxControllerBuilder::create)
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.maxMarinSnowParticles"))
@@ -385,25 +405,25 @@ object ModConfig {
                         .name(Component.translatable("config.squ_abyssal_bloom.marineSnowDensity"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowDensity.tooltip")))
                         .binding(Binding.generic(1.0, { marineSnowDensity }, { marineSnowDensity = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 3.0).step(0.1) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 3.0).step(0.1).formatValue { v -> Component.literal(String.format("%.1fx", v)) } }
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.marineSnowVisibilityRange"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowVisibilityRange.tooltip")))
                         .binding(Binding.generic(20, { marineSnowVisibilityRange }, { marineSnowVisibilityRange = it }))
-                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(5, 50).step(5) }
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(5, 50).step(5).formatValue { v -> Component.literal("$v blocs") } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.marineSnowSwayAmplitude"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowSwayAmplitude.desc")))
                         .binding(Binding.generic(1.0, { marineSnowSwayAmplitude }, { marineSnowSwayAmplitude = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue { v -> Component.literal(String.format("%.1f blocs", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.marineSnowSpawnHeightAbove"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowSpawnHeightAbove.desc")))
                         .binding(Binding.generic(2.0, { marineSnowSpawnHeightAbove }, { marineSnowSpawnHeightAbove = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 20.0).step(0.5) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 20.0).step(0.5).formatValue { v -> Component.literal(String.format("%.1f blocs", v)) } }
                         .build())
                     .build())
 
@@ -425,19 +445,19 @@ object ModConfig {
                         .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers.desc")))
                         .binding(Binding.generic(5, { surfaceOccluderNumLayers }, { surfaceOccluderNumLayers = it }))
-                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 10).step(1) }
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 10).step(1).formatValue { v -> Component.literal("$v couches") } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderFadeSpeed"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderFadeSpeed.desc")))
                         .binding(Binding.generic(2.5, { surfaceOccluderFadeSpeed }, { surfaceOccluderFadeSpeed = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 10.0).step(0.5) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 10.0).step(0.5).formatValue { v -> Component.literal(String.format("%.1fx", v)) } }
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderLodBandWidth"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderLodBandWidth.desc")))
                         .binding(Binding.generic(64, { surfaceOccluderLodBandWidth }, { surfaceOccluderLodBandWidth = it }))
-                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(16, 256).step(16) }
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(16, 256).step(16).formatValue { v -> Component.literal("$v blocs") } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderTargetDepth"))
@@ -448,40 +468,89 @@ object ModConfig {
                     .build())
 
                 .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_client").withStyle(ChatFormatting.AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_client.desc"))
+                        .customImage(StaticImageRenderer("wave", 1920, 991))
+                        .build()
+                    )
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.enableBioluminescenceRendering"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.enableBioluminescenceRendering.desc")
+                        ))
+                        .binding(Binding.generic(
+                            true,
+                            { enableBioluminescenceRendering },
+                            { enableBioluminescenceRendering = it }
+                        ))
+                        .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceRenderDistance"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.bioluminescenceRenderDistance.desc")
+                        ))
+                        .binding(Binding.generic(
+                            128.0,
+                            { bioluminescenceRenderDistance },
+                            { bioluminescenceRenderDistance = it }
+                        ))
+                        .controller { option -> DoubleSliderControllerBuilder.create(option).range(32.0, 256.0).step(8.0).formatValue { v -> Component.literal(String.format("%.0f blocs", v)) } }
+                        .build())
+                    .option(Option.createBuilder<Int>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceTileFadeInTicks"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.bioluminescenceTileFadeInTicks.desc")
+                        ))
+                        .binding(Binding.generic(
+                            20,
+                            { bioluminescenceTileFadeInTicks },
+                            { bioluminescenceTileFadeInTicks = it }
+                        ))
+                        .controller { option ->
+                            IntegerSliderControllerBuilder.create(option).range(0, 100).step(5)
+                                .formatValue { value -> Component.literal(ModUtilities.formatTicksAsDuration(value)) }
+                        }
+                        .build())
+                    .build())
+
+
+                .group(OptionGroup.createBuilder()
                     .name(Component.translatable("config.squ_abyssal_bloom.group.conduit").withStyle(ChatFormatting.DARK_AQUA))
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.conduit.desc"))
                         .customImage(StaticImageRenderer("conduit_boundary", 1920, 991))
                         .build())
                     .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticlesEnabled.desc")))
-                        .binding(Binding.generic(true, { conduitBoundaryParticlesEnabled }, { conduitBoundaryParticlesEnabled = it }))
+                        .name(Component.translatable("config.squ_abyssal_bloom.enableConduitBoundaryParticles"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableConduitBoundaryParticles.desc")))
+                        .binding(Binding.generic(true, { enableConduitBoundaryParticles }, { enableConduitBoundaryParticles = it }))
                         .controller(TickBoxControllerBuilder::create)
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryTriggerDistance"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryTriggerDistance.desc")))
                         .binding(Binding.generic(5.0, { conduitBoundaryTriggerDistance }, { conduitBoundaryTriggerDistance = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(1.0, 20.0).step(0.5) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(1.0, 20.0).step(0.5).formatValue { v -> Component.literal(String.format("%.1f blocs", v)) } }
                         .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingRadius"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingRadius.desc")))
                         .binding(Binding.generic(2.5, { conduitBoundaryRingRadius }, { conduitBoundaryRingRadius = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 10.0).step(0.5) }
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 10.0).step(0.5).formatValue { v -> Component.literal(String.format("%.1f blocs", v)) } }
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingPoints"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryRingPoints.desc")))
                         .binding(Binding.generic(24, { conduitBoundaryRingPoints }, { conduitBoundaryRingPoints = it }))
-                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(4, 64).step(4) }
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(4, 64).step(4).formatValue { v -> Component.literal("$v points") } }
                         .build())
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticleInterval"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.conduitBoundaryParticleInterval.desc")))
                         .binding(Binding.generic(3, { conduitBoundaryParticleInterval }, { conduitBoundaryParticleInterval = it }))
-                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 20).step(1) }
+                        .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 20).step(1).formatValue { v -> Component.literal("$v ticks") } }
                         .build())
                     .build())
 
@@ -497,10 +566,27 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.ocean_territories.desc"))
                         .build())
-                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS, step = 1))
+                    .option(serverInt(ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS, step = 1) { Component.literal("$it zooms") })
                     .option(serverInt(ModServerConfig.OCEAN_TERRITORY_DEFAULT_WEIGHT, step = 5))
                     .option(serverInt(ModServerConfig.OCEAN_TERRITORY_OWN_WEIGHT, step = 5))
                     .option(serverBool(ModServerConfig.OCEAN_TERRITORY_INCLUDE_VANILLA))
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(BioluminescenceServerSubMenu.displayName.copy().withStyle(ChatFormatting.AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(BioluminescenceServerSubMenu.displayDescription)
+                        .customImage(StaticImageRenderer("wave", 1920, 991))
+                        .build())
+                    .option(subScreenButton(
+                        name = BioluminescenceServerSubMenu.displayName,
+                        description = OptionDescription.createBuilder()
+                            .text(BioluminescenceServerSubMenu.displayDescription)
+                            .customImage(StaticImageRenderer("wave", 1920, 991))
+                            .build(),
+                        screenTitle = BioluminescenceServerSubMenu.displayName,
+                        buildGroups = BioluminescenceServerSubMenu::buildGroups
+                    ))
                     .build())
 
                 .group(OptionGroup.createBuilder()
@@ -579,7 +665,7 @@ object ModConfig {
                     .option(shallowFloorOpt)
                     .option(deepFloorOpt)
                     .option(abyssalFloorOpt)
-                    .option(serverInt(ModServerConfig.SHALLOW_CLEARANCE))
+                    .option(serverInt(ModServerConfig.SHALLOW_CLEARANCE, format = ModUtilities.blocksFormatInt()))
                     .build())
 
                 .group(OptionGroup.createBuilder()
@@ -587,15 +673,15 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.topo.desc"))
                         .build())
-                    .option(serverDouble(ModServerConfig.WARP_AMP, step = 5.0))
-                    .option(serverDouble(ModServerConfig.WARP2_AMP, step = 2.0))
-                    .option(serverDouble(ModServerConfig.TOPO_LARGE_AMP, step = 5.0))
-                    .option(serverDouble(ModServerConfig.TOPO_AMP, step = 2.0))
-                    .option(serverDouble(ModServerConfig.TOPO_MID_AMP, step = 1.0))
-                    .option(serverDouble(ModServerConfig.WALL_AMP, step = 2.0))
-                    .option(serverDouble(ModServerConfig.DETAIL_AMP, step = 1.0))
-                    .option(serverDouble(ModServerConfig.MICRO_AMP, step = 0.5))
-                    .option(serverDouble(ModServerConfig.WEIRDNESS_AMP, step = 1.0))
+                    .option(serverDouble(ModServerConfig.WARP_AMP, step = 5.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.WARP2_AMP, step = 2.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.TOPO_LARGE_AMP, step = 5.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.TOPO_AMP, step = 2.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.TOPO_MID_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.WALL_AMP, step = 2.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.DETAIL_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.MICRO_AMP, step = 0.5, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.WEIRDNESS_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
                     .build())
 
                 .group(OptionGroup.createBuilder()
@@ -605,7 +691,7 @@ object ModConfig {
                         .build())
                     .option(serverDouble(ModServerConfig.FAULT_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
                     .option(serverDouble(ModServerConfig.FAULT_BLEND, step = 0.001) { Component.literal(String.format("%.3f", it)) })
-                    .option(serverDouble(ModServerConfig.FAULT_OFFSET_AMP, step = 1.0))
+                    .option(serverDouble(ModServerConfig.FAULT_OFFSET_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
                     .build())
 
                 .group(OptionGroup.createBuilder()
@@ -614,7 +700,7 @@ object ModConfig {
                         .text(Component.translatable("config.squ_abyssal_bloom.group.trenches.desc"))
                         .build())
                     .option(serverDouble(ModServerConfig.TRENCH_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
-                    .option(serverDouble(ModServerConfig.TRENCH_DEPTH_AMP, step = 1.0))
+                    .option(serverDouble(ModServerConfig.TRENCH_DEPTH_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
                     .build())
 
                 .group(OptionGroup.createBuilder()
@@ -623,7 +709,7 @@ object ModConfig {
                         .text(Component.translatable("config.squ_abyssal_bloom.group.terraces.desc"))
                         .build())
                     .option(serverDouble(ModServerConfig.TERRACE_FREQUENCY_PERCENT, step = 1.0) { Component.literal(String.format("%.0f%%", it)) })
-                    .option(serverDouble(ModServerConfig.TERRACE_STEP, step = 1.0))
+                    .option(serverDouble(ModServerConfig.TERRACE_STEP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
                     .build())
 
                 .build())

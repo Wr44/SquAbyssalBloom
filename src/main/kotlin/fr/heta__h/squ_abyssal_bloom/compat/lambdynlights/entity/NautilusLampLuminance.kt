@@ -22,7 +22,7 @@ class NautilusLampLuminance : EntityLuminance {
     override fun type(): EntityLuminance.Type = TYPE
 
     override fun getLuminance(itemLightSourceManager: ItemLightSourceManager, entity: Entity): Int {
-        if (!ModConfig.dynamicLightsEnabled) return 0
+        if (!ModConfig.enableDynamicLights) return 0
         if (entity is AbstractNautilus) {
             val extraItem = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
 

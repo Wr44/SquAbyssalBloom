@@ -1,6 +1,5 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation
 
-import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomainCollector
@@ -25,7 +24,7 @@ import java.util.ArrayDeque
 import kotlin.math.roundToInt
 
 class BioluminescentZoneGenerator(
-    anchor: BlockPos,
+    private val anchor: BlockPos,
     initialCell: BioluminescentWaterCell,
     val preset: BioluminescentZonePreset,
     private val zoneSeed: Long,
@@ -35,7 +34,7 @@ class BioluminescentZoneGenerator(
         const val TARGET_STEP_NANOS = 1_200_000L
         const val MAX_WORK_STEPS_PER_TICK = 4
         const val GENERATION_TIME_SLICE_NANOS = 4_000_000L
-        const val STEP_WARNING_THRESHOLD_NANOS = 8_000_000L
+        const val UPLOAD_STEPS_PER_ADVANCE = 2
         const val MIN_MACRO_COMPONENT_RATIO = 0.95
         const val RADIUS_SALT = 0x7137449123EF65CDL
         const val MACRO_COVERAGE_SALT = 0x428A2F98D728AE22L
@@ -74,9 +73,12 @@ class BioluminescentZoneGenerator(
     private var tileOrigins: List<Long> = emptyList()
     private var tileCursor = 0
     private var currentTile: BioluminescentZoneTile? = null
+    private var tileBudgetLimit = 0
     private var uploadCursor = 0
     private var completedResult: BioluminescentZoneGenerationResult? = null
     private var transferred = false
+    private var priorityWorldX = anchor.x + 0.5
+    private var priorityWorldZ = anchor.z + 0.5
 
     var stage = BioluminescentZoneGenerationStage.COLLECT_WATER_DOMAIN
         private set
@@ -91,35 +93,40 @@ class BioluminescentZoneGenerator(
         get() = stage == BioluminescentZoneGenerationStage.READY ||
             stage == BioluminescentZoneGenerationStage.FAILED
 
+    val renderableTiles: List<BioluminescentZoneTile>
+        get() = preparedTiles.subList(0, uploadCursor.coerceAtMost(preparedTiles.size))
+
+    val reservedTileCount: Int
+        get() = tileBudgetLimit
+
     fun advance(
         level: ClientLevel,
         textureManager: TextureManager,
         identifierFactory: () -> Identifier,
-        maxTileCount: Int
+        maxTileCount: Int,
+        gameTime: Long,
+        generationTimeSliceNanos: Long,
+        maximumUploadSteps: Int,
+        priorityWorldX: Double,
+        priorityWorldZ: Double
     ) {
         if (isTerminal) return
+        this.priorityWorldX = priorityWorldX
+        this.priorityWorldZ = priorityWorldZ
         val startedAt = System.nanoTime()
         try {
             var workSteps = 0
+            var uploadSteps = 0
             do {
                 val stageBeforeStep = stage
-                val stepStartedAt = System.nanoTime()
-                advanceCurrentStage(level, textureManager, identifierFactory, maxTileCount)
-                val stepNanos = System.nanoTime() - stepStartedAt
-                if (stepNanos > STEP_WARNING_THRESHOLD_NANOS) {
-                    SquAbyssalBloom.LOGGER.warn(
-                        "[Bio Perf] etape {} a pris {} ms (preset={}, tuiles={}/{})",
-                        stageBeforeStep,
-                        stepNanos / 1_000_000.0,
-                        preset.size.commandName,
-                        preparedTiles.size,
-                        tileOrigins.size
-                    )
-                }
+                advanceCurrentStage(level, textureManager, identifierFactory, maxTileCount, gameTime)
                 workSteps++
+                if (stageBeforeStep == BioluminescentZoneGenerationStage.UPLOAD_TILES) uploadSteps++
             } while (!isTerminal &&
                 workSteps < MAX_WORK_STEPS_PER_TICK &&
-                System.nanoTime() - startedAt < GENERATION_TIME_SLICE_NANOS
+                System.nanoTime() - startedAt < generationTimeSliceNanos &&
+                (stage != BioluminescentZoneGenerationStage.UPLOAD_TILES ||
+                    uploadSteps < maximumUploadSteps.coerceAtLeast(1))
             )
         } catch (exception: RuntimeException) {
             fail(exception.message ?: exception.javaClass.simpleName)
@@ -132,7 +139,8 @@ class BioluminescentZoneGenerator(
         level: ClientLevel,
         textureManager: TextureManager,
         identifierFactory: () -> Identifier,
-        maxTileCount: Int
+        maxTileCount: Int,
+        gameTime: Long
     ) {
         when (stage) {
             BioluminescentZoneGenerationStage.COLLECT_WATER_DOMAIN -> collectDomain(level)
@@ -149,7 +157,7 @@ class BioluminescentZoneGenerator(
                 identifierFactory,
                 maxTileCount
             )
-            BioluminescentZoneGenerationStage.UPLOAD_TILES -> uploadTiles()
+            BioluminescentZoneGenerationStage.UPLOAD_TILES -> uploadTiles(gameTime)
             BioluminescentZoneGenerationStage.READY,
             BioluminescentZoneGenerationStage.FAILED -> Unit
         }
@@ -324,11 +332,12 @@ class BioluminescentZoneGenerator(
         maxTileCount: Int
     ) {
         check(tileOrigins.isNotEmpty()) { "aucune tuile lumineuse" }
-        check(tileOrigins.size <= maxTileCount) {
-            "budget de tuiles insuffisant: ${tileOrigins.size}/$maxTileCount"
+        if (tileBudgetLimit < tileOrigins.size) {
+            tileBudgetLimit = maxOf(tileBudgetLimit, minOf(tileOrigins.size, maxTileCount))
         }
+        if (tileCursor >= tileBudgetLimit && currentTile == null && preparedTiles.isEmpty()) return
         var tile = currentTile
-        while (tile == null && tileCursor < tileOrigins.size) {
+        while (tile == null && tileCursor < tileBudgetLimit) {
             val key = tileOrigins[tileCursor++]
             val originX = (key shr 32).toInt()
             val originZ = key.toInt()
@@ -357,12 +366,12 @@ class BioluminescentZoneGenerator(
         stage = BioluminescentZoneGenerationStage.UPLOAD_TILES
     }
 
-    private fun uploadTiles() {
+    private fun uploadTiles(gameTime: Long) {
         if (uploadCursor >= preparedTiles.size) {
             finalizeResult()
             return
         }
-        if (preparedTiles[uploadCursor].uploadStep()) {
+        if (preparedTiles[uploadCursor].uploadStep(gameTime)) {
             uploadCursor++
             if (uploadCursor >= preparedTiles.size) finalizeResult()
         }
@@ -400,7 +409,19 @@ class BioluminescentZoneGenerator(
                 BioluminescentZoneTile.TILE_SIZE
             origins.add(ModUtilities.horizontalPositionKey(originX, originZ))
         }
-        return origins.sortedWith(compareBy({ (it shr 32).toInt() }, { it.toInt() }))
+        return origins.sortedWith(
+            compareBy<Long> { key ->
+                val originX = (key shr 32).toInt()
+                val originZ = key.toInt()
+                ModUtilities.horizontalDistanceSqr(
+                    originX + BioluminescentZoneTile.TILE_SIZE * 0.5,
+                    originZ + BioluminescentZoneTile.TILE_SIZE * 0.5,
+                    priorityWorldX,
+                    priorityWorldZ
+                )
+            }.thenBy { key -> (key shr 32).toInt() }
+                .thenBy { key -> key.toInt() }
+        )
     }
 
     private fun validateMacroConnectivity(field: BioluminescentMacroField) {

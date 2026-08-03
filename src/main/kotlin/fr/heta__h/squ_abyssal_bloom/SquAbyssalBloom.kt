@@ -14,6 +14,8 @@ import fr.heta__h.squ_abyssal_bloom.entity.ai.stealth.StealthRetargetRegistry
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.control.BarnacleStealthRetargetProvider
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererFishInfluenceProvider
 import fr.heta__h.squ_abyssal_bloom.entity.custom.red_slobberer.ecology.RedSlobbererReefManager
+import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.BioluminescenceLevelManager
+import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.BioluminescenceServerManager
 import fr.heta__h.squ_abyssal_bloom.item.ModCreativeModeTabs
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
@@ -129,6 +131,8 @@ object SquAbyssalBloom {
     @SubscribeEvent
     fun onServerStopped(event: ServerStoppedEvent) {
         AbyssalWorldgenScope.clear()
+        BioluminescenceLevelManager.releaseServerLevels(event.server)
+        BioluminescenceServerManager.releaseServer(event.server)
     }
 
     @SubscribeEvent
@@ -143,5 +147,6 @@ object SquAbyssalBloom {
         AbyssalWorldgenScope.unregister(serverLevel)
         FishCollectiveManager.releaseLevel(serverLevel)
         RedSlobbererReefManager.releaseLevel(serverLevel)
+        BioluminescenceLevelManager.releaseLevel(serverLevel)
     }
 }

@@ -1,6 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture
 
 import com.mojang.blaze3d.pipeline.RenderPipeline
+import com.mojang.blaze3d.systems.RenderSystem
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.pipeline.BioluminescentRenderPipelines
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -271,6 +273,9 @@ class BioluminescentZoneTile private constructor(
     var uploaded: Boolean = false
         private set
 
+    var state: BioluminescentTileState = BioluminescentTileState.BUILDING_CPU
+        private set
+
     var uploadCount: Int = 0
         private set
 
@@ -278,11 +283,15 @@ class BioluminescentZoneTile private constructor(
     private var uploadStarted = false
     private var movementFadeStrength: Double = 0.0
     private var lastMovementFadeNanos: Long = 0L
+    private var readyAtGameTime: Long? = null
 
     fun fillPixelsStep(rowBudget: Int): Boolean {
         val context = pixelationContext ?: return true
         val done = context.advance(rowBudget)
-        if (done) pixelationContext = null
+        if (done) {
+            pixelationContext = null
+            state = BioluminescentTileState.WAITING_GPU_UPLOAD
+        }
         return done
     }
 
@@ -321,9 +330,17 @@ class BioluminescentZoneTile private constructor(
         )
     }
 
-    fun uploadStep(): Boolean {
+    fun localLoadingIntensityAt(renderGameTime: Double): Float {
+        val readyAt = readyAtGameTime ?: return 0.0f
+        val fadeTicks = ModConfig.bioluminescenceTileFadeInTicks.coerceAtLeast(0)
+        if (fadeTicks == 0) return 1.0f
+        return ((renderGameTime - readyAt) / fadeTicks.toDouble()).toFloat().coerceIn(0.0f, 1.0f)
+    }
+
+    fun uploadStep(gameTime: Long): Boolean {
         check(!closed)
         if (uploaded) return true
+        RenderSystem.assertOnRenderThread()
         val finished = if (!uploadStarted) {
             val source = checkNotNull(preparedPixels)
             uploadStarted = true
@@ -336,6 +353,8 @@ class BioluminescentZoneTile private constructor(
         if (!finished) return false
         uploaded = true
         uploadCount++
+        readyAtGameTime = gameTime
+        state = BioluminescentTileState.READY
         return true
     }
 
@@ -345,6 +364,7 @@ class BioluminescentZoneTile private constructor(
         pixelationContext = null
         textureManager.release(identifier)
         closed = true
+        state = BioluminescentTileState.CLOSED
     }
 
     class RenderQuad internal constructor(

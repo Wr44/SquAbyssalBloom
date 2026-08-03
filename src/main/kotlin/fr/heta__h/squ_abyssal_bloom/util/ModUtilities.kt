@@ -47,6 +47,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.LevelReader
+import net.minecraft.world.level.chunk.status.ChunkStatus
 import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.level.levelgen.RandomSupport
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource
@@ -65,6 +66,10 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 object ModUtilities {
+
+    fun hasLoadedChunk(level: LevelReader, chunkX: Int, chunkZ: Int): Boolean {
+        return level.getChunk(chunkX, chunkZ, ChunkStatus.FULL, false) != null
+    }
 
     fun horizontalPositionKey(x: Int, z: Int): Long {
         return (x.toLong() shl 32) xor (z.toLong() and 0xFFFFFFFFL)
@@ -132,7 +137,7 @@ object ModUtilities {
 
                     val x = center.x + offsetX
                     val z = center.z + offsetZ
-                    if (!level.hasChunk(x shr 4, z shr 4)) continue
+                    if (!hasLoadedChunk(level, x shr 4, z shr 4)) continue
 
                     for (y in minY..maxY) {
                         cursor.set(x, y, z)
@@ -203,6 +208,50 @@ object ModUtilities {
     ): BlockPos? {
         val waterBlock = findNearbyWaterBlock(level, center, horizontalRadius, verticalRadius) ?: return null
         return findTopWaterBlock(level, waterBlock)
+    }
+
+    fun findNearbyRenderableWaterSurface(
+        level: LevelReader,
+        center: BlockPos,
+        horizontalRadius: Int,
+        verticalRadius: Int,
+        predicate: (BlockPos) -> Boolean = { true }
+    ): BlockPos? {
+        val minimumY = maxOf(level.minY, center.y - verticalRadius)
+        val maximumY = minOf(level.maxY - 1, center.y + verticalRadius)
+        val cursor = BlockPos.MutableBlockPos()
+        val visitedColumns = hashSetOf<Long>()
+
+        for (radius in 0..horizontalRadius) {
+            for (offsetX in -radius..radius) {
+                for (offsetZ in -radius..radius) {
+                    if (maxOf(abs(offsetX), abs(offsetZ)) != radius) continue
+                    val x = center.x + offsetX
+                    val z = center.z + offsetZ
+                    if (!hasLoadedChunk(level, x shr 4, z shr 4)) continue
+
+                    for (y in maximumY downTo minimumY) {
+                        cursor.set(x, y, z)
+                        if (!isWaterBlock(level, cursor)) continue
+                        val surface = findTopWaterBlock(level, cursor) ?: continue
+                        val columnKey = horizontalPositionKey(surface.x, surface.z)
+                        if (!visitedColumns.add(columnKey)) break
+                        if (isRenderableWaterSurface(level, surface) && predicate(surface)) {
+                            return surface
+                        }
+                        break
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    fun isOverworldLikeDimension(level: Level): Boolean {
+        val type = level.dimensionType()
+        return type.hasSkyLight() &&
+            !type.hasCeiling() &&
+            type.skybox() == net.minecraft.world.level.dimension.DimensionType.Skybox.OVERWORLD
     }
 
     fun findFluidBlockBelow(
@@ -707,6 +756,31 @@ object ModUtilities {
 
         return (surfaceY - pos.y).toDouble()
     }
+
+    fun formatTicksAsDuration(ticks: Int): String {
+        var totalSeconds = ticks / 20
+        val days = totalSeconds / 86400
+        totalSeconds %= 86400
+        val hours = totalSeconds / 3600
+        totalSeconds %= 3600
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+
+        val parts = mutableListOf<String>()
+        if (days > 0) parts.add("${days}j")
+        if (hours > 0) parts.add("${hours}h")
+        if (minutes > 0) parts.add("${minutes}min")
+        if (seconds > 0 || parts.isEmpty()) parts.add("${seconds}s")
+        return parts.joinToString(" ")
+    }
+
+    fun ticksFormat(): (Int) -> Component = { ticks -> Component.literal(formatTicksAsDuration(ticks)) }
+
+    fun blocksFormatInt(): (Int) -> Component = { value -> Component.literal("$value blocs") }
+
+    fun blocksFormatDouble(): (Double) -> Component = { value -> Component.literal(String.format("%.1f blocs", value)) }
+
+    fun percentFormat(): (Double) -> Component = { value -> Component.literal(String.format("%.0f%%", value * 100.0)) }
 
     fun serverDouble(
         opt: DoubleOption,

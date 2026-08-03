@@ -314,7 +314,7 @@ object ConduitDomainHandler {
             player.setDeltaMovement(player.deltaMovement.x, JUMP_VELOCITY_MAX, player.deltaMovement.z)
         }
 
-        if (ModConfig.conduitBoundaryParticlesEnabled && player.tickCount % ModConfig.conduitBoundaryParticleInterval == 0) {
+        if (ModConfig.enableConduitBoundaryParticles && player.tickCount % ModConfig.conduitBoundaryParticleInterval == 0) {
             val isPortable = domain.target is ConduitTarget.Entity
             spawnBoundaryWarning(player, domain.centerX, domain.centerY, domain.centerZ, domain.radius, isPortable)
         }

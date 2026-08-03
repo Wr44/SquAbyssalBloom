@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.bioluminescent_wave.BioluminescentSurfaceLight
+import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.bioluminescence_wave.BioluminescentSurfaceLight
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 
@@ -14,7 +14,7 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
     private const val ACTIVE_WAVE_MIN_FACTOR = 0.60
     private const val INACTIVE_WAVE_FACTOR = 0.45
 
-    private val lightsByZone = HashMap<Long, List<BioluminescentSurfaceLight>>()
+    private val lightsByZone = HashMap<java.util.UUID, List<BioluminescentSurfaceLight>>()
     private var tickCounter = 0L
 
     fun onZoneReady(zone: BioluminescentZone) {
@@ -39,30 +39,30 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
                 addDynamicLight(light)
             }
         }
-        lightsByZone[zone.zoneSeed] = lights
+        lightsByZone[zone.eventId] = lights
     }
 
     fun onZoneRemoved(zone: BioluminescentZone) {
-        val lights = lightsByZone.remove(zone.zoneSeed) ?: return
+        val lights = lightsByZone.remove(zone.eventId) ?: return
         lights.forEach {
             it.markRemoved()
             removeDynamicLight(it)
         }
     }
 
-    fun updateDynamicState(zones: List<BioluminescentZone>, gameTime: Long) {
+    fun updateDynamicState(zones: Collection<BioluminescentZone>, gameTime: Long) {
         if (!isInitialized || lightsByZone.isEmpty()) return
         tickCounter++
         if (tickCounter % UPDATE_INTERVAL_TICKS != 0L) return
 
         val renderGameTime = gameTime.toDouble()
         for (zone in zones) {
-            val lights = lightsByZone[zone.zoneSeed] ?: continue
+            val lights = lightsByZone[zone.eventId] ?: continue
             updateZoneLights(zone, lights, renderGameTime)
         }
     }
 
-    fun registeredLightCount(zone: BioluminescentZone): Int = lightsByZone[zone.zoneSeed]?.size ?: 0
+    fun registeredLightCount(zone: BioluminescentZone): Int = lightsByZone[zone.eventId]?.size ?: 0
 
     fun totalRegisteredLightCount(): Int = lightsByZone.values.sumOf { it.size }
 
