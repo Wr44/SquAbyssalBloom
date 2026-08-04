@@ -52,11 +52,7 @@ class RedSlobbererMoveControl(
         lockPropulsionHeading()
         redSlobberer.xxa = 0.0f
         redSlobberer.yya = 0.0f
-        redSlobberer.speed = (
-            speedModifier *
-                redSlobberer.getAttributeValue(Attributes.MOVEMENT_SPEED) *
-                RedSlobbererEntity.LOCOMOTION_PROPULSION_SPEED_MULTIPLIER
-            ).toFloat()
+        redSlobberer.speed = propulsionSpeed()
         wasPropelling = true
     }
 
@@ -81,12 +77,15 @@ class RedSlobbererMoveControl(
         lockPropulsionHeading()
         redSlobberer.xxa = 0.0f
         redSlobberer.yya = 0.0f
-        redSlobberer.speed = (
-            speedModifier *
-                redSlobberer.getAttributeValue(Attributes.MOVEMENT_SPEED) *
-                RedSlobbererEntity.LOCOMOTION_PROPULSION_SPEED_MULTIPLIER
-            ).toFloat()
+        redSlobberer.speed = propulsionSpeed()
         wasPropelling = true
+    }
+
+    private fun propulsionSpeed(): Float {
+        val multiplier = if (redSlobberer.isInWater) RedSlobbererEntity.LOCOMOTION_PROPULSION_SPEED_MULTIPLIER else 1.0
+        return (
+            speedModifier * redSlobberer.getAttributeValue(Attributes.MOVEMENT_SPEED) * multiplier
+            ).toFloat()
     }
 
     private fun waitForMovement() {

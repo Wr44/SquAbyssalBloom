@@ -24,7 +24,9 @@ import net.minecraft.server.level.ServerLevel
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.tags.FluidTags
 import net.minecraft.util.Mth
+import net.minecraft.util.Mth.lerp
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
@@ -472,15 +474,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return ModSounds.BARNACLE_AMBIENT.get()
     }
 
-//    override fun playAmbientSound() {
-//        val soundEvent = this.ambientSound
-//        if (soundEvent != null) {
-//            this.playSound(soundEvent, getSoundVolume() * 1.5f, this.voicePitch)
-//        }
-//    }
-
     override fun getHurtSound(source: DamageSource): SoundEvent = ModSounds.BARNACLE_HURT.get()
-
 
     override fun getDeathSound(): SoundEvent = ModSounds.BARNACLE_DEATH.get()
 
@@ -548,7 +542,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     fun holdTarget(tgt: LivingEntity, factor: Double) {
         val dir = getMovementDirection()
 
-        val holdPos = this.position().add(dir.scale(factor))
+        val holdPos = clampHoldPositionToWater(this.position().add(dir.scale(factor)))
 
         if (tgt.isPassenger) {
             tgt.stopRiding()
@@ -568,6 +562,23 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         }
 
         tgt.hurtMarked = true
+    }
+
+    private fun clampHoldPositionToWater(desired: Vec3): Vec3 {
+        if (level().getFluidState(BlockPos.containing(desired)).`is`(FluidTags.WATER)) return desired
+
+        val origin = this.position()
+        val steps = 8
+        for (step in 1..steps) {
+            val t = step.toDouble() / steps
+            val candidate = Vec3(
+                lerp(t, desired.x, origin.x),
+                lerp(t, desired.y, origin.y),
+                lerp(t, desired.z, origin.z)
+            )
+            if (level().getFluidState(BlockPos.containing(candidate)).`is`(FluidTags.WATER)) return candidate
+        }
+        return origin
     }
 
     fun spawnInk() {
