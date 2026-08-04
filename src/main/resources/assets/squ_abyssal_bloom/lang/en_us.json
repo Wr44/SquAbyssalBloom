@@ -62,6 +62,8 @@
   "config.squ_abyssal_bloom.shaderBioluminescenceGrazingStrength.desc": "Minimum visibility compensation kept at grazing viewing angles, where a flat surface would otherwise look artificial",
   "config.squ_abyssal_bloom.shaderBioluminescenceUnderwaterCompensation": "Underwater Camera Compensation",
   "config.squ_abyssal_bloom.shaderBioluminescenceUnderwaterCompensation.desc": "Multiplier applied to the visibility compensation while the camera itself is submerged in water",
+  "config.squ_abyssal_bloom.shaderBioluminescenceSubsurfaceOffset": "Shader Subsurface Offset",
+  "config.squ_abyssal_bloom.shaderBioluminescenceSubsurfaceOffset.desc": "How far below the logical water surface the bioluminescence is drawn when a shader pack is active, so shader-driven wave animation no longer fights it for depth",
   "config.squ_abyssal_bloom.compat": "Compatibility",
   "config.squ_abyssal_bloom.compat.tooltip": "Settings for optional mods this mod integrates with. Only mods currently installed are shown below",
   "config.squ_abyssal_bloom.group.compat_mods": "Detected Compatible Mods",

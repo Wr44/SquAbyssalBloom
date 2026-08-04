@@ -383,6 +383,7 @@ class BioluminescentZoneTile private constructor(
         val northEastWaterDepth: Double
     ) {
         var lastRenderTop: Boolean? = null
+        var invalidated: Boolean = false
     }
 
 }

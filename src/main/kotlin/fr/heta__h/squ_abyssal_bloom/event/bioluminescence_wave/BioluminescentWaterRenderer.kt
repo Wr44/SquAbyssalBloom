@@ -28,8 +28,6 @@ import kotlin.math.sqrt
 object BioluminescentWaterRenderer {
 
     private const val SURFACE_OFFSET = 0.004
-    private const val SHADER_UNDERWATER_OFFSET = 0.02
-    private const val SHADER_COMPENSATION_OFFSET = 0.006
     private const val SHALLOW_DEPTH = 4.0
     private const val DEEP_DEPTH = 24.0
     private const val SHALLOW_COMPENSATION_MULTIPLIER = 0.65
@@ -177,6 +175,7 @@ object BioluminescentWaterRenderer {
 
                 val resolvedQuads = ArrayList<ResolvedQuad>(tile.renderQuads.size)
                 for (quad in tile.renderQuads) {
+                    if (quad.invalidated) continue
                     val renderTop = resolveRenderTop(quad, cameraPosition.y)
                     resolvedQuads.add(
                         ResolvedQuad(
@@ -244,12 +243,13 @@ object BioluminescentWaterRenderer {
 
         poseStack.pushPose()
         val pose = poseStack.last()
+        val subsurfaceOffset = ModConfig.shaderBioluminescenceSubsurfaceOffset
         for (resolvedTile in plan.tiles) {
             val renderType = resolvedTile.tile.renderTypeShaderUnderwater
             val consumer = bufferSource.getBuffer(renderType)
             for (quad in resolvedTile.quads) {
                 emitQuad(
-                    consumer, pose, quad, cameraPosition, SHADER_UNDERWATER_OFFSET,
+                    consumer, pose, quad, cameraPosition, subsurfaceOffset,
                     quad.northWest.scaledAlpha(alphaMultiplier),
                     quad.southWest.scaledAlpha(alphaMultiplier),
                     quad.southEast.scaledAlpha(alphaMultiplier),
@@ -277,7 +277,8 @@ object BioluminescentWaterRenderer {
         } else {
             1.0
         }
-        val offset = BioluminescentIrisDebugState.compensationOffsetOverride ?: SHADER_COMPENSATION_OFFSET
+        val offset = BioluminescentIrisDebugState.compensationOffsetOverride
+            ?: ModConfig.shaderBioluminescenceSubsurfaceOffset
         val debugMode = BioluminescentIrisDebugState.mode
         var quadsSubmitted = 0
         var depthFactorSum = 0.0
@@ -405,7 +406,7 @@ object BioluminescentWaterRenderer {
         pose: PoseStack.Pose,
         quad: ResolvedQuad,
         cameraPosition: Vec3,
-        extraYOffset: Double,
+        subsurfaceOffset: Double,
         northWest: VertexShade,
         southWest: VertexShade,
         southEast: VertexShade,
@@ -415,8 +416,7 @@ object BioluminescentWaterRenderer {
         val maxX = (quad.worldMaxX - cameraPosition.x).toFloat()
         val minZ = (quad.worldMinZ - cameraPosition.z).toFloat()
         val maxZ = (quad.worldMaxZ - cameraPosition.z).toFloat()
-        val surfaceOffset = if (quad.renderTop) SURFACE_OFFSET else -SURFACE_OFFSET
-        val y = (quad.surfaceY + surfaceOffset + extraYOffset - cameraPosition.y).toFloat()
+        val y = (quad.surfaceY - subsurfaceOffset - cameraPosition.y).toFloat()
 
         if (quad.renderTop) {
             vertex(consumer, pose, minX, y, minZ, quad.minU, quad.minV, 1.0f, northWest)
@@ -505,7 +505,10 @@ object BioluminescentWaterRenderer {
         temporalIntensity: Float,
         movementFadeStrength: Float
     ): Int {
+        var quadsSubmitted = 0
         for (quad in tile.renderQuads) {
+            if (quad.invalidated) continue
+            quadsSubmitted++
             val minX = (tile.originX + quad.minLocalX - cameraPosition.x).toFloat()
             val maxX = (tile.originX + quad.maxLocalX - cameraPosition.x).toFloat()
             val minZ = (tile.originZ + quad.minLocalZ - cameraPosition.z).toFloat()
@@ -570,7 +573,7 @@ object BioluminescentWaterRenderer {
                 vertex(consumer, pose, minX, y, maxZ, minU, maxV, -1.0f, southWest)
             }
         }
-        return tile.renderQuads.size
+        return quadsSubmitted
     }
 
     private fun resolveRenderTop(quad: BioluminescentZoneTile.RenderQuad, cameraY: Double): Boolean {

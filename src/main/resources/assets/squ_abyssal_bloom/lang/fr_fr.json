@@ -62,6 +62,8 @@
   "config.squ_abyssal_bloom.shaderBioluminescenceGrazingStrength.desc": "Compensation de visibilité minimale conservée lorsque la surface est observée sous un angle rasant, afin d'éviter un rendu artificiel",
   "config.squ_abyssal_bloom.shaderBioluminescenceUnderwaterCompensation": "Compensation sous l'eau",
   "config.squ_abyssal_bloom.shaderBioluminescenceUnderwaterCompensation.desc": "Multiplicateur appliqué à la compensation de visibilité lorsque la caméra est immergée",
+  "config.squ_abyssal_bloom.shaderBioluminescenceSubsurfaceOffset": "Décalage sous la surface avec les shaders",
+  "config.squ_abyssal_bloom.shaderBioluminescenceSubsurfaceOffset.desc": "Profondeur à laquelle la bioluminescence est dessinée sous la surface d'eau logique lorsqu'un pack de shaders est actif, afin que l'animation des vagues du shader ne lutte plus avec elle en profondeur",
   "config.squ_abyssal_bloom.compat": "Compatibilité",
   "config.squ_abyssal_bloom.compat.tooltip": "Paramètres des mods optionnels avec lesquels Abyssal Bloom s'intègre. Seuls les mods actuellement installés sont affichés ci-dessous",
   "config.squ_abyssal_bloom.group.compat_mods": "Mods compatibles détectés",

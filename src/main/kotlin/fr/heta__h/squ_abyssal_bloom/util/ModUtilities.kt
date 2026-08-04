@@ -173,7 +173,7 @@ object ModUtilities {
 
     fun isRenderableWaterSurface(level: LevelReader, waterBlock: BlockPos): Boolean {
         if (!isWaterSurface(level, waterBlock)) return false
-        if (level.getFluidState(waterBlock).getHeight(level, waterBlock) <= 0.0f) return false
+        if (!level.getFluidState(waterBlock).isSource) return false
         if (level.getBlockState(waterBlock).isSolidRender) return false
 
         val above = waterBlock.above()

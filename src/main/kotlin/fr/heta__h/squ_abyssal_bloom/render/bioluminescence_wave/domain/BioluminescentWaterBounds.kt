@@ -14,6 +14,4 @@ data class BioluminescentWaterBounds(
     val length: Int
         get() = maxZ - minZ + 1
 
-    val debugText: String
-        get() = "$minX,$minY,$minZ -> $maxX,$maxY,$maxZ"
 }

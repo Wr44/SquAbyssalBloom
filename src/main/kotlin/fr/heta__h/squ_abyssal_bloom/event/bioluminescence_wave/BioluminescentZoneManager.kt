@@ -46,6 +46,7 @@ object BioluminescentZoneManager {
     private const val RETRY_DELAY_TICKS = 200L
     private const val MAX_GPU_TILES = 128
     private const val COLOR_PHASE_SALT = 0x3956C25BF348B538L
+    private const val WATER_REVALIDATION_BUDGET_PER_ZONE = 4
 
     private data class ClientWave(
         val payload: S2CBioluminescenceWavePayload,
@@ -117,6 +118,7 @@ object BioluminescentZoneManager {
             if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
                 zone.spawnAmbientParticles(level, level.gameTime)
             }
+            zone.revalidateWaterStep(level, WATER_REVALIDATION_BUDGET_PER_ZONE)
         }
         BioluminescentZoneDynamicLights.updateDynamicState(zonesByEventId.values, level.gameTime)
     }

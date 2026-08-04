@@ -67,11 +67,12 @@ object ModConfig {
     var surfaceOccluderLodBandWidth: Int = 64
     var surfaceOccluderTargetDepth: Double = 0.5
     var enableIrisCompatibility: Boolean = true
-    var shaderBioluminescencePrimaryAlphaMultiplier: Double = 1.6
-    var shaderBioluminescenceVisibilityCompensation: Double = 0.12
-    var shaderBioluminescenceDeepWaterBoost: Double = 1.45
-    var shaderBioluminescenceGrazingStrength: Double = 0.20
-    var shaderBioluminescenceUnderwaterCompensation: Double = 0.45
+    var shaderBioluminescencePrimaryAlphaMultiplier: Double = 2.2
+    var shaderBioluminescenceVisibilityCompensation: Double = 0.22
+    var shaderBioluminescenceDeepWaterBoost: Double = 2.2
+    var shaderBioluminescenceGrazingStrength: Double = 0.45
+    var shaderBioluminescenceUnderwaterCompensation: Double = 0.85
+    var shaderBioluminescenceSubsurfaceOffset: Double = 0.25
     var enableDynamicLights: Boolean = true
     var dynamicLightsNautilusIntensity: Double = 1.0
     var dynamicLightsBioluminescenceActiveIntensity: Double = 1.0
@@ -115,15 +116,17 @@ object ModConfig {
             surfaceOccluderTargetDepth = json.get("surfaceOccluderTargetDepth")?.asDouble ?: 0.5
             enableIrisCompatibility = json.get("enableIrisCompatibility")?.asBoolean ?: true
             shaderBioluminescencePrimaryAlphaMultiplier =
-                json.get("shaderBioluminescencePrimaryAlphaMultiplier")?.asDouble ?: 1.6
+                json.get("shaderBioluminescencePrimaryAlphaMultiplier")?.asDouble ?: 2.2
             shaderBioluminescenceVisibilityCompensation =
-                json.get("shaderBioluminescenceVisibilityCompensation")?.asDouble ?: 0.12
+                json.get("shaderBioluminescenceVisibilityCompensation")?.asDouble ?: 0.22
             shaderBioluminescenceDeepWaterBoost =
-                json.get("shaderBioluminescenceDeepWaterBoost")?.asDouble ?: 1.45
+                json.get("shaderBioluminescenceDeepWaterBoost")?.asDouble ?: 2.2
             shaderBioluminescenceGrazingStrength =
-                json.get("shaderBioluminescenceGrazingStrength")?.asDouble ?: 0.20
+                json.get("shaderBioluminescenceGrazingStrength")?.asDouble ?: 0.45
             shaderBioluminescenceUnderwaterCompensation =
-                json.get("shaderBioluminescenceUnderwaterCompensation")?.asDouble ?: 0.45
+                json.get("shaderBioluminescenceUnderwaterCompensation")?.asDouble ?: 0.85
+            shaderBioluminescenceSubsurfaceOffset =
+                json.get("shaderBioluminescenceSubsurfaceOffset")?.asDouble ?: 0.25
             enableDynamicLights = json.get("enableDynamicLights")?.asBoolean ?: true
             dynamicLightsNautilusIntensity =
                 json.get("dynamicLightsNautilusIntensity")?.asDouble ?: 1.0
@@ -177,6 +180,7 @@ object ModConfig {
                 addProperty("shaderBioluminescenceDeepWaterBoost", shaderBioluminescenceDeepWaterBoost)
                 addProperty("shaderBioluminescenceGrazingStrength", shaderBioluminescenceGrazingStrength)
                 addProperty("shaderBioluminescenceUnderwaterCompensation", shaderBioluminescenceUnderwaterCompensation)
+                addProperty("shaderBioluminescenceSubsurfaceOffset", shaderBioluminescenceSubsurfaceOffset)
                 addProperty("enableDynamicLights", enableDynamicLights)
                 addProperty("dynamicLightsNautilusIntensity", dynamicLightsNautilusIntensity)
                 addProperty("dynamicLightsBioluminescenceActiveIntensity", dynamicLightsBioluminescenceActiveIntensity)

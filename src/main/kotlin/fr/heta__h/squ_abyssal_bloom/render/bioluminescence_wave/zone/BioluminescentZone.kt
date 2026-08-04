@@ -48,6 +48,9 @@ class BioluminescentZone(
         const val TOTAL_NIGHT_FADE_OUT_TICKS = 60.0
     }
 
+    private var revalidationTileIndex = 0
+    private var revalidationQuadIndex = 0
+
     private var generator: BioluminescentZoneGenerator? = BioluminescentZoneGenerator(
         anchor,
         initialCell,
@@ -214,6 +217,36 @@ class BioluminescentZone(
     ): Boolean = movementWaves.affects(minX, minZ, maxX, maxZ, renderGameTime)
 
     fun movementWaveVisibilityStrength(): Double = movementWaves.visibilityStrength
+
+    fun revalidateWaterStep(level: ClientLevel, budget: Int) {
+        val currentTiles = tiles
+        if (currentTiles.isEmpty()) return
+        var remaining = budget
+        while (remaining > 0) {
+            if (revalidationTileIndex >= currentTiles.size) {
+                revalidationTileIndex = 0
+                revalidationQuadIndex = 0
+            }
+            val tile = currentTiles[revalidationTileIndex]
+            val quads = tile.renderQuads
+            if (quads.isEmpty() || revalidationQuadIndex >= quads.size) {
+                revalidationTileIndex++
+                revalidationQuadIndex = 0
+                continue
+            }
+            val quad = quads[revalidationQuadIndex]
+            revalidationQuadIndex++
+            remaining--
+            if (quad.invalidated) continue
+            val checkX = tile.originX + (quad.minLocalX + quad.maxLocalX) / 2
+            val checkZ = tile.originZ + (quad.minLocalZ + quad.maxLocalZ) / 2
+            if (!ModUtilities.hasLoadedChunk(level, checkX shr 4, checkZ shr 4)) continue
+            val waterBlockY = kotlin.math.floor(quad.surfaceY).toInt()
+            if (!ModUtilities.isRenderableWaterSurface(level, BlockPos(checkX, waterBlockY, checkZ))) {
+                quad.invalidated = true
+            }
+        }
+    }
 
     fun isCompleteAt(gameTime: Long): Boolean {
         return mode == BioluminescenceWaveMode.NORMAL && gameTime + serverGameTimeOffset >= endGameTime
