@@ -112,7 +112,11 @@ object BioluminescentZoneManager {
         advanceOneGeneration(level)
         advanceEndingZones(level.gameTime)
         for (zone in zonesByEventId.values) {
-            if (zone.isReady) zone.updateMovementWaves(level, level.gameTime)
+            if (!zone.isReady) continue
+            zone.updateMovementWaves(level, level.gameTime)
+            if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
+                zone.spawnAmbientParticles(level, level.gameTime)
+            }
         }
         BioluminescentZoneDynamicLights.updateDynamicState(zonesByEventId.values, level.gameTime)
     }

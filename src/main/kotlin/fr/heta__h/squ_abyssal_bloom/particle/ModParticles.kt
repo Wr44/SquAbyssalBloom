@@ -1,6 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.particle
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.particle.bioluminescent_water.BioluminescentWaterParticleProvider
+import fr.heta__h.squ_abyssal_bloom.particle.bioluminescent_water.BioluminescentWaterParticleType
 import fr.heta__h.squ_abyssal_bloom.particle.marine_snow.MarineSnowParticleProvider
 import fr.heta__h.squ_abyssal_bloom.particle.nautilus.NautilusTrackingParticleProvider
 import fr.heta__h.squ_abyssal_bloom.particle.underwater_torch.UnderwaterTorchBubbleParticleProvider
@@ -22,6 +24,8 @@ object ModParticles {
 
     val UNDERWATER_TORCH_BUBBLE = REGISTRY.register("underwater_torch_bubble", Supplier { SimpleParticleType(false) })
 
+    val BIOLUMINESCENT_WATER_PARTICLE = REGISTRY.register("bioluminescent_water_particle", Supplier { BioluminescentWaterParticleType(false) })
+
     fun register(modBus: IEventBus) = REGISTRY.register(modBus)
 
     fun registerParticleProviders(event: net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent) {
@@ -29,5 +33,6 @@ object ModParticles {
         event.registerSpriteSet(NAUTILUS_TRACKING_PARTICLE.get(), ::NautilusTrackingParticleProvider)
         event.registerSpriteSet(UNDERWATER_CRYSTAL_GAZ.get()) { sprites -> FlameParticle.Provider(sprites) }
         event.registerSpriteSet(UNDERWATER_TORCH_BUBBLE.get(), ::UnderwaterTorchBubbleParticleProvider)
+        event.registerSpriteSet(BIOLUMINESCENT_WATER_PARTICLE.get(), ::BioluminescentWaterParticleProvider)
     }
 }

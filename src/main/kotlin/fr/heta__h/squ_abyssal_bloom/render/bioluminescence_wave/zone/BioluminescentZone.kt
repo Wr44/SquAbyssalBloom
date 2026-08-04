@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.Biolu
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationSnapshot
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentAmbientParticleEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWaveField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
@@ -56,6 +57,7 @@ class BioluminescentZone(
     )
     private val brightnessScale = brightnessScaleFromSeed()
     private val movementWaves = BioluminescentMovementWaveField()
+    private val ambientParticles = BioluminescentAmbientParticleEmitter()
 
     var spatialData: BioluminescentZoneGenerationResult? = null
         private set
@@ -193,6 +195,11 @@ class BioluminescentZone(
     fun updateMovementWaves(level: ClientLevel, gameTime: Long) {
         val data = spatialData ?: return
         movementWaves.tick(level, data, gameTime)
+    }
+
+    fun spawnAmbientParticles(level: ClientLevel, gameTime: Long) {
+        val data = spatialData ?: return
+        ambientParticles.tick(level, data, temporalIntensityAt(gameTime.toDouble()))
     }
 
     fun movementWaveIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float =

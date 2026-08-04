@@ -1,7 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction
 
+import fr.heta__h.squ_abyssal_bloom.particle.bioluminescent_water.BioluminescentWaterParticleOptions
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationResult
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.multiplayer.ClientLevel
@@ -33,6 +35,9 @@ class BioluminescentMovementWaveField {
         const val MAX_RADIUS = 11.0
         const val VISIBILITY_TICK_DT = 1.0 / 20.0
         const val VISIBILITY_FADE_RATE = 4.0
+        const val MOVEMENT_PARTICLE_COUNT = 8
+        const val MOVEMENT_PARTICLE_SPREAD = 0.9
+        const val MOVEMENT_PARTICLE_MIN_ALPHA = 0.05f
     }
 
     private val waves = ArrayDeque<BioluminescentMovementWave>()
@@ -84,7 +89,9 @@ class BioluminescentMovementWaveField {
             if (!isValidWaterSource(entity, waterCell)) continue
 
             acceptedSources++
-            emitWave(entity.x, entity.z, speed, gameTime)
+            if (emitWave(entity.x, entity.z, speed, gameTime)) {
+                spawnMovementParticles(level, data.emissionField, waterCell, entity.x, entity.z)
+            }
         }
         movingSourceCount = acceptedSources
     }
@@ -125,13 +132,13 @@ class BioluminescentMovementWaveField {
         waves.removeIf { wave -> wave.isExpiredAt(gameTime) }
     }
 
-    private fun emitWave(worldX: Double, worldZ: Double, speed: Double, gameTime: Long) {
+    private fun emitWave(worldX: Double, worldZ: Double, speed: Double, gameTime: Long): Boolean {
         val recentDuplicate = waves.any { wave ->
             gameTime - wave.startedAt <= DUPLICATE_WINDOW_TICKS &&
                 ModUtilities.horizontalDistanceSqr(wave.originX, wave.originZ, worldX, worldZ) <=
                 DUPLICATE_DISTANCE * DUPLICATE_DISTANCE
         }
-        if (recentDuplicate) return
+        if (recentDuplicate) return false
         while (waves.size >= MAX_ACTIVE_WAVES) waves.removeFirst()
 
         val movement = ModUtilities.smooth(MIN_MOVEMENT_SPEED, FULL_MOVEMENT_SPEED, speed)
@@ -144,6 +151,39 @@ class BioluminescentMovementWaveField {
                 MIN_RADIUS + (MAX_RADIUS - MIN_RADIUS) * movement
             )
         )
+        return true
+    }
+
+    private fun spawnMovementParticles(
+        level: ClientLevel,
+        emission: BioluminescentEmissionField,
+        waterCell: BioluminescentWaterCell,
+        worldX: Double,
+        worldZ: Double
+    ) {
+        val cellIndex = emission.domain.cellIndexAt(floor(worldX).toInt(), floor(worldZ).toInt())
+            ?: return
+        if (!emission.hasLuminousCell(cellIndex)) return
+        val random = level.random
+
+        repeat(MOVEMENT_PARTICLE_COUNT) {
+            val localPixelX = random.nextInt(BioluminescentEmissionField.PIXELS_PER_BLOCK)
+            val localPixelZ = random.nextInt(BioluminescentEmissionField.PIXELS_PER_BLOCK)
+            val alpha = emission.alphaAt(cellIndex, localPixelX, localPixelZ)
+            if (alpha < MOVEMENT_PARTICLE_MIN_ALPHA) return@repeat
+            val color = emission.colorAt(cellIndex, localPixelX, localPixelZ)
+
+            val offsetX = (random.nextDouble() - 0.5) * MOVEMENT_PARTICLE_SPREAD
+            val offsetZ = (random.nextDouble() - 0.5) * MOVEMENT_PARTICLE_SPREAD
+
+            level.addParticle(
+                BioluminescentWaterParticleOptions(color, alpha),
+                worldX + offsetX,
+                waterCell.surfaceY,
+                worldZ + offsetZ,
+                0.0, 0.0, 0.0
+            )
+        }
     }
 
     private fun nearestWaterCell(
