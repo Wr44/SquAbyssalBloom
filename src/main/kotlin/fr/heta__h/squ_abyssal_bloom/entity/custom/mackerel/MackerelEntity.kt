@@ -4,6 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.world.damagesource.DamageSource
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityType
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.animal.fish.AbstractFish
@@ -26,4 +27,6 @@ class MackerelEntity(type: EntityType<out MackerelEntity>, level: Level) : Abstr
     override fun getHurtSound(source: DamageSource): SoundEvent = ModSounds.MACKEREL_HURT.get()
 
     override fun getFlopSound(): SoundEvent = ModSounds.MACKEREL_FLOP.get()
+
+    override fun canRide(vehicle: Entity): Boolean = false
 }

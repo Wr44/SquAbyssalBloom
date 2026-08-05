@@ -11,6 +11,7 @@ import fr.heta__h.squ_abyssal_bloom.config.renderer.StaticImageRenderer
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
+import fr.heta__h.squ_abyssal_bloom.config.submenu.AmbientSoundSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BioluminescenceServerSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BrineSubMenu
@@ -80,6 +81,7 @@ object ModConfig {
     var enableBioluminescenceRendering: Boolean = true
     var bioluminescenceTileFadeInTicks: Int = 20
     var bioluminescenceRenderDistance: Double = 128.0
+    var enableBeachWaveSound: Boolean = true
 
     fun loadConfig() {
         if (!configFile.exists()) { saveConfig(); return }
@@ -137,6 +139,7 @@ object ModConfig {
             enableBioluminescenceRendering = json.get("enableBioluminescenceRendering")?.asBoolean ?: true
             bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 20
             bioluminescenceRenderDistance = json.get("bioluminescenceRenderDistance")?.asDouble ?: 128.0
+            enableBeachWaveSound = json.get("enableBeachWaveSound")?.asBoolean ?: true
         } catch (e: Exception) {
             println("Erreur config : ${e.message}")
         }
@@ -188,6 +191,7 @@ object ModConfig {
                 addProperty("enableBioluminescenceRendering", enableBioluminescenceRendering)
                 addProperty("bioluminescenceTileFadeInTicks", bioluminescenceTileFadeInTicks)
                 addProperty("bioluminescenceRenderDistance", bioluminescenceRenderDistance)
+                addProperty("enableBeachWaveSound", enableBeachWaveSound)
             }
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))
@@ -320,8 +324,8 @@ object ModConfig {
             }
 
             .category(ConfigCategory.createBuilder()
-                .name(Component.translatable("config.squ_abyssal_bloom.visual"))
-                .tooltip(Component.translatable("config.squ_abyssal_bloom.visual.tooltip"))
+                .name(Component.translatable("config.squ_abyssal_bloom.client"))
+                .tooltip(Component.translatable("config.squ_abyssal_bloom.client.tooltip"))
 
                 .group(OptionGroup.createBuilder()
                     .name(Component.translatable("config.squ_abyssal_bloom.group.fog").withStyle(ChatFormatting.AQUA))
@@ -556,6 +560,23 @@ object ModConfig {
                         .binding(Binding.generic(3, { conduitBoundaryParticleInterval }, { conduitBoundaryParticleInterval = it }))
                         .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 20).step(1).formatValue { v -> Component.literal("$v ticks") } }
                         .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(AmbientSoundSubMenu.displayName.copy().withStyle(ChatFormatting.AQUA))
+                    .description(OptionDescription.createBuilder()
+                        .text(AmbientSoundSubMenu.displayDescription)
+                        .customImage(StaticImageRenderer("wave", 1920, 991))
+                        .build())
+                    .option(subScreenButton(
+                        name = AmbientSoundSubMenu.displayName,
+                        description = OptionDescription.createBuilder()
+                            .text(AmbientSoundSubMenu.displayDescription)
+                            .customImage(StaticImageRenderer("wave", 1920, 991))
+                            .build(),
+                        screenTitle = AmbientSoundSubMenu.displayName,
+                        buildGroups = AmbientSoundSubMenu::buildGroups
+                    ))
                     .build())
 
                 .build())

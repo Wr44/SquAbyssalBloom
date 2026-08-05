@@ -171,6 +171,14 @@ object ModSounds {
     }
 
 
+
+    // Ambient
+
+    val BEACH_WAVE_LOOP = SOUNDS.register("beach_wave_loop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+
     fun register(eventBus: IEventBus) {
         SOUNDS.register(eventBus)
     }

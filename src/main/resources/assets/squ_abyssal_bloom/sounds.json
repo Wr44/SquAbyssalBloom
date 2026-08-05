@@ -171,5 +171,16 @@
   "pressure_damage": {
     "subtitle": "subtitles.squ_abyssal_bloom.pressure_damage",
     "sounds": [ "squ_abyssal_bloom:damage_type/pressure_damage" ]
+  },
+
+  "beach_wave_loop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.beach_waves",
+    "sounds": [
+      {
+        "name": "squ_abyssal_bloom:ambient/beach_wave_loop",
+        "stream": true
+      }
+    ]
   }
+
 }

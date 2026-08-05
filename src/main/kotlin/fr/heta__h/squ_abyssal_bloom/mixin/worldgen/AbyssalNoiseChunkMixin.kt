@@ -31,20 +31,36 @@ import kotlin.math.roundToInt
 @Mixin(value = [NoiseChunk::class], priority = 1500)
 abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
-    @Unique private var floorGrid: IntArray? = null
-    @Unique private var minX: Int = 0
-    @Unique private var minZ: Int = 0
-    @Unique private var cachedSeaLevel: Int = 63
-    @Unique private var overworldNoiseChunk: Boolean = false
+    @Unique
+    private var floorGrid: IntArray? = null
 
-    @Shadow abstract fun blockX(): Int
-    @Shadow abstract fun blockY(): Int
-    @Shadow abstract fun blockZ(): Int
+    @Unique
+    private var minX: Int = 0
+
+    @Unique
+    private var minZ: Int = 0
+
+    @Unique
+    private var cachedSeaLevel: Int = 63
+
+    @Unique
+    private var overworldNoiseChunk: Boolean = false
+
+    @Shadow
+    abstract fun blockX(): Int
+
+    @Shadow
+    abstract fun blockY(): Int
+
+    @Shadow
+    abstract fun blockZ(): Int
 
     override fun getFloorGrid(): IntArray? = floorGrid
 
     @Inject(
-        method = ["<init>(ILnet/minecraft/world/level/levelgen/RandomState;IILnet/minecraft/world/level/levelgen/NoiseSettings;Lnet/minecraft/world/level/levelgen/DensityFunctions\$BeardifierOrMarker;Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/world/level/levelgen/Aquifer\$FluidPicker;Lnet/minecraft/world/level/levelgen/blending/Blender;)V"],
+        method = [
+            "<init>(ILnet/minecraft/world/level/levelgen/RandomState;IILnet/minecraft/world/level/levelgen/NoiseSettings;Lnet/minecraft/world/level/levelgen/DensityFunctions\$BeardifierOrMarker;Lnet/minecraft/world/level/levelgen/NoiseGeneratorSettings;Lnet/minecraft/world/level/levelgen/Aquifer\$FluidPicker;Lnet/minecraft/world/level/levelgen/blending/Blender;)V"
+        ],
         at = [At("RETURN")]
     )
     private fun onInit(
@@ -59,17 +75,29 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         blender: Blender,
         ci: CallbackInfo
     ) {
-        if (!AbyssalWorldgenScope.isOverworld(randomState)) return
+        if (!AbyssalWorldgenScope.isOverworld(randomState)) {
+            return
+        }
+
         overworldNoiseChunk = true
 
         val continentsDf = randomState.router().continents()
-        if (continentsDf.minValue() == 0.0 && continentsDf.maxValue() == 0.0) return
+        if (
+            continentsDf.minValue() == 0.0 &&
+            continentsDf.maxValue() == 0.0
+        ) {
+            return
+        }
 
         minX = chunkMinBlockX
         minZ = chunkMinBlockZ
         cachedSeaLevel = settings.seaLevel()
 
-        val terrainSettings = AbyssalTerrainSettings.capture(cachedSeaLevel, noiseSettings.minY())
+        val terrainSettings = AbyssalTerrainSettings.capture(
+            cachedSeaLevel,
+            noiseSettings.minY()
+        )
+
         val shaping = AbyssalShapingContext(
             topoNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_TOPO),
             wallNoise = randomState.getOrCreateNoise(ModNoises.ABYSSAL_WALL),
@@ -86,54 +114,94 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
 
         val grid = IntArray(256) { Int.MIN_VALUE }
         var anyModified = false
-        val coveredBlocks = (cellCountXZ * noiseSettings.cellWidth).coerceIn(0, 16)
-        if (coveredBlocks == 0) return
+
+        val coveredBlocks = (
+                cellCountXZ * noiseSettings.cellWidth
+                ).coerceIn(0, 16)
+
+        if (coveredBlocks == 0) {
+            return
+        }
 
         for (localX in 0 until coveredBlocks) {
             for (localZ in 0 until coveredBlocks) {
                 val worldX = chunkMinBlockX + localX
                 val worldZ = chunkMinBlockZ + localZ
-                val ctx = DensityFunction.SinglePointContext(worldX, 0, worldZ)
-                val cont = continentsDf.compute(ctx)
 
-                if (!AbyssalFloorShaper.isWithinOceanBand(shaping, cont)) continue
+                val context = DensityFunction.SinglePointContext(
+                    worldX,
+                    0,
+                    worldZ
+                )
+
+                val continentalness = continentsDf.compute(context)
+
+                if (
+                    !AbyssalFloorShaper.isWithinOceanBand(
+                        shaping,
+                        continentalness
+                    )
+                ) {
+                    continue
+                }
+
                 val blendAlpha = if (blender.isEmpty()) {
                     1.0
                 } else {
-                    blender.blendOffsetAndFactor(worldX, worldZ).alpha().coerceIn(0.0, 1.0)
+                    blender
+                        .blendOffsetAndFactor(worldX, worldZ)
+                        .alpha()
+                        .coerceIn(0.0, 1.0)
                 }
-                if (blendAlpha <= 0.0) continue
-                if (finalDensityDf.compute(shaping.densityContext(worldX, cachedSeaLevel + 6, worldZ)) > 0.0) continue
+
+                if (blendAlpha <= 0.0) {
+                    continue
+                }
 
                 val column = ColumnSample(
                     worldX = worldX,
                     worldZ = worldZ,
-                    cont = cont,
-                    erosion = erosionDf.compute(ctx),
-                    ridges = ridgesDf.compute(ctx),
-                    temperature = temperatureDf.compute(ctx),
-                    vegetation = vegetationDf.compute(ctx)
+                    cont = continentalness,
+                    erosion = erosionDf.compute(context),
+                    ridges = ridgesDf.compute(context),
+                    temperature = temperatureDf.compute(context),
+                    vegetation = vegetationDf.compute(context)
                 )
 
-                val shapedFloorY = AbyssalFloorShaper.computeFloor(shaping, column, finalDensityDf)
+                val shapedFloorY = AbyssalFloorShaper.computeFloor(
+                    shaping,
+                    column,
+                    finalDensityDf
+                )
+
                 val floorY = if (blendAlpha < 1.0) {
-                    val vanillaFloorY = AbyssalFloorShaper.scanVanillaFloor(
-                        shaping,
-                        column,
-                        finalDensityDf,
-                        shaping.deepHardLimit
-                    )
-                    (vanillaFloorY + (shapedFloorY - vanillaFloorY) * blendAlpha)
+                    val vanillaFloorY =
+                        AbyssalFloorShaper.scanVanillaFloor(
+                            shaping,
+                            column,
+                            finalDensityDf,
+                            shaping.deepHardLimit
+                        )
+
+                    (
+                            vanillaFloorY +
+                                    (shapedFloorY - vanillaFloorY) * blendAlpha
+                            )
                         .roundToInt()
-                        .coerceIn(shaping.abyssalHardLimit, shaping.maxFloorY)
+                        .coerceIn(
+                            shaping.abyssalHardLimit,
+                            shaping.maxFloorY
+                        )
                 } else {
                     shapedFloorY
                 }
 
-                if (floorY < cachedSeaLevel) {
-                    grid[localX + localZ * 16] = floorY
-                    anyModified = true
+                if (floorY >= cachedSeaLevel) {
+                    continue
                 }
+
+                grid[localX + localZ * 16] = floorY
+                anyModified = true
             }
         }
 
@@ -142,7 +210,10 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         }
     }
 
-    @Inject(method = ["cachedClimateSampler"], at = [At("RETURN")])
+    @Inject(
+        method = ["cachedClimateSampler"],
+        at = [At("RETURN")]
+    )
     private fun onCachedClimateSampler(
         noises: NoiseRouter,
         spawnTarget: List<Climate.ParameterPoint>,
@@ -158,25 +229,48 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         at = [At("RETURN")],
         cancellable = true
     )
-    private fun onGetInterpolatedState(cir: CallbackInfoReturnable<BlockState?>) {
+    private fun onGetInterpolatedState(
+        cir: CallbackInfoReturnable<BlockState?>
+    ) {
         val grid = floorGrid ?: return
-        if (blockY() >= cachedSeaLevel) return
+
         val localX = blockX() - minX
         val localZ = blockZ() - minZ
-        if (localX !in 0..15 || localZ !in 0..15) return
-        val floorY = grid[localX + localZ * 16]
-        if (floorY == Int.MIN_VALUE) return
 
-        val current = cir.returnValue
-
-        if (blockY() <= floorY) {
-            if (current != null && current.`is`(Blocks.WATER)) {
-                cir.returnValue = if (blockY() < 0) Blocks.DEEPSLATE.defaultBlockState() else Blocks.STONE.defaultBlockState()
-            }
+        if (localX !in 0..15 || localZ !in 0..15) {
             return
         }
 
-        if (current != null && current.`is`(Blocks.WATER)) return
-        cir.returnValue = Blocks.WATER.defaultBlockState()
+        val floorY = grid[localX + localZ * 16]
+
+        if (floorY == Int.MIN_VALUE) {
+            return
+        }
+
+        val y = blockY()
+
+        if (y >= cachedSeaLevel) {
+            cir.returnValue = Blocks.AIR.defaultBlockState()
+            return
+        }
+
+        if (y > floorY) {
+            cir.returnValue = Blocks.WATER.defaultBlockState()
+            return
+        }
+
+        val currentState = cir.returnValue
+
+        if (
+            currentState == null ||
+            currentState.isAir ||
+            !currentState.fluidState.isEmpty
+        ) {
+            cir.returnValue = if (y < 0) {
+                Blocks.DEEPSLATE.defaultBlockState()
+            } else {
+                Blocks.STONE.defaultBlockState()
+            }
+        }
     }
 }

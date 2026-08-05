@@ -29,8 +29,8 @@
   "config.squ_abyssal_bloom.server.no_permission": "You don't have permission to change this part of the config",
   "config.squ_abyssal_bloom.group.server_gameplay": "Gameplay",
 
-  "config.squ_abyssal_bloom.visual": "Visual Settings",
-  "config.squ_abyssal_bloom.visual.tooltip": "Visual and rendering settings",
+  "config.squ_abyssal_bloom.client": "Client Settings",
+  "config.squ_abyssal_bloom.client.tooltip": "Visual, rendering and ambient sound settings",
 
   "config.squ_abyssal_bloom.group.fog": "Fog Settings",
   "config.squ_abyssal_bloom.group.fog.desc": "These settings control the underwater darkness effect, which simulates the lack of light in deep/abyssal underwater environments",
@@ -120,6 +120,11 @@
   "config.squ_abyssal_bloom.conduitBoundaryRingPoints.desc": "The number of particles used to draw the conduit's boundary ring. A higher value gives a denser ring",
   "config.squ_abyssal_bloom.conduitBoundaryParticleInterval": "Particle Interval",
   "config.squ_abyssal_bloom.conduitBoundaryParticleInterval.desc": "The interval (in ticks) between each spawn of the conduit boundary warning particles",
+
+  "config.squ_abyssal_bloom.group.ambient_sounds": "Ambient Sounds",
+  "config.squ_abyssal_bloom.group.ambient_sounds.desc": "Lets you enable or disable each ambient sound individually",
+  "config.squ_abyssal_bloom.enableBeachWaveSound": "Beach Wave Sound",
+  "config.squ_abyssal_bloom.enableBeachWaveSound.desc": "Turns the ambient wave sound heard near beaches on or off",
 
   "config.squ_abyssal_bloom.group.surface_occluder": "Surface Darkening",
   "config.squ_abyssal_bloom.group.surface_occluder.desc": "Visually darkens the water surface.\n\nWarning: this option can hit your FPS when you're in deep oceans.",
@@ -546,12 +551,15 @@
   "subtitles.squ_abyssal_bloom.red_slobberer_moving": "Red Slobberer moves",
   "subtitles.squ_abyssal_bloom.red_slobberer_death": "Red Slobberer dies",
   "subtitles.squ_abyssal_bloom.red_slobberer_hit": "Red Slobberer hurts",
-  "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide": "Red Slobberer hurts being shielded",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide": "Red Slobberer hurts",
   "subtitles.squ_abyssal_bloom.red_slobberer_hide": "Red Slobberer hides",
   "subtitles.squ_abyssal_bloom.red_slobberer_show": "Red Slobberer emerges",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Creature enters shelter",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Creature leaves shelter",
   "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket": "Baby Red Slobberer captured",
+  "subtitles.squ_abyssal_bloom.beach_waves": "Waves",
+
+
 
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Can produce Prismarine Bulbs"
 

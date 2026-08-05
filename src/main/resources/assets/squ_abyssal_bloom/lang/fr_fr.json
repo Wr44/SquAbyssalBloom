@@ -29,8 +29,8 @@
   "config.squ_abyssal_bloom.server.no_permission": "Vous n'avez pas la permission de modifier cette partie de la config",
   "config.squ_abyssal_bloom.group.server_gameplay": "Gameplay",
 
-  "config.squ_abyssal_bloom.visual": "Paramètres visuels",
-  "config.squ_abyssal_bloom.visual.tooltip": "Paramètres visuels et de rendu",
+  "config.squ_abyssal_bloom.client": "Paramètres client",
+  "config.squ_abyssal_bloom.client.tooltip": "Paramètres visuels, de rendu et de sons ambiants",
 
   "config.squ_abyssal_bloom.group.fog": "Paramètres du brouillard",
   "config.squ_abyssal_bloom.group.fog.desc": "Ces paramètres contrôlent l'effet d'obscurité sous-marine, qui simule le manque de lumière dans les environnements sous-marins profonds/abyssaux",
@@ -120,6 +120,11 @@
   "config.squ_abyssal_bloom.conduitBoundaryRingPoints.desc": "Le nombre de particules utilisées pour dessiner l'anneau de la limite du conduit. Une valeur plus élevée donne un anneau plus dense",
   "config.squ_abyssal_bloom.conduitBoundaryParticleInterval": "Intervalle de particules",
   "config.squ_abyssal_bloom.conduitBoundaryParticleInterval.desc": "L'intervalle (en ticks) entre chaque apparition des particules d'avertissement de la limite du conduit",
+
+  "config.squ_abyssal_bloom.group.ambient_sounds": "Sons ambiants",
+  "config.squ_abyssal_bloom.group.ambient_sounds.desc": "Permet d'activer ou de désactiver chaque son ambiant individuellement",
+  "config.squ_abyssal_bloom.enableBeachWaveSound": "Son des vagues",
+  "config.squ_abyssal_bloom.enableBeachWaveSound.desc": "Active ou désactive le son ambiant des vagues entendu près des plages",
 
   "config.squ_abyssal_bloom.group.surface_occluder": "Assombrissement de la Surface",
   "config.squ_abyssal_bloom.group.surface_occluder.desc": "Assombrit visuellement la surface de l'eau.\n\nAttention : Cette option peut impacter vos FPS (chute de performances) lorsque vous êtes dans des océans profonds.",
@@ -516,7 +521,7 @@
   "item.minecraft.lingering_potion.effect.guardian_s_redistribution": "Potion de Redistribution du Gardien persistante",
   "item.minecraft.tipped_arrow.effect.guardian_s_redistribution": "Flèche de Redistribution du Gardien",
 
-  "subtitles.squ_abyssal_bloom.mackerel_hurt": "Maquereau souffre",
+  "subtitles.squ_abyssal_bloom.mackerel_hurt": "Maquereau blessé",
   "subtitles.squ_abyssal_bloom.mackerel_death": "Maquereau meurt",
   "subtitles.squ_abyssal_bloom.mackerel_flop": "Maquereau sautille",
   "subtitles.squ_abyssal_bloom.barnacle_ambient": "Barnacle grogne",
@@ -544,12 +549,13 @@
   "subtitles.squ_abyssal_bloom.red_slobberer_moving": "Le Baveur Rouge se déplace",
   "subtitles.squ_abyssal_bloom.red_slobberer_death": "Le Baveur Rouge meurt",
   "subtitles.squ_abyssal_bloom.red_slobberer_hit": "Le Baveur Rouge est blessé",
-  "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide": "Le Baveur Rouge est blessé en étant protégé",
+  "subtitles.squ_abyssal_bloom.red_slobberer_hit_hide": "Le Baveur Rouge est blessé",
   "subtitles.squ_abyssal_bloom.red_slobberer_hide": "Le Baveur Rouge se cache",
   "subtitles.squ_abyssal_bloom.red_slobberer_show": "Le Baveur Rouge ressort",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Une créature entre dans l'abri",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Une créature quitte l'abri",
   "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket": "Bébé Baveur Rouge capturé",
+  "subtitles.squ_abyssal_bloom.beach_waves": "Vagues",
 
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Peut produire des bulbes de prismarine"
 }
