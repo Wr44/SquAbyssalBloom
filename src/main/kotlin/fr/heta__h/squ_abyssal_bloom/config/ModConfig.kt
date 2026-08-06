@@ -472,7 +472,7 @@ object ModConfig {
                     .option(Option.createBuilder<Int>()
                         .name(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.surfaceOccluderNumLayers.desc")))
-                        .binding(Binding.generic(5, { surfaceOccluderNumLayers }, { surfaceOccluderNumLayers = it }))
+                        .binding(Binding.generic(3, { surfaceOccluderNumLayers }, { surfaceOccluderNumLayers = it }))
                         .controller { opt -> IntegerSliderControllerBuilder.create(opt).range(1, 10).step(1).formatValue { v -> Component.literal("$v couches") } }
                         .build())
                     .option(Option.createBuilder<Double>()

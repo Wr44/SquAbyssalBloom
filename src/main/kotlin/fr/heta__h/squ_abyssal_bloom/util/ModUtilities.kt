@@ -25,7 +25,6 @@ import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
-import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.client.Minecraft
 import net.neoforged.neoforge.client.network.ClientPacketDistributor
 import net.minecraft.core.BlockPos
@@ -75,6 +74,9 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 object ModUtilities {
+
+    const val FULL_BRIGHT_LIGHTMAP = 15728880
+    const val WHITE_RGB = 0xFFFFFF
 
     fun hasLoadedChunk(level: LevelReader, chunkX: Int, chunkZ: Int): Boolean {
         return level.getChunk(chunkX, chunkZ, ChunkStatus.FULL, false) != null
@@ -512,7 +514,7 @@ object ModUtilities {
         for (nautilus in level.getEntitiesOfClass(AbstractNautilus::class.java, aabb)) {
             val extra = nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
 
-            if (!extra.isEmpty && (extra.item == NautilusLayerItems.LAMP || isFogRepellerStack(extra))) {
+            if (isFogRepellerStack(extra)) {
                 val distanceSquared = nautilus.position().distanceToSqr(center)
                 maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
             }
@@ -628,9 +630,7 @@ object ModUtilities {
         val vehicle = entity.vehicle
 
         if (vehicle is AbstractNautilus) {
-            val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
-
-            if (!extra.isEmpty && (extra.item == NautilusLayerItems.LAMP || isFogRepellerStack(extra))) {
+            if (isFogRepellerStack(vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT))) {
                 return 1.0
             }
         }
@@ -665,10 +665,9 @@ object ModUtilities {
         return smooth(normalized)
     }
 
-    fun smoothstep(t: Double): Double = smooth(t)
-
-    fun smoothstep(edge0: Double, edge1: Double, value: Double): Double =
-        smooth(edge0, edge1, value)
+    fun lerp(first: Double, second: Double, amount: Double): Double {
+        return first + (second - first) * amount
+    }
 
     fun smoothTowards(current: Double, target: Double, dt: Double, rate: Double = 2.0): Double {
         return current + (target - current) * (rate * dt)

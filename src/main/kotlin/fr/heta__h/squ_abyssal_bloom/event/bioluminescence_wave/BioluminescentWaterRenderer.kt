@@ -11,6 +11,10 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.Biolumin
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.WHITE_RGB
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation.VISIBILITY_EPSILON
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.OverlayTexture
@@ -20,7 +24,6 @@ import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
-import kotlin.math.abs
 import kotlin.math.sqrt
 
 @EventBusSubscriber(
@@ -30,22 +33,13 @@ import kotlin.math.sqrt
 object BioluminescentWaterRenderer {
 
     private const val SURFACE_OFFSET = 0.004
-    private const val SHALLOW_DEPTH = 4.0
-    private const val DEEP_DEPTH = 24.0
-    private const val SHALLOW_COMPENSATION_MULTIPLIER = 0.65
-    private const val GRAZING_VISIBILITY_START = 0.15
-    private const val TOP_VIEW_VISIBILITY_FULL = 0.65
     private const val DEBUG_FIXED_ALPHA = 200
     private const val DEPTH_VISUALIZATION_COLOR = 0xFF3030
     private const val ANGLE_VISUALIZATION_COLOR = 0x30FF60
     private const val UNDERWATER_VISUALIZATION_COLOR = 0x3060FF
-    private const val FULL_BRIGHT_LIGHTMAP = 15728880
     private const val MAX_TEMPORAL_ALPHA = 179
-    private const val VISIBILITY_EPSILON = 0.01
-    private const val WHITE_COLOR = 0xFFFFFF
     private const val WAVE_HIGHLIGHT_COLOR = 0x8A2BE2
     private const val HIGHLIGHT_COLOR_STRENGTH = 0.7
-    private const val RENDER_SIDE_HYSTERESIS = 0.05
     private const val ACTIVE_BASE_MAX_OPACITY = 0.60f
     private const val ACTIVE_MOVEMENT_WAVE_OPACITY = 0.20f
     private const val ACTIVE_WAVE_MIN_OPACITY = 0.60f
@@ -380,19 +374,16 @@ object BioluminescentWaterRenderer {
     }
 
     private fun depthFactorOf(waterDepth: Double): Double {
-        return ModUtilities.smoothstep(SHALLOW_DEPTH, DEEP_DEPTH, waterDepth)
+        return BioluminescentCompensation.depthFactor(waterDepth)
     }
 
     private fun angleFactorOf(quad: ResolvedQuad, cameraPosition: Vec3): Double {
-        val centerX = (quad.worldMinX + quad.worldMaxX) * 0.5
-        val centerZ = (quad.worldMinZ + quad.worldMaxZ) * 0.5
-        val dx = centerX - cameraPosition.x
-        val dy = quad.surfaceY - cameraPosition.y
-        val dz = centerZ - cameraPosition.z
-        val distance = sqrt(dx * dx + dy * dy + dz * dz)
-        val viewAlignment = if (distance > 1.0e-6) (abs(dy) / distance) else 1.0
-        val angleFactor = ModUtilities.smoothstep(GRAZING_VISIBILITY_START, TOP_VIEW_VISIBILITY_FULL, viewAlignment)
-        return lerp(ModConfig.shaderBioluminescenceGrazingStrength, 1.0, angleFactor)
+        return BioluminescentCompensation.angleFactor(
+            (quad.worldMinX + quad.worldMaxX) * 0.5,
+            quad.surfaceY,
+            (quad.worldMinZ + quad.worldMaxZ) * 0.5,
+            cameraPosition
+        )
     }
 
     private fun compensationMultiplier(
@@ -403,7 +394,7 @@ object BioluminescentWaterRenderer {
         debugMode: BioluminescentIrisDebugMode
     ): Double {
         if (debugMode == BioluminescentIrisDebugMode.COMPENSATION_IGNORE_MODULATION) return baseStrength
-        val depthMultiplier = lerp(SHALLOW_COMPENSATION_MULTIPLIER, ModConfig.shaderBioluminescenceDeepWaterBoost, depthFactor)
+        val depthMultiplier = BioluminescentCompensation.depthMultiplier(depthFactor)
         return baseStrength * depthMultiplier * finalAngleFactor * cameraEnvironmentMultiplier
     }
 
@@ -430,10 +421,6 @@ object BioluminescentWaterRenderer {
             else -> ANGLE_VISUALIZATION_COLOR
         }
         return shade.withColor(color)
-    }
-
-    private fun lerp(a: Double, b: Double, t: Double): Double {
-        return a + (b - a) * t
     }
 
     private fun emitQuad(
@@ -621,13 +608,7 @@ object BioluminescentWaterRenderer {
     }
 
     private fun resolveRenderTop(quad: BioluminescentZoneTile.RenderQuad, cameraY: Double): Boolean {
-        val previous = quad.lastRenderTop
-        val resolved = when {
-            previous == null -> cameraY >= quad.surfaceY
-            previous && cameraY < quad.surfaceY - RENDER_SIDE_HYSTERESIS -> false
-            !previous && cameraY > quad.surfaceY + RENDER_SIDE_HYSTERESIS -> true
-            else -> previous
-        }
+        val resolved = BioluminescentCompensation.resolveRenderTop(quad.lastRenderTop, cameraY, quad.surfaceY)
         quad.lastRenderTop = resolved
         return resolved
     }
@@ -669,12 +650,12 @@ object BioluminescentWaterRenderer {
 
         var color = if (zone.activity == BioluminescentZoneActivity.ACTIVE && waveIntensity > 0.0f) {
             ModUtilities.lerpColor(
-                WHITE_COLOR,
+                WHITE_RGB,
                 WAVE_HIGHLIGHT_COLOR,
                 waveIntensity * HIGHLIGHT_COLOR_STRENGTH
             )
         } else {
-            WHITE_COLOR
+            WHITE_RGB
         }
 
         if (!ModConfig.enableBioluminescenceBloomRendering) return VertexShade(color, alpha)
@@ -693,7 +674,7 @@ object BioluminescentWaterRenderer {
             if (bloomPulse > 0.0f) {
                 val pulseAlpha = (lifecycleIntensity * bloomPulse * BLOOM_PULSE_ACTIVE_OPACITY * 255.0f).toInt()
                 alpha = maxOf(alpha, pulseAlpha).coerceIn(0, 255)
-                color = ModUtilities.lerpColor(color, WHITE_COLOR, bloomPulse.coerceAtMost(1.0f).toDouble())
+                color = ModUtilities.lerpColor(color, WHITE_RGB, bloomPulse.coerceAtMost(1.0f).toDouble())
             }
         } else if (bloomPulse > 0.0f) {
             val revealAlpha = (lifecycleIntensity * bloomPulse * BLOOM_PULSE_REVEAL_OPACITY * 255.0f).toInt()

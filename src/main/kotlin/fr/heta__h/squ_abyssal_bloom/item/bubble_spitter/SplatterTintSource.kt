@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.data_component.bubble
+package fr.heta__h.squ_abyssal_bloom.item.bubble_spitter
 
 import com.mojang.serialization.MapCodec
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
@@ -18,7 +18,7 @@ class SplatterTintSource : ItemTintSource {
     override fun type(): MapCodec<out ItemTintSource> = CODEC
 
     companion object {
-        val ID = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "splatter_tint")
+        val ID: Identifier = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "splatter_tint")
         val CODEC: MapCodec<SplatterTintSource> = MapCodec.unit(SplatterTintSource())
     }
 }

@@ -30,7 +30,7 @@ object AbyssDepthCache {
 
     val displayedDepthFactor: Double
         get() {
-            val inner = ModUtilities.smoothstep(smoothedDepthFactor)
+            val inner = ModUtilities.smooth(smoothedDepthFactor)
             return inner * inner
         }
 

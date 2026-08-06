@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRenderer
@@ -25,10 +26,6 @@ import kotlin.math.sqrt
 class BubbleRenderer(context: EntityRendererProvider.Context) :
     EntityRenderer<BubbleProjectile, BubbleRenderState>(context) {
 
-    private companion object {
-        const val FULL_BRIGHT_LIGHTMAP = 15728880
-    }
-
     private val modelStage1 = BubbleStage1Model(context.bakeLayer(BubbleStage1Model.LAYER_LOCATION))
     private val modelStage2 = BubbleStage2Model(context.bakeLayer(BubbleStage2Model.LAYER_LOCATION))
     private val modelStage3 = BubbleStage3Model(context.bakeLayer(BubbleStage3Model.LAYER_LOCATION))
@@ -49,7 +46,6 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.extractRenderState(entity, state, partialTicks)
-        state.luminescent = entity.isLuminescent
         state.packedLight = if (entity.isLuminescent) {
             FULL_BRIGHT_LIGHTMAP
         } else {

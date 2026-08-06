@@ -61,20 +61,36 @@ class BioluminescentMacroField internal constructor(
         private const val RADIAL_RAW_MIN = 0.30
         private const val GEODESIC_DOMAIN_MARGIN = 1.5
         private const val GEODESIC_FADE_WIDTH = 7.0
+
+        private const val MAX_RADIAL_WARP = 1.0 + RADIAL_NOISE_WARP / 2.0
+
+        private fun radialFadeStartOf(domain: BioluminescentWaterDomain): Double =
+            domain.geodesicRadius * RADIAL_FADE_START_RATIO
+
+        private fun geodesicFadeEndOf(domain: BioluminescentWaterDomain): Double =
+            minOf(
+                domain.analysisGeodesicRadius.toDouble(),
+                domain.maxGeodesicDistance.toDouble()
+            ) - GEODESIC_DOMAIN_MARGIN
+
+        fun fullIntensityGeodesicLimit(domain: BioluminescentWaterDomain): Double {
+            val limit = minOf(
+                radialFadeStartOf(domain),
+                geodesicFadeEndOf(domain) - GEODESIC_FADE_WIDTH
+            )
+            return (limit / MAX_RADIAL_WARP).coerceAtLeast(0.0)
+        }
     }
 
     private val anchorWorldX = domain.cells[domain.anchorIndex].waterPos.x + 0.5
     private val anchorWorldZ = domain.cells[domain.anchorIndex].waterPos.z + 0.5
-    private val radialFadeStart = domain.geodesicRadius * RADIAL_FADE_START_RATIO
+    private val radialFadeStart = radialFadeStartOf(domain)
     private val radialFadeEnd = minOf(
         domain.analysisGeodesicRadius - RADIAL_DOMAIN_MARGIN,
         domain.geodesicRadius * RADIAL_FADE_END_RATIO
     ).coerceAtLeast(radialFadeStart + RADIAL_MIN_FADE_WIDTH)
 
-    private val geodesicFadeEnd = minOf(
-        domain.analysisGeodesicRadius.toDouble(),
-        domain.maxGeodesicDistance.toDouble()
-    ) - GEODESIC_DOMAIN_MARGIN
+    private val geodesicFadeEnd = geodesicFadeEndOf(domain)
     private val geodesicFadeStart = geodesicFadeEnd - GEODESIC_FADE_WIDTH
 
 

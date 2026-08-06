@@ -4,13 +4,13 @@ import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.bioluminescence_wave.BioluminescentSurfaceLight
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation.VISIBILITY_EPSILON
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 
 object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
 
     private const val UPDATE_INTERVAL_TICKS = 1L
     private const val SMOOTHING_DELTA = UPDATE_INTERVAL_TICKS / 20.0
-    private const val VISIBILITY_EPSILON = 0.01
     private const val ACTIVE_BASE_FACTOR = 0.60
     private const val ACTIVE_WAVE_BOOST_FACTOR = 0.20
     private const val ACTIVE_WAVE_MIN_FACTOR = 0.60

@@ -4,7 +4,7 @@ import dev.lambdaurora.lambdynlights.api.DynamicLightsContext
 import dev.lambdaurora.lambdynlights.api.DynamicLightsInitializer
 import dev.lambdaurora.lambdynlights.api.item.ItemLightSource
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity.LuminescentBubbleLuminance
-import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity.NautilusLampLuminance
+import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity.NautilusEquipmentLuminance
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
@@ -19,15 +19,15 @@ class SquAbyssalDynamicLights : DynamicLightsInitializer {
     override fun onInitializeDynamicLights(context: DynamicLightsContext) {
         context.entityLightSourceManager().onRegisterEvent().register { ctx ->
 
-            ctx.register(EntityType.NAUTILUS, NautilusLampLuminance.INSTANCE)
-            ctx.register(EntityType.ZOMBIE_NAUTILUS, NautilusLampLuminance.INSTANCE)
+            ctx.register(EntityType.NAUTILUS, NautilusEquipmentLuminance.INSTANCE)
+            ctx.register(EntityType.ZOMBIE_NAUTILUS, NautilusEquipmentLuminance.INSTANCE)
             ctx.register(ModEntities.BUBBLE.get(), LuminescentBubbleLuminance.INSTANCE)
         }
 
         context.itemLightSourceManager().onRegisterEvent().register { ctx ->
-            ctx.register(ModItems.BIOLUMINESCENT_CRYSTAL.get(), 10)
-            ctx.register(ModItems.NAUTILUS_LAMP.get(), 15)
-            ctx.register(ModItems.PLANKTON_BOTTLE.get(), 10)
+            ctx.register(ModItems.BIOLUMINESCENT_CRYSTAL.get(), ModDynamicLightLevels.BIOLUMINESCENT_CRYSTAL)
+            ctx.register(ModItems.NAUTILUS_LAMP.get(), ModDynamicLightLevels.NAUTILUS_LAMP)
+            ctx.register(ModItems.PLANKTON_BOTTLE.get(), ModDynamicLightLevels.PLANKTON_BOTTLE)
             ctx.register(
                 ItemLightSource(
                     ItemPredicate.Builder.item()
@@ -38,7 +38,7 @@ class SquAbyssalDynamicLights : DynamicLightsInitializer {
                                 .build()
                         )
                         .build(),
-                    12
+                    ModDynamicLightLevels.PLANKTON_LUMINESCENCE
                 )
             )
         }

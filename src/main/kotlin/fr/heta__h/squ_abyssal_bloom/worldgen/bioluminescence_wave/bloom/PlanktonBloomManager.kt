@@ -9,6 +9,7 @@ import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.Biolumine
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CPlanktonBloomStateUpdatePayload
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomainCollector
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentMacroField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.skeleton.BioluminescentTopologyBuilder
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePresets
@@ -130,7 +131,10 @@ class PlanktonBloomManager private constructor(
         )
 
         val maxAnchorDistance = geodesicRadius * MAX_ANCHOR_DISTANCE_RATIO
-        val candidates = topologyResult.cores.withIndex().map { (coreIndex, core) ->
+        val fullIntensityLimit = BioluminescentMacroField.fullIntensityGeodesicLimit(domain)
+        val candidates = topologyResult.cores.withIndex().filter { (_, core) ->
+            domain.geodesicDistanceFromAnchor[core.cellIndex] <= fullIntensityLimit
+        }.map { (coreIndex, core) ->
             val boundaryDepth = domain.boundaryDepth[core.cellIndex]
             val withinAnchorRange = domain.geodesicDistanceFromAnchor[core.cellIndex] <= maxAnchorDistance
             val connectedToSkeleton = topologyResult.skeleton.paths.any { path ->
@@ -196,8 +200,8 @@ class PlanktonBloomManager private constructor(
         }
 
         SquAbyssalBloom.LOGGER.debug(
-            "[Bioluminescence] Wave {}: {} core(s), target={}, {} bloom(s) created",
-            wave.eventId, topologyResult.cores.size, targetCount, created.size
+            "[Bioluminescence] Wave {}: {} core(s), {} within full-intensity radius {}, target={}, {} bloom(s) created",
+            wave.eventId, topologyResult.cores.size, candidates.size, fullIntensityLimit, targetCount, created.size
         )
 
         if (created.isNotEmpty()) {

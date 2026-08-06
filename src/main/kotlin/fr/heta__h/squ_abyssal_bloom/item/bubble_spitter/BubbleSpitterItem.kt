@@ -9,7 +9,6 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.ChatFormatting
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.SlotAccess
 import net.minecraft.world.entity.player.Player

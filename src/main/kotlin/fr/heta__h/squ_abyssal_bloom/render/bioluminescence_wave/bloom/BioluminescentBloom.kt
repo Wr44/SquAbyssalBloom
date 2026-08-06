@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationResult
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.levelgen.RandomSupport
@@ -92,14 +93,8 @@ class BioluminescentBloom(
 
     private var lastRenderTop: Boolean? = null
 
-    fun resolveRenderTop(cameraY: Double, surfaceY: Double, hysteresis: Double): Boolean {
-        val previous = lastRenderTop
-        val resolved = when {
-            previous == null -> cameraY >= surfaceY
-            previous && cameraY < surfaceY - hysteresis -> false
-            !previous && cameraY > surfaceY + hysteresis -> true
-            else -> previous
-        }
+    fun resolveRenderTop(cameraY: Double, surfaceY: Double): Boolean {
+        val resolved = BioluminescentCompensation.resolveRenderTop(lastRenderTop, cameraY, surfaceY)
         lastRenderTop = resolved
         return resolved
     }

@@ -417,7 +417,7 @@ class FishCollectiveManager private constructor(
         val edgeProximity = (1.0 - distance / settings.threatDetectionRadius)
             .coerceIn(0.0, 1.0)
         val intensity = if (edgeProximity < MINIMUM_DIRECT_THREAT_INTENSITY) {
-            MINIMUM_DIRECT_THREAT_INTENSITY * ModUtilities.smoothstep(
+            MINIMUM_DIRECT_THREAT_INTENSITY * ModUtilities.smooth(
                 (edgeProximity / MINIMUM_DIRECT_THREAT_INTENSITY).coerceIn(0.0, 1.0)
             )
         } else {

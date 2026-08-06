@@ -22,8 +22,8 @@ class PlanktonTintSource(private val phase: Double, private val whiten: Double) 
         val renderGameTime = renderGameTime(level)
         val color = cycledColorAt(renderGameTime)
         val glow = luminosityAt(renderGameTime) * GLOW_WHITEN_STRENGTH
-        val brightened = ModUtilities.lerpColor(color, WHITE, glow)
-        return OPAQUE_ALPHA or ModUtilities.lerpColor(brightened, WHITE, whiten.coerceIn(0.0, 1.0))
+        val brightened = ModUtilities.lerpColor(color, ModUtilities.WHITE_RGB, glow)
+        return OPAQUE_ALPHA or ModUtilities.lerpColor(brightened, ModUtilities.WHITE_RGB, whiten.coerceIn(0.0, 1.0))
     }
 
     override fun type(): MapCodec<out ItemTintSource> = CODEC
@@ -62,7 +62,6 @@ class PlanktonTintSource(private val phase: Double, private val whiten: Double) 
         }
 
         private const val OPAQUE_ALPHA = 0xFF shl 24
-        private const val WHITE = 0xFFFFFF
         private const val COLOR_STEP_TICKS = 70.0
         private const val PULSE_PERIOD_TICKS = 46.0
         private const val FLICKER_PERIOD_TICKS = 11.0

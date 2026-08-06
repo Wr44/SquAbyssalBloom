@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.world.effect.MobEffects
@@ -60,7 +61,7 @@ object AbyssOverlayRender {
         val bufferSource = mc.renderBuffers().bufferSource()
         val buffer = bufferSource.getBuffer(renderType)
 
-        drawInsideOutBox(buffer, matrix4f, safeSize, finalBoxAlpha, 0xF000F0)
+        drawInsideOutBox(buffer, matrix4f, safeSize, finalBoxAlpha, ModUtilities.FULL_BRIGHT_LIGHTMAP)
 
         bufferSource.endBatch(renderType)
         poseStack.popPose()

@@ -10,6 +10,9 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.Biolumin
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.pipeline.BioluminescentRenderPipelines
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation.VISIBILITY_EPSILON_FLOAT
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import com.mojang.blaze3d.pipeline.RenderPipeline
 import net.minecraft.client.renderer.MultiBufferSource
@@ -19,18 +22,13 @@ import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.resources.Identifier
 import net.minecraft.world.phys.Vec3
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 object BioluminescentBloomRenderer {
     private val WHITE_TEXTURE = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/misc/white.png")
 
-    private const val FULL_BRIGHT_LIGHTMAP = 15728880
     private const val VANILLA_SURFACE_OFFSET = 0.006
-    private const val RENDER_SIDE_HYSTERESIS = 0.05
-    private const val VISIBILITY_EPSILON = 0.01f
     private const val UV_CENTER = 0.5
 
     private const val HALO_PEAK_ALPHA = 0.22f
@@ -41,14 +39,6 @@ object BioluminescentBloomRenderer {
     private const val SATELLITE_SHIMMER_MIN = 0.55
     private const val LOBE_PEAK_ALPHA = 0.8f
     private const val LOBE_WEDGES = 12
-
-    private const val SHALLOW_DEPTH = 4.0
-    private const val DEEP_DEPTH = 24.0
-    private const val SHALLOW_COMPENSATION_MULTIPLIER = 0.65
-    private const val DEEP_COMPENSATION_MULTIPLIER = 1.35
-    private const val GRAZING_VISIBILITY_START = 0.15
-    private const val TOP_VIEW_VISIBILITY_FULL = 0.65
-    private const val GRAZING_MINIMUM_FACTOR = 0.35
 
     private val renderTypeVanilla: RenderType by lazy {
         createRenderType("squ_plankton_bloom_vanilla", BioluminescentRenderPipelines.VANILLA_SURFACE)
@@ -76,7 +66,7 @@ object BioluminescentBloomRenderer {
         val consumer = bufferSource.getBuffer(renderTypeVanilla)
         val pose = poseStack.last()
         forEachVisibleBloom(renderGameTime) { palette, bloom, geometry, opacity, tint ->
-            val renderTop = bloom.resolveRenderTop(cameraPosition.y, geometry.surfaceY, RENDER_SIDE_HYSTERESIS)
+            val renderTop = bloom.resolveRenderTop(cameraPosition.y, geometry.surfaceY)
             val signedOffset = if (renderTop) VANILLA_SURFACE_OFFSET else -VANILLA_SURFACE_OFFSET
             emitBloom(consumer, pose, cameraPosition, geometry, palette, bloom, opacity, tint, signedOffset, renderGameTime)
         }
@@ -114,10 +104,12 @@ object BioluminescentBloomRenderer {
         val consumer = bufferSource.getBuffer(renderTypeShaderCompensation)
         val pose = poseStack.last()
         forEachVisibleBloom(renderGameTime) { palette, bloom, geometry, opacity, tint ->
-            val depthFactor = ModUtilities.smoothstep(SHALLOW_DEPTH, DEEP_DEPTH, geometry.waterDepth)
-            val depthMultiplier = SHALLOW_COMPENSATION_MULTIPLIER +
-                (DEEP_COMPENSATION_MULTIPLIER - SHALLOW_COMPENSATION_MULTIPLIER) * depthFactor
-            val angleFactor = angleFactorOf(geometry, cameraPosition)
+            val depthMultiplier = BioluminescentCompensation.depthMultiplier(
+                BioluminescentCompensation.depthFactor(geometry.waterDepth)
+            )
+            val angleFactor = BioluminescentCompensation.angleFactor(
+                geometry.centerX, geometry.surfaceY, geometry.centerZ, cameraPosition
+            )
             val multiplier = baseStrength * depthMultiplier * angleFactor * cameraEnvironmentMultiplier
             emitBloom(
                 consumer, pose, cameraPosition, geometry, palette, bloom,
@@ -153,21 +145,11 @@ object BioluminescentBloomRenderer {
                 if (appearance <= 0.0f || terminal <= 0.0f) continue
                 val pulse = bloom.pulseIntensityAt(renderGameTime, zone.serverGameTimeOffset)
                 val opacity = appearance * terminal * pulse * waveLifecycle * glowIntensity
-                if (opacity <= VISIBILITY_EPSILON) continue
+                if (opacity <= VISIBILITY_EPSILON_FLOAT) continue
                 val invalidatedTint = if (bloom.lifecycle == PlanktonBloomLifecycle.INVALIDATED) 1.0f - terminal else 0.0f
                 action(zone.palette, bloom, geometry, opacity, invalidatedTint)
             }
         }
-    }
-
-    private fun angleFactorOf(geometry: BioluminescentBloomGeometry, cameraPosition: Vec3): Double {
-        val deltaX = geometry.centerX - cameraPosition.x
-        val deltaY = geometry.surfaceY - cameraPosition.y
-        val deltaZ = geometry.centerZ - cameraPosition.z
-        val distance = sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ)
-        val viewAlignment = if (distance > 1.0e-6) abs(deltaY) / distance else 1.0
-        val factor = ModUtilities.smoothstep(GRAZING_VISIBILITY_START, TOP_VIEW_VISIBILITY_FULL, viewAlignment)
-        return GRAZING_MINIMUM_FACTOR + (1.0 - GRAZING_MINIMUM_FACTOR) * factor
     }
 
     private fun emitBloom(
@@ -182,7 +164,7 @@ object BioluminescentBloomRenderer {
         surfaceOffset: Double,
         renderGameTime: Double
     ) {
-        if (opacity <= VISIBILITY_EPSILON) return
+        if (opacity <= VISIBILITY_EPSILON_FLOAT) return
         val y = (geometry.surfaceY + surfaceOffset - cameraPosition.y).toFloat()
         val centerX = (geometry.centerX - cameraPosition.x).toFloat()
         val centerZ = (geometry.centerZ - cameraPosition.z).toFloat()
@@ -209,7 +191,7 @@ object BioluminescentBloomRenderer {
         invalidatedTint: Float
     ) {
         val alpha = (HALO_PEAK_ALPHA * opacity).coerceIn(0.0f, 1.0f)
-        if (alpha <= VISIBILITY_EPSILON) return
+        if (alpha <= VISIBILITY_EPSILON_FLOAT) return
         val color = tintedColor(
             ModUtilities.lerpColor(palette.accentColor, palette.highlightColor, HALO_COLOR_MIX),
             palette, invalidatedTint
@@ -233,7 +215,7 @@ object BioluminescentBloomRenderer {
             val shimmerWave = 0.5 + 0.5 * sin(renderGameTime * PI * 2.0 / SATELLITE_SHIMMER_PERIOD_TICKS + satellite.phaseOffset)
             val shimmer = SATELLITE_SHIMMER_MIN + (1.0 - SATELLITE_SHIMMER_MIN) * shimmerWave
             val alpha = (satellite.alphaScale * shimmer * opacity).toFloat().coerceIn(0.0f, 1.0f)
-            if (alpha <= VISIBILITY_EPSILON) continue
+            if (alpha <= VISIBILITY_EPSILON_FLOAT) continue
             val color = tintedColor(
                 ModUtilities.lerpColor(palette.accentColor, palette.highlightColor, satellite.colorMix),
                 palette, invalidatedTint
@@ -259,7 +241,7 @@ object BioluminescentBloomRenderer {
         invalidatedTint: Float
     ) {
         val centerAlpha = (LOBE_PEAK_ALPHA * opacity).coerceIn(0.0f, 1.0f)
-        if (centerAlpha <= VISIBILITY_EPSILON) return
+        if (centerAlpha <= VISIBILITY_EPSILON_FLOAT) return
         val centerColor = tintedColor(palette.highlightColor, palette, invalidatedTint)
         val rimColor = tintedColor(palette.accentColor, palette, invalidatedTint)
 

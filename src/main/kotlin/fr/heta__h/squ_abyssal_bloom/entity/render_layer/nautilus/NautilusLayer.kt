@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import fr.heta__h.squ_abyssal_bloom.util.accessor.AddPropertiesToRenderState
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitMaterialHolder
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems.BUBBLE
@@ -69,7 +70,6 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
         const val VERTICAL_PERIODS = 3.5f
         const val SELF_ROTATION_SPEED = 0.06f
         const val CONDUIT_SCALE = 0.90f
-        const val FULL_BRIGHT_LIGHTMAP = 15728880
     }
 
     override fun submit(

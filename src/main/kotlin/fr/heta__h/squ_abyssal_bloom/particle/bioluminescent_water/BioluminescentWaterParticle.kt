@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.particle.bioluminescent_water
 
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.particle.SingleQuadParticle
 import net.minecraft.client.renderer.texture.TextureAtlasSprite
@@ -64,7 +65,7 @@ class BioluminescentWaterParticle(
         }
     }
 
-    override fun getLightCoords(partialTick: Float): Int = 0xF000F0
+    override fun getLightCoords(partialTick: Float): Int = ModUtilities.FULL_BRIGHT_LIGHTMAP
 
 
     override fun getLayer(): Layer = Layer.TRANSLUCENT

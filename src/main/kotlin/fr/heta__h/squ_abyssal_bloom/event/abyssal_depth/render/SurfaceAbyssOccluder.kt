@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.FrustumAccessor
 import fr.heta__h.squ_abyssal_bloom.render.surface_occluder.SurfaceHeightCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
@@ -49,7 +50,6 @@ object SurfaceAbyssOccluder {
     private const val LAMP_REDUCTION_MULTIPLIER = 0.15f
     private const val ALPHA_RENDER_THRESHOLD = 0.01f
 
-    private const val FULL_BRIGHT_LIGHTMAP = 15728880
     private const val DEFAULT_OVERLAY = 655360
     private const val UV_CENTER = 0.5f
 

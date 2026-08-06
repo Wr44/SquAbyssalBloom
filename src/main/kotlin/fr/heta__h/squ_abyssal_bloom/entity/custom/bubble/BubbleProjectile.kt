@@ -105,7 +105,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
         const val EFFECT_PARTICLE_CHANCE = 0.4f
 
-        const val LUMINESCENCE_GLOW_DURATION_TICKS = 900
+        const val PLANKTON_GLOW_DURATION_TICKS = 900
 
         const val TORPEDO_DECAY_BASE = 0.08
 
@@ -223,7 +223,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
     private var bounceCount = 0
     private var isBursting = false
-    private var spawnCooldown = 0
     private var interBubbleCooldown = 0
 
     fun applySplatter(data: SplatterData) {
@@ -236,7 +235,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     override fun tick() {
         super.tick()
 
-        if (spawnCooldown > 0) spawnCooldown--
         if (interBubbleCooldown > 0) interBubbleCooldown--
 
         if (!isBoxFullySubmerged()) {
@@ -528,7 +526,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                 }
 
                 if (isLuminescent) {
-                    target.addEffect(MobEffectInstance(MobEffects.GLOWING, LUMINESCENCE_GLOW_DURATION_TICKS))
+                    target.addEffect(MobEffectInstance(MobEffects.GLOWING, PLANKTON_GLOW_DURATION_TICKS))
                 }
             }
 
@@ -689,6 +687,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         p_422546_.putInt("BubbleStage", bubbleStage)
         p_422546_.putInt("BounceCount", bounceCount)
         p_422546_.putBoolean("Luminescent", isLuminescent)
+        p_422546_.putInt("TorpedoLevel", torpedoLevel)
+        p_422546_.putFloat("TorpedoFactor", torpedoFactor.toFloat())
 
         if (splatterEntries.isNotEmpty()) {
             p_422546_.putInt("SplatterCount", splatterEntries.size)
@@ -699,8 +699,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                     p_422546_.putString("SplatterEffect$i", key.toString())
                     p_422546_.putInt("SplatterDuration$i", entry.duration)
                     p_422546_.putInt("SplatterAmplifier$i", entry.amplifier)
-                    p_422546_.putInt("TorpedoLevel", torpedoLevel)
-                    p_422546_.putFloat("TorpedoFactor", torpedoFactor.toFloat())
                 }
             }
         }
@@ -712,6 +710,9 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         bounceCount = p_422548_.getIntOr("BounceCount", 0)
         isLuminescent = p_422548_.getBooleanOr("Luminescent", false)
         if (isHeld) discard()
+
+        torpedoLevel = p_422548_.getIntOr("TorpedoLevel", 0)
+        torpedoFactor = p_422548_.getFloatOr("TorpedoFactor", 0f).toDouble()
 
         val count = p_422548_.getIntOr("SplatterCount", 0)
         if (count > 0) {
@@ -727,8 +728,6 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                     p_422548_.getIntOr("SplatterDuration$i", 600),
                     p_422548_.getIntOr("SplatterAmplifier$i", 0),
                 ))
-                torpedoLevel = p_422548_.getIntOr("TorpedoLevel", 0)
-                torpedoFactor = p_422548_.getFloatOr("TorpedoFactor", 0f).toDouble()
             }
             splatterEntries = entries
         }
