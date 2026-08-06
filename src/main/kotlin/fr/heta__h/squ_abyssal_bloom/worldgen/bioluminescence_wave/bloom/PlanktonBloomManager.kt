@@ -132,9 +132,20 @@ class PlanktonBloomManager private constructor(
 
         val maxAnchorDistance = geodesicRadius * MAX_ANCHOR_DISTANCE_RATIO
         val fullIntensityLimit = BioluminescentMacroField.fullIntensityGeodesicLimit(domain)
-        val candidates = topologyResult.cores.withIndex().filter { (_, core) ->
+        val withinFullIntensity = topologyResult.cores.withIndex().filter { (_, core) ->
             domain.geodesicDistanceFromAnchor[core.cellIndex] <= fullIntensityLimit
-        }.map { (coreIndex, core) ->
+        }
+        val usedNearestFallback = withinFullIntensity.isEmpty() && topologyResult.cores.isNotEmpty()
+        val usableCores = if (usedNearestFallback) {
+            listOfNotNull(
+                topologyResult.cores.withIndex().minByOrNull { (_, core) ->
+                    domain.geodesicDistanceFromAnchor[core.cellIndex]
+                }
+            )
+        } else {
+            withinFullIntensity
+        }
+        val candidates = usableCores.map { (coreIndex, core) ->
             val boundaryDepth = domain.boundaryDepth[core.cellIndex]
             val withinAnchorRange = domain.geodesicDistanceFromAnchor[core.cellIndex] <= maxAnchorDistance
             val connectedToSkeleton = topologyResult.skeleton.paths.any { path ->
@@ -200,8 +211,9 @@ class PlanktonBloomManager private constructor(
         }
 
         SquAbyssalBloom.LOGGER.debug(
-            "[Bioluminescence] Wave {}: {} core(s), {} within full-intensity radius {}, target={}, {} bloom(s) created",
-            wave.eventId, topologyResult.cores.size, candidates.size, fullIntensityLimit, targetCount, created.size
+            "[Bioluminescence] Wave {}: {} core(s), {} within full-intensity radius {} (nearest-core fallback: {}), target={}, {} bloom(s) created",
+            wave.eventId, topologyResult.cores.size, withinFullIntensity.size, fullIntensityLimit,
+            usedNearestFallback, targetCount, created.size
         )
 
         if (created.isNotEmpty()) {

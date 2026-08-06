@@ -18,8 +18,8 @@ object BioluminescenceServerSubMenu {
     val displayDescription: Component = Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_server.desc")
 
     private val durationFormat: (Int) -> Component = { Component.literal(ModUtilities.formatTicksAsDuration(it)) }
-    private val countFormat: (Int) -> Component = { Component.literal("$it floraison(s)") }
-    private val harvestFormat: (Int) -> Component = { Component.literal("$it recolte(s)") }
+    private val countFormat: (Int) -> Component = ModUtilities.unitInt("blooms")
+    private val harvestFormat: (Int) -> Component = ModUtilities.unitInt("harvests")
 
     private fun bindOrderedPair(minimum: Option<Int>, maximum: Option<Int>) {
         minimum.addEventListener { option, event ->
@@ -78,11 +78,11 @@ object BioluminescenceServerSubMenu {
             .option(serverDouble(
                 ModServerConfig.BIOLUMINESCENCE_LARGE_CHANCE,
                 step = 0.01
-            ) { value -> Component.literal(String.format("%.0f%%", value * 100.0)) })
+            , format = ModUtilities.percentFormat()))
             .option(serverDouble(
                 ModServerConfig.BIOLUMINESCENCE_ACTIVE_CHANCE,
                 step = 0.01
-            ) { value -> Component.literal(String.format("%.0f%%", value * 100.0)) })
+            , format = ModUtilities.percentFormat()))
             .option(serverInt(ModServerConfig.BIOLUMINESCENCE_DURATION_MEAN_TICKS, step = 100, format = durationFormat))
             .option(serverInt(
                 ModServerConfig.BIOLUMINESCENCE_DURATION_STANDARD_DEVIATION_TICKS,
@@ -102,7 +102,7 @@ object BioluminescenceServerSubMenu {
                 Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_detection.desc")
             ))
             .option(serverInt(ModServerConfig.BIOLUMINESCENCE_WATER_SEARCH_RADIUS, format = ModUtilities.blocksFormatInt()))
-            .option(serverInt(ModServerConfig.BIOLUMINESCENCE_MINIMUM_NEARBY_WATER_CELLS) { Component.literal("$it cellules") })
+            .option(serverInt(ModServerConfig.BIOLUMINESCENCE_MINIMUM_NEARBY_WATER_CELLS, format = ModUtilities.unitInt("cells")))
             .build())
 
         val smallMinimum = serverInt(ModServerConfig.BIOLUMINESCENCE_BLOOM_SMALL_MIN_COUNT, format = countFormat)
@@ -153,7 +153,7 @@ object BioluminescenceServerSubMenu {
             .option(serverDouble(
                 ModServerConfig.BIOLUMINESCENCE_TOTAL_NIGHT_CHANCE,
                 step = 0.01
-            ) { value -> Component.literal(String.format("%.0f%%", value * 100.0)) })
+            , format = ModUtilities.percentFormat()))
             .option(serverInt(ModServerConfig.BIOLUMINESCENCE_NIGHT_START_TICK, step = 100, format = durationFormat))
             .option(serverInt(ModServerConfig.BIOLUMINESCENCE_NIGHT_END_TICK, step = 100, format = durationFormat))
             .build())

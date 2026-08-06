@@ -65,6 +65,7 @@ import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import java.util.ArrayDeque
+import java.util.Locale
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
@@ -809,20 +810,43 @@ object ModUtilities {
         val seconds = totalSeconds % 60
 
         val parts = mutableListOf<String>()
-        if (days > 0) parts.add("${days}j")
-        if (hours > 0) parts.add("${hours}h")
-        if (minutes > 0) parts.add("${minutes}min")
-        if (seconds > 0 || parts.isEmpty()) parts.add("${seconds}s")
+        if (days > 0) parts.add(formatUnit("days", days))
+        if (hours > 0) parts.add(formatUnit("hours", hours))
+        if (minutes > 0) parts.add(formatUnit("minutes", minutes))
+        if (seconds > 0 || parts.isEmpty()) parts.add(formatUnit("seconds", seconds))
         return parts.joinToString(" ")
     }
 
+    private fun formatUnit(unit: String, value: Any): String =
+        Component.translatable("config.squ_abyssal_bloom.format.$unit", value).string
+
     fun ticksFormat(): (Int) -> Component = { ticks -> Component.literal(formatTicksAsDuration(ticks)) }
 
-    fun blocksFormatInt(): (Int) -> Component = { value -> Component.literal("$value blocs") }
+    fun unitInt(unit: String): (Int) -> Component = { value ->
+        Component.translatable("config.squ_abyssal_bloom.format.$unit", value)
+    }
 
-    fun blocksFormatDouble(): (Double) -> Component = { value -> Component.literal(String.format("%.1f blocs", value)) }
+    fun unitDouble(unit: String, decimals: Int = 1): (Double) -> Component = { value ->
+        Component.translatable(
+            "config.squ_abyssal_bloom.format.$unit",
+            String.format(Locale.ROOT, "%.${decimals}f", value)
+        )
+    }
 
-    fun percentFormat(): (Double) -> Component = { value -> Component.literal(String.format("%.0f%%", value * 100.0)) }
+    fun plainDouble(decimals: Int): (Double) -> Component = { value ->
+        Component.literal(String.format(Locale.ROOT, "%.${decimals}f", value))
+    }
+
+    fun blocksFormatInt(): (Int) -> Component = unitInt("blocks")
+
+    fun blocksFormatDouble(): (Double) -> Component = unitDouble("blocks", 1)
+
+    fun percentFormat(decimals: Int = 0): (Double) -> Component = { value ->
+        Component.translatable(
+            "config.squ_abyssal_bloom.format.percent",
+            String.format(Locale.ROOT, "%.${decimals}f", value * 100.0)
+        )
+    }
 
     fun serverDouble(
         opt: DoubleOption,
