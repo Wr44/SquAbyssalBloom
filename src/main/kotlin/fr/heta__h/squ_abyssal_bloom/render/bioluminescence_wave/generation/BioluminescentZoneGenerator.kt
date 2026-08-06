@@ -229,10 +229,10 @@ class BioluminescentZoneGenerator(
     private fun buildSkeleton() {
         val createdTopology = checkNotNull(topologyBuilder).build()
         check(createdTopology.cores.size in preset.coreCountRange) {
-            "nombre de noyaux invalide: ${createdTopology.cores.size}"
+            "invalid core count: ${createdTopology.cores.size}"
         }
         check(createdTopology.skeleton.connectionCount >= createdTopology.cores.size - 1) {
-            "squelette geodesique incomplet"
+            "incomplete geodesic skeleton"
         }
         topology = createdTopology
         macroBuilder = BioluminescentMacroFieldBuilder(
@@ -331,7 +331,7 @@ class BioluminescentZoneGenerator(
         identifierFactory: () -> Identifier,
         maxTileCount: Int
     ) {
-        check(tileOrigins.isNotEmpty()) { "aucune tuile lumineuse" }
+        check(tileOrigins.isNotEmpty()) { "no luminous tile" }
         if (tileBudgetLimit < tileOrigins.size) {
             tileBudgetLimit = maxOf(tileBudgetLimit, minOf(tileOrigins.size, maxTileCount))
         }
@@ -362,7 +362,7 @@ class BioluminescentZoneGenerator(
             }
             return
         }
-        check(preparedTiles.isNotEmpty()) { "aucune texture preparee" }
+        check(preparedTiles.isNotEmpty()) { "no prepared texture" }
         stage = BioluminescentZoneGenerationStage.UPLOAD_TILES
     }
 
@@ -444,7 +444,7 @@ class BioluminescentZoneGenerator(
         }
         val connectedRatio = connectedCells.toDouble() / field.macroCellCount.coerceAtLeast(1)
         check(connectedRatio >= MIN_MACRO_COMPONENT_RATIO) {
-            "support macroscopique fragmente: ${(connectedRatio * 100.0).roundToInt()}% connecte"
+            "fragmented macro support: ${(connectedRatio * 100.0).roundToInt()}% connected"
         }
     }
 

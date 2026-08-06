@@ -41,6 +41,10 @@ object BioluminescentPalettes {
 
     private val all = listOf(cyanGreen, cyanPurple, violetPink, turquoiseMagenta, blueMagentaPink)
 
+    val waveColorCycle: List<Int> = all.flatMap { palette ->
+        listOf(palette.firstColor, palette.secondColor, palette.accentColor)
+    }
+
     fun select(
         seed: Long,
         family: BioluminescentPaletteFamily = BioluminescentPaletteFamily.RANDOM

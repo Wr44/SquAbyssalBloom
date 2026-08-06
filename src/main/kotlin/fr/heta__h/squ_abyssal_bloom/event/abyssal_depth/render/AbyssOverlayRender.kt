@@ -22,7 +22,7 @@ import org.joml.Matrix4f
 @EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object AbyssOverlayRender {
 
-    private val WHITE_TEXTURE = Identifier.withDefaultNamespace("textures/misc/white.png")
+    private val WHITE_TEXTURE = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/misc/white.png")
     private const val VERT_HALF_FOV = 22.5f
 
     @SubscribeEvent

@@ -4,15 +4,20 @@ import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.bioluminescence_wave.BioluminescentSurfaceLight
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 
 object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
 
-    private const val UPDATE_INTERVAL_TICKS = 4L
+    private const val UPDATE_INTERVAL_TICKS = 1L
+    private const val SMOOTHING_DELTA = UPDATE_INTERVAL_TICKS / 20.0
     private const val VISIBILITY_EPSILON = 0.01
     private const val ACTIVE_BASE_FACTOR = 0.60
     private const val ACTIVE_WAVE_BOOST_FACTOR = 0.20
     private const val ACTIVE_WAVE_MIN_FACTOR = 0.60
     private const val INACTIVE_WAVE_FACTOR = 0.45
+    private const val BLOOM_ACTIVE_FACTOR = 0.85
+    private const val BLOOM_INACTIVE_FACTOR = 0.55
+    private const val BLOOM_GLOW_RADIUS = 4.0
 
     private val lightsByZone = HashMap<java.util.UUID, List<BioluminescentSurfaceLight>>()
     private var tickCounter = 0L
@@ -83,12 +88,13 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
     ) {
         val lifecycle = zone.lifecycleIntensityAt(renderGameTime)
         val isActive = zone.activity == BioluminescentZoneActivity.ACTIVE
-        if (lifecycle <= 0.0f) {
-            lights.forEach { it.setIntensityFactor(0.0) }
-            return
-        }
-        if (!isActive && zone.movementWaveVisibilityStrength() <= VISIBILITY_EPSILON) {
-            lights.forEach { it.setIntensityFactor(0.0) }
+        val dormant = lifecycle <= 0.0f || (
+            !isActive &&
+                zone.movementWaveVisibilityStrength() <= VISIBILITY_EPSILON &&
+                zone.bloomPulseVisibilityStrength() <= VISIBILITY_EPSILON
+            )
+        if (dormant) {
+            lights.forEach { it.setIntensityFactor(0.0, SMOOTHING_DELTA) }
             return
         }
 
@@ -102,16 +108,46 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
             } else {
                 0.0f
             }
+            val bloomIntensity = bloomIntensityIn(zone, minX, minZ, maxX, maxZ, renderGameTime)
 
             val factor = if (isActive) {
                 val base = lifecycle * ACTIVE_BASE_FACTOR
                 val boosted = base + lifecycle * waveIntensity * ACTIVE_WAVE_BOOST_FACTOR
                 val waveFloor = lifecycle * waveIntensity * ACTIVE_WAVE_MIN_FACTOR
-                maxOf(boosted, waveFloor) * ModConfig.dynamicLightsBioluminescenceActiveIntensity
+                val bloomFloor = lifecycle * bloomIntensity * BLOOM_ACTIVE_FACTOR
+                maxOf(boosted, waveFloor, bloomFloor) * ModConfig.dynamicLightsBioluminescenceActiveIntensity
             } else {
-                lifecycle * waveIntensity * INACTIVE_WAVE_FACTOR * ModConfig.dynamicLightsBioluminescenceInactiveIntensity
+                val waveFactor = lifecycle * waveIntensity * INACTIVE_WAVE_FACTOR
+                val bloomFactor = lifecycle * bloomIntensity * BLOOM_INACTIVE_FACTOR
+                maxOf(waveFactor, bloomFactor) * ModConfig.dynamicLightsBioluminescenceInactiveIntensity
             }
-            light.setIntensityFactor(factor)
+            light.setIntensityFactor(factor, SMOOTHING_DELTA)
         }
+    }
+
+    private fun bloomIntensityIn(
+        zone: BioluminescentZone,
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
+        renderGameTime: Double
+    ): Float {
+        if (!ModConfig.enableBioluminescenceBloomRendering) return 0.0f
+        val pulseIntensity = zone.bloomPulseMaxIntensityIn(minX, minZ, maxX, maxZ, renderGameTime)
+
+        var glowIntensity = 0.0f
+        for (bloom in zone.blooms.values) {
+            if (bloom.lifecycle != PlanktonBloomLifecycle.ACTIVE) continue
+            val geometry = bloom.geometry ?: continue
+            if (geometry.centerX < minX - BLOOM_GLOW_RADIUS || geometry.centerX > maxX + BLOOM_GLOW_RADIUS) continue
+            if (geometry.centerZ < minZ - BLOOM_GLOW_RADIUS || geometry.centerZ > maxZ + BLOOM_GLOW_RADIUS) continue
+            val fade = bloom.appearanceFadeAt(renderGameTime, zone.serverGameTimeOffset) *
+                bloom.terminalFadeAt(renderGameTime) *
+                bloom.pulseIntensityAt(renderGameTime, zone.serverGameTimeOffset)
+            glowIntensity = maxOf(glowIntensity, fade)
+        }
+
+        return maxOf(pulseIntensity, glowIntensity)
     }
 }

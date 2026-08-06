@@ -79,7 +79,7 @@ object SeagrassPlantation {
 
         if (!level.isClientSide) {
             level.setBlock(placePos, customState, 3)
-            if (!player.isCreative) stack.shrink(1)
+            stack.consume(1, player)
             val sound = customState.soundType
             level.playSound(null, placePos, sound.placeSound, SoundSource.BLOCKS, (sound.volume + 1.0f) / 2.0f, sound.pitch * 0.8f)
         }

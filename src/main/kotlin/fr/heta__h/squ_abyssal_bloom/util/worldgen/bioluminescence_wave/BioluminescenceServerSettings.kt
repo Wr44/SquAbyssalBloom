@@ -1,8 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave
 
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveActivity
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveSize
 import net.minecraft.util.RandomSource
 import kotlin.math.ceil
 import kotlin.math.ln

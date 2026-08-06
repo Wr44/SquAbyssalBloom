@@ -67,7 +67,7 @@ class RespirationBubbleItem(properties: Properties) : Item(properties) {
             )
         }
 
-        if (!player.isCreative) player.getItemInHand(hand).shrink(1)
+        player.getItemInHand(hand).consume(1, player)
 
 
         return InteractionResult.CONSUME

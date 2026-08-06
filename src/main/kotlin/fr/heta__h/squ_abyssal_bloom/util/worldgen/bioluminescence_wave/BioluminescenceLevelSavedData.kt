@@ -3,7 +3,6 @@ package fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.ActiveBioluminescenceWave
 import net.minecraft.resources.Identifier
 import net.minecraft.world.level.saveddata.SavedData
 import net.minecraft.world.level.saveddata.SavedDataType

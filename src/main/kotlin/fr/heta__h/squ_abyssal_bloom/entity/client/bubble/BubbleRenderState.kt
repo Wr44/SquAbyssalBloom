@@ -12,4 +12,5 @@ class BubbleRenderState : EntityRenderState() {
     var hasAttachedPlayer = false
     var attachedLeash: LeashState? = null
     var effectColor: Int = 0
+    var luminescent: Boolean = false
 }

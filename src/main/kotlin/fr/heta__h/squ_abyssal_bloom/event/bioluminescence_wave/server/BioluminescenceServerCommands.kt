@@ -4,24 +4,28 @@ import com.mojang.brigadier.arguments.LongArgumentType
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.context.CommandContext
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveMode
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveSize
+import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveMode
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.commands.CommandSourceStack
 import net.minecraft.commands.Commands
 import net.minecraft.commands.arguments.GameProfileArgument
 import net.minecraft.network.chat.Component
-import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.ActiveBioluminescenceWave
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.ActiveBioluminescenceWave
 import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.BioluminescenceLevelManager
 import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.BioluminescenceServerManager
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceServerSettings
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.PlayerBioluminescenceStatus
+import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.bloom.PlanktonBloomManager
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomState
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.players.NameAndId
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.RegisterCommandsEvent
 import java.util.UUID
+import kotlin.math.sqrt
 
 @EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object BioluminescenceServerCommands {
@@ -90,6 +94,20 @@ object BioluminescenceServerCommands {
                 .then(Commands.literal("here").executes(::executeBeachHere))
                 .then(Commands.literal("clearcache").executes(::executeBeachClearCache))
                 .then(Commands.literal("verify").executes(::executeBeachVerify))
+        )
+
+        root.then(
+            Commands.literal("bloom")
+                .then(Commands.literal("list").executes(::executeBloomList))
+                .then(
+                    Commands.literal("info")
+                        .then(Commands.argument("id", StringArgumentType.word()).executes(::executeBloomInfo))
+                )
+                .then(Commands.literal("here").executes(::executeBloomHere))
+                .then(
+                    Commands.literal("forceactivate")
+                        .then(Commands.argument("id", StringArgumentType.word()).executes(::executeBloomForceActivate))
+                )
         )
 
         event.dispatcher.register(root)
@@ -166,27 +184,22 @@ object BioluminescenceServerCommands {
         val nextDeadline = levelManager.nextNormalWaveEndGameTime
 
         val lines = listOf(
-            "=== Bioluminescence : statut (${level.dimension().identifier()}) ===",
-            "Systeme serveur: ${if (settings.enabled) "active" else "desactive"}",
-            "Temps de jeu (gameTime): ${level.gameTime}",
-            "Temps d'horloge overworld: $dayTime (tick du jour ${Math.floorMod(dayTime, 24000L)})",
-            "Etat: ${if (isNight) "nuit" else "jour"}",
-            "Indice de nuit courant: ${settings.nightIndex(dayTime)} " +
-                "(dernier tirage memorise: ${levelManager.lastRolledNightIndex})",
-            "Nuit totale active: ${if (levelManager.isTotalNightActive) "oui" else "non"}",
-            "Joueurs WAITING: ${serverManager.countByStatus(PlayerBioluminescenceStatus.WAITING)}",
-            "Joueurs ARMED: ${serverManager.countByStatus(PlayerBioluminescenceStatus.ARMED)}",
-            "Joueurs connus du systeme: ${serverManager.knownPlayerIds().size}",
-            "Vagues actives: ${waves.size} (normal=$normalCount, nuit_totale=$totalNightCount)",
-            "Prochaine echeance d'expiration connue: " + if (nextDeadline == Long.MAX_VALUE) {
-                "aucune"
+            "${level.dimension().identifier()} enabled=${settings.enabled} " +
+                "gameTime=${level.gameTime} dayTime=$dayTime(${Math.floorMod(dayTime, 24000L)}) " +
+                "${if (isNight) "night" else "day"}",
+            "nightIndex=${settings.nightIndex(dayTime)} lastRolled=${levelManager.lastRolledNightIndex} " +
+                "totalNight=${levelManager.isTotalNightActive} " +
+                "nextExpiry=" + if (nextDeadline == Long.MAX_VALUE) {
+                "none"
             } else {
-                "$nextDeadline (dans ${nextDeadline - level.gameTime} ticks)"
+                "$nextDeadline(in ${nextDeadline - level.gameTime} ticks)"
             },
-            "Index spatial: ${levelManager.sectorIndexCount} secteur(s), " +
-                "${levelManager.beachIndexCount} plage(s) indexee(s)",
-            "Cache plages: ${levelManager.beachCacheZoneCount} zone(s), " +
-                "${levelManager.beachCacheDetectionCount} detection(s) joueur"
+            "players: waiting=${serverManager.countByStatus(PlayerBioluminescenceStatus.WAITING)} " +
+                "armed=${serverManager.countByStatus(PlayerBioluminescenceStatus.ARMED)} " +
+                "known=${serverManager.knownPlayerIds().size}",
+            "waves=${waves.size} (normal=$normalCount, totalNight=$totalNightCount) " +
+                "sectors=${levelManager.sectorIndexCount} beaches=${levelManager.beachIndexCount} " +
+                "beachCache=${levelManager.beachCacheZoneCount}/${levelManager.beachCacheDetectionCount}"
         )
         lines.forEach { line -> source.sendSuccess({ Component.literal(line) }, false) }
         return 1
@@ -197,20 +210,20 @@ object BioluminescenceServerCommands {
         val level = source.level
         val settings = BioluminescenceServerSettings.current()
         if (!settings.enabled) {
-            source.sendFailure(Component.literal("Le systeme de bioluminescence est desactive dans la configuration serveur."))
+            source.sendFailure(Component.literal("Bioluminescence is disabled in the server config."))
             return 0
         }
         if (!ModUtilities.isOverworldLikeDimension(level)) {
-            source.sendFailure(Component.literal("Cette dimension n'est pas compatible avec la bioluminescence."))
+            source.sendFailure(Component.literal("This dimension does not support bioluminescence."))
             return 0
         }
         val started = BioluminescenceLevelManager.forLevel(level).forceStartTotalNight(settings)
         if (!started) {
-            source.sendFailure(Component.literal("Une nuit totale est deja active dans ce niveau."))
+            source.sendFailure(Component.literal("A total night is already active in this level."))
             return 0
         }
         source.sendSuccess(
-            { Component.literal("Nuit bioluminescente totale demarree dans ${level.dimension().identifier()}.") },
+            { Component.literal("Total bioluminescent night started in ${level.dimension().identifier()}.") },
             true
         )
         return 1
@@ -221,11 +234,11 @@ object BioluminescenceServerCommands {
         val level = source.level
         val stopped = BioluminescenceLevelManager.forLevel(level).forceStopTotalNight()
         if (!stopped) {
-            source.sendFailure(Component.literal("Aucune nuit totale active dans ce niveau."))
+            source.sendFailure(Component.literal("No total night active in this level."))
             return 0
         }
         source.sendSuccess(
-            { Component.literal("Nuit bioluminescente totale arretee dans ${level.dimension().identifier()}.") },
+            { Component.literal("Total bioluminescent night stopped in ${level.dimension().identifier()}.") },
             true
         )
         return 1
@@ -238,8 +251,8 @@ object BioluminescenceServerCommands {
         source.sendSuccess(
             {
                 Component.literal(
-                    "Tirage nuit totale (probabilite configuree=${settings.totalNightChance}) : " +
-                        if (result) "SUCCES (aurait declenche une nuit totale)" else "ECHEC"
+                    "Total night roll (configured chance=${settings.totalNightChance}) : " +
+                        if (result) "SUCCESS (would have triggered a total night)" else "FAILURE"
                 )
             },
             false
@@ -255,7 +268,7 @@ object BioluminescenceServerCommands {
         val level = source.level
         val removed = BioluminescenceLevelManager.forLevel(level).endWavesWhere(predicate)
         source.sendSuccess(
-            { Component.literal("$removed vague(s) supprimee(s) dans ${level.dimension().identifier()}.") },
+            { Component.literal("$removed wave(s) cleared in ${level.dimension().identifier()}.") },
             true
         )
         return removed
@@ -270,7 +283,7 @@ object BioluminescenceServerCommands {
             null -> 0
             else -> {
                 val removed = manager.endWavesWhere { candidate -> candidate.eventId == resolved.eventId }
-                source.sendSuccess({ Component.literal("Vague ${resolved.eventId} supprimee.") }, true)
+                source.sendSuccess({ Component.literal("Wave ${resolved.eventId} cleared.") }, true)
                 removed
             }
         }
@@ -287,12 +300,12 @@ object BioluminescenceServerCommands {
         val player = source.playerOrException
         val level = source.level
         if (!ModUtilities.isOverworldLikeDimension(level)) {
-            source.sendFailure(Component.literal("Cette dimension n'est pas compatible avec la bioluminescence."))
+            source.sendFailure(Component.literal("This dimension does not support bioluminescence."))
             return 0
         }
         val settings = BioluminescenceServerSettings.current()
         if (!settings.enabled) {
-            source.sendFailure(Component.literal("Le systeme de bioluminescence est desactive dans la configuration serveur."))
+            source.sendFailure(Component.literal("Bioluminescence is disabled in the server config."))
             return 0
         }
         val manager = BioluminescenceLevelManager.forLevel(level)
@@ -301,8 +314,8 @@ object BioluminescenceServerCommands {
                 source.sendSuccess(
                     {
                         Component.literal(
-                            "Vague creee: ${outcome.wave.eventId.toString().take(8)} " +
-                                "(${mode.name.lowercase()}, ${size.name.lowercase()}) a ${outcome.wave.anchor}."
+                            "Wave created: ${outcome.wave.eventId.toString().take(8)} " +
+                                "(${mode.name.lowercase()}, ${size.name.lowercase()}) at ${outcome.wave.anchor}."
                         )
                     },
                     true
@@ -313,8 +326,8 @@ object BioluminescenceServerCommands {
                 source.sendSuccess(
                     {
                         Component.literal(
-                            "Une vague compatible existe deja: ${outcome.wave.eventId.toString().take(8)} " +
-                                "(reutilisee par deduplication spatiale, aucun conflit cree)."
+                            "Compatible wave already exists: ${outcome.wave.eventId.toString().take(8)} " +
+                                "(reused by spatial deduplication, no conflict created)."
                         )
                     },
                     true
@@ -322,7 +335,7 @@ object BioluminescenceServerCommands {
                 1
             }
             BioluminescenceLevelManager.WaveCreationOutcome.NoValidBeach -> {
-                source.sendFailure(Component.literal("Aucune plage ou surface d'eau valide detectee a votre position."))
+                source.sendFailure(Component.literal("No valid beach or water surface at your position."))
                 0
             }
         }
@@ -335,14 +348,15 @@ object BioluminescenceServerCommands {
         val settings = BioluminescenceServerSettings.current()
         val waves = manager.allWaves()
         if (waves.isEmpty()) {
-            source.sendSuccess({ Component.literal("Aucune vague active dans ${level.dimension().identifier()}.") }, false)
+            source.sendSuccess({ Component.literal("No active wave in ${level.dimension().identifier()}.") }, false)
             return 0
         }
         source.sendSuccess(
-            { Component.literal("=== Vagues actives dans ${level.dimension().identifier()} (${waves.size}) ===") },
+            { Component.literal("Active waves in ${level.dimension().identifier()} (${waves.size}):") },
             false
         )
         val gameTime = level.gameTime
+        val bloomManager = PlanktonBloomManager.forLevel(level)
         for (wave in waves.take(MAX_LISTED_WAVES)) {
             val age = gameTime - wave.startGameTime
             val remaining = if (wave.mode == BioluminescenceWaveMode.TOTAL_NIGHT) {
@@ -350,12 +364,14 @@ object BioluminescenceServerCommands {
             } else {
                 "${wave.endGameTime - gameTime}"
             }
+            val blooms = bloomManager.bloomsForWave(wave.eventId)
             source.sendSuccess(
                 {
                     Component.literal(
                         "${wave.eventId.toString().take(8)} ${wave.mode.name.lowercase()} ${wave.size.name.lowercase()} " +
-                            "${wave.activity.name.lowercase()} anchor=${wave.anchor} age=$age reste=$remaining " +
-                            "chevauchements=${manager.overlappingWaveCount(wave, settings)}"
+                            "${wave.activity.name.lowercase()} anchor=${wave.anchor} age=$age remaining=$remaining " +
+                            "overlaps=${manager.overlappingWaveCount(wave, settings)} " +
+                            "blooms=${blooms.size}"
                     )
                 },
                 false
@@ -365,7 +381,7 @@ object BioluminescenceServerCommands {
             source.sendSuccess(
                 {
                     Component.literal(
-                        "... et ${waves.size - MAX_LISTED_WAVES} de plus (utilisez 'wave info <id>' pour le detail)."
+                        "... and ${waves.size - MAX_LISTED_WAVES} more (use 'wave info <id>' for details)."
                     )
                 },
                 false
@@ -387,25 +403,28 @@ object BioluminescenceServerCommands {
         val remaining = if (wave.mode == BioluminescenceWaveMode.TOTAL_NIGHT) "illimite" else "${wave.endGameTime - gameTime}"
         val viewers = level.players().count { player -> wave.eventId in manager.visibleWaveIds(player.uuid) }
         val lines = listOf(
-            "=== Vague ${wave.eventId} ===",
-            "Court: ${wave.eventId.toString().take(8)}",
-            "Seed: ${wave.seed}",
-            "Dimension: ${wave.dimension}",
-            "BeachId: ${wave.beachId}",
-            "Mode: ${wave.mode.name.lowercase()}  Taille: ${wave.size.name.lowercase()}  Activite: ${wave.activity.name.lowercase()}",
-            "Anchor: ${wave.anchor}",
-            "Bounds: [${wave.bounds.minimumX},${wave.bounds.minimumZ}] a [${wave.bounds.maximumX},${wave.bounds.maximumZ}]",
-            "startGameTime=${wave.startGameTime}  endGameTime=${wave.endGameTime}",
-            "Age: $age ticks  Temps restant: $remaining",
-            "Origine: ${if (wave.createdByCommand) "commande" else "naturelle"}" +
-                (wave.originPlayerId?.let { originId -> "  (joueur d'origine: $originId)" } ?: ""),
-            "Joueurs dans la zone de synchronisation: $viewers",
-            "Secteurs spatiaux couverts: ${manager.sectorCount(wave.bounds)}",
-            "Chevauchements detectes: ${manager.overlappingWaveCount(wave, settings)}",
-            "Etat persistant: oui (sauvegarde du niveau)"
+            "${wave.eventId} seed=${wave.seed} dim=${wave.dimension} beach=${wave.beachId}",
+            "${wave.mode.name.lowercase()} ${wave.size.name.lowercase()} ${wave.activity.name.lowercase()} " +
+                "anchor=${wave.anchor} " +
+                "bounds=[${wave.bounds.minimumX},${wave.bounds.minimumZ}]..[${wave.bounds.maximumX},${wave.bounds.maximumZ}]",
+            "start=${wave.startGameTime} end=${wave.endGameTime} age=$age remaining=$remaining",
+            "origin=${if (wave.createdByCommand) "command" else "natural"}" +
+                (wave.originPlayerId?.let { originId -> "($originId)" } ?: "") +
+                " viewers=$viewers sectors=${manager.sectorCount(wave.bounds)} " +
+                "overlaps=${manager.overlappingWaveCount(wave, settings)}"
         )
         lines.forEach { line -> source.sendSuccess({ Component.literal(line) }, false) }
+
+        for (bloom in PlanktonBloomManager.forLevel(level).bloomsForWave(wave.eventId)) {
+            source.sendSuccess({ Component.literal(describeBloom(bloom)) }, false)
+        }
         return 1
+    }
+
+    private fun describeBloom(bloom: PlanktonBloomState): String {
+        return "bloom=${bloom.id.toString().take(8)} ${bloom.lifecycle.name.lowercase()} pos=${bloom.position} " +
+            "harvests=${bloom.remainingHarvests}/${bloom.maxHarvests} " +
+            "activated=${bloom.activatedAtGameTime ?: "never"}"
     }
 
     private fun executePlayerList(context: CommandContext<CommandSourceStack>): Int {
@@ -414,10 +433,10 @@ object BioluminescenceServerCommands {
         val serverManager = BioluminescenceServerManager.forServer(server)
         val ids = serverManager.knownPlayerIds()
         if (ids.isEmpty()) {
-            source.sendSuccess({ Component.literal("Aucun joueur connu du systeme de bioluminescence.") }, false)
+            source.sendSuccess({ Component.literal("No player known to the bioluminescence system.") }, false)
             return 0
         }
-        source.sendSuccess({ Component.literal("=== Joueurs connus (${ids.size}) ===") }, false)
+        source.sendSuccess({ Component.literal("Known players (${ids.size}):") }, false)
         for (playerId in ids.take(MAX_LISTED_PLAYERS)) {
             source.sendSuccess({ Component.literal(formatPlayerSummary(server, playerId)) }, false)
         }
@@ -425,7 +444,7 @@ object BioluminescenceServerCommands {
             source.sendSuccess(
                 {
                     Component.literal(
-                        "... et ${ids.size - MAX_LISTED_PLAYERS} de plus (utilisez 'player info <joueur>' pour le detail)."
+                        "... and ${ids.size - MAX_LISTED_PLAYERS} more (use 'player info <player>' for details)."
                     )
                 },
                 false
@@ -444,7 +463,7 @@ object BioluminescenceServerCommands {
         val state = serverManager.snapshotState(playerId)
         if (state == null) {
             source.sendSuccess(
-                { Component.literal("Aucun etat de bioluminescence enregistre pour ${profile.name()} ($playerId).") },
+                { Component.literal("No bioluminescence state recorded for ${profile.name()} ($playerId).") },
                 false
             )
             return 0
@@ -454,35 +473,22 @@ object BioluminescenceServerCommands {
         val beach = levelManager.currentBeach(playerId)
         val gameTime = server.overworld().gameTime
 
-        val lines = mutableListOf(
-            "=== Joueur ${profile.name()} ($playerId) ===",
-            "Statut: ${state.status.name.lowercase()}",
-            "Connecte: ${if (online != null) "oui" else "non"}"
+        val lines = listOf(
+            "${profile.name()} ($playerId) ${state.status.name.lowercase()} " +
+                "online=${online != null}" +
+                (online?.let { " dim=${it.level().dimension().identifier()} pos=${it.blockPosition()}" } ?: ""),
+            "beach=${beach?.id?.toString()?.take(8) ?: "none"} " +
+                (if (state.status == PlayerBioluminescenceStatus.WAITING) {
+                    "nightTicksUntilOpportunity=${state.remainingNightTicksUntilOpportunity}"
+                } else {
+                    "armed=next beach entry"
+                }) +
+                " lastActivity=${state.lastActivityGameTime} (${gameTime - state.lastActivityGameTime} ticks ago)",
+            "visibleWaves=" + (
+                if (visibleWaves.isEmpty()) "none"
+                else visibleWaves.joinToString(",") { id -> id.toString().take(8) }
+                )
         )
-        if (online != null) {
-            lines.add("Dimension: ${online.level().dimension().identifier()}")
-            lines.add("Position: ${online.blockPosition()}")
-        }
-        lines.add("Plage detectee: ${beach?.id?.toString()?.take(8) ?: "aucune"}")
-        lines.add(
-            if (state.status == PlayerBioluminescenceStatus.WAITING) {
-                "Ticks nocturnes restants avant la prochaine opportunite: ${state.remainingNightTicksUntilOpportunity}"
-            } else {
-                "Arme: opportunite disponible a la prochaine entree sur une plage."
-            }
-        )
-        lines.add(
-            "Derniere activite (gameTime): ${state.lastActivityGameTime} " +
-                "(il y a ${gameTime - state.lastActivityGameTime} ticks)"
-        )
-        lines.add(
-            if (visibleWaves.isEmpty()) {
-                "Vague(s) visible(s)/rejointe(s): aucune"
-            } else {
-                "Vague(s) visible(s)/rejointe(s): " + visibleWaves.joinToString(", ") { id -> id.toString().take(8) }
-            }
-        )
-        lines.add("Etat de prechargement client: information indisponible cote serveur (donnee purement client).")
         lines.forEach { line -> source.sendSuccess({ Component.literal(line) }, false) }
         return 1
     }
@@ -493,10 +499,10 @@ object BioluminescenceServerCommands {
         val settings = BioluminescenceServerSettings.current()
         val triggeredWave = BioluminescenceServerManager.forServer(source.server).forcePlayerArmed(profile.id(), settings)
         val message = if (triggeredWave != null) {
-            "${profile.name()} est ARME : une vague ${triggeredWave.activity.name.lowercase()} vient d'etre " +
-                "declenchee immediatement (deja sur une plage valide)."
+            "${profile.name()} armed: a ${triggeredWave.activity.name.lowercase()} wave was triggered " +
+                "immediately (already on a valid beach)."
         } else {
-            "${profile.name()} est ARME, en attente de la prochaine entree sur une plage valide (aucune plage detectee a sa position actuelle)."
+            "${profile.name()} armed, waiting for next valid beach entry (no beach at current position)."
         }
         source.sendSuccess({ Component.literal(message) }, true)
         return 1
@@ -507,7 +513,7 @@ object BioluminescenceServerCommands {
         val profile = resolveSingleProfile(context, source) ?: return 0
         val settings = BioluminescenceServerSettings.current()
         BioluminescenceServerManager.forServer(source.server).forcePlayerDisarmed(profile.id(), settings)
-        source.sendSuccess({ Component.literal("${profile.name()} est desarme.") }, true)
+        source.sendSuccess({ Component.literal("${profile.name()} disarmed.") }, true)
         return 1
     }
 
@@ -518,7 +524,7 @@ object BioluminescenceServerCommands {
         BioluminescenceServerManager.forServer(source.server)
             .schedulePlayerOpportunity(profile.id(), nightTicks, BioluminescenceServerSettings.current())
         source.sendSuccess(
-            { Component.literal("Delai avant la prochaine opportunite de ${profile.name()} fixe a $nightTicks ticks.") },
+            { Component.literal("Next opportunity for ${profile.name()} set to $nightTicks night ticks.") },
             true
         )
         return 1
@@ -529,7 +535,7 @@ object BioluminescenceServerCommands {
         val profile = resolveSingleProfile(context, source) ?: return 0
         BioluminescenceServerManager.forServer(source.server)
             .resetPlayerState(profile.id(), BioluminescenceServerSettings.current())
-        source.sendSuccess({ Component.literal("Etat de bioluminescence de ${profile.name()} reinitialise.") }, true)
+        source.sendSuccess({ Component.literal("Bioluminescence state for ${profile.name()} reset.") }, true)
         return 1
     }
 
@@ -542,23 +548,23 @@ object BioluminescenceServerCommands {
         val diagnostic = manager.diagnoseBeach(player.uuid, player.blockPosition(), settings)
 
         val lines = mutableListOf(
-            "=== Diagnostic de plage a ${diagnostic.position} ===",
-            "Dimension compatible: ${if (diagnostic.dimensionSupported) "oui" else "non"}",
-            "Biome: ${diagnostic.biomeId ?: "inconnu"} (tag plage: ${if (diagnostic.isBeachBiome) "oui" else "non"})",
-            "Surface d'eau trouvee: ${diagnostic.waterSurface ?: "aucune"}",
-            "Assez d'eau proche: ${diagnostic.hasEnoughNearbyWater?.let { if (it) "oui" else "non" } ?: "non evalue"}",
-            "Resultat: ${if (diagnostic.zone != null) "PLAGE VALIDE" else "REFUSE"}"
+            "beach diagnostic at ${diagnostic.position}",
+            "dimensionSupported=${diagnostic.dimensionSupported}",
+            "biome=${diagnostic.biomeId ?: "unknown"} beachTag=${diagnostic.isBeachBiome}",
+            "waterSurface=${diagnostic.waterSurface ?: "none"}",
+            "enoughNearbyWater=${diagnostic.hasEnoughNearbyWater ?: "not evaluated"}",
+            "result=${if (diagnostic.zone != null) "VALID BEACH" else "REJECTED"}"
         )
         diagnostic.zone?.let { zone ->
             lines.add("beachId: ${zone.id}")
             lines.add(
-                "Bounds estimes: [${zone.bounds.minimumX},${zone.bounds.minimumZ}] a " +
+                "bounds=[${zone.bounds.minimumX},${zone.bounds.minimumZ}].." +
                     "[${zone.bounds.maximumX},${zone.bounds.maximumZ}]"
             )
         }
-        diagnostic.failureReason?.let { reason -> lines.add("Raison precise du refus: $reason") }
-        lines.add("Cache detection joueur: ${if (diagnostic.playerDetectionCacheHit) "hit" else "miss"}")
-        lines.add("Cache zone cellule: ${if (diagnostic.cellZoneCacheHit) "hit" else "miss"}")
+        diagnostic.failureReason?.let { reason -> lines.add("reason=$reason") }
+        lines.add("playerDetectionCache=${if (diagnostic.playerDetectionCacheHit) "hit" else "miss"}")
+        lines.add("cellZoneCache=${if (diagnostic.cellZoneCacheHit) "hit" else "miss"}")
         lines.forEach { line -> source.sendSuccess({ Component.literal(line) }, false) }
         return 1
     }
@@ -574,9 +580,9 @@ object BioluminescenceServerCommands {
         source.sendSuccess(
             {
                 Component.literal(
-                    "Verification stabilite beachId (${ids.size} appels): " +
-                        "${ids.map { id -> id?.toString()?.take(8) ?: "aucune plage" }} -> " +
-                        if (stable) "STABLE" else "INSTABLE"
+                    "beachId stability (${ids.size} calls): " +
+                        "${ids.map { id -> id?.toString()?.take(8) ?: "no beach" }} -> " +
+                        if (stable) "STABLE" else "UNSTABLE"
                 )
             },
             false
@@ -589,10 +595,143 @@ object BioluminescenceServerCommands {
         val level = source.level
         BioluminescenceLevelManager.forLevel(level).clearBeachCaches()
         source.sendSuccess(
-            { Component.literal("Caches de detection de plage vides pour ${level.dimension().identifier()}.") },
+            { Component.literal("Beach detection caches cleared for ${level.dimension().identifier()}.") },
             true
         )
         return 1
+    }
+
+    private fun executeBloomList(context: CommandContext<CommandSourceStack>): Int {
+        val source = context.source
+        val level = source.level
+        val manager = PlanktonBloomManager.forLevel(level)
+        val blooms = manager.allBlooms()
+        if (blooms.isEmpty()) {
+            source.sendSuccess({ Component.literal("No bloom in ${level.dimension().identifier()}.") }, false)
+            return 0
+        }
+        source.sendSuccess(
+            { Component.literal("Blooms in ${level.dimension().identifier()} (${blooms.size}):") },
+            false
+        )
+        val gameTime = level.gameTime
+        for (bloom in blooms.take(MAX_LISTED_WAVES)) {
+            source.sendSuccess(
+                {
+                    Component.literal(
+                        describeBloom(bloom) + " wave=${bloom.waveEventId.toString().take(8)}"
+                    )
+                },
+                false
+            )
+        }
+        if (blooms.size > MAX_LISTED_WAVES) {
+            source.sendSuccess(
+                {
+                    Component.literal(
+                        "... and ${blooms.size - MAX_LISTED_WAVES} more (use 'bloom info <id>' for details)."
+                    )
+                },
+                false
+            )
+        }
+        return blooms.size
+    }
+
+    private fun executeBloomInfo(context: CommandContext<CommandSourceStack>): Int {
+        val source = context.source
+        val level = source.level
+        val manager = PlanktonBloomManager.forLevel(level)
+        val input = StringArgumentType.getString(context, "id")
+        val bloom = resolveBloomMatch(manager, input, source) ?: return 0
+        val gameTime = level.gameTime
+        val waterValid = manager.diagnoseWater(bloom.position)
+        val movement = manager.movementDiagnostic(bloom.position)
+
+        val lines = listOf(
+            "${bloom.id} wave=${bloom.waveEventId} seed=${bloom.visualSeed}",
+            describeBloom(bloom) +
+                (bloom.activatedAtGameTime?.let { activatedAt -> "(${gameTime - activatedAt} ticks ago)" } ?: ""),
+            "water=${if (waterValid) "valid" else "invalid (will be invalidated next pass)"} " +
+                "movement=${if (movement.detected) "detected" else "none"} " +
+                "(radius=${movement.radius}, candidates=${movement.candidateCount}, " +
+                "maxDisplacement=${"%.4f".format(movement.fastestSpeed)}, threshold=${movement.threshold})"
+        )
+        lines.forEach { line -> source.sendSuccess({ Component.literal(line) }, false) }
+        return 1
+    }
+
+    private fun executeBloomHere(context: CommandContext<CommandSourceStack>): Int {
+        val source = context.source
+        val player = source.playerOrException
+        val level = source.level
+        val manager = PlanktonBloomManager.forLevel(level)
+        val blooms = manager.allBlooms()
+        if (blooms.isEmpty()) {
+            source.sendFailure(Component.literal("No bloom in ${level.dimension().identifier()}."))
+            return 0
+        }
+        val nearest = blooms.minBy { bloom -> bloom.position.distSqr(player.blockPosition()) }
+        val distance = sqrt(nearest.position.distSqr(player.blockPosition()))
+        val activationRadius = ModServerConfig.BIOLUMINESCENCE_BLOOM_ACTIVATION_RADIUS.get()
+        val harvestRadius = ModServerConfig.BIOLUMINESCENCE_BLOOM_HARVEST_RADIUS.get()
+
+        source.sendSuccess(
+            {
+                Component.literal(
+                    "nearest ${describeBloom(nearest)} wave=${nearest.waveEventId.toString().take(8)} " +
+                        "distance=${"%.1f".format(distance)} " +
+                        "inActivationRadius($activationRadius)=${distance <= activationRadius} " +
+                        "inHarvestRadius($harvestRadius)=${distance <= harvestRadius}"
+                )
+            },
+            false
+        )
+        return 1
+    }
+
+    private fun executeBloomForceActivate(context: CommandContext<CommandSourceStack>): Int {
+        val source = context.source
+        val level = source.level
+        val manager = PlanktonBloomManager.forLevel(level)
+        val input = StringArgumentType.getString(context, "id")
+        val bloom = resolveBloomMatch(manager, input, source) ?: return 0
+        val success = manager.forceActivate(bloom.id, level.gameTime)
+        if (success) {
+            source.sendSuccess({ Component.literal("Bloom ${bloom.id.toString().take(8)} force-activated.") }, true)
+        } else {
+            source.sendFailure(Component.literal("Cannot activate ${bloom.id.toString().take(8)} (state=${bloom.lifecycle}, requires DORMANT)."))
+        }
+        return if (success) 1 else 0
+    }
+
+    private fun resolveBloomMatch(
+        manager: PlanktonBloomManager,
+        input: String,
+        source: CommandSourceStack
+    ): PlanktonBloomState? {
+        val exact = runCatching { UUID.fromString(input) }.getOrNull()
+        val matches = if (exact != null) {
+            manager.allBlooms().filter { bloom -> bloom.id == exact }
+        } else {
+            manager.allBlooms().filter { bloom -> bloom.id.toString().startsWith(input, ignoreCase = true) }
+        }
+        return when {
+            matches.isEmpty() -> {
+                source.sendFailure(Component.literal("No bloom matches '$input'."))
+                null
+            }
+            matches.size > 1 -> {
+                source.sendFailure(
+                    Component.literal(
+                        "Identifiant ambigu '$input' (${matches.size} correspondances) : " +
+                            matches.joinToString(", ") { bloom -> bloom.id.toString().take(8) }
+                    )
+                )
+                null
+            }
+            else -> matches.single()
+        }
     }
 
     private fun resolveSingleProfile(
@@ -602,13 +741,13 @@ object BioluminescenceServerCommands {
         val profiles = GameProfileArgument.getGameProfiles(context, "player")
         return when {
             profiles.isEmpty() -> {
-                source.sendFailure(Component.literal("Joueur introuvable."))
+                source.sendFailure(Component.literal("Player not found."))
                 null
             }
             profiles.size > 1 -> {
                 source.sendFailure(
                     Component.literal(
-                        "Le selecteur correspond a plusieurs joueurs (${profiles.size}), une seule cible est attendue."
+                        "Selector matched multiple players (${profiles.size}), expected exactly one."
                     )
                 )
                 null
@@ -630,7 +769,7 @@ object BioluminescenceServerCommands {
         }
         return when {
             matches.isEmpty() -> {
-                source.sendFailure(Component.literal("Aucune vague ne correspond a '$input'."))
+                source.sendFailure(Component.literal("No wave matches '$input'."))
                 null
             }
             matches.size > 1 -> {
@@ -649,10 +788,10 @@ object BioluminescenceServerCommands {
     private fun formatPlayerSummary(server: MinecraftServer, playerId: UUID): String {
         val serverManager = BioluminescenceServerManager.forServer(server)
         val state = serverManager.snapshotState(playerId)
-            ?: return "${playerId.toString().take(8)} : aucun etat enregistre"
+            ?: return "${playerId.toString().take(8)} : no recorded state"
         val online = server.playerList.getPlayer(playerId)
         val label = online?.gameProfile?.name ?: playerId.toString().take(8)
-        return "$label (${playerId.toString().take(8)}) statut=${state.status.name.lowercase()} " +
-            (if (online != null) "connecte" else "hors_ligne")
+        return "$label (${playerId.toString().take(8)}) status=${state.status.name.lowercase()} " +
+            (if (online != null) "online" else "offline")
     }
 }

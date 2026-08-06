@@ -1,11 +1,7 @@
-package fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave
+package fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave
 
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceBounds
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveActivity
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveMode
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveSize
 import net.minecraft.core.BlockPos
 import net.minecraft.core.UUIDUtil
 import net.minecraft.resources.Identifier

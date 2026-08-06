@@ -1,12 +1,17 @@
 {
-  "type": "minecraft:crafting_shapeless",
-  "category": "misc",
-  "ingredients": [
-    "#squ_abyssal_bloom:is_dried_algea" ,
-    "minecraft:prismarine_crystals"
+  "type": "minecraft:crafting_shaped",
+  "category": "decorations",
+  "pattern": [
+    "AAA",
+    "ABA",
+    "AAA"
   ],
+  "key": {
+    "A": "minecraft:prismarine_crystals",
+    "B": "squ_abyssal_bloom:plankton_bottle"
+  },
   "result": {
     "id": "squ_abyssal_bloom:bioluminescent_crystal",
-    "count": 2
+    "count": 8
   }
 }

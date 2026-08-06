@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave
 
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.ActiveBioluminescenceWave
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceArmedPayload
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescencePlayerSavedData

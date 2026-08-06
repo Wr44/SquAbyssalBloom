@@ -16,6 +16,8 @@ class BioluminescentWaterDomain internal constructor(
 ) {
     val localCellIndices: IntArray = createLocalCellIndices()
 
+    val maxGeodesicDistance: Int = geodesicDistanceFromAnchor.maxOrNull() ?: 0
+
     val size: Int
         get() = cells.size
 

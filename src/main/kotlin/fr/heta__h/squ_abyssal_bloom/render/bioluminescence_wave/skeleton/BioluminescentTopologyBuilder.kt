@@ -95,7 +95,7 @@ class BioluminescentTopologyBuilder(
         }
         if (selectedIndices.size >= targetCoreCount || exhausted) {
             check(selectedIndices.size >= preset.coreCountRange.first) {
-                "noyaux insuffisants: ${selectedIndices.size}/${preset.coreCountRange.first}"
+                "insufficient cores: ${selectedIndices.size}/${preset.coreCountRange.first}"
             }
             stage = Stage.COMPUTE_PATHS
         }
@@ -307,7 +307,7 @@ class BioluminescentTopologyBuilder(
                     }
                 }
             }
-            check(bestSource >= 0 && bestDestination >= 0) { "noyaux geodesiques non raccordables" }
+            check(bestSource >= 0 && bestDestination >= 0) { "geodesic cores cannot be linked" }
             result.add(bestSource to bestDestination)
             inTree[bestDestination] = true
         }
@@ -353,7 +353,7 @@ class BioluminescentTopologyBuilder(
         while (cursor != sourceCell) {
             reversed.add(cursor)
             cursor = shortestPaths[sourceCore].parents[cursor]
-            check(cursor >= 0) { "chemin geodesique incomplet" }
+            check(cursor >= 0) { "incomplete geodesic path" }
         }
         reversed.add(sourceCell)
         reversed.reverse()

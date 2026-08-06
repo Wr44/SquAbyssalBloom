@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave
 
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceBounds
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceBounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceServerSettings
 import net.minecraft.core.BlockPos

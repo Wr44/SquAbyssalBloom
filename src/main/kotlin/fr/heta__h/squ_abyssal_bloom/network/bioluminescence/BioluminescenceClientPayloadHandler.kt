@@ -20,4 +20,8 @@ object BioluminescenceClientPayloadHandler {
     fun handleArmed(payload: S2CBioluminescenceArmedPayload) {
         BioluminescentZoneManager.setOpportunityArmed(payload.armed)
     }
+
+    fun handleBloomStateUpdate(payload: S2CPlanktonBloomStateUpdatePayload) {
+        BioluminescentZoneManager.applyBloomStateUpdate(payload)
+    }
 }

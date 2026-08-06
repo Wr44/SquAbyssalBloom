@@ -3,8 +3,10 @@ package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.bioluminescence_wave
 import dev.lambdaurora.lambdynlights.api.behavior.DynamicLightBehavior
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import java.util.ArrayDeque
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
@@ -28,6 +30,8 @@ class BioluminescentSurfaceLight private constructor(
         private const val BOUNDING_BOX_MARGIN = 1
         private const val DOWNWARD_DISTANCE_MULTIPLIER = 0.6
         private const val LEVEL_QUANTIZATION_STEPS = 30.0
+        private const val SMOOTHING_RATE = 6.0
+        private const val SNAP_THRESHOLD = 0.002
         private val NEIGHBOR_OFFSET_X = intArrayOf(1, -1, 0, 0)
         private val NEIGHBOR_OFFSET_Z = intArrayOf(0, 0, 1, -1)
 
@@ -164,9 +168,15 @@ class BioluminescentSurfaceLight private constructor(
     private var dirty = true
     private var removed = false
 
-    fun setIntensityFactor(factor: Double) {
-        intensityFactor = factor
-        val level = (factor * LEVEL_QUANTIZATION_STEPS).roundToInt()
+    fun setIntensityFactor(target: Double, smoothingDelta: Double) {
+        intensityFactor = if (smoothingDelta <= 0.0) {
+            target
+        } else {
+            ModUtilities.smoothTowards(intensityFactor, target, smoothingDelta, SMOOTHING_RATE)
+        }
+        if (abs(intensityFactor - target) < SNAP_THRESHOLD) intensityFactor = target
+
+        val level = (intensityFactor * LEVEL_QUANTIZATION_STEPS).roundToInt()
         if (level != lastReportedLevel) {
             lastReportedLevel = level
             dirty = true

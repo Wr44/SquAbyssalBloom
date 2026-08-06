@@ -1,16 +1,20 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone
 
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveMode
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveMode
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloom
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloomPulseField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationResult
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationSnapshot
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentAmbientParticleEmitter
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentBloomParticleEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWaveField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.texture.TextureManager
 import net.minecraft.core.BlockPos
@@ -48,6 +52,8 @@ class BioluminescentZone(
         const val TOTAL_NIGHT_FADE_OUT_TICKS = 60.0
     }
 
+    val blooms: MutableMap<UUID, BioluminescentBloom> = linkedMapOf()
+
     private var revalidationTileIndex = 0
     private var revalidationQuadIndex = 0
 
@@ -61,6 +67,8 @@ class BioluminescentZone(
     private val brightnessScale = brightnessScaleFromSeed()
     private val movementWaves = BioluminescentMovementWaveField()
     private val ambientParticles = BioluminescentAmbientParticleEmitter()
+    private val bloomPulses = BioluminescentBloomPulseField()
+    private val bloomParticles = BioluminescentBloomParticleEmitter()
 
     var spatialData: BioluminescentZoneGenerationResult? = null
         private set
@@ -133,7 +141,7 @@ class BioluminescentZone(
             activeGenerator.close()
             generator = null
         } else if (activeGenerator.stage == BioluminescentZoneGenerationStage.FAILED) {
-            failureReason = activeGenerator.failureReason ?: "echec de generation inconnu"
+            failureReason = activeGenerator.failureReason ?: "unknown generation failure"
             activeGenerator.close()
             generator = null
         }
@@ -205,6 +213,30 @@ class BioluminescentZone(
         ambientParticles.tick(level, data, temporalIntensityAt(gameTime.toDouble()))
     }
 
+    fun tickBlooms(level: ClientLevel, gameTime: Long) {
+        if (blooms.isEmpty()) return
+        val renderGameTime = gameTime.toDouble()
+        val waveLifecycle = lifecycleIntensityAt(renderGameTime)
+        val data = spatialData
+
+        val terminal = mutableListOf<UUID>()
+        for (bloom in blooms.values) {
+            if (data != null) bloom.ensureGeometry(data)
+            if (bloom.terminalFadeComplete(renderGameTime)) {
+                terminal.add(bloom.id)
+                continue
+            }
+            if (bloom.lifecycle != PlanktonBloomLifecycle.ACTIVE) continue
+            bloomParticles.tickAmbient(level, bloom, palette, waveLifecycle * bloom.terminalFadeAt(renderGameTime))
+        }
+        terminal.forEach(blooms::remove)
+
+        if (data == null) return
+        for (bloom in bloomPulses.tick(blooms.values, data.domain.bounds, gameTime)) {
+            bloomParticles.emitPulseBurst(level, bloom, palette, waveLifecycle)
+        }
+    }
+
     fun movementWaveIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float =
         movementWaves.intensityAt(worldX, worldZ, renderGameTime)
 
@@ -217,6 +249,27 @@ class BioluminescentZone(
     ): Boolean = movementWaves.affects(minX, minZ, maxX, maxZ, renderGameTime)
 
     fun movementWaveVisibilityStrength(): Double = movementWaves.visibilityStrength
+
+    fun bloomPulseIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float =
+        bloomPulses.intensityAt(worldX, worldZ, renderGameTime)
+
+    fun bloomPulsesAffect(
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
+        renderGameTime: Double
+    ): Boolean = bloomPulses.affects(minX, minZ, maxX, maxZ, renderGameTime)
+
+    fun bloomPulseMaxIntensityIn(
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
+        renderGameTime: Double
+    ): Float = bloomPulses.maxIntensityIn(minX, minZ, maxX, maxZ, renderGameTime)
+
+    fun bloomPulseVisibilityStrength(): Double = bloomPulses.visibilityStrength
 
     fun revalidateWaterStep(level: ClientLevel, budget: Int) {
         val currentTiles = tiles
@@ -269,6 +322,8 @@ class BioluminescentZone(
         activatedAt = null
         endingAtServerGameTime = null
         movementWaves.clear()
+        bloomPulses.clear()
+        blooms.clear()
     }
 
     private fun lifecycleIntensity(elapsedTicks: Double): Double {

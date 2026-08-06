@@ -58,6 +58,8 @@ object C2SBubbleChargeStartPacket : CustomPacketPayload {
                 bubble.applySplatter(splatter)
             }
 
+            bubble.isLuminescent = extraStack.getOrDefault(ModDataComponents.PLANKTON_LUMINESCENCE.get(), false)
+
             val torpedoLevel = getEnchantLevel(extraStack, level, "torpedo")
             if (torpedoLevel > 0) bubble.torpedoLevel = torpedoLevel
 

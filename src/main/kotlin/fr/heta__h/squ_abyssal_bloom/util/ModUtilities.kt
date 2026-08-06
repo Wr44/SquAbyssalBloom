@@ -21,6 +21,8 @@ import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
 import fr.heta__h.squ_abyssal_bloom.config.server.types.BoolOption
 import fr.heta__h.squ_abyssal_bloom.config.server.types.DoubleOption
 import fr.heta__h.squ_abyssal_bloom.config.server.types.IntOption
+import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
+import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
@@ -38,11 +40,16 @@ import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
 import net.minecraft.tags.FluidTags
 import net.minecraft.tags.TagKey
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.animal.fish.AbstractFish
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
+import net.minecraft.world.entity.animal.squid.Squid
 import net.minecraft.world.entity.decoration.ItemFrame
 import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.player.Player
+import net.minecraft.world.entity.vehicle.boat.AbstractBoat
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
@@ -62,8 +69,10 @@ import java.util.ArrayDeque
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 object ModUtilities {
 
@@ -503,21 +512,27 @@ object ModUtilities {
         for (nautilus in level.getEntitiesOfClass(AbstractNautilus::class.java, aabb)) {
             val extra = nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
 
-            if (!extra.isEmpty && extra.item == NautilusLayerItems.LAMP) {
+            if (!extra.isEmpty && (extra.item == NautilusLayerItems.LAMP || isFogRepellerStack(extra))) {
                 val distanceSquared = nautilus.position().distanceToSqr(center)
                 maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
             }
         }
 
+        for (bubble in level.getEntitiesOfClass(BubbleProjectile::class.java, aabb)) {
+            if (!bubble.isLuminescent) continue
+            val distanceSquared = bubble.position().distanceToSqr(center)
+            maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
+        }
+
         if (ModCompat.hasDynLights) {
             for (itemEntity in level.getEntitiesOfClass(ItemEntity::class.java, aabb)) {
-                if (!itemEntity.item.`is`(ModTags.Items.FOG_REPELLER)) continue
+                if (!isFogRepellerStack(itemEntity.item)) continue
                 val distanceSquared = itemEntity.position().distanceToSqr(center)
                 maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
             }
 
             for (itemFrame in level.getEntitiesOfClass(ItemFrame::class.java, aabb)) {
-                if (!itemFrame.item.`is`(ModTags.Items.FOG_REPELLER)) continue
+                if (!isFogRepellerStack(itemFrame.item)) continue
                 val distanceSquared = itemFrame.position().distanceToSqr(center)
                 maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
             }
@@ -608,19 +623,24 @@ object ModUtilities {
         val mainHand = entity.mainHandItem
         val offHand = entity.offhandItem
 
-        if ( ModCompat.hasDynLights && (mainHand.`is`(ModTags.Items.FOG_REPELLER) || offHand.`is`(ModTags.Items.FOG_REPELLER))) return 1.0
+        if ( ModCompat.hasDynLights && (isFogRepellerStack(mainHand) || isFogRepellerStack(offHand))) return 1.0
 
         val vehicle = entity.vehicle
 
         if (vehicle is AbstractNautilus) {
             val extra = vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
 
-            if (!extra.isEmpty && extra.item == NautilusLayerItems.LAMP) {
+            if (!extra.isEmpty && (extra.item == NautilusLayerItems.LAMP || isFogRepellerStack(extra))) {
                 return 1.0
             }
         }
 
         return 0.0
+    }
+
+    fun isFogRepellerStack(stack: ItemStack): Boolean {
+        if (stack.isEmpty) return false
+        return stack.`is`(ModTags.Items.FOG_REPELLER) || stack.getOrDefault(ModDataComponents.PLANKTON_LUMINESCENCE.get(), false)
     }
 
     fun preferWaterWalkTarget(pos: BlockPos, level: LevelReader, fallback: () -> Float): Float {
@@ -706,6 +726,29 @@ object ModUtilities {
 
     fun uuidFractionAsAngle(bits: Long, shift: Int = 0, mask: Long = 0xFFFFL): Double {
         return normalizedUuidFraction(bits, shift, mask) * Math.PI * 2.0
+    }
+
+    fun isQualifyingWaterMover(entity: Entity): Boolean {
+        return entity.isAlive && !entity.isSpectator && !entity.isPassenger &&
+            entity !is AbstractFish && entity !is Squid &&
+            (entity.isInWater || entity is AbstractBoat)
+    }
+
+    fun isQualifyingWaterMovingPlayer(player: Player): Boolean {
+        return player.isAlive && !player.isSpectator &&
+            (player.isInWater || player.vehicle is AbstractBoat)
+    }
+
+    fun horizontalMovementSpeed(entity: Entity): Double {
+
+        val positionDeltaX = entity.x - entity.xo
+        val positionDeltaZ = entity.z - entity.zo
+        val movement = entity.deltaMovement
+
+        return max(
+            sqrt(positionDeltaX * positionDeltaX + positionDeltaZ * positionDeltaZ),
+            sqrt(movement.x * movement.x + movement.z * movement.z)
+        )
     }
 
     fun getDepth(level: Level, pos: BlockPos): Double {

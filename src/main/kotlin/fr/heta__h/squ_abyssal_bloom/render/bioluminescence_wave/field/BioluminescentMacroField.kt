@@ -8,6 +8,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sin
 
@@ -58,6 +59,8 @@ class BioluminescentMacroField internal constructor(
         private const val RADIAL_NOISE_SCALE = 0.075
         private const val RADIAL_NOISE_WARP = 0.24
         private const val RADIAL_RAW_MIN = 0.30
+        private const val GEODESIC_DOMAIN_MARGIN = 1.5
+        private const val GEODESIC_FADE_WIDTH = 7.0
     }
 
     private val anchorWorldX = domain.cells[domain.anchorIndex].waterPos.x + 0.5
@@ -67,6 +70,12 @@ class BioluminescentMacroField internal constructor(
         domain.analysisGeodesicRadius - RADIAL_DOMAIN_MARGIN,
         domain.geodesicRadius * RADIAL_FADE_END_RATIO
     ).coerceAtLeast(radialFadeStart + RADIAL_MIN_FADE_WIDTH)
+
+    private val geodesicFadeEnd = minOf(
+        domain.analysisGeodesicRadius.toDouble(),
+        domain.maxGeodesicDistance.toDouble()
+    ) - GEODESIC_DOMAIN_MARGIN
+    private val geodesicFadeStart = geodesicFadeEnd - GEODESIC_FADE_WIDTH
 
 
     val macroCellCount: Int
@@ -93,7 +102,7 @@ class BioluminescentMacroField internal constructor(
         cellIndex: Int,
         result: BioluminescentMacroSample?
     ): Double {
-        val radialAttenuation = radialAttenuationAt(worldX, worldZ)
+        val radialAttenuation = radialAttenuationAt(worldX, worldZ, cellIndex)
         if (radialAttenuation <= 0.0) {
             result?.clear()
             return 0.0
@@ -105,7 +114,7 @@ class BioluminescentMacroField internal constructor(
     }
 
     fun rawAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
-        val radialAttenuation = radialAttenuationAt(worldX, worldZ)
+        val radialAttenuation = radialAttenuationAt(worldX, worldZ, cellIndex)
         return baseFieldAt(worldX, worldZ, cellIndex, null) * radialRawBias(radialAttenuation)
     }
 
@@ -138,14 +147,19 @@ class BioluminescentMacroField internal constructor(
         return reinforcedEnvelope * connectedCores
     }
 
-    private fun radialAttenuationAt(worldX: Double, worldZ: Double): Double {
+    private fun radialAttenuationAt(worldX: Double, worldZ: Double, cellIndex: Int): Double {
         val distance = hypot(worldX - anchorWorldX, worldZ - anchorWorldZ)
         val radialNoise = noiseSampler.sampleLarge(
             (worldX + 617.0) * RADIAL_NOISE_SCALE,
             (worldZ - 541.0) * RADIAL_NOISE_SCALE
         )
-        val warpedDistance = distance * (1.0 + (radialNoise - 0.5) * RADIAL_NOISE_WARP)
-        return 1.0 - ModUtilities.smooth(radialFadeStart, radialFadeEnd, warpedDistance)
+        val warp = 1.0 + (radialNoise - 0.5) * RADIAL_NOISE_WARP
+        val euclidean = 1.0 - ModUtilities.smooth(radialFadeStart, radialFadeEnd, distance * warp)
+        if (euclidean <= 0.0) return 0.0
+
+        val geodesic = domain.geodesicDistanceFromAnchor[cellIndex].toDouble() * warp
+        val geodesicAttenuation = 1.0 - ModUtilities.smooth(geodesicFadeStart, geodesicFadeEnd, geodesic)
+        return min(euclidean, geodesicAttenuation)
     }
 
     private fun radialRawBias(radialAttenuation: Double): Double {

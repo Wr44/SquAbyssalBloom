@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.network.bubble.C2SBubbleChargeStartPacket
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceArmedPayload
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceWaveEndPayload
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceWavePayload
+import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CPlanktonBloomStateUpdatePayload
 import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import fr.heta__h.squ_abyssal_bloom.network.config.S2CServerConfigPacket
 import fr.heta__h.squ_abyssal_bloom.network.nautilus_chest.SyncNautilusExtraSlotPayload
@@ -55,6 +56,12 @@ object ModNetworking {
             S2CBioluminescenceArmedPayload.ID,
             S2CBioluminescenceArmedPayload.STREAM_CODEC,
             S2CBioluminescenceArmedPayload::handle
+        )
+
+        registrar.playToClient(
+            S2CPlanktonBloomStateUpdatePayload.ID,
+            S2CPlanktonBloomStateUpdatePayload.STREAM_CODEC,
+            S2CPlanktonBloomStateUpdatePayload::handle
         )
 
 

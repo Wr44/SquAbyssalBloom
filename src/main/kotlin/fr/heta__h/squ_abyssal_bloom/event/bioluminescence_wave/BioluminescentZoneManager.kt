@@ -5,10 +5,12 @@ import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.compat.iris.IrisRenderState
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.BioluminescentZoneDynamicLights
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveActivity
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveMode
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveSize
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveActivity
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveMode
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceWavePayload
+import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CPlanktonBloomStateUpdatePayload
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomainCollector
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
@@ -19,6 +21,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.Bioluminesc
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePresets
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
@@ -119,6 +122,7 @@ object BioluminescentZoneManager {
                 zone.spawnAmbientParticles(level, level.gameTime)
             }
             zone.revalidateWaterStep(level, WATER_REVALIDATION_BUDGET_PER_ZONE)
+            zone.tickBlooms(level, level.gameTime)
         }
         BioluminescentZoneDynamicLights.updateDynamicState(zonesByEventId.values, level.gameTime)
     }
@@ -186,61 +190,48 @@ object BioluminescentZoneManager {
         val renderGameTime = level?.gameTime?.toDouble() ?: 0.0
         val report = mutableListOf<String>()
 
+        val shaderPath = if (ModCompat.hasIris && IrisRenderState.shaderPackInUse) "iris" else "vanilla"
         report.add(
-            "[Bio Debug] -- informations recues du serveur --"
-        )
-        report.add(
-            "[Bio Debug] dimension=${level?.dimension()?.identifier()} armed=$opportunityArmed " +
-                "events=${synchronizedWaves.size} zones=${zonesByEventId.size} " +
-                "renderingEnabled=${ModConfig.enableBioluminescenceRendering}"
+            "[Bio] dim=${level?.dimension()?.identifier()} armed=$opportunityArmed " +
+                "waves=${synchronizedWaves.size} zones=${zonesByEventId.size} " +
+                "rendering=${ModConfig.enableBioluminescenceRendering} path=$shaderPath " +
+                "distance=${ModConfig.bioluminescenceRenderDistance}"
         )
         for ((eventId, synchronized) in synchronizedWaves) {
             val zone = zonesByEventId[eventId]
+            val shortId = eventId.toString().take(8)
             val serverNow = (level?.gameTime ?: 0L) + synchronized.serverGameTimeOffset
             val snapshot = zone?.generationSnapshot()
             val distance = if (playerPosition != null && zone != null) {
-                sqrt(zone.horizontalDistanceSqr(playerPosition.first, playerPosition.second))
+                "%.1f".format(sqrt(zone.horizontalDistanceSqr(playerPosition.first, playerPosition.second)))
             } else {
-                null
+                "?"
             }
             report.add(
-                "[Bio Debug] -- generation client : ${eventId.toString().take(8)} --"
-            )
-            report.add(
-                "[Bio Debug] ${eventId.toString().take(8)} ${synchronized.payload.mode.name.lowercase()} " +
+                "[Bio] $shortId ${synchronized.payload.mode.name.lowercase()} " +
                     "${synchronized.payload.size.name.lowercase()} ${synchronized.payload.activity.name.lowercase()} " +
                     "age=${serverNow - synchronized.payload.startGameTime} " +
-                    "stage=${snapshot?.stage ?: "waiting_surface"} cellules=${snapshot?.waterCells ?: 0} " +
-                    "noyaux=${snapshot?.selectedCores ?: 0}"
+                    "stage=${snapshot?.stage ?: "waiting_surface"} cells=${snapshot?.waterCells ?: 0} " +
+                    "cores=${snapshot?.selectedCores ?: 0} " +
+                    "rd=${snapshot?.reactionIterations ?: 0}/${snapshot?.targetReactionIterations ?: 0} " +
+                    "tiles=${snapshot?.preparedTiles ?: 0}/${snapshot?.uploadedTiles ?: 0}/${zone?.tiles?.size ?: 0} " +
+                    "cpu=${(snapshot?.cpuNanos ?: 0L) / 1_000_000}ms " +
+                    "attempts=${generationAttemptsByEventId[eventId] ?: 0} distance=$distance"
             )
-            report.add(
-                "[Bio Debug] ${eventId.toString().take(8)} reaction_diffusion=${snapshot?.reactionIterations ?: 0}" +
-                    "/${snapshot?.targetReactionIterations ?: 0} " +
-                    "tiles_preparees=${snapshot?.preparedTiles ?: 0} tiles_uploadees=${snapshot?.uploadedTiles ?: 0} " +
-                    "tiles_visibles=${zone?.tiles?.size ?: 0} cpu_cumule_ms=${(snapshot?.cpuNanos ?: 0L) / 1_000_000.0}"
-            )
-            report.add(
-                "[Bio Debug] ${eventId.toString().take(8)} tentatives=${generationAttemptsByEventId[eventId] ?: 0} " +
-                    "prochain_retry=${retryAtGameTime[eventId]?.toString() ?: "aucun"} " +
-                    "distance_joueur=${distance?.let { d -> "%.1f".format(d) } ?: "inconnue"} " +
-                    "intensite_temporelle=${zone?.temporalIntensityAt(renderGameTime) ?: 0.0f}"
-            )
+            val serverGameTimeOffset = zone?.serverGameTimeOffset ?: 0L
+            zone?.blooms?.values?.forEach { bloom ->
+                report.add(
+                    "[Bio] $shortId bloom=${bloom.id.toString().take(8)} " +
+                        "${bloom.lifecycle.name.lowercase()} pos=${bloom.position} " +
+                        "harvests=${bloom.remainingHarvests}/${bloom.maxHarvests} " +
+                        "fade=${"%.2f".format(bloom.appearanceFadeAt(renderGameTime, serverGameTimeOffset))}" +
+                        "/${"%.2f".format(bloom.terminalFadeAt(renderGameTime))} " +
+                        "pulse=${"%.2f".format(bloom.pulseIntensityAt(renderGameTime, serverGameTimeOffset))} " +
+                        "geometry=${bloom.geometry != null}"
+                )
+            }
         }
-        recentFailures.forEach { failure -> report.add("[Bio Debug] echec recent: $failure") }
-
-        report.add("[Bio Debug] -- generation GPU locale --")
-        report.add(
-            "[Bio Debug] budgets: generation_budget_micros=" +
-                "${BioluminescentZoneGenerator.GENERATION_TIME_SLICE_NANOS / 1000L} " +
-                "gpu_upload_steps_par_tick=${BioluminescentZoneGenerator.UPLOAD_STEPS_PER_ADVANCE} " +
-                "max_tiles_gpu=$MAX_GPU_TILES"
-        )
-        report.add(
-            "[Bio Debug] renderer: iris_installe=${ModCompat.hasIris} " +
-                "shader_pack_actif=${ModCompat.hasIris && IrisRenderState.shaderPackInUse} " +
-                "chemin=${if (ModCompat.hasIris && IrisRenderState.shaderPackInUse) "iris" else "vanilla"} " +
-                "distance_rendu=${ModConfig.bioluminescenceRenderDistance}"
-        )
+        recentFailures.forEach { failure -> report.add("[Bio] failure: $failure") }
         if (ModCompat.hasIris) report.addAll(IrisRenderState.debugLines())
         return report
     }
@@ -258,7 +249,7 @@ object BioluminescentZoneManager {
             val colorPhase = ModUtilities.stableUnitValue(
                 RandomSupport.mixStafford13(synchronized.payload.seed xor COLOR_PHASE_SALT)
             ) * PI * 2.0
-            zonesByEventId[eventId] = BioluminescentZone(
+            val zone = BioluminescentZone(
                 zoneSeed = synchronized.payload.seed,
                 anchor = initialCell.waterPos,
                 palette = BioluminescentPalettes.select(
@@ -283,6 +274,36 @@ object BioluminescentZoneManager {
                 endGameTime = synchronized.payload.endGameTime,
                 serverGameTimeOffset = synchronized.serverGameTimeOffset
             )
+            for (snapshot in synchronized.payload.blooms) {
+                if (
+                    snapshot.lifecycle == PlanktonBloomLifecycle.DEPLETED ||
+                    snapshot.lifecycle == PlanktonBloomLifecycle.INVALIDATED
+                ) continue
+                zone.blooms[snapshot.id] = BioluminescentBloom(
+                    id = snapshot.id,
+                    position = snapshot.position,
+                    visualSeed = snapshot.visualSeed,
+                    maxHarvests = snapshot.maxHarvests,
+                    remainingHarvests = snapshot.remainingHarvests,
+                    lifecycle = snapshot.lifecycle,
+                    activatedAtGameTime = snapshot.activatedAtGameTime
+                )
+            }
+            zonesByEventId[eventId] = zone
+        }
+    }
+
+    fun applyBloomStateUpdate(payload: S2CPlanktonBloomStateUpdatePayload) {
+        val level = currentLevel ?: return
+        val zone = zonesByEventId[payload.waveEventId] ?: return
+        val bloom = zone.blooms[payload.bloomId] ?: return
+        bloom.lifecycle = payload.lifecycle
+        bloom.remainingHarvests = payload.remainingHarvests
+        bloom.activatedAtGameTime = payload.activatedAtGameTime
+        val isTerminal = payload.lifecycle == PlanktonBloomLifecycle.DEPLETED ||
+            payload.lifecycle == PlanktonBloomLifecycle.INVALIDATED
+        if (isTerminal && bloom.terminalAtGameTime == null) {
+            bloom.terminalAtGameTime = level.gameTime
         }
     }
 

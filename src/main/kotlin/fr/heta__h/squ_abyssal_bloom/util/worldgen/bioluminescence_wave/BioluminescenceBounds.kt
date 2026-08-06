@@ -1,4 +1,4 @@
-package fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common
+package fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave
 
 import com.mojang.serialization.Codec
 import com.mojang.serialization.codecs.RecordCodecBuilder

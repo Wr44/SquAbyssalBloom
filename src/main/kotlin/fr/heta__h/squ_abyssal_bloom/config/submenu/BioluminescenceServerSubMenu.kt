@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.config.submenu
 
 import dev.isxander.yacl3.api.ConfigCategory
+import dev.isxander.yacl3.api.Option
 import dev.isxander.yacl3.api.OptionDescription
 import dev.isxander.yacl3.api.OptionEventListener
 import dev.isxander.yacl3.api.OptionGroup
@@ -17,6 +18,21 @@ object BioluminescenceServerSubMenu {
     val displayDescription: Component = Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_server.desc")
 
     private val durationFormat: (Int) -> Component = { Component.literal(ModUtilities.formatTicksAsDuration(it)) }
+    private val countFormat: (Int) -> Component = { Component.literal("$it floraison(s)") }
+    private val harvestFormat: (Int) -> Component = { Component.literal("$it recolte(s)") }
+
+    private fun bindOrderedPair(minimum: Option<Int>, maximum: Option<Int>) {
+        minimum.addEventListener { option, event ->
+            if (event == OptionEventListener.Event.STATE_CHANGE &&
+                maximum.pendingValue() < option.pendingValue()
+            ) maximum.requestSet(option.pendingValue())
+        }
+        maximum.addEventListener { option, event ->
+            if (event == OptionEventListener.Event.STATE_CHANGE &&
+                minimum.pendingValue() > option.pendingValue()
+            ) minimum.requestSet(option.pendingValue())
+        }
+    }
 
     fun buildGroups(category: ConfigCategory.Builder) {
         val opportunityMinimum = serverInt(
@@ -31,30 +47,12 @@ object BioluminescenceServerSubMenu {
             1200,
             durationFormat
         )
-        opportunityMinimum.addEventListener { option, event ->
-            if (event == OptionEventListener.Event.STATE_CHANGE &&
-                opportunityMaximum.pendingValue() < option.pendingValue()
-            ) opportunityMaximum.requestSet(option.pendingValue())
-        }
-        opportunityMaximum.addEventListener { option, event ->
-            if (event == OptionEventListener.Event.STATE_CHANGE &&
-                opportunityMinimum.pendingValue() > option.pendingValue()
-            ) opportunityMinimum.requestSet(option.pendingValue())
-        }
+        bindOrderedPair(opportunityMinimum, opportunityMaximum)
 
         val durationMinimum = serverInt(ModServerConfig.BIOLUMINESCENCE_DURATION_MIN_TICKS, step = 100, format = durationFormat)
         val durationMaximum = serverInt(ModServerConfig.BIOLUMINESCENCE_DURATION_MAX_TICKS, step = 100, format = durationFormat)
 
-        durationMinimum.addEventListener { option, event ->
-            if (event == OptionEventListener.Event.STATE_CHANGE &&
-                durationMaximum.pendingValue() < option.pendingValue()
-            ) durationMaximum.requestSet(option.pendingValue())
-        }
-        durationMaximum.addEventListener { option, event ->
-            if (event == OptionEventListener.Event.STATE_CHANGE &&
-                durationMinimum.pendingValue() > option.pendingValue()
-            ) durationMinimum.requestSet(option.pendingValue())
-        }
+        bindOrderedPair(durationMinimum, durationMaximum)
 
         category.group(OptionGroup.createBuilder()
             .name(Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_opportunities").withStyle(ChatFormatting.AQUA))
@@ -105,6 +103,46 @@ object BioluminescenceServerSubMenu {
             ))
             .option(serverInt(ModServerConfig.BIOLUMINESCENCE_WATER_SEARCH_RADIUS, format = ModUtilities.blocksFormatInt()))
             .option(serverInt(ModServerConfig.BIOLUMINESCENCE_MINIMUM_NEARBY_WATER_CELLS) { Component.literal("$it cellules") })
+            .build())
+
+        val smallMinimum = serverInt(ModServerConfig.BIOLUMINESCENCE_BLOOM_SMALL_MIN_COUNT, format = countFormat)
+        val smallMaximum = serverInt(ModServerConfig.BIOLUMINESCENCE_BLOOM_SMALL_MAX_COUNT, format = countFormat)
+        val largeMinimum = serverInt(ModServerConfig.BIOLUMINESCENCE_BLOOM_LARGE_MIN_COUNT, format = countFormat)
+        val largeMaximum = serverInt(ModServerConfig.BIOLUMINESCENCE_BLOOM_LARGE_MAX_COUNT, format = countFormat)
+        val harvestMinimum = serverInt(ModServerConfig.BIOLUMINESCENCE_BLOOM_MIN_HARVESTS, format = harvestFormat)
+        val harvestMaximum = serverInt(ModServerConfig.BIOLUMINESCENCE_BLOOM_MAX_HARVESTS, format = harvestFormat)
+
+        bindOrderedPair(smallMinimum, smallMaximum)
+        bindOrderedPair(largeMinimum, largeMaximum)
+        bindOrderedPair(harvestMinimum, harvestMaximum)
+
+        category.group(OptionGroup.createBuilder()
+            .name(Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_blooms").withStyle(ChatFormatting.GREEN))
+            .description(OptionDescription.of(
+                Component.translatable("config.squ_abyssal_bloom.group.bioluminescence_blooms.desc")
+            ))
+            .option(serverBool(ModServerConfig.BIOLUMINESCENCE_BLOOM_ENABLED))
+            .option(smallMinimum)
+            .option(smallMaximum)
+            .option(largeMinimum)
+            .option(largeMaximum)
+            .option(harvestMinimum)
+            .option(harvestMaximum)
+            .option(serverDouble(
+                ModServerConfig.BIOLUMINESCENCE_BLOOM_HARVEST_RADIUS,
+                step = 0.5,
+                format = ModUtilities.blocksFormatDouble()
+            ))
+            .option(serverDouble(
+                ModServerConfig.BIOLUMINESCENCE_BLOOM_ACTIVATION_RADIUS,
+                step = 1.0,
+                format = ModUtilities.blocksFormatDouble()
+            ))
+            .option(serverDouble(
+                ModServerConfig.BIOLUMINESCENCE_BLOOM_ACTIVATION_MIN_DISPLACEMENT,
+                step = 0.01,
+                format = ModUtilities.blocksFormatDouble()
+            ))
             .build())
 
         category.group(OptionGroup.createBuilder()

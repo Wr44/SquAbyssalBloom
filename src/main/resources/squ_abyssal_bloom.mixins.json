@@ -42,6 +42,8 @@
 
     "entity.nautilus.NautilusScreenMixin",
 
+    "enable.FrustumAccessor",
+
     "render.LivingEntityRenderStateMixin",
     "render.LivingEntityRendererMixin",
     "render.LevelRendererSkyMixin"

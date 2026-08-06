@@ -17,7 +17,11 @@ object SurfaceHeightCache {
 
     private const val TTL_NEAR = 20L
     private const val TTL_FAR = 80L
+    private const val TTL_JITTER_NEAR = 4L
+    private const val TTL_JITTER_FAR = 16L
     private const val NEAR_THRESHOLD_SQ = 64f * 64f
+
+    private const val MAX_FRESH_COMPUTES_PER_FRAME = 24
 
     private val cache = Long2LongOpenHashMap(8192).apply {
         defaultReturnValue(-1L)
@@ -27,6 +31,10 @@ object SurfaceHeightCache {
 
     private val mutPos = BlockPos.MutableBlockPos()
     private var cachedLevel: Level? = null
+    private var freshComputesThisFrame = 0
+
+    private fun jitteredTtl(key: Long, baseTtl: Long, jitterRange: Long): Long =
+        baseTtl + (ModUtilities.stableUnitValue(key) * jitterRange).toLong()
 
     private fun pack(surfaceY: Int, floorY: Int, isValid: Boolean, tick: Long): Long {
         val sy = (surfaceY + 128).toLong() and 0xFFFL
@@ -48,6 +56,8 @@ object SurfaceHeightCache {
     }
 
     fun tick(gameTick: Long, camX: Int, camZ: Int) {
+        freshComputesThisFrame = 0
+
         if (cache.isEmpty()) return
 
         var steps = 50
@@ -69,7 +79,8 @@ object SurfaceHeightCache {
             val dz = (cellZ - camZ).toFloat()
             val distSq = dx * dx + dz * dz
 
-            val ttl = if (distSq < NEAR_THRESHOLD_SQ) TTL_NEAR else TTL_FAR
+            val ttl = if (distSq < NEAR_THRESHOLD_SQ) jitteredTtl(key, TTL_NEAR, TTL_JITTER_NEAR)
+                else jitteredTtl(key, TTL_FAR, TTL_JITTER_FAR)
 
             if (age !in 0L..ttl) {
                 cleanupIterator!!.remove()
@@ -91,13 +102,19 @@ object SurfaceHeightCache {
             val dx = (cx - camX).toFloat()
             val dz = (cz - camZ).toFloat()
             val distSq = dx * dx + dz * dz
-            val ttl = if (distSq < NEAR_THRESHOLD_SQ) TTL_NEAR else TTL_FAR
+            val ttl = if (distSq < NEAR_THRESHOLD_SQ) jitteredTtl(key, TTL_NEAR, TTL_JITTER_NEAR)
+                else jitteredTtl(key, TTL_FAR, TTL_JITTER_FAR)
             if (age in 0L..ttl) return existing
         }
 
         if (!level.hasChunk(cx shr 4, cz shr 4)) {
             return pack(-1, 0, false, gameTick - TTL_FAR - 1)
         }
+
+        if (existing != -1L && freshComputesThisFrame >= MAX_FRESH_COMPUTES_PER_FRAME) {
+            return existing
+        }
+        freshComputesThisFrame++
 
         var finalSurfaceY = -1
         var finalFloorY = 0
@@ -107,7 +124,8 @@ object SurfaceHeightCache {
 
         while (searchY > level.minY) {
             mutPos.set(cx, searchY - 1, cz)
-            val isWater = level.getFluidState(mutPos).`is`(FluidTags.WATER)
+            val fluidState = level.getFluidState(mutPos)
+            val isWater = fluidState.`is`(FluidTags.WATER)
 
             if (!isWater) {
                 val waterBlock = ModUtilities.findFluidBlockBelow(
@@ -121,6 +139,8 @@ object SurfaceHeightCache {
                 searchY = waterBlock.y + 1
                 continue
             }
+
+            if (!fluidState.isSource) break
 
             val surfaceY = searchY - 1
 

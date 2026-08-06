@@ -25,6 +25,10 @@ import kotlin.math.sqrt
 class BubbleRenderer(context: EntityRendererProvider.Context) :
     EntityRenderer<BubbleProjectile, BubbleRenderState>(context) {
 
+    private companion object {
+        const val FULL_BRIGHT_LIGHTMAP = 15728880
+    }
+
     private val modelStage1 = BubbleStage1Model(context.bakeLayer(BubbleStage1Model.LAYER_LOCATION))
     private val modelStage2 = BubbleStage2Model(context.bakeLayer(BubbleStage2Model.LAYER_LOCATION))
     private val modelStage3 = BubbleStage3Model(context.bakeLayer(BubbleStage3Model.LAYER_LOCATION))
@@ -45,7 +49,12 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.extractRenderState(entity, state, partialTicks)
-        state.packedLight = getPackedLightCoords(entity, partialTicks)
+        state.luminescent = entity.isLuminescent
+        state.packedLight = if (entity.isLuminescent) {
+            FULL_BRIGHT_LIGHTMAP
+        } else {
+            getPackedLightCoords(entity, partialTicks)
+        }
         state.bubbleStage = entity.bubbleStage
         state.ageInTicks = entity.tickCount + partialTicks
         state.effectColor = entity.effectColor

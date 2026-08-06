@@ -3,9 +3,9 @@ package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap
-import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
 import net.minecraft.tags.FluidTags
+import net.minecraft.world.level.LevelReader
 import java.util.ArrayDeque
 import kotlin.math.abs
 
@@ -26,7 +26,7 @@ class BioluminescentWaterDomainCollector(
             intArrayOf(0, -1)
         )
 
-        fun scanWaterDepth(level: ClientLevel, surfaceBlock: BlockPos): Double {
+        fun scanWaterDepth(level: LevelReader, surfaceBlock: BlockPos): Double {
             val limitY = maxOf(level.minY, surfaceBlock.y - MAX_DEPTH_SCAN)
             var y = surfaceBlock.y
             var depth = 0
@@ -40,7 +40,7 @@ class BioluminescentWaterDomainCollector(
         }
 
         fun sampleWaterCell(
-            level: ClientLevel,
+            level: LevelReader,
             worldX: Int,
             worldZ: Int,
             referenceY: Int
@@ -85,7 +85,7 @@ class BioluminescentWaterDomainCollector(
         queue.addLast(0)
     }
 
-    fun advance(level: ClientLevel, budget: Int) {
+    fun advance(level: LevelReader, budget: Int) {
         if (complete) return
         var processed = 0
         while (cells.size < maxWaterCells && processed < budget) {

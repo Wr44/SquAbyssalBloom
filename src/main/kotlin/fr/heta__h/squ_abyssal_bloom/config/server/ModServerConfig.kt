@@ -144,6 +144,17 @@ object ModServerConfig {
     val BIOLUMINESCENCE_WATER_SEARCH_RADIUS = int("bioluminescenceWaterSearchRadius", 12, 1, 32, "Horizontal radius used to confirm that a beach entry is next to compatible water.")
     val BIOLUMINESCENCE_MINIMUM_NEARBY_WATER_CELLS = int("bioluminescenceMinimumNearbyWaterCells", 12, 1, 81, "Minimum compatible water samples required around a detected beach entry.")
 
+    val BIOLUMINESCENCE_BLOOM_ENABLED = bool("bioluminescenceBloomEnabled", true, "Enables plankton blooms inside bioluminescent waves.")
+    val BIOLUMINESCENCE_BLOOM_HARVEST_RADIUS = double("bioluminescenceBloomHarvestRadius", 2.5, 0.5, 8.0, "Radius around a bloom's center within which it can be harvested.")
+    val BIOLUMINESCENCE_BLOOM_ACTIVATION_RADIUS = double("bioluminescenceBloomActivationRadius", 8.0, 1.0, 32.0, "Radius around a dormant bloom scanned for nearby movement to activate it.")
+    val BIOLUMINESCENCE_BLOOM_ACTIVATION_MIN_DISPLACEMENT = double("bioluminescenceBloomActivationMinDisplacement", 0.15, 0.01, 2.0, "Minimum distance an entity must travel between scans to activate a dormant bloom.")
+    val BIOLUMINESCENCE_BLOOM_SMALL_MIN_COUNT = int("bioluminescenceBloomSmallMinCount", 1, 0, 8, "Minimum number of blooms placed in a small wave.")
+    val BIOLUMINESCENCE_BLOOM_SMALL_MAX_COUNT = int("bioluminescenceBloomSmallMaxCount", 2, 0, 8, "Maximum number of blooms placed in a small wave.")
+    val BIOLUMINESCENCE_BLOOM_LARGE_MIN_COUNT = int("bioluminescenceBloomLargeMinCount", 2, 0, 8, "Minimum number of blooms placed in a large wave.")
+    val BIOLUMINESCENCE_BLOOM_LARGE_MAX_COUNT = int("bioluminescenceBloomLargeMaxCount", 4, 0, 8, "Maximum number of blooms placed in a large wave.")
+    val BIOLUMINESCENCE_BLOOM_MIN_HARVESTS = int("bioluminescenceBloomMinHarvests", 2, 1, 16, "Minimum number of times a single bloom can be harvested.")
+    val BIOLUMINESCENCE_BLOOM_MAX_HARVESTS = int("bioluminescenceBloomMaxHarvests", 4, 1, 16, "Maximum number of times a single bloom can be harvested.")
+
     val SHALLOW_DEEP_BOUNDARY = double("shallowDeepBoundary", -0.45, -0.915, -0.19, "Continentalness boundary between shallow and deep ocean. Vanilla: -0.455")
     val DEEP_ABYSSAL_BOUNDARY = double("deepAbyssalBoundary", -0.70, -0.965, -0.24, "Continentalness boundary between deep ocean and abyssal zone.")
     val SHALLOW_FLOOR_Y = int("shallowFloorY", 36, -60, 61, "Base Y target for shallow ocean floor.")

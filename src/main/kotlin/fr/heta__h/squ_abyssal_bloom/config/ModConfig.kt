@@ -63,7 +63,7 @@ object ModConfig {
     var enableSurfaceOccluder: Boolean = true
     var surfaceOccluderAlphaMin: Double = 0.05
     var surfaceOccluderAlphaMax: Double = 0.70
-    var surfaceOccluderNumLayers: Int = 5
+    var surfaceOccluderNumLayers: Int = 3
     var surfaceOccluderFadeSpeed: Double = 2.5
     var surfaceOccluderLodBandWidth: Int = 64
     var surfaceOccluderTargetDepth: Double = 0.5
@@ -81,6 +81,11 @@ object ModConfig {
     var enableBioluminescenceRendering: Boolean = true
     var bioluminescenceTileFadeInTicks: Int = 20
     var bioluminescenceRenderDistance: Double = 128.0
+    var enableBioluminescenceBloomRendering: Boolean = true
+    var bioluminescenceBloomGlowIntensity: Double = 1.0
+    var bioluminescenceBloomParticleDensity: Double = 1.0
+    var bioluminescenceBloomPulseIntensity: Double = 1.0
+    var bioluminescenceBloomPulseIntervalTicks: Int = 70
     var enableBeachWaveSound: Boolean = true
 
     fun loadConfig() {
@@ -112,7 +117,7 @@ object ModConfig {
             enableSurfaceOccluder = json.get("enableSurfaceOccluder")?.asBoolean ?: true
             surfaceOccluderAlphaMin = json.get("surfaceOccluderAlphaMin")?.asDouble ?: 0.05
             surfaceOccluderAlphaMax = json.get("surfaceOccluderAlphaMax")?.asDouble ?: 0.70
-            surfaceOccluderNumLayers = json.get("surfaceOccluderNumLayers")?.asInt ?: 5
+            surfaceOccluderNumLayers = json.get("surfaceOccluderNumLayers")?.asInt ?: 3
             surfaceOccluderFadeSpeed = json.get("surfaceOccluderFadeSpeed")?.asDouble ?: 2.5
             surfaceOccluderLodBandWidth = json.get("surfaceOccluderLodBandWidth")?.asInt ?: 64
             surfaceOccluderTargetDepth = json.get("surfaceOccluderTargetDepth")?.asDouble ?: 0.5
@@ -139,6 +144,16 @@ object ModConfig {
             enableBioluminescenceRendering = json.get("enableBioluminescenceRendering")?.asBoolean ?: true
             bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 20
             bioluminescenceRenderDistance = json.get("bioluminescenceRenderDistance")?.asDouble ?: 128.0
+            enableBioluminescenceBloomRendering =
+                json.get("enableBioluminescenceBloomRendering")?.asBoolean ?: true
+            bioluminescenceBloomGlowIntensity =
+                json.get("bioluminescenceBloomGlowIntensity")?.asDouble ?: 1.0
+            bioluminescenceBloomParticleDensity =
+                json.get("bioluminescenceBloomParticleDensity")?.asDouble ?: 1.0
+            bioluminescenceBloomPulseIntensity =
+                json.get("bioluminescenceBloomPulseIntensity")?.asDouble ?: 1.0
+            bioluminescenceBloomPulseIntervalTicks =
+                json.get("bioluminescenceBloomPulseIntervalTicks")?.asInt ?: 70
             enableBeachWaveSound = json.get("enableBeachWaveSound")?.asBoolean ?: true
         } catch (e: Exception) {
             println("Erreur config : ${e.message}")
@@ -191,6 +206,11 @@ object ModConfig {
                 addProperty("enableBioluminescenceRendering", enableBioluminescenceRendering)
                 addProperty("bioluminescenceTileFadeInTicks", bioluminescenceTileFadeInTicks)
                 addProperty("bioluminescenceRenderDistance", bioluminescenceRenderDistance)
+                addProperty("enableBioluminescenceBloomRendering", enableBioluminescenceBloomRendering)
+                addProperty("bioluminescenceBloomGlowIntensity", bioluminescenceBloomGlowIntensity)
+                addProperty("bioluminescenceBloomParticleDensity", bioluminescenceBloomParticleDensity)
+                addProperty("bioluminescenceBloomPulseIntensity", bioluminescenceBloomPulseIntensity)
+                addProperty("bioluminescenceBloomPulseIntervalTicks", bioluminescenceBloomPulseIntervalTicks)
                 addProperty("enableBeachWaveSound", enableBeachWaveSound)
             }
             configFile.parentFile?.mkdirs()
@@ -518,6 +538,69 @@ object ModConfig {
                         ))
                         .controller { option ->
                             IntegerSliderControllerBuilder.create(option).range(0, 100).step(5)
+                                .formatValue { value -> Component.literal(ModUtilities.formatTicksAsDuration(value)) }
+                        }
+                        .build())
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.enableBioluminescenceBloomRendering"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.enableBioluminescenceBloomRendering.desc")
+                        ))
+                        .binding(Binding.generic(
+                            true,
+                            { enableBioluminescenceBloomRendering },
+                            { enableBioluminescenceBloomRendering = it }
+                        ))
+                        .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomGlowIntensity"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomGlowIntensity.desc")
+                        ))
+                        .binding(Binding.generic(
+                            1.0,
+                            { bioluminescenceBloomGlowIntensity },
+                            { bioluminescenceBloomGlowIntensity = it }
+                        ))
+                        .controller { option -> DoubleSliderControllerBuilder.create(option).range(0.0, 2.0).step(0.05).formatValue(ModUtilities.percentFormat()) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomParticleDensity"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomParticleDensity.desc")
+                        ))
+                        .binding(Binding.generic(
+                            1.0,
+                            { bioluminescenceBloomParticleDensity },
+                            { bioluminescenceBloomParticleDensity = it }
+                        ))
+                        .controller { option -> DoubleSliderControllerBuilder.create(option).range(0.0, 3.0).step(0.1).formatValue(ModUtilities.percentFormat()) }
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomPulseIntensity"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomPulseIntensity.desc")
+                        ))
+                        .binding(Binding.generic(
+                            1.0,
+                            { bioluminescenceBloomPulseIntensity },
+                            { bioluminescenceBloomPulseIntensity = it }
+                        ))
+                        .controller { option -> DoubleSliderControllerBuilder.create(option).range(0.0, 2.0).step(0.05).formatValue(ModUtilities.percentFormat()) }
+                        .build())
+                    .option(Option.createBuilder<Int>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomPulseIntervalTicks"))
+                        .description(OptionDescription.of(
+                            Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomPulseIntervalTicks.desc")
+                        ))
+                        .binding(Binding.generic(
+                            70,
+                            { bioluminescenceBloomPulseIntervalTicks },
+                            { bioluminescenceBloomPulseIntervalTicks = it }
+                        ))
+                        .controller { option ->
+                            IntegerSliderControllerBuilder.create(option).range(20, 400).step(5)
                                 .formatValue { value -> Component.literal(ModUtilities.formatTicksAsDuration(value)) }
                         }
                         .build())

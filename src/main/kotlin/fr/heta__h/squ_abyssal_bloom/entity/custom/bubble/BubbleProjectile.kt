@@ -22,6 +22,7 @@ import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.AreaEffectCloud
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.EntityDimensions
@@ -104,6 +105,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
 
         const val EFFECT_PARTICLE_CHANCE = 0.4f
 
+        const val LUMINESCENCE_GLOW_DURATION_TICKS = 900
+
         const val TORPEDO_DECAY_BASE = 0.08
 
         val STAGES = arrayOf(
@@ -145,6 +148,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
         private val TORPEDO_LEVEL: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
+        private val LUMINESCENT: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.BOOLEAN)
     }
 
     var releaseYaw: Float = 0f
@@ -163,6 +168,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         builder.define(ATTACHED_PLAYER_ID, -1)
         builder.define(EFFECT_COLOR, 0)
         builder.define(TORPEDO_LEVEL, 0)
+        builder.define(LUMINESCENT, false)
     }
 
     var bubbleStage: Int
@@ -201,6 +207,10 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     var torpedoLevel: Int
         get() = entityData.get(TORPEDO_LEVEL)
         set(value) { entityData.set(TORPEDO_LEVEL, value) }
+
+    var isLuminescent: Boolean
+        get() = entityData.get(LUMINESCENT)
+        set(value) { entityData.set(LUMINESCENT, value) }
 
     var torpedoFactor: Double = 0.0
 
@@ -454,6 +464,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             child.interBubbleCooldown = INTER_BUBBLE_COOLDOWN_TICKS
             child.holdTicks = holdTicks
             child.isChildBubble = true
+            child.isLuminescent = isLuminescent
 
             if (hasSplatter()) {
                 child.splatterEntries = splatterEntries
@@ -514,6 +525,10 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
                     for (entry in splatterEntries) {
                         target.addEffect(MobEffectInstance(entry.effect, entry.duration / 2, entry.amplifier))
                     }
+                }
+
+                if (isLuminescent) {
+                    target.addEffect(MobEffectInstance(MobEffects.GLOWING, LUMINESCENCE_GLOW_DURATION_TICKS))
                 }
             }
 
@@ -673,6 +688,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         super.addAdditionalSaveData(p_422546_)
         p_422546_.putInt("BubbleStage", bubbleStage)
         p_422546_.putInt("BounceCount", bounceCount)
+        p_422546_.putBoolean("Luminescent", isLuminescent)
 
         if (splatterEntries.isNotEmpty()) {
             p_422546_.putInt("SplatterCount", splatterEntries.size)
@@ -694,6 +710,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         super.readAdditionalSaveData(p_422548_)
         bubbleStage = p_422548_.getIntOr("BubbleStage", 0)
         bounceCount = p_422548_.getIntOr("BounceCount", 0)
+        isLuminescent = p_422548_.getBooleanOr("Luminescent", false)
         if (isHeld) discard()
 
         val count = p_422548_.getIntOr("SplatterCount", 0)

@@ -1,15 +1,17 @@
 package fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave
 
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.ActiveBioluminescenceWave
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceBounds
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveActivity
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveMode
-import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.common.BioluminescenceWaveSize
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceBounds
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveActivity
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveMode
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceWaveEndPayload
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceWavePayload
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceLevelSavedData
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceServerSettings
+import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.bloom.PlanktonBloomManager
 import net.minecraft.core.BlockPos
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
@@ -138,6 +140,8 @@ class BioluminescenceLevelManager private constructor(
             detectBeachEntries(settings, serverManager)
             synchronizePlayers(settings)
         }
+
+        PlanktonBloomManager.forLevel(level).tick(gameTime)
     }
 
     fun synchronizePlayer(
@@ -254,7 +258,7 @@ class BioluminescenceLevelManager private constructor(
         }
         val stable = ids.all { it == ids.first() }
         SquAbyssalBloom.LOGGER.info(
-            "[Bioluminescence] Verification stabilite beachId pour {}: ids={} stable={}",
+            "[Bioluminescence] beachId stability check for {}: ids={} stable={}",
             player.gameProfile.name,
             ids.map { id -> id?.toString()?.take(8) },
             stable
@@ -274,7 +278,7 @@ class BioluminescenceLevelManager private constructor(
         nextBeachCheckGameTime = level.gameTime
         savedData.setDirty()
         SquAbyssalBloom.LOGGER.info(
-            "[Bioluminescence] Nuit bioluminescente totale forcee dans {} (commande)",
+            "[Bioluminescence] Total bioluminescent night forced in {} (command)",
             level.dimension().identifier()
         )
         return true
@@ -286,7 +290,7 @@ class BioluminescenceLevelManager private constructor(
         endWaves { wave -> wave.mode == BioluminescenceWaveMode.TOTAL_NIGHT }
         savedData.setDirty()
         SquAbyssalBloom.LOGGER.info(
-            "[Bioluminescence] Nuit bioluminescente totale arretee dans {} (commande)",
+            "[Bioluminescence] Total bioluminescent night stopped in {} (command)",
             level.dimension().identifier()
         )
         return true
@@ -456,7 +460,7 @@ class BioluminescenceLevelManager private constructor(
             synchronizePlayers(settings)
             if (createdByCommand) {
                 SquAbyssalBloom.LOGGER.info(
-                    "[Bioluminescence] Reused {} {} {} wave {} for beach {} (commande)",
+                    "[Bioluminescence] Reused {} {} {} wave {} for beach {} (command)",
                     mode.name.lowercase(),
                     existing.size.name.lowercase(),
                     existing.activity.name.lowercase(),
@@ -499,10 +503,11 @@ class BioluminescenceLevelManager private constructor(
             nextNormalWaveEndGameTime = minOf(nextNormalWaveEndGameTime, endGameTime)
         }
         savedData.setDirty()
+        PlanktonBloomManager.forLevel(level).createBloomsForWave(wave)
         synchronizePlayers(settings)
         if (createdByCommand) {
             SquAbyssalBloom.LOGGER.info(
-                "[Bioluminescence] Created {} {} {} wave {} at {} in {} for beach {} (commande)",
+                "[Bioluminescence] Created {} {} {} wave {} at {} in {} for beach {} (command)",
                 mode.name.lowercase(),
                 size.name.lowercase(),
                 activity.name.lowercase(),
@@ -520,9 +525,10 @@ class BioluminescenceLevelManager private constructor(
     }
 
     private fun sendWave(player: ServerPlayer, wave: ActiveBioluminescenceWave) {
+        val blooms = PlanktonBloomManager.forLevel(level).bloomsForWave(wave.eventId)
         PacketDistributor.sendToPlayer(
             player,
-            S2CBioluminescenceWavePayload.from(wave, level.gameTime)
+            S2CBioluminescenceWavePayload.from(wave, level.gameTime, blooms)
         )
     }
 
@@ -552,6 +558,7 @@ class BioluminescenceLevelManager private constructor(
         if (removedIds.isEmpty()) return
         for (eventId in removedIds) {
             savedData.waves.remove(eventId)?.let(::unindexWave)
+            PlanktonBloomManager.forLevel(level).removeBloomsForWave(eventId)
             for (player in level.players()) {
                 val visible = visibleEventsByPlayer[player.uuid] ?: continue
                 if (!visible.remove(eventId)) continue

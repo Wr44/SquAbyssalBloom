@@ -35,7 +35,7 @@ object BioluminescentClientCommands {
                     Commands.literal("mode")
                         .executes { context ->
                             context.source.sendSuccess(
-                                { Component.literal("Mode debug Iris actuel: ${BioluminescentIrisDebugState.mode}") },
+                                { Component.literal("Iris debug mode: ${BioluminescentIrisDebugState.mode}") },
                                 false
                             )
                             1
@@ -57,7 +57,7 @@ object BioluminescentClientCommands {
                                 .executes { context ->
                                     BioluminescentIrisDebugState.compensationOffsetOverride = null
                                     context.source.sendSuccess(
-                                        { Component.literal("Offset de compensation reinitialise.") },
+                                        { Component.literal("Compensation offset reset.") },
                                         false
                                     )
                                     1
@@ -69,7 +69,7 @@ object BioluminescentClientCommands {
                                     val value = DoubleArgumentType.getDouble(context, "value")
                                     BioluminescentIrisDebugState.compensationOffsetOverride = value
                                     context.source.sendSuccess(
-                                        { Component.literal("Offset de compensation regle sur $value") },
+                                        { Component.literal("Compensation offset set to $value") },
                                         false
                                     )
                                     1
@@ -81,7 +81,7 @@ object BioluminescentClientCommands {
                         .executes { context ->
                             BioluminescentIrisDebugState.reset()
                             context.source.sendSuccess(
-                                { Component.literal("Debug Iris reinitialise (mode NORMAL, offset par defaut).") },
+                                { Component.literal("Iris debug reset (NORMAL mode, default offset).") },
                                 false
                             )
                             1
@@ -97,13 +97,13 @@ object BioluminescentClientCommands {
         } ?: run {
             source.sendFailure(
                 Component.literal(
-                    "Mode inconnu. Modes valides: ${BioluminescentIrisDebugMode.entries.joinToString { it.name }}"
+                    "Unknown mode. Valid modes: ${BioluminescentIrisDebugMode.entries.joinToString { it.name }}"
                 )
             )
             return 0
         }
         BioluminescentIrisDebugState.mode = mode
-        source.sendSuccess({ Component.literal("Mode debug Iris regle sur $mode") }, false)
+        source.sendSuccess({ Component.literal("Iris debug mode set to $mode") }, false)
         return 1
     }
 }

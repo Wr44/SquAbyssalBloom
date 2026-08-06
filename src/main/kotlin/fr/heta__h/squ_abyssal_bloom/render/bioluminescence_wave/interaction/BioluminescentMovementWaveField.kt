@@ -8,15 +8,12 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.Biolu
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.world.entity.Entity
-import net.minecraft.world.entity.animal.fish.AbstractFish
-import net.minecraft.world.entity.animal.squid.Squid
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat
 import net.minecraft.world.phys.AABB
 import java.util.ArrayDeque
 import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.max
-import kotlin.math.sqrt
 
 class BioluminescentMovementWaveField {
     companion object {
@@ -74,16 +71,12 @@ class BioluminescentMovementWaveField {
             bounds.maxY + 1.0 + VERTICAL_SEARCH_RANGE,
             bounds.maxZ + 1.0 + HORIZONTAL_SEARCH_MARGIN
         )
-        val candidates = level.getEntitiesOfClass(Entity::class.java, searchBounds) { entity ->
-            entity.isAlive && !entity.isSpectator && !entity.isPassenger &&
-                entity !is AbstractFish && entity !is Squid &&
-                (entity.isInWater || entity is AbstractBoat)
-        }
+        val candidates = level.getEntitiesOfClass(Entity::class.java, searchBounds, ModUtilities::isQualifyingWaterMover)
 
         var acceptedSources = 0
         for (entity in candidates) {
             if (acceptedSources >= MAX_MOVING_SOURCES) break
-            val speed = horizontalSpeed(entity)
+            val speed = ModUtilities.horizontalMovementSpeed(entity)
             if (speed < MIN_MOVEMENT_SPEED) continue
             val waterCell = nearestWaterCell(data.domain, entity.x, entity.z) ?: continue
             if (!isValidWaterSource(entity, waterCell)) continue
@@ -220,16 +213,6 @@ class BioluminescentMovementWaveField {
         } else {
             entity.isInWater && abs(entity.y - waterCell.surfaceY) <= VERTICAL_SEARCH_RANGE
         }
-    }
-
-    private fun horizontalSpeed(entity: Entity): Double {
-        val positionDeltaX = entity.x - entity.xo
-        val positionDeltaZ = entity.z - entity.zo
-        val movement = entity.deltaMovement
-        return max(
-            sqrt(positionDeltaX * positionDeltaX + positionDeltaZ * positionDeltaZ),
-            sqrt(movement.x * movement.x + movement.z * movement.z)
-        )
     }
 
 }
