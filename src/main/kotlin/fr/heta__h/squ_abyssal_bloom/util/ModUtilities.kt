@@ -16,6 +16,7 @@ import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig.saveConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
 import fr.heta__h.squ_abyssal_bloom.config.server.types.BoolOption
@@ -347,7 +348,7 @@ object ModUtilities {
         val startY = start.y
         var errors = 0
 
-        for (dy in 0..(level.maxY - startY - 1)) {
+        for (dy in 0..<level.maxY - startY) {
             val pos = start.above(dy)
             val above = pos.above()
 
@@ -462,6 +463,21 @@ object ModUtilities {
     }
     
 
+
+    fun playPositionedSound(
+        level: Level,
+        sound: SoundEvent,
+        worldX: Double,
+        worldY: Double,
+        worldZ: Double,
+        volume: Float,
+        pitchSpread: Float = 0.0f,
+        source: SoundSource = SoundSource.AMBIENT
+    ) {
+        val random = level.random
+        val pitch = 1.0f + (random.nextFloat() - random.nextFloat()) * pitchSpread
+        level.playLocalSound(worldX, worldY, worldZ, sound, source, volume, pitch, false)
+    }
 
     fun isNautilusExtraEquipment(stack: ItemStack): Boolean {
         if (stack.isEmpty) return false
@@ -848,6 +864,13 @@ object ModUtilities {
         )
     }
 
+    fun percentPointsFormat(decimals: Int = 0): (Double) -> Component = { value ->
+        Component.translatable(
+            "config.squ_abyssal_bloom.format.percent",
+            String.format(Locale.ROOT, "%.${decimals}f", value)
+        )
+    }
+
     fun serverDouble(
         opt: DoubleOption,
         range: ClosedFloatingPointRange<Double> = opt.min..opt.max,
@@ -907,8 +930,7 @@ object ModUtilities {
         name: Component,
         description: OptionDescription,
         screenTitle: Component,
-        buildGroups: (ConfigCategory.Builder) -> Unit,
-        onSave: () -> Unit = {}
+        buildGroups: (ConfigCategory.Builder) -> Unit
     ): Option<*> =
         ButtonOption.createBuilder()
             .name(name)
@@ -921,8 +943,8 @@ object ModUtilities {
                 val subScreen = YetAnotherConfigLib.createBuilder()
                     .title(screenTitle)
                     .save {
+                        saveConfig()
                         persistServerConfigChanges(initialServerConfig)
-                        onSave()
                     }
                     .category(categoryBuilder.build())
                     .build()

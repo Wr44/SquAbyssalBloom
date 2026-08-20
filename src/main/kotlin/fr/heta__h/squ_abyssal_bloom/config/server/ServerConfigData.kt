@@ -34,8 +34,10 @@ data class ServerConfigData(val values: Map<String, Any>) {
 
     fun applyToSpec() {
         for (opt in ModServerConfig.options) {
+            val value = values[opt.key] ?: continue
+
             @Suppress("UNCHECKED_CAST")
-            (opt as ConfigOption<Any>).spec.set(values.getValue(opt.key))
+            (opt as ConfigOption<Any>).spec.set(value)
         }
         ModServerConfig.SPEC.save()
     }

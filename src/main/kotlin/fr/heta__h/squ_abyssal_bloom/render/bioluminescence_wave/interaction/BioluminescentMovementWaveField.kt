@@ -8,6 +8,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.Biolu
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.entity.vehicle.boat.AbstractBoat
 import net.minecraft.world.phys.AABB
 import java.util.ArrayDeque
@@ -35,10 +36,13 @@ class BioluminescentMovementWaveField {
         const val MOVEMENT_PARTICLE_COUNT = 8
         const val MOVEMENT_PARTICLE_SPREAD = 0.9
         const val MOVEMENT_PARTICLE_MIN_ALPHA = 0.05f
+        const val PLAYER_DISTURBANCE_WINDOW_TICKS = 100L
     }
 
     private val waves = ArrayDeque<BioluminescentMovementWave>()
+    private val disturbanceSounds = BioluminescentDisturbanceSoundEmitter()
     private var lastScanTick = Long.MIN_VALUE
+    private var lastPlayerDisturbanceTick = Long.MIN_VALUE
 
     var movingSourceCount: Int = 0
         private set
@@ -59,6 +63,7 @@ class BioluminescentMovementWaveField {
             VISIBILITY_TICK_DT,
             VISIBILITY_FADE_RATE
         ).coerceIn(0.0, 1.0)
+        disturbanceSounds.tick(gameTime)
         if (lastScanTick != Long.MIN_VALUE && gameTime - lastScanTick < SCAN_INTERVAL_TICKS) return
         lastScanTick = gameTime
 
@@ -82,11 +87,18 @@ class BioluminescentMovementWaveField {
             if (!isValidWaterSource(entity, waterCell)) continue
 
             acceptedSources++
+            if (isPlayerDriven(entity)) lastPlayerDisturbanceTick = gameTime
+            disturbanceSounds.trackSource(level, entity, waterCell.surfaceY, gameTime)
             if (emitWave(entity.x, entity.z, speed, gameTime)) {
                 spawnMovementParticles(level, data.emissionField, waterCell, entity.x, entity.z)
             }
         }
         movingSourceCount = acceptedSources
+    }
+
+    fun playerDisturbedRecently(gameTime: Long): Boolean {
+        if (lastPlayerDisturbanceTick == Long.MIN_VALUE) return false
+        return gameTime - lastPlayerDisturbanceTick in 0..PLAYER_DISTURBANCE_WINDOW_TICKS
     }
 
     fun intensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float {
@@ -116,9 +128,11 @@ class BioluminescentMovementWaveField {
 
     fun clear() {
         waves.clear()
+        disturbanceSounds.clear()
         movingSourceCount = 0
         visibilityStrength = 0.0
         lastScanTick = Long.MIN_VALUE
+        lastPlayerDisturbanceTick = Long.MIN_VALUE
     }
 
     private fun removeExpiredWaves(gameTime: Long) {
@@ -205,6 +219,10 @@ class BioluminescentMovementWaveField {
             }
         }
         return nearest
+    }
+
+    private fun isPlayerDriven(entity: Entity): Boolean {
+        return entity is Player || entity.passengers.any { passenger -> passenger is Player }
     }
 
     private fun isValidWaterSource(entity: Entity, waterCell: BioluminescentWaterCell): Boolean {

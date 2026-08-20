@@ -143,6 +143,10 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val BOTTLE_FILL_BIOLUMINESCENT = SOUNDS.register("bottle_fill_bioluminescent") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
     // Respiration Bubble
 
     val RESPIRATION_BUBBLE = SOUNDS.register("respiration_bubble") { id ->
@@ -175,6 +179,37 @@ object ModSounds {
     // Ambient
 
     val BEACH_WAVE_LOOP = SOUNDS.register("beach_wave_loop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+
+    // Bioluminescent wave
+
+    val BIOLUMINESCENT_WAVE_AMBIENT = SOUNDS.register("bioluminescent_wave_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BIOLUMINESCENT_WAVE_SHIMMERING = SOUNDS.register("bioluminescent_wave_shimmering") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BIOLUMINESCENT_WAVE_START = SOUNDS.register("bioluminescent_wave_start") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BIOLUMINESCENT_WAVE_STOP = SOUNDS.register("bioluminescent_wave_stop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BLOOM_PULSE = SOUNDS.register("bloom_pulse") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BLOOM_START = SOUNDS.register("bloom_start") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BLOOM_STOP = SOUNDS.register("bloom_stop") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 

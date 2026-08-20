@@ -16,22 +16,14 @@ object IrisPipelineBootstrap {
         attempted = true
 
         if (!ModCompat.hasIris) return
-        if (!ModConfig.enableIrisCompatibility) {
-            SquAbyssalBloom.LOGGER.info(
-                "[Bio Debug] Iris detected but compatibility disabled in config; skipping pipeline registration"
-            )
-            return
-        }
+        if (!ModConfig.enableIrisCompatibility) return
 
         for (pipeline in pipelines) {
             try {
                 IrisApi.getInstance().assignPipeline(pipeline, IrisProgram.ENTITIES_TRANSLUCENT)
-                SquAbyssalBloom.LOGGER.info(
-                    "[Bio Debug] Iris compatibility registered: ${pipeline.location} -> IrisProgram.ENTITIES_TRANSLUCENT"
-                )
             } catch (t: Throwable) {
                 SquAbyssalBloom.LOGGER.warn(
-                    "[Bio Debug] Iris compatibility registration failed for ${pipeline.location}; " +
+                    "Iris pipeline registration failed for ${pipeline.location}; " +
                         "this pass will render unhooked under shader packs",
                     t
                 )

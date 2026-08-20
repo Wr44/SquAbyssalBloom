@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.util.conduit
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBlock
 import net.minecraft.core.BlockPos
+import net.minecraft.core.SectionPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.Blocks
@@ -56,7 +57,6 @@ object AstralPrismarineTracker {
                 iterator.remove()
             } else if (!hasActiveConduitNearby(level, pos)) {
                 level.setBlock(pos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
-                level.sendBlockUpdated(pos , state, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
                 iterator.remove()
             }
         }
@@ -82,7 +82,7 @@ object AstralPrismarineTracker {
 
             if (!section.maybeHas { it.`is`(ModBlocks.ASTRAL_PRISMARINE) }) continue
 
-            val sectionBaseY = chunk.getSectionYFromSectionIndex(i)
+            val sectionBaseY = SectionPos.sectionToBlockCoord(chunk.getSectionYFromSectionIndex(i))
 
             for (localX in 0..15) {
                 for (localY in 0..15) {
@@ -103,12 +103,6 @@ object AstralPrismarineTracker {
                             } else {
                                 level.setBlock(
                                     worldPos,
-                                    state.setValue(AstralPrismarineBlock.ACTIVE, false),
-                                    3
-                                )
-                                level.sendBlockUpdated(
-                                    worldPos,
-                                    state,
                                     state.setValue(AstralPrismarineBlock.ACTIVE, false),
                                     3
                                 )

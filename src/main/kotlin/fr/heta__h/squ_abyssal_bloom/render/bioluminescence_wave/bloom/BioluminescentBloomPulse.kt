@@ -63,7 +63,12 @@ class BioluminescentBloomPulse internal constructor(
         return gameTime < startedAt || gameTime - startedAt >= lifetimeTicks
     }
 
-    private fun frontRadiusAt(renderGameTime: Double): Double? {
+    internal fun frontStrengthAt(renderGameTime: Double): Double {
+        val frontRadius = frontRadiusAt(renderGameTime) ?: return 0.0
+        return intensityForRingError(0.0, frontRadius, renderGameTime)
+    }
+
+    internal fun frontRadiusAt(renderGameTime: Double): Double? {
         val age = renderGameTime - startedAt
         if (age < 0.0 || age >= lifetimeTicks) return null
         return age * PULSE_SPEED

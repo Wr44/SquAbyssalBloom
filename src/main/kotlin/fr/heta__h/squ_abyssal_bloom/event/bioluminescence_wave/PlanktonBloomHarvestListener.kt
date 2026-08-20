@@ -3,10 +3,9 @@ package fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.bloom.PlanktonBloomManager
-import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.Items
@@ -44,13 +43,13 @@ object PlanktonBloomHarvestListener {
         }
         level.playSound(
             null, player.x, player.y, player.z,
-            SoundEvents.BOTTLE_FILL, SoundSource.PLAYERS, 1.0f, 1.0f
+            ModSounds.BOTTLE_FILL_BIOLUMINESCENT.get(), SoundSource.PLAYERS, 1.0f, 1.0f
         )
         player.swing(event.hand)
         event.isCanceled = true
     }
 
-    private fun fluidRaycast(level: Level, player: Player): BlockHitResult {
+    fun fluidRaycast(level: Level, player: Player): BlockHitResult {
         val start = player.eyePosition
         val look = player.getViewVector(1.0f)
         val reach = player.blockInteractionRange()

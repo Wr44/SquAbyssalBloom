@@ -6,20 +6,19 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.block.astral_prismarine.AstralPrismarineBlock
-import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.mixin.enable.ConduitBlockEntityAccessor
+import fr.heta__h.squ_abyssal_bloom.network.conduit.S2CConduitDomainPayload
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.conduit.AstralPrismarineTracker
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitHuntingTracker
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.core.BlockPos
-import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
-import net.minecraft.tags.FluidTags
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
@@ -38,12 +37,9 @@ import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
 import net.neoforged.neoforge.event.tick.ServerTickEvent
+import net.neoforged.neoforge.network.PacketDistributor
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
 @EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object ConduitDomainHandler {
@@ -52,7 +48,6 @@ object ConduitDomainHandler {
     private const val RADIUS_MAX = 36.0
 
     const val PORTABLE_RADIUS = 12.0
-    private const val PORTABLE_WARNING_DISTANCE = 3.5
 
     private const val STEP_MIN = 2
     private const val STEP_MAX = 6
@@ -78,13 +73,15 @@ object ConduitDomainHandler {
         val centerY: Double,
         val centerZ: Double,
         val radius: Double,
-        val isHunting: Boolean
+        val isHunting: Boolean,
+        val entityId: Int = -1
     )
 
     private val conduitRegistry = ConcurrentHashMap<Level, MutableSet<BlockPos>>()
     private val playerAttachment = ConcurrentHashMap<UUID, ConduitTarget>()
     private val playerNextAmbientSound = ConcurrentHashMap<UUID, Long>()
     private val pendingConduitEquipmentChange = ConcurrentHashMap.newKeySet<UUID>()
+    private val lastSentDomain = ConcurrentHashMap<UUID, S2CConduitDomainPayload>()
 
     private fun getConduits(level: Level) = conduitRegistry.getOrPut(level) { ConcurrentHashMap.newKeySet() }
 
@@ -109,6 +106,7 @@ object ConduitDomainHandler {
 
             val onlinePlayers = event.server.playerList.players.map { it.uuid }.toSet()
             playerAttachment.keys.removeIf { it !in onlinePlayers }
+            lastSentDomain.keys.removeIf { it !in onlinePlayers }
             playerNextAmbientSound.keys.removeIf { it !in onlinePlayers }
             pendingConduitEquipmentChange.removeIf { it !in onlinePlayers }
         }
@@ -155,6 +153,7 @@ object ConduitDomainHandler {
     @SubscribeEvent
     fun onPlayerLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
         detach(event.entity)
+        lastSentDomain.remove(event.entity.uuid)
     }
 
     @SubscribeEvent
@@ -183,6 +182,7 @@ object ConduitDomainHandler {
         revokeFlight(player)
 
         if (!player.level().isClientSide) {
+            syncDomain(player, S2CConduitDomainPayload.NONE)
             player.removeEffect(MobEffects.CONDUIT_POWER)
 
             if (wasInDomain && attachedTarget != null) {
@@ -214,32 +214,7 @@ object ConduitDomainHandler {
     fun onPlayerTick(event: PlayerTickEvent.Post) {
         val player = event.entity
 
-        if (player.level().isClientSide) {
-            val effect = player.getEffect(MobEffects.CONDUIT_POWER)
-            if (effect != null && player.isUnderWater) {
-                val abilities = player.abilities
-                var changed = false
-
-                if (!abilities.mayfly) {
-                    abilities.mayfly = true
-                    if (!player.onGround()) {
-                        abilities.flying = true
-                    }
-                    changed = true
-                }
-
-                val targetSpeed = if (effect.amplifier == 1) FLYING_SPEED_HUNTING else FLYING_SPEED_NORMAL
-                if (abilities.flyingSpeed != targetSpeed) {
-                    abilities.flyingSpeed = targetSpeed
-                    changed = true
-                }
-
-                if (changed) {
-                    player.onUpdateAbilities()
-                }
-            }
-            return
-        }
+        if (player.level().isClientSide) return
 
         val previousAttachment = playerAttachment[player.uuid]
         val domain = findActiveDomain(player)
@@ -249,7 +224,10 @@ object ConduitDomainHandler {
                 playerAttachment.remove(player.uuid)
                 playerNextAmbientSound.remove(player.uuid)
                 revokeFlight(player)
-                if (!player.level().isClientSide) player.removeEffect(MobEffects.CONDUIT_POWER)
+                if (!player.level().isClientSide) {
+                    syncDomain(player, S2CConduitDomainPayload.NONE)
+                    player.removeEffect(MobEffects.CONDUIT_POWER)
+                }
                 return
             }
             detach(player, previousAttachment)
@@ -314,10 +292,7 @@ object ConduitDomainHandler {
             player.setDeltaMovement(player.deltaMovement.x, JUMP_VELOCITY_MAX, player.deltaMovement.z)
         }
 
-        if (ModConfig.enableConduitBoundaryParticles && player.tickCount % ModConfig.conduitBoundaryParticleInterval == 0) {
-            val isPortable = domain.target is ConduitTarget.Entity
-            spawnBoundaryWarning(player, domain.centerX, domain.centerY, domain.centerZ, domain.radius, isPortable)
-        }
+        syncDomain(player, domainPayloadOf(domain))
     }
 
     private fun findActiveDomain(player: Player): DomainInfo? {
@@ -341,7 +316,7 @@ object ConduitDomainHandler {
                     val nautilusList = level.getEntitiesOfClass(AbstractNautilus::class.java, player.boundingBox.inflate(PORTABLE_RADIUS))
                     val nautilus = nautilusList.firstOrNull { it.uuid == attachedTarget.uuid && it.isAlive && it.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).item == NautilusLayerItems.CONDUIT }
                     if (nautilus != null && nautilus.distanceTo(player) <= PORTABLE_RADIUS) {
-                        return DomainInfo(attachedTarget, nautilus.x, nautilus.y + nautilus.bbHeight / 2.0, nautilus.z, PORTABLE_RADIUS, false)
+                        return DomainInfo(attachedTarget, nautilus.x, nautilus.y + nautilus.bbHeight / 2.0, nautilus.z, PORTABLE_RADIUS, false, nautilus.id)
                     }
                     playerAttachment.remove(player.uuid)
                 }
@@ -368,71 +343,23 @@ object ConduitDomainHandler {
         if (nautilus != null && nautilus.distanceTo(player) <= PORTABLE_RADIUS) {
             val target = ConduitTarget.Entity(nautilus.uuid)
             playerAttachment[player.uuid] = target
-            return DomainInfo(target, nautilus.x, nautilus.y + nautilus.bbHeight / 2.0, nautilus.z, PORTABLE_RADIUS, false)
+            return DomainInfo(target, nautilus.x, nautilus.y + nautilus.bbHeight / 2.0, nautilus.z, PORTABLE_RADIUS, false, nautilus.id)
         }
 
         return null
     }
 
-    private fun spawnBoundaryWarning(player: Player, cx: Double, cy: Double, cz: Double, radius: Double, isPortable: Boolean) {
-        val eyePos = player.eyePosition
-        val vx = eyePos.x - cx
-        val vy = eyePos.y - cy
-        val vz = eyePos.z - cz
-
-        val dist = sqrt(vx * vx + vy * vy + vz * vz)
-
-        val triggerDist = if (isPortable) PORTABLE_WARNING_DISTANCE else ModConfig.conduitBoundaryTriggerDistance
-        if (dist <= 0.001 || radius - dist > triggerDist) return
-
-        val nx = vx / dist
-        val ny = vy / dist
-        val nz = vz / dist
-        val bx = cx + nx * radius
-        val by = cy + ny * radius
-        val bz = cz + nz * radius
-
-        val serverLevel = player.level() as? ServerLevel ?: return
-
-        val rx: Double
-        val ry: Double
-        val rz: Double
-        if (abs(ny) > 0.99) {
-            rx = 1.0
-            ry = 0.0
-            rz = 0.0
-        } else {
-            val rLen = sqrt(nx * nx + nz * nz).coerceAtLeast(1e-6)
-            rx = nz / rLen
-            ry = 0.0
-            rz = -nx / rLen
+    private fun domainPayloadOf(domain: DomainInfo): S2CConduitDomainPayload {
+        return when (val target = domain.target) {
+            is ConduitTarget.Block -> S2CConduitDomainPayload.ofBlock(target.pos, domain.radius)
+            is ConduitTarget.Entity -> S2CConduitDomainPayload.ofPortable(domain.entityId, domain.radius)
         }
-        val ux = ny * rz - nz * ry
-        val uy = nz * rx - nx * rz
-        val uz = nx * ry - ny * rx
+    }
 
-        val ringPoints = ModConfig.conduitBoundaryRingPoints
-        val ringRadius = if (isPortable) ModConfig.conduitBoundaryRingRadius / 2.0 else ModConfig.conduitBoundaryRingRadius
-
-        repeat(ringPoints) { i ->
-            val phi = 2.0 * Math.PI * i / ringPoints
-            val cosPhi = cos(phi)
-            val sinPhi = sin(phi)
-
-            val px = bx + (cosPhi * rx + sinPhi * ux) * ringRadius
-            val py = by + (cosPhi * ry + sinPhi * uy) * ringRadius
-            val pz = bz + (cosPhi * rz + sinPhi * uz) * ringRadius
-
-            val particlePos = BlockPos.containing(px, py, pz)
-
-            if (serverLevel.getFluidState(particlePos).`is`(FluidTags.WATER)) {
-                serverLevel.sendParticles(
-                    ParticleTypes.NAUTILUS,
-                    px, py, pz,
-                    1, 0.0, 0.0, 0.0, 0.0
-                )
-            }
-        }
+    private fun syncDomain(player: Player, payload: S2CConduitDomainPayload) {
+        val serverPlayer = player as? ServerPlayer ?: return
+        if (lastSentDomain.put(player.uuid, payload) == payload) return
+        PacketDistributor.sendToPlayer(serverPlayer, payload)
     }
 
     private fun grantFlight(player: Player, isHunting: Boolean, justEntered: Boolean = false) {
@@ -492,7 +419,6 @@ object ConduitDomainHandler {
             if (state.`is`(ModBlocks.ASTRAL_PRISMARINE) &&
                 state.getValue(AstralPrismarineBlock.ACTIVE)) {
                 level.setBlock(checkPos, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
-                level.sendBlockUpdated(checkPos, state, state.setValue(AstralPrismarineBlock.ACTIVE, false), 3)
                 AstralPrismarineTracker.markInactive(level, checkPos)
             }
         }

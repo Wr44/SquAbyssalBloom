@@ -16,7 +16,9 @@ class BioluminescentBloomPulseField {
         const val VISIBILITY_TICK_DT = 1.0 / 20.0
         const val VISIBILITY_FADE_RATE = 4.0
         const val MAX_ACTIVE_PULSES = 32
+        const val PULSE_INTERVAL_JITTER_TICKS = 30L
         private const val PULSE_PHASE_SALT = 0x1F83D9ABFB41BD6BL
+        private const val PULSE_INTERVAL_SALT = 0x5BE0CD19137E2179L
     }
 
     private val pulses = ArrayDeque<BioluminescentBloomPulse>()
@@ -44,17 +46,17 @@ class BioluminescentBloomPulseField {
             lastPulseGameTime.keys.retainAll(presentIds)
         }
 
-        val interval = ModConfig.bioluminescenceBloomPulseIntervalTicks.toLong().coerceAtLeast(1L)
+        val baseInterval = ModConfig.bioluminescenceBloomPulseIntervalTicks.toLong().coerceAtLeast(1L)
         var emitted: MutableList<BioluminescentBloom>? = null
         for (bloom in blooms) {
             if (bloom.lifecycle != PlanktonBloomLifecycle.ACTIVE) continue
             val geometry = bloom.geometry ?: continue
             val previous = lastPulseGameTime[bloom.id]
             if (previous == null) {
-                lastPulseGameTime[bloom.id] = gameTime - initialPhaseOf(bloom.visualSeed, interval)
+                lastPulseGameTime[bloom.id] = gameTime - initialPhaseOf(bloom.visualSeed, baseInterval)
                 continue
             }
-            if (gameTime - previous < interval) continue
+            if (gameTime - previous < intervalFor(bloom.visualSeed, previous, baseInterval)) continue
             if (pulses.size >= MAX_ACTIVE_PULSES) break
             lastPulseGameTime[bloom.id] = gameTime
             pulses.addLast(
@@ -104,10 +106,25 @@ class BioluminescentBloomPulseField {
         return intensity.toFloat().coerceIn(0.0f, 1.0f)
     }
 
+    fun forEachFront(renderGameTime: Double, action: (Double, Double, Double, Double) -> Unit) {
+        for (pulse in pulses) {
+            val frontRadius = pulse.frontRadiusAt(renderGameTime) ?: continue
+            val strength = pulse.frontStrengthAt(renderGameTime)
+            if (strength <= 0.0) continue
+            action(pulse.originX, pulse.originZ, frontRadius, strength)
+        }
+    }
+
     fun clear() {
         pulses.clear()
         lastPulseGameTime.clear()
         visibilityStrength = 0.0
+    }
+
+    private fun intervalFor(visualSeed: Long, previousPulse: Long, baseInterval: Long): Long {
+        val mixed = RandomSupport.mixStafford13(visualSeed xor previousPulse xor PULSE_INTERVAL_SALT)
+        val jitter = ((ModUtilities.stableUnitValue(mixed) * 2.0 - 1.0) * PULSE_INTERVAL_JITTER_TICKS).toLong()
+        return (baseInterval + jitter).coerceAtLeast(1L)
     }
 
     private fun initialPhaseOf(visualSeed: Long, interval: Long): Long {

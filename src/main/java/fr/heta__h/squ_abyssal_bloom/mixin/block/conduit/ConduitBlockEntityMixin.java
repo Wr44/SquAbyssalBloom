@@ -61,7 +61,7 @@ public abstract class ConduitBlockEntityMixin {
     @ModifyConstant(method = "updateAndAttackTarget", constant = @Constant(floatValue = 4.0f))
     private static float modifyHuntingDamage(float original) { return 0.75f; }
 
-    @Inject(method = "updateShape", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "updateShape", at = @At(value = "RETURN", ordinal = 1), cancellable = true)
     private static void enforceAstralPrismarineArches(
             Level level, BlockPos pos, List<BlockPos> positions,
             CallbackInfoReturnable<Boolean> cir
@@ -153,12 +153,6 @@ public abstract class ConduitBlockEntityMixin {
                     BlockPos immutablePos = mutablePos.immutable();
                     level.setBlock(
                             immutablePos,
-                            blockState.setValue(AstralPrismarineBlock.ACTIVE, shouldActivate),
-                            3
-                    );
-                    level.sendBlockUpdated(
-                            immutablePos,
-                            blockState,
                             blockState.setValue(AstralPrismarineBlock.ACTIVE, shouldActivate),
                             3
                     );

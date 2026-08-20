@@ -49,6 +49,7 @@
   "config.squ_abyssal_bloom.server.no_permission": "You don't have permission to change this part of the config",
   "config.squ_abyssal_bloom.group.server_gameplay": "Gameplay",
 
+  "config.squ_abyssal_bloom.category": "Squ Abyssal Bloom Settings",
   "config.squ_abyssal_bloom.client": "Client Settings",
   "config.squ_abyssal_bloom.client.tooltip": "Visual, rendering and ambient sound settings",
 
@@ -66,8 +67,6 @@
   "config.squ_abyssal_bloom.enableDepthVignette.desc": "Turns the dark vignette around the screen edges on or off when exploring deep areas",
   "config.squ_abyssal_bloom.vignetteIntensity": "Vignette Intensity",
   "config.squ_abyssal_bloom.vignetteIntensity.desc": "Controls the overall opacity and intensity of the dark vignette on screen",
-  "config.squ_abyssal_bloom.lightDimmingStrength": "Light Dimming Strength",
-  "config.squ_abyssal_bloom.lightDimmingStrength.desc": "Determines how much ambient light and fog darken as you go down into the ocean",
   "config.squ_abyssal_bloom.group.iris": "Iris Compatibility",
   "config.squ_abyssal_bloom.group.iris.desc": "Controls how shaders interact with the content of Abyssal Bloom",
   "config.squ_abyssal_bloom.enableIrisCompatibility": "Enable Compatibility with Iris",
@@ -117,8 +116,6 @@
   "config.squ_abyssal_bloom.marineSnowVisibilityRange.tooltip": "Radius in blocks where marine snow particles can appear",
   "config.squ_abyssal_bloom.marineSnowSwayAmplitude": "Snow Sway Amplitude",
   "config.squ_abyssal_bloom.marineSnowSwayAmplitude.desc": "Adjusts how much marine snow particles sway side to side",
-  "config.squ_abyssal_bloom.marineSnowSpawnHeightAbove": "Snow Spawn Height",
-  "config.squ_abyssal_bloom.marineSnowSpawnHeightAbove.desc": "Sets how high above the player marine snow starts spawning",
 
   "config.squ_abyssal_bloom.group.fogRepeller": "Fog Repeller",
   "config.squ_abyssal_bloom.fogRepellerInfluence": "Fog Repeller Influence",
@@ -593,7 +590,7 @@
   "subtitles.squ_abyssal_bloom.bubble_projectile_launch": "Bubble launched",
   "subtitles.squ_abyssal_bloom.pressure_damage": "Pressure damage",
   "subtitles.squ_abyssal_bloom.respiration_bubble": "Bubble respiration",
-  "subtitles.squ_abyssal_bloom.conduit_entering": "Entring conduit domain",
+  "subtitles.squ_abyssal_bloom.conduit_entering": "Entering conduit domain",
   "subtitles.squ_abyssal_bloom.conduit_leaving": "Leaving conduit domain",
   "subtitles.squ_abyssal_bloom.clean_bubble_spitter": "Cleaning a bubble spitter",
   "subtitles.squ_abyssal_bloom.potion_bubble_spitter": "Potion poured into a bubble spitter",
@@ -607,7 +604,15 @@
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Creature enters shelter",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Creature leaves shelter",
   "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket": "Baby Red Slobberer captured",
+  "subtitles.squ_abyssal_bloom.bottle_fill_bioluminescent": "Bottle fills with bioluminescent water",
   "subtitles.squ_abyssal_bloom.beach_waves": "Waves",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_ambient": "Bioluminescent water stirs",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_shimmering": "Bioluminescent water shimmers",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_start": "Bioluminescent wave rises",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_stop": "Bioluminescent wave fades",
+  "subtitles.squ_abyssal_bloom.bloom_pulse": "Plankton bloom pulses",
+  "subtitles.squ_abyssal_bloom.bloom_start": "Plankton bloom opens",
+  "subtitles.squ_abyssal_bloom.bloom_stop": "Plankton bloom depleted",
 
 
 

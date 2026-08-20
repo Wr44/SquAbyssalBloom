@@ -11,8 +11,10 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.Biolu
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentAmbientParticleEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentBloomParticleEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWaveField
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentShimmeringSoundEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
+import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.multiplayer.ClientLevel
@@ -50,6 +52,8 @@ class BioluminescentZone(
         const val BRIGHTNESS_SEED_SALT = 0x6A09E667F3BCC909L
         const val TOTAL_NIGHT_APPEARANCE_TICKS = 60.0
         const val TOTAL_NIGHT_FADE_OUT_TICKS = 60.0
+        const val BLOOM_PULSE_VOLUME = 2.0f
+        const val SOUND_PITCH_SPREAD = 0.2f
     }
 
     val blooms: MutableMap<UUID, BioluminescentBloom> = linkedMapOf()
@@ -67,6 +71,7 @@ class BioluminescentZone(
     private val brightnessScale = brightnessScaleFromSeed()
     private val movementWaves = BioluminescentMovementWaveField()
     private val ambientParticles = BioluminescentAmbientParticleEmitter()
+    private val shimmeringSounds = BioluminescentShimmeringSoundEmitter()
     private val bloomPulses = BioluminescentBloomPulseField()
     private val bloomParticles = BioluminescentBloomParticleEmitter()
 
@@ -213,6 +218,13 @@ class BioluminescentZone(
         ambientParticles.tick(level, data, temporalIntensityAt(gameTime.toDouble()))
     }
 
+    fun tickAmbientSounds(level: ClientLevel, gameTime: Long) {
+        val data = spatialData ?: return
+        if (lifecycleIntensityAt(gameTime.toDouble()) <= 0.0f) return
+        if (activity != BioluminescentZoneActivity.ACTIVE && !movementWaves.playerDisturbedRecently(gameTime)) return
+        shimmeringSounds.tick(level, data, gameTime)
+    }
+
     fun tickBlooms(level: ClientLevel, gameTime: Long) {
         if (blooms.isEmpty()) return
         val renderGameTime = gameTime.toDouble()
@@ -234,6 +246,22 @@ class BioluminescentZone(
         if (data == null) return
         for (bloom in bloomPulses.tick(blooms.values, data.domain.bounds, gameTime)) {
             bloomParticles.emitPulseBurst(level, bloom, palette, waveLifecycle)
+            bloom.geometry?.let { geometry ->
+                ModUtilities.playPositionedSound(
+                    level,
+                    ModSounds.BLOOM_PULSE.get(),
+                    geometry.centerX,
+                    geometry.surfaceY,
+                    geometry.centerZ,
+                    BLOOM_PULSE_VOLUME,
+                    SOUND_PITCH_SPREAD
+                )
+            }
+        }
+        bloomPulses.forEachFront(renderGameTime) { originX, originZ, frontRadius, strength ->
+            bloomParticles.emitPulseFront(
+                level, data, palette, originX, originZ, frontRadius, (strength * waveLifecycle).toFloat()
+            )
         }
     }
 
@@ -322,6 +350,7 @@ class BioluminescentZone(
         activatedAt = null
         endingAtServerGameTime = null
         movementWaves.clear()
+        shimmeringSounds.clear()
         bloomPulses.clear()
         blooms.clear()
     }

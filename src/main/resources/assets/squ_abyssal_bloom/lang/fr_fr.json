@@ -49,6 +49,7 @@
   "config.squ_abyssal_bloom.server.no_permission": "Vous n'avez pas la permission de modifier cette partie de la config",
   "config.squ_abyssal_bloom.group.server_gameplay": "Gameplay",
 
+  "config.squ_abyssal_bloom.category": "Paramètres de Squ Abyssal Bloom",
   "config.squ_abyssal_bloom.client": "Paramètres client",
   "config.squ_abyssal_bloom.client.tooltip": "Paramètres visuels, de rendu et de sons ambiants",
 
@@ -66,8 +67,6 @@
   "config.squ_abyssal_bloom.enableDepthVignette.desc": "Active ou désactive la vignette sombre sur les bords de l'écran lors de l'exploration des grandes profondeurs",
   "config.squ_abyssal_bloom.vignetteIntensity": "Intensité de la vignette",
   "config.squ_abyssal_bloom.vignetteIntensity.desc": "Contrôle l'opacité et l'intensité globale de la vignette sombre sur l'écran",
-  "config.squ_abyssal_bloom.lightDimmingStrength": "Force d'atténuation de la lumière",
-  "config.squ_abyssal_bloom.lightDimmingStrength.desc": "Détermine à quel point la lumière ambiante et le brouillard s'assombrissent lors de la descente dans l'océan",
   "config.squ_abyssal_bloom.group.iris": "Compatibilité Iris",
   "config.squ_abyssal_bloom.group.iris.desc": "Contrôle la façon dont les shaders interagissent avec le contenu d'Abyssal Bloom",
   "config.squ_abyssal_bloom.enableIrisCompatibility": "Activer la compatibilité avec Iris",
@@ -117,8 +116,6 @@
   "config.squ_abyssal_bloom.marineSnowVisibilityRange.tooltip": "Rayon en blocs dans lequel les particules de neige marine apparaissent",
   "config.squ_abyssal_bloom.marineSnowSwayAmplitude": "Force sinusoïdale de la neige",
   "config.squ_abyssal_bloom.marineSnowSwayAmplitude.desc": "Ajuste l'amplitude du balancement horizontal des particules de neige marine",
-  "config.squ_abyssal_bloom.marineSnowSpawnHeightAbove": "Hauteur d'apparition de la neige",
-  "config.squ_abyssal_bloom.marineSnowSpawnHeightAbove.desc": "Définit la hauteur au-dessus du joueur à laquelle la neige marine commence à apparaître",
 
   "config.squ_abyssal_bloom.group.fogRepeller": "Répulseur de brouillard",
   "config.squ_abyssal_bloom.fogRepellerInfluence": "Influence du répulseur de brouillard",
@@ -605,7 +602,15 @@
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_enter": "Une créature entre dans l'abri",
   "subtitles.squ_abyssal_bloom.red_slobberer_entity_leave": "Une créature quitte l'abri",
   "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket": "Bébé Baveur Rouge capturé",
+  "subtitles.squ_abyssal_bloom.bottle_fill_bioluminescent": "Fiole remplie d'eau bioluminescente",
   "subtitles.squ_abyssal_bloom.beach_waves": "Vagues",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_ambient": "L'eau bioluminescente s'agite",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_shimmering": "L'eau bioluminescente scintille",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_start": "Une vague bioluminescente se lève",
+  "subtitles.squ_abyssal_bloom.bioluminescent_wave_stop": "Une vague bioluminescente s'éteint",
+  "subtitles.squ_abyssal_bloom.bloom_pulse": "Une efflorescence pulse",
+  "subtitles.squ_abyssal_bloom.bloom_start": "Une efflorescence s'ouvre",
+  "subtitles.squ_abyssal_bloom.bloom_stop": "Une efflorescence est épuisée",
 
   "tooltip.squ_abyssal_bloom.sprouting_gene": "Peut produire des bulbes de prismarine"
 }

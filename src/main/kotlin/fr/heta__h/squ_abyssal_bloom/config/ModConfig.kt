@@ -6,6 +6,7 @@ import dev.isxander.yacl3.api.*
 import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
+import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.config.renderer.StaticImageRenderer
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
@@ -42,16 +43,14 @@ object ModConfig {
     var abyssDepthStart: Double = 30.0
     var abyssMaxDepth: Double = 80.0
     var enableMarineSnow: Boolean = true
-    var maxMarinSnowParticles: Int = 75
+    var maxMarinSnowParticles: Int = 100
     var fogDarknessIntensity: Double = 1.0
     var fogRepellerInfluence: Double = 0.5
-    var marineSnowDensity: Double = 0.5
+    var marineSnowDensity: Double = 1.0
     var marineSnowVisibilityRange: Int = 20
     var marineSnowSwayAmplitude: Double = 1.0
-    var marineSnowSpawnHeightAbove: Double = 2.0
     var enableDepthVignette: Boolean = true
     var vignetteIntensity: Double = 1.0
-    var lightDimmingStrength: Double = 0.7
     var abyssColorRetention: Double = 0.15
     var fogRepellerNearPlaneMultiplier: Double = 12.0
     var fogRepellerFarPlaneMultiplier: Double = 60.0
@@ -85,27 +84,26 @@ object ModConfig {
     var bioluminescenceBloomGlowIntensity: Double = 1.0
     var bioluminescenceBloomParticleDensity: Double = 1.0
     var bioluminescenceBloomPulseIntensity: Double = 1.0
-    var bioluminescenceBloomPulseIntervalTicks: Int = 70
+    var bioluminescenceBloomPulseIntervalTicks: Int = 170
     var enableBeachWaveSound: Boolean = true
 
     fun loadConfig() {
         if (!configFile.exists()) { saveConfig(); return }
         try {
+
             val json = gson.fromJson(configFile.readText(), JsonObject::class.java) ?: return
             enableAbyssFog = json.get("enableAbyssFog")?.asBoolean ?: true
             abyssDepthStart = json.get("abyssDepthStart")?.asDouble ?: 30.0
             abyssMaxDepth = json.get("abyssMaxDepth")?.asDouble ?: 80.0
             enableMarineSnow = json.get("enableMarineSnow")?.asBoolean ?: true
-            maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 75
+            maxMarinSnowParticles = json.get("maxMarinSnowParticles")?.asInt ?: 100
             fogDarknessIntensity = json.get("fogDarknessIntensity")?.asDouble ?: 1.0
             fogRepellerInfluence = json.get("fogRepellerInfluence")?.asDouble ?: 0.5
-            marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 0.5
+            marineSnowDensity = json.get("marineSnowDensity")?.asDouble ?: 1.0
             marineSnowVisibilityRange = json.get("marineSnowVisibilityRange")?.asInt ?: 20
             marineSnowSwayAmplitude = json.get("marineSnowSwayAmplitude")?.asDouble ?: 1.0
-            marineSnowSpawnHeightAbove = json.get("marineSnowSpawnHeightAbove")?.asDouble ?: 2.0
             enableDepthVignette = json.get("enableDepthVignette")?.asBoolean ?: true
             vignetteIntensity = json.get("vignetteIntensity")?.asDouble ?: 1.0
-            lightDimmingStrength = json.get("lightDimmingStrength")?.asDouble ?: 0.7
             abyssColorRetention = json.get("abyssColorRetention")?.asDouble ?: 0.15
             fogRepellerNearPlaneMultiplier = json.get("fogRepellerNearPlaneMultiplier")?.asDouble ?: 12.0
             fogRepellerFarPlaneMultiplier = json.get("fogRepellerFarPlaneMultiplier")?.asDouble ?: 60.0
@@ -122,41 +120,28 @@ object ModConfig {
             surfaceOccluderLodBandWidth = json.get("surfaceOccluderLodBandWidth")?.asInt ?: 64
             surfaceOccluderTargetDepth = json.get("surfaceOccluderTargetDepth")?.asDouble ?: 0.5
             enableIrisCompatibility = json.get("enableIrisCompatibility")?.asBoolean ?: true
-            shaderBioluminescencePrimaryAlphaMultiplier =
-                json.get("shaderBioluminescencePrimaryAlphaMultiplier")?.asDouble ?: 2.2
-            shaderBioluminescenceVisibilityCompensation =
-                json.get("shaderBioluminescenceVisibilityCompensation")?.asDouble ?: 0.22
-            shaderBioluminescenceDeepWaterBoost =
-                json.get("shaderBioluminescenceDeepWaterBoost")?.asDouble ?: 2.2
-            shaderBioluminescenceGrazingStrength =
-                json.get("shaderBioluminescenceGrazingStrength")?.asDouble ?: 0.45
-            shaderBioluminescenceUnderwaterCompensation =
-                json.get("shaderBioluminescenceUnderwaterCompensation")?.asDouble ?: 0.85
-            shaderBioluminescenceSubsurfaceOffset =
-                json.get("shaderBioluminescenceSubsurfaceOffset")?.asDouble ?: 0.25
+            shaderBioluminescencePrimaryAlphaMultiplier = json.get("shaderBioluminescencePrimaryAlphaMultiplier")?.asDouble ?: 2.2
+            shaderBioluminescenceVisibilityCompensation = json.get("shaderBioluminescenceVisibilityCompensation")?.asDouble ?: 0.22
+            shaderBioluminescenceDeepWaterBoost = json.get("shaderBioluminescenceDeepWaterBoost")?.asDouble ?: 2.2
+            shaderBioluminescenceGrazingStrength = json.get("shaderBioluminescenceGrazingStrength")?.asDouble ?: 0.45
+            shaderBioluminescenceUnderwaterCompensation = json.get("shaderBioluminescenceUnderwaterCompensation")?.asDouble ?: 0.85
+            shaderBioluminescenceSubsurfaceOffset = json.get("shaderBioluminescenceSubsurfaceOffset")?.asDouble ?: 0.25
             enableDynamicLights = json.get("enableDynamicLights")?.asBoolean ?: true
-            dynamicLightsNautilusIntensity =
-                json.get("dynamicLightsNautilusIntensity")?.asDouble ?: 1.0
-            dynamicLightsBioluminescenceActiveIntensity =
-                json.get("dynamicLightsBioluminescenceActiveIntensity")?.asDouble ?: 1.0
-            dynamicLightsBioluminescenceInactiveIntensity =
-                json.get("dynamicLightsBioluminescenceInactiveIntensity")?.asDouble ?: 1.0
+            dynamicLightsNautilusIntensity = json.get("dynamicLightsNautilusIntensity")?.asDouble ?: 1.0
+            dynamicLightsBioluminescenceActiveIntensity = json.get("dynamicLightsBioluminescenceActiveIntensity")?.asDouble ?: 1.0
+            dynamicLightsBioluminescenceInactiveIntensity = json.get("dynamicLightsBioluminescenceInactiveIntensity")?.asDouble ?: 1.0
             enableBioluminescenceRendering = json.get("enableBioluminescenceRendering")?.asBoolean ?: true
             bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 20
             bioluminescenceRenderDistance = json.get("bioluminescenceRenderDistance")?.asDouble ?: 128.0
-            enableBioluminescenceBloomRendering =
-                json.get("enableBioluminescenceBloomRendering")?.asBoolean ?: true
-            bioluminescenceBloomGlowIntensity =
-                json.get("bioluminescenceBloomGlowIntensity")?.asDouble ?: 1.0
-            bioluminescenceBloomParticleDensity =
-                json.get("bioluminescenceBloomParticleDensity")?.asDouble ?: 1.0
-            bioluminescenceBloomPulseIntensity =
-                json.get("bioluminescenceBloomPulseIntensity")?.asDouble ?: 1.0
-            bioluminescenceBloomPulseIntervalTicks =
-                json.get("bioluminescenceBloomPulseIntervalTicks")?.asInt ?: 70
+            enableBioluminescenceBloomRendering = json.get("enableBioluminescenceBloomRendering")?.asBoolean ?: true
+            bioluminescenceBloomGlowIntensity = json.get("bioluminescenceBloomGlowIntensity")?.asDouble ?: 1.0
+            bioluminescenceBloomParticleDensity = json.get("bioluminescenceBloomParticleDensity")?.asDouble ?: 1.0
+            bioluminescenceBloomPulseIntensity = json.get("bioluminescenceBloomPulseIntensity")?.asDouble ?: 1.0
+            bioluminescenceBloomPulseIntervalTicks = json.get("bioluminescenceBloomPulseIntervalTicks")?.asInt ?: 170
             enableBeachWaveSound = json.get("enableBeachWaveSound")?.asBoolean ?: true
+
         } catch (e: Exception) {
-            println("Erreur config : ${e.message}")
+            SquAbyssalBloom.LOGGER.error("Failed to read the client config, keeping defaults", e)
         }
     }
 
@@ -173,10 +158,8 @@ object ModConfig {
                 addProperty("marineSnowDensity", marineSnowDensity)
                 addProperty("marineSnowVisibilityRange", marineSnowVisibilityRange)
                 addProperty("marineSnowSwayAmplitude", marineSnowSwayAmplitude)
-                addProperty("marineSnowSpawnHeightAbove", marineSnowSpawnHeightAbove)
                 addProperty("enableDepthVignette", enableDepthVignette)
                 addProperty("vignetteIntensity", vignetteIntensity)
-                addProperty("lightDimmingStrength", lightDimmingStrength)
                 addProperty("abyssColorRetention", abyssColorRetention)
                 addProperty("fogRepellerNearPlaneMultiplier", fogRepellerNearPlaneMultiplier)
                 addProperty("fogRepellerFarPlaneMultiplier", fogRepellerFarPlaneMultiplier)
@@ -216,7 +199,7 @@ object ModConfig {
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))
         } catch (e: Exception) {
-            println("Erreur save config : ${e.message}")
+            SquAbyssalBloom.LOGGER.error("Failed to write the client config", e)
         }
     }
 
@@ -310,8 +293,7 @@ object ModConfig {
                         .customImage(IrisSubMenu.previewRenderer())
                         .build(),
                     screenTitle = IrisSubMenu.displayName,
-                    buildGroups = IrisSubMenu::buildGroups,
-                    onSave = { saveConfig() }
+                    buildGroups = IrisSubMenu::buildGroups
                 ))
             }
             if (ModCompat.hasDynLights) {
@@ -322,8 +304,7 @@ object ModConfig {
                         .customImage(DynamicLightSubMenu.previewRenderer())
                         .build(),
                     screenTitle = DynamicLightSubMenu.displayName,
-                    buildGroups = DynamicLightSubMenu::buildGroups,
-                    onSave = { saveConfig() }
+                    buildGroups = DynamicLightSubMenu::buildGroups
                 ))
             }
 
@@ -403,12 +384,6 @@ object ModConfig {
                         .binding(Binding.generic(1.0, { vignetteIntensity }, { vignetteIntensity = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue(ModUtilities.unitDouble("multiplier", 1)) }
                         .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.lightDimmingStrength"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.lightDimmingStrength.desc")))
-                        .binding(Binding.generic(0.7, { lightDimmingStrength }, { lightDimmingStrength = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue(ModUtilities.unitDouble("multiplier", 1)) }
-                        .build())
                     .build())
 
                 .group(OptionGroup.createBuilder()
@@ -446,12 +421,6 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowSwayAmplitude.desc")))
                         .binding(Binding.generic(1.0, { marineSnowSwayAmplitude }, { marineSnowSwayAmplitude = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue(ModUtilities.unitDouble("blocks", 1)) }
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.marineSnowSpawnHeightAbove"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.marineSnowSpawnHeightAbove.desc")))
-                        .binding(Binding.generic(2.0, { marineSnowSpawnHeightAbove }, { marineSnowSpawnHeightAbove = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 20.0).step(0.5).formatValue(ModUtilities.unitDouble("blocks", 1)) }
                         .build())
                     .build())
 
@@ -595,7 +564,7 @@ object ModConfig {
                             Component.translatable("config.squ_abyssal_bloom.bioluminescenceBloomPulseIntervalTicks.desc")
                         ))
                         .binding(Binding.generic(
-                            70,
+                            170,
                             { bioluminescenceBloomPulseIntervalTicks },
                             { bioluminescenceBloomPulseIntervalTicks = it }
                         ))
@@ -797,7 +766,7 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.faults.desc"))
                         .build())
-                    .option(serverDouble(ModServerConfig.FAULT_FREQUENCY_PERCENT, step = 1.0, format = ModUtilities.percentFormat()))
+                    .option(serverDouble(ModServerConfig.FAULT_FREQUENCY_PERCENT, step = 1.0, format = ModUtilities.percentPointsFormat()))
                     .option(serverDouble(ModServerConfig.FAULT_BLEND, step = 0.001, format = ModUtilities.plainDouble(3)))
                     .option(serverDouble(ModServerConfig.FAULT_OFFSET_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
                     .build())
@@ -807,7 +776,7 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.trenches.desc"))
                         .build())
-                    .option(serverDouble(ModServerConfig.TRENCH_FREQUENCY_PERCENT, step = 1.0, format = ModUtilities.percentFormat()))
+                    .option(serverDouble(ModServerConfig.TRENCH_FREQUENCY_PERCENT, step = 1.0, format = ModUtilities.percentPointsFormat()))
                     .option(serverDouble(ModServerConfig.TRENCH_DEPTH_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
                     .build())
 
@@ -816,7 +785,7 @@ object ModConfig {
                     .description(OptionDescription.createBuilder()
                         .text(Component.translatable("config.squ_abyssal_bloom.group.terraces.desc"))
                         .build())
-                    .option(serverDouble(ModServerConfig.TERRACE_FREQUENCY_PERCENT, step = 1.0, format = ModUtilities.percentFormat()))
+                    .option(serverDouble(ModServerConfig.TERRACE_FREQUENCY_PERCENT, step = 1.0, format = ModUtilities.percentPointsFormat()))
                     .option(serverDouble(ModServerConfig.TERRACE_STEP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
                     .build())
 
