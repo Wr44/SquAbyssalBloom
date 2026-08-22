@@ -15,6 +15,8 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.WHITE_RGB
 import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation
 import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation.VISIBILITY_EPSILON
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.ACTIVE_WAVE_MAXIMUM_OPACITY
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.INACTIVE_WAVE_MAXIMUM_OPACITY
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.OverlayTexture
@@ -36,10 +38,7 @@ object BioluminescentWaterRenderer {
     private const val MAX_TEMPORAL_ALPHA = 179
     private const val WAVE_HIGHLIGHT_COLOR = 0x8A2BE2
     private const val HIGHLIGHT_COLOR_STRENGTH = 0.7
-    private const val ACTIVE_BASE_MAX_OPACITY = 0.60f
     private const val ACTIVE_MOVEMENT_WAVE_OPACITY = 0.20f
-    private const val ACTIVE_WAVE_MIN_OPACITY = 0.60f
-    private const val INACTIVE_MOVEMENT_WAVE_OPACITY = 0.45f
     private const val BLOOM_PULSE_ACTIVE_OPACITY = 0.85f
     private const val BLOOM_PULSE_REVEAL_OPACITY = 0.55f
     private const val BLOOM_MOAT_INNER_RADIUS = 1.5
@@ -538,7 +537,7 @@ object BioluminescentWaterRenderer {
     ): VertexShade {
         val baseOpacity = if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
             val rawBaseOpacity = temporalIntensity * zone.localPulseIntensityAt(renderGameTime, spatialPhase)
-            rawBaseOpacity.coerceAtMost(lifecycleIntensity * ACTIVE_BASE_MAX_OPACITY)
+            rawBaseOpacity.coerceAtMost(lifecycleIntensity * ACTIVE_WAVE_MAXIMUM_OPACITY)
         } else {
             0.0f
         }
@@ -550,14 +549,15 @@ object BioluminescentWaterRenderer {
         val waveStrength = if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
             ACTIVE_MOVEMENT_WAVE_OPACITY
         } else {
-            INACTIVE_MOVEMENT_WAVE_OPACITY
+            INACTIVE_WAVE_MAXIMUM_OPACITY
         }
         val waveOpacity = lifecycleIntensity * waveStrength * waveIntensity
         val baseAlpha = (baseOpacity * 255.0f).toInt().coerceIn(0, MAX_TEMPORAL_ALPHA)
         val waveAlpha = (waveOpacity * 255.0f).toInt()
         var alpha = (baseAlpha + waveAlpha).coerceIn(0, 255)
         if (zone.activity == BioluminescentZoneActivity.ACTIVE && waveIntensity > 0.0f) {
-            val floorAlpha = (lifecycleIntensity * ACTIVE_WAVE_MIN_OPACITY * waveIntensity * 255.0f).toInt()
+            val floorAlpha =
+                (lifecycleIntensity * ACTIVE_WAVE_MAXIMUM_OPACITY * waveIntensity * 255.0f).toInt()
             alpha = maxOf(alpha, floorAlpha).coerceIn(0, 255)
         }
 

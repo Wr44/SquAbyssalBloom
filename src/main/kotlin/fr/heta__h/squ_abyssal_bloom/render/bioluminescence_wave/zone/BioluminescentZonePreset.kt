@@ -1,7 +1,9 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone
 
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
+
 data class BioluminescentZonePreset(
-    val size: BioluminescentZoneSize,
+    val size: BioluminescenceWaveSize,
     val geodesicRadiusRange: IntRange,
     val analysisMargin: Int,
     val maxWaterCells: Int,

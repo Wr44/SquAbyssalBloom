@@ -133,7 +133,7 @@ object ModServerConfig {
     val BIOLUMINESCENCE_DURATION_MIN_TICKS = int("bioluminescenceDurationMinimumTicks", 1200, 1, 72000, "Minimum duration of a normal bioluminescent wave, in ticks.")
     val BIOLUMINESCENCE_DURATION_MAX_TICKS = int("bioluminescenceDurationMaximumTicks", 7200, 1, 72000, "Maximum duration of a normal bioluminescent wave, in ticks.")
     val BIOLUMINESCENCE_VISIBILITY_RADIUS = double("bioluminescenceVisibilityRadius", 128.0, 16.0, 512.0, "Server synchronization radius around an active wave.")
-    val BIOLUMINESCENCE_OVERLAP_MARGIN = double("bioluminescenceOverlapMargin", 16.0, 0.0, 128.0, "Additional horizontal margin used to prevent overlapping wave events.")
+    val BIOLUMINESCENCE_OVERLAP_MARGIN = double("bioluminescenceOverlapMargin", 16.0, 0.0, 128.0, "Additional tolerance around a wave's real visible radius used to reuse nearby events without extending their rendered coverage.")
     val BIOLUMINESCENCE_PREPARATION_DELAY_TICKS = int("bioluminescencePreparationDelayTicks", 40, 0, 1200, "Server-controlled delay between wave creation and its visual timeline.")
     val BIOLUMINESCENCE_TOTAL_NIGHT_CHANCE = double("bioluminescenceTotalNightChance", 1.0 / 25.0, 0.0, 1.0, "Chance, rolled once at the beginning of each night and level, for a total bioluminescent night.")
     val BIOLUMINESCENCE_NIGHT_START_TICK = int("bioluminescenceNightStartTick", 13000, 0, 23999, "Day-time tick at which bioluminescence considers night to begin.")

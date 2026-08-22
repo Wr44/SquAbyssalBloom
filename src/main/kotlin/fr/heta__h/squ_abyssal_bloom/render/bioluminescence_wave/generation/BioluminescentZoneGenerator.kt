@@ -36,12 +36,11 @@ class BioluminescentZoneGenerator(
         const val GENERATION_TIME_SLICE_NANOS = 4_000_000L
         const val UPLOAD_STEPS_PER_ADVANCE = 2
         const val MIN_MACRO_COMPONENT_RATIO = 0.95
-        const val RADIUS_SALT = 0x7137449123EF65CDL
         const val MACRO_COVERAGE_SALT = 0x428A2F98D728AE22L
         const val VISIBLE_COVERAGE_SALT = 0x3956C25BF348B538L
     }
 
-    val geodesicRadius = selectInt(preset.geodesicRadiusRange, RADIUS_SALT)
+    val geodesicRadius = preset.size.selectGeodesicRadius(zoneSeed)
     val targetMacroCoverage = selectDouble(preset.macroCoverageRange, MACRO_COVERAGE_SALT)
     val targetVisibleCoverage = selectDouble(preset.visiblePixelCoverageRange, VISIBLE_COVERAGE_SALT)
 
@@ -455,11 +454,6 @@ class BioluminescentZoneGenerator(
         currentTile?.close()
         currentTile = null
         stage = BioluminescentZoneGenerationStage.FAILED
-    }
-
-    private fun selectInt(range: IntRange, salt: Long): Int {
-        val mixed = RandomSupport.mixStafford13(zoneSeed xor salt)
-        return range.first + Math.floorMod(mixed, (range.last - range.first + 1).toLong()).toInt()
     }
 
     private fun selectDouble(range: ClosedFloatingPointRange<Double>, salt: Long): Double {

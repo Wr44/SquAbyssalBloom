@@ -23,7 +23,7 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
     private var tickCounter = 0L
 
     fun onZoneReady(zone: BioluminescentZone) {
-        if (!isInitialized) return
+        if (!isInitialized || !ModConfig.enableDynamicLights || lightsByZone.containsKey(zone.eventId)) return
         val data = zone.spatialData ?: return
         val bounds = data.domain.bounds
         val minChunkX = bounds.minX shr 4
@@ -56,7 +56,15 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
     }
 
     fun updateDynamicState(zones: Collection<BioluminescentZone>, gameTime: Long) {
-        if (!isInitialized || lightsByZone.isEmpty()) return
+        if (!ModConfig.enableDynamicLights) {
+            if (lightsByZone.isNotEmpty()) clear()
+            return
+        }
+        if (!isInitialized) return
+        zones.forEach { zone ->
+            if (zone.eventId !in lightsByZone) onZoneReady(zone)
+        }
+        if (lightsByZone.isEmpty()) return
         tickCounter++
         if (tickCounter % UPDATE_INTERVAL_TICKS != 0L) return
 

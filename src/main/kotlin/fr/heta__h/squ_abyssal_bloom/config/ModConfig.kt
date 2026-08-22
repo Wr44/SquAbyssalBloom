@@ -8,6 +8,7 @@ import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
+import fr.heta__h.squ_abyssal_bloom.config.renderer.ItemIconRenderer
 import fr.heta__h.squ_abyssal_bloom.config.renderer.StaticImageRenderer
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
@@ -27,10 +28,13 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.subScreenButton
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.ACTIVE_WAVE_MAXIMUM_OPACITY
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalTerrainSettings
 import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
+import net.minecraft.resources.Identifier
 import net.neoforged.fml.loading.FMLPaths
 import java.io.File
 
@@ -80,6 +84,12 @@ object ModConfig {
     var enableBioluminescenceRendering: Boolean = true
     var bioluminescenceTileFadeInTicks: Int = 20
     var bioluminescenceRenderDistance: Double = 128.0
+    var enableBioluminescenceFootprints: Boolean = true
+    var bioluminescenceFootprintOpacity: Double = ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble()
+    var bioluminescenceFootprintLifetimeTicks: Int = 100
+    var bioluminescenceFootprintSmallRadius: Int = BioluminescenceWaveSize.SMALL.shorelineFootprintRadius
+    var bioluminescenceFootprintLargeRadius: Int = BioluminescenceWaveSize.LARGE.shorelineFootprintRadius
+    var bioluminescenceFootprintDistanceFadeStart: Double = 0.0
     var enableBioluminescenceBloomRendering: Boolean = true
     var bioluminescenceBloomGlowIntensity: Double = 1.0
     var bioluminescenceBloomParticleDensity: Double = 1.0
@@ -133,6 +143,24 @@ object ModConfig {
             enableBioluminescenceRendering = json.get("enableBioluminescenceRendering")?.asBoolean ?: true
             bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 20
             bioluminescenceRenderDistance = json.get("bioluminescenceRenderDistance")?.asDouble ?: 128.0
+            enableBioluminescenceFootprints = json.get("enableBioluminescenceFootprints")?.asBoolean ?: true
+            bioluminescenceFootprintOpacity =
+                (json.get("bioluminescenceFootprintOpacity")?.asDouble
+                    ?: ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble())
+                    .coerceIn(0.0, ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble())
+            bioluminescenceFootprintLifetimeTicks =
+                (json.get("bioluminescenceFootprintLifetimeTicks")?.asInt ?: 100).coerceIn(20, 300)
+            bioluminescenceFootprintSmallRadius =
+                (json.get("bioluminescenceFootprintSmallRadius")?.asInt
+                    ?: BioluminescenceWaveSize.SMALL.shorelineFootprintRadius).coerceIn(1, 30)
+            bioluminescenceFootprintLargeRadius =
+                (json.get("bioluminescenceFootprintLargeRadius")?.asInt
+                    ?: BioluminescenceWaveSize.LARGE.shorelineFootprintRadius).coerceIn(1, 64)
+            if (bioluminescenceFootprintLargeRadius < bioluminescenceFootprintSmallRadius) {
+                bioluminescenceFootprintLargeRadius = bioluminescenceFootprintSmallRadius
+            }
+            bioluminescenceFootprintDistanceFadeStart =
+                (json.get("bioluminescenceFootprintDistanceFadeStart")?.asDouble ?: 0.0).coerceIn(0.0, 0.95)
             enableBioluminescenceBloomRendering = json.get("enableBioluminescenceBloomRendering")?.asBoolean ?: true
             bioluminescenceBloomGlowIntensity = json.get("bioluminescenceBloomGlowIntensity")?.asDouble ?: 1.0
             bioluminescenceBloomParticleDensity = json.get("bioluminescenceBloomParticleDensity")?.asDouble ?: 1.0
@@ -189,6 +217,12 @@ object ModConfig {
                 addProperty("enableBioluminescenceRendering", enableBioluminescenceRendering)
                 addProperty("bioluminescenceTileFadeInTicks", bioluminescenceTileFadeInTicks)
                 addProperty("bioluminescenceRenderDistance", bioluminescenceRenderDistance)
+                addProperty("enableBioluminescenceFootprints", enableBioluminescenceFootprints)
+                addProperty("bioluminescenceFootprintOpacity", bioluminescenceFootprintOpacity)
+                addProperty("bioluminescenceFootprintLifetimeTicks", bioluminescenceFootprintLifetimeTicks)
+                addProperty("bioluminescenceFootprintSmallRadius", bioluminescenceFootprintSmallRadius)
+                addProperty("bioluminescenceFootprintLargeRadius", bioluminescenceFootprintLargeRadius)
+                addProperty("bioluminescenceFootprintDistanceFadeStart", bioluminescenceFootprintDistanceFadeStart)
                 addProperty("enableBioluminescenceBloomRendering", enableBioluminescenceBloomRendering)
                 addProperty("bioluminescenceBloomGlowIntensity", bioluminescenceBloomGlowIntensity)
                 addProperty("bioluminescenceBloomParticleDensity", bioluminescenceBloomParticleDensity)
@@ -317,6 +351,49 @@ object ModConfig {
             null
         }
 
+        val footprintSmallRadiusOpt = Option.createBuilder<Int>()
+            .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceFootprintSmallRadius"))
+            .description(OptionDescription.of(Component.translatable(
+                "config.squ_abyssal_bloom.bioluminescenceFootprintSmallRadius.desc"
+            )))
+            .binding(Binding.generic(
+                BioluminescenceWaveSize.SMALL.shorelineFootprintRadius,
+                { bioluminescenceFootprintSmallRadius },
+                { bioluminescenceFootprintSmallRadius = it }
+            ))
+            .controller { option ->
+                IntegerSliderControllerBuilder.create(option).range(1, 30).step(1)
+                    .formatValue(ModUtilities.unitInt("blocks"))
+            }
+            .build()
+
+        val footprintLargeRadiusOpt = Option.createBuilder<Int>()
+            .name(Component.translatable("config.squ_abyssal_bloom.bioluminescenceFootprintLargeRadius"))
+            .description(OptionDescription.of(Component.translatable(
+                "config.squ_abyssal_bloom.bioluminescenceFootprintLargeRadius.desc"
+            )))
+            .binding(Binding.generic(
+                BioluminescenceWaveSize.LARGE.shorelineFootprintRadius,
+                { bioluminescenceFootprintLargeRadius },
+                { bioluminescenceFootprintLargeRadius = it }
+            ))
+            .controller { option ->
+                IntegerSliderControllerBuilder.create(option).range(1, 64).step(1)
+                    .formatValue(ModUtilities.unitInt("blocks"))
+            }
+            .build()
+
+        footprintSmallRadiusOpt.addEventListener { option, event ->
+            if (event == OptionEventListener.Event.STATE_CHANGE &&
+                footprintLargeRadiusOpt.pendingValue() < option.pendingValue()
+            ) footprintLargeRadiusOpt.requestSet(option.pendingValue())
+        }
+        footprintLargeRadiusOpt.addEventListener { option, event ->
+            if (event == OptionEventListener.Event.STATE_CHANGE &&
+                footprintSmallRadiusOpt.pendingValue() > option.pendingValue()
+            ) footprintSmallRadiusOpt.requestSet(option.pendingValue())
+        }
+
         val libraryBuilder = YetAnotherConfigLib.createBuilder()
             .title(Component.translatable("config.squ_abyssal_bloom.category").withStyle(ChatFormatting.BOLD, ChatFormatting.DARK_AQUA))
             .save {
@@ -354,6 +431,29 @@ object ModConfig {
                         .binding(Binding.generic(0.15, { abyssColorRetention }, { abyssColorRetention = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 1.0).step(0.05).formatValue(ModUtilities.percentFormat()) }
                         .build())
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.enableDepthVignette"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableDepthVignette.desc")))
+                        .binding(Binding.generic(true, { enableDepthVignette }, { enableDepthVignette = it }))
+                        .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity"))
+                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity.desc")))
+                        .binding(Binding.generic(1.0, { vignetteIntensity }, { vignetteIntensity = it }))
+                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue(ModUtilities.unitDouble("multiplier", 1)) }
+                        .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.fogRepeller").withStyle(ChatFormatting.YELLOW))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.fogRepeller.desc"))
+                        .customImage(ItemIconRenderer(Identifier.fromNamespaceAndPath(
+                            SquAbyssalBloom.ID,
+                            "item/nautilus_lamp"
+                        )))
+                        .build())
                     .option(Option.createBuilder<Double>()
                         .name(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence"))
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerInfluence.tooltip")))
@@ -371,18 +471,6 @@ object ModConfig {
                         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.fogRepellerFarPlaneMultiplier.desc")))
                         .binding(Binding.generic(60.0, { fogRepellerFarPlaneMultiplier }, { fogRepellerFarPlaneMultiplier = it }))
                         .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 200.0).step(5.0).formatValue(ModUtilities.unitDouble("multiplier", 1)) }
-                        .build())
-                    .option(Option.createBuilder<Boolean>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.enableDepthVignette"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableDepthVignette.desc")))
-                        .binding(Binding.generic(true, { enableDepthVignette }, { enableDepthVignette = it }))
-                        .controller(TickBoxControllerBuilder::create)
-                        .build())
-                    .option(Option.createBuilder<Double>()
-                        .name(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity"))
-                        .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.vignetteIntensity.desc")))
-                        .binding(Binding.generic(1.0, { vignetteIntensity }, { vignetteIntensity = it }))
-                        .controller { opt -> DoubleSliderControllerBuilder.create(opt).range(0.0, 2.0).step(0.1).formatValue(ModUtilities.unitDouble("multiplier", 1)) }
                         .build())
                     .build())
 
@@ -571,6 +659,85 @@ object ModConfig {
                         .controller { option ->
                             IntegerSliderControllerBuilder.create(option).range(20, 400).step(5)
                                 .formatValue { value -> Component.literal(ModUtilities.formatTicksAsDuration(value)) }
+                        }
+                    .build())
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable(
+                        "config.squ_abyssal_bloom.group.bioluminescence_footprints"
+                    ).withStyle(ChatFormatting.LIGHT_PURPLE))
+                    .description(OptionDescription.of(Component.translatable(
+                        "config.squ_abyssal_bloom.group.bioluminescence_footprints.desc"
+                    )))
+                    .option(Option.createBuilder<Boolean>()
+                        .name(Component.translatable(
+                            "config.squ_abyssal_bloom.enableBioluminescenceFootprints"
+                        ))
+                        .description(OptionDescription.of(Component.translatable(
+                            "config.squ_abyssal_bloom.enableBioluminescenceFootprints.desc"
+                        )))
+                        .binding(Binding.generic(
+                            true,
+                            { enableBioluminescenceFootprints },
+                            { enableBioluminescenceFootprints = it }
+                        ))
+                        .controller(TickBoxControllerBuilder::create)
+                        .build())
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable(
+                            "config.squ_abyssal_bloom.bioluminescenceFootprintOpacity"
+                        ))
+                        .description(OptionDescription.of(Component.translatable(
+                            "config.squ_abyssal_bloom.bioluminescenceFootprintOpacity.desc"
+                        )))
+                        .binding(Binding.generic(
+                            ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble(),
+                            { bioluminescenceFootprintOpacity },
+                            { bioluminescenceFootprintOpacity = it }
+                        ))
+                        .controller { option ->
+                            DoubleSliderControllerBuilder.create(option)
+                                .range(0.0, ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble()).step(0.05)
+                                .formatValue(ModUtilities.percentFormat())
+                        }
+                        .build())
+                    .option(Option.createBuilder<Int>()
+                        .name(Component.translatable(
+                            "config.squ_abyssal_bloom.bioluminescenceFootprintLifetimeTicks"
+                        ))
+                        .description(OptionDescription.of(Component.translatable(
+                            "config.squ_abyssal_bloom.bioluminescenceFootprintLifetimeTicks.desc"
+                        )))
+                        .binding(Binding.generic(
+                            100,
+                            { bioluminescenceFootprintLifetimeTicks },
+                            { bioluminescenceFootprintLifetimeTicks = it }
+                        ))
+                        .controller { option ->
+                            IntegerSliderControllerBuilder.create(option).range(20, 300).step(10)
+                                .formatValue { value ->
+                                    Component.literal(ModUtilities.formatTicksAsDuration(value))
+                                }
+                        }
+                        .build())
+                    .option(footprintSmallRadiusOpt)
+                    .option(footprintLargeRadiusOpt)
+                    .option(Option.createBuilder<Double>()
+                        .name(Component.translatable(
+                            "config.squ_abyssal_bloom.bioluminescenceFootprintDistanceFadeStart"
+                        ))
+                        .description(OptionDescription.of(Component.translatable(
+                            "config.squ_abyssal_bloom.bioluminescenceFootprintDistanceFadeStart.desc"
+                        )))
+                        .binding(Binding.generic(
+                            0.0,
+                            { bioluminescenceFootprintDistanceFadeStart },
+                            { bioluminescenceFootprintDistanceFadeStart = it }
+                        ))
+                        .controller { option ->
+                            DoubleSliderControllerBuilder.create(option).range(0.0, 0.95).step(0.05)
+                                .formatValue(ModUtilities.percentFormat())
                         }
                         .build())
                     .build())

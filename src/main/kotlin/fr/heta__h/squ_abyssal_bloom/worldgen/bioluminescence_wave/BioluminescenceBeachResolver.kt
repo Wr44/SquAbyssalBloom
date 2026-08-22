@@ -112,7 +112,7 @@ class BioluminescenceBeachResolver(
             ?.takeIf { cached -> cached.expiresAtGameTime >= gameTime }
             ?.let { cached -> return cached.zone.copy(waterSurface = waterSurface) }
 
-        val zone = resolveConnectedZone(startCellX, startCellZ)
+        val zone = resolveConnectedZone(startCellX, startCellZ, waterSurface) ?: return null
         val cached = CachedZone(zone, gameTime + CACHE_LIFETIME_TICKS)
         for (cellKey in connectedCellKeys) cachedZonesByCell[cellKey] = cached
         return zone.copy(waterSurface = waterSurface)
@@ -176,8 +176,14 @@ class BioluminescenceBeachResolver(
         val startCellZ = Math.floorDiv(waterSurface.z, GRID_SIZE)
         val startKey = ModUtilities.horizontalPositionKey(startCellX, startCellZ)
         val cachedZone = cachedZonesByCell[startKey]?.takeIf { cached -> cached.expiresAtGameTime >= gameTime }
-        val zone = (cachedZone?.zone ?: resolveConnectedZone(startCellX, startCellZ))
-            .copy(waterSurface = waterSurface)
+        val resolvedZone = cachedZone?.zone ?: resolveConnectedZone(startCellX, startCellZ, waterSurface)
+        if (resolvedZone == null) {
+            return Diagnostic(
+                position, true, biomeId, true, waterSurface, true, null,
+                detectionCacheHit, cachedZone != null, "zone_cotiere_invalide"
+            )
+        }
+        val zone = resolvedZone.copy(waterSurface = waterSurface)
 
         return Diagnostic(
             position, true, biomeId, true, waterSurface, true, zone,
@@ -192,7 +198,11 @@ class BioluminescenceBeachResolver(
     }
 
 
-    private fun resolveConnectedZone(startCellX: Int, startCellZ: Int): BeachZone {
+    private fun resolveConnectedZone(
+        startCellX: Int,
+        startCellZ: Int,
+        startWaterSurface: BlockPos
+    ): BeachZone? {
         connectedCellKeys.clear()
         val visitedCellKeys = hashSetOf<Long>()
         val pending = ArrayDeque<Pair<Int, Int>>()
@@ -214,7 +224,11 @@ class BioluminescenceBeachResolver(
         ) {
             val (cellX, cellZ) = pending.removeFirst()
             examinedCells++
-            val cellWaterY = compatibleCoastalCellHeight(cellX, cellZ)
+            val cellWaterY = if (cellX == startCellX && cellZ == startCellZ) {
+                startWaterSurface.y
+            } else {
+                compatibleCoastalCellHeight(cellX, cellZ)
+            }
             if (cellWaterY == null) continue
 
             connectedCellKeys.add(ModUtilities.horizontalPositionKey(cellX, cellZ))
@@ -236,6 +250,10 @@ class BioluminescenceBeachResolver(
             }
         }
 
+        if (connectedCellKeys.isEmpty() || canonicalCellX == Int.MAX_VALUE || canonicalCellZ == Int.MAX_VALUE) {
+            return null
+        }
+
         val dimension = level.dimension().identifier()
         val serializedId = "$dimension:$canonicalCellX:$canonicalCellZ:${Math.floorDiv(canonicalCellY, GRID_SIZE)}"
         val beachId = UUID.nameUUIDFromBytes(serializedId.toByteArray(StandardCharsets.UTF_8))
@@ -252,14 +270,22 @@ class BioluminescenceBeachResolver(
         )
     }
 
-    /**
-     * Purely intrinsic to this cell's own column: uses the world-surface heightmap as a local
-     * search hint, never an external reference height. Two calls for the same cell always agree.
-     */
     private fun compatibleCoastalCellHeight(cellX: Int, cellZ: Int): Int? {
-        val worldX = cellX * GRID_SIZE + GRID_SIZE / 2
-        val worldZ = cellZ * GRID_SIZE + GRID_SIZE / 2
-        if (!ModUtilities.hasLoadedChunk(level, worldX shr 4, worldZ shr 4)) return null
+        val originX = cellX * GRID_SIZE
+        val originZ = cellZ * GRID_SIZE
+        if (!ModUtilities.hasLoadedChunk(level, originX shr 4, originZ shr 4)) return null
+        val centerOffset = GRID_SIZE / 2
+        sampleCompatibleCoastalHeight(originX + centerOffset, originZ + centerOffset)?.let { return it }
+        for (offsetX in 0 until GRID_SIZE) {
+            for (offsetZ in 0 until GRID_SIZE) {
+                if (offsetX == centerOffset && offsetZ == centerOffset) continue
+                sampleCompatibleCoastalHeight(originX + offsetX, originZ + offsetZ)?.let { return it }
+            }
+        }
+        return null
+    }
+
+    private fun sampleCompatibleCoastalHeight(worldX: Int, worldZ: Int): Int? {
         val surfaceHint = level.getHeight(Heightmap.Types.WORLD_SURFACE, worldX, worldZ) - 1
         val water = ModUtilities.findWaterBlockBelow(
             level,

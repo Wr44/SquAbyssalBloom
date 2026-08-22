@@ -58,6 +58,11 @@ abstract class AbstractDynamicLightCompat {
         luminance: Int,
         removedCheck: () -> Boolean
     ) {
+        if (!ModConfig.enableDynamicLights) {
+            removeLineLight(map, id)
+            return
+        }
+
         val existing = map[id]
 
         if (existing != null) {

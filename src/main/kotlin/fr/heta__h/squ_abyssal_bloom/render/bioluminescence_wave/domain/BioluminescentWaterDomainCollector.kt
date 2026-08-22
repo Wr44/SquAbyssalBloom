@@ -19,6 +19,7 @@ class BioluminescentWaterDomainCollector(
     companion object {
         const val WATER_LEVEL_TOLERANCE = 3
         const val MAX_DEPTH_SCAN = 32
+        private const val MAX_UNLOADED_BOUNDARY_WAIT_PASSES = 20
         val CARDINAL_OFFSETS = arrayOf(
             intArrayOf(1, 0),
             intArrayOf(-1, 0),
@@ -60,14 +61,25 @@ class BioluminescentWaterDomainCollector(
         }
     }
 
+    private data class DeferredColumn(
+        val key: Long,
+        val worldX: Int,
+        val worldZ: Int,
+        val referenceY: Int,
+        val distance: Int
+    )
+
     private val analysisGeodesicRadius = localGeodesicRadius + analysisMargin
     private val cells = ArrayList<BioluminescentWaterCell>()
     private val distances = IntArrayList()
     private val indexByKey = Long2IntOpenHashMap()
     private val sampledColumns = mutableMapOf<Long, BioluminescentWaterCell?>()
     private val queue = ArrayDeque<Int>()
+    private val deferredColumns = ArrayDeque<DeferredColumn>()
+    private val deferredColumnKeys = hashSetOf<Long>()
     private var currentCellIndex = -1
     private var currentDirection = 0
+    private var unloadedBoundaryWaitPasses = 0
 
     var complete = false
         private set
@@ -86,8 +98,31 @@ class BioluminescentWaterDomainCollector(
     }
 
     fun advance(level: LevelReader, budget: Int) {
-        if (complete) return
+        if (complete || budget <= 0) return
         var processed = 0
+        var resolvedDeferredColumn = false
+        val deferredBudget = if (queue.isEmpty() && currentCellIndex < 0) {
+            budget
+        } else {
+            maxOf(1, budget / 4)
+        }
+        val deferredChecks = minOf(deferredColumns.size, deferredBudget)
+        repeat(deferredChecks) {
+            val deferred = deferredColumns.removeFirst()
+            if (!ModUtilities.hasLoadedChunk(level, deferred.worldX shr 4, deferred.worldZ shr 4)) {
+                deferredColumns.addLast(deferred)
+            } else {
+                deferredColumnKeys.remove(deferred.key)
+                val waterCell = sampleWaterCell(level, deferred.worldX, deferred.worldZ, deferred.referenceY)
+                sampledColumns[deferred.key] = waterCell
+                if (waterCell != null && abs(waterCell.waterPos.y - anchor.y) <= WATER_LEVEL_TOLERANCE) {
+                    addCell(waterCell, deferred.distance)
+                }
+                resolvedDeferredColumn = true
+            }
+            processed++
+        }
+
         while (cells.size < maxWaterCells && processed < budget) {
             if (currentCellIndex < 0) {
                 if (queue.isEmpty()) break
@@ -110,7 +145,16 @@ class BioluminescentWaterDomainCollector(
                 val worldZ = cell.waterPos.z + offset[1]
                 val key = ModUtilities.horizontalPositionKey(worldX, worldZ)
                 if (!sampledColumns.containsKey(key)) {
-                    if (!ModUtilities.hasLoadedChunk(level, worldX shr 4, worldZ shr 4)) return
+                    if (!ModUtilities.hasLoadedChunk(level, worldX shr 4, worldZ shr 4)) {
+                        if (deferredColumnKeys.add(key)) {
+                            deferredColumns.addLast(
+                                DeferredColumn(key, worldX, worldZ, cell.waterPos.y, distance + 1)
+                            )
+                        }
+                        currentDirection++
+                        processed++
+                        continue
+                    }
                     sampledColumns[key] = sampleWaterCell(level, worldX, worldZ, cell.waterPos.y)
                 }
                 val waterCell = sampledColumns.getValue(key)
@@ -122,7 +166,14 @@ class BioluminescentWaterDomainCollector(
             }
             if (currentDirection >= CARDINAL_OFFSETS.size) currentCellIndex = -1
         }
-        complete = (queue.isEmpty() && currentCellIndex < 0) || cells.size >= maxWaterCells
+        val traversalExhausted = queue.isEmpty() && currentCellIndex < 0
+        complete = cells.size >= maxWaterCells || traversalExhausted && deferredColumns.isEmpty()
+        if (!complete && traversalExhausted) {
+            unloadedBoundaryWaitPasses = if (resolvedDeferredColumn) 0 else unloadedBoundaryWaitPasses + 1
+            if (unloadedBoundaryWaitPasses >= MAX_UNLOADED_BOUNDARY_WAIT_PASSES) complete = true
+        } else if (!traversalExhausted) {
+            unloadedBoundaryWaitPasses = 0
+        }
     }
 
     fun build(): BioluminescentWaterDomain {
@@ -166,8 +217,11 @@ class BioluminescentWaterDomainCollector(
         indexByKey.clear()
         sampledColumns.clear()
         queue.clear()
+        deferredColumns.clear()
+        deferredColumnKeys.clear()
         currentCellIndex = -1
         currentDirection = 0
+        unloadedBoundaryWaitPasses = 0
         return domain
     }
 

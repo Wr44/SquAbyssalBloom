@@ -7,15 +7,11 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
 import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CPlanktonBloomStateUpdatePayload
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomainCollector
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentMacroField
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.skeleton.BioluminescentTopologyBuilder
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePresets
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.ActiveBioluminescenceWave
 import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.BioluminescenceLevelManager
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaterAreaSampler
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomPlacement
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
@@ -26,7 +22,6 @@ import net.minecraft.world.phys.Vec3
 import net.neoforged.neoforge.network.PacketDistributor
 import java.util.UUID
 import java.util.WeakHashMap
-import kotlin.math.abs
 
 class PlanktonBloomManager private constructor(
     private val level: ServerLevel
@@ -48,15 +43,8 @@ class PlanktonBloomManager private constructor(
 
         private const val BLOOM_HARVEST_COUNT_SALT = 0x650A73548BAF63DEL
         private const val BLOOM_VISUAL_SEED_SALT = 0x1D373AE2A0FF3F31L
-        private const val GEODESIC_RADIUS_SALT = 0x7137449123EF65CDL
-
-        private const val MIN_CORE_BOUNDARY_DEPTH = 1
-        private const val MAX_ANCHOR_DISTANCE_RATIO = 0.55
-        private const val BOUNDARY_DEPTH_PROMINENCE_WEIGHT = 1.5
-        private const val DOMAIN_COLLECTION_BUDGET_MULTIPLIER = 6
 
         private const val BLOOM_COUNT_SALT = 0x136E5CBFCA9AC0B4L
-        private const val BLOOM_ORDER_SALT = 0x4F1BBCDCE5DE3FDEL
 
         private const val MOVEMENT_VERTICAL_MARGIN = 4.0
         private const val ACTIVATION_SCAN_INTERVAL_TICKS = 5L
@@ -77,90 +65,12 @@ class PlanktonBloomManager private constructor(
     private var displacementCacheGameTime = -1L
     private val displacementCache = HashMap<UUID, Double>()
 
-    fun createBloomsForWave(wave: ActiveBioluminescenceWave): List<PlanktonBloomState> {
+    fun createBloomsForWave(
+        wave: ActiveBioluminescenceWave,
+        waterArea: BioluminescenceWaterAreaSampler.BioluminescenceWaterArea,
+        placementRadius: Int
+    ): List<PlanktonBloomState> {
         if (!ModServerConfig.BIOLUMINESCENCE_BLOOM_ENABLED.get()) return emptyList()
-
-        val preset = when (wave.size) {
-            BioluminescenceWaveSize.SMALL -> BioluminescentZonePresets.SMALL
-            BioluminescenceWaveSize.LARGE -> BioluminescentZonePresets.LARGE
-        }
-        val initialCell = findInitialCell(wave.anchor) ?: run {
-            SquAbyssalBloom.LOGGER.warn(
-                "[Bioluminescence] No initial water cell found for wave {} (anchor={}), skipping blooms",
-                wave.eventId, wave.anchor
-            )
-            return emptyList()
-        }
-        val geodesicRadius = selectGeodesicRadius(wave.seed, preset)
-        val collector = BioluminescentWaterDomainCollector(
-            initialCell.waterPos,
-            initialCell,
-            geodesicRadius,
-            preset.analysisMargin,
-            preset.maxWaterCells
-        )
-        collector.advance(level, preset.maxWaterCells * DOMAIN_COLLECTION_BUDGET_MULTIPLIER)
-        if (!collector.complete) {
-            SquAbyssalBloom.LOGGER.warn(
-                "[Bioluminescence] Incomplete water domain for wave {}, skipping blooms (unloaded chunks)",
-                wave.eventId
-            )
-            return emptyList()
-        }
-
-        val domain = collector.build()
-        val topologyResult = try {
-            val topologyBuilder = BioluminescentTopologyBuilder(domain, preset, wave.seed)
-            while (topologyBuilder.stage != BioluminescentTopologyBuilder.Stage.COMPLETE) topologyBuilder.advance()
-            topologyBuilder.build()
-        } catch (exception: IllegalStateException) {
-            SquAbyssalBloom.LOGGER.warn(
-                "[Bioluminescence] Topology generation failed for wave {}, placing blooms without cores: {}",
-                wave.eventId,
-                exception.message
-            )
-            null
-        }
-        val cores = topologyResult?.cores ?: emptyList()
-
-        data class Candidate(
-            val cellIndex: Int,
-            val positionKey: Long,
-            val tier: Int,
-            val prominence: Double
-        )
-
-        val maxAnchorDistance = geodesicRadius * MAX_ANCHOR_DISTANCE_RATIO
-        // Every bloom stays inside the full-intensity radius, cores included: past it the wave
-        // itself is fading out, so a bloom there would sit in water that barely glows. Core
-        // selection pushes all but the first core onto the rim, so this filter usually leaves
-        // a single core and the rest of the count comes from PlanktonBloomPlacement.
-        val fullIntensityLimit = BioluminescentMacroField.fullIntensityGeodesicLimit(domain)
-        val candidates = cores.withIndex().filter { (_, core) ->
-            domain.geodesicDistanceFromAnchor[core.cellIndex] <= fullIntensityLimit
-        }.map { (coreIndex, core) ->
-            val boundaryDepth = domain.boundaryDepth[core.cellIndex]
-            val deepEnough = boundaryDepth >= MIN_CORE_BOUNDARY_DEPTH
-            val withinAnchorRange = domain.geodesicDistanceFromAnchor[core.cellIndex] <= maxAnchorDistance
-            val connectedToSkeleton = topologyResult?.skeleton?.paths.orEmpty().any { path ->
-                path.sourceCore == coreIndex || path.destinationCore == coreIndex
-            }
-            val tier = when {
-                deepEnough && withinAnchorRange && connectedToSkeleton -> 0
-                deepEnough && connectedToSkeleton -> 1
-                deepEnough -> 2
-                else -> 3
-            }
-            val luminousArea = core.radiusX * core.radiusZ * core.weight
-            val prominence = luminousArea + boundaryDepth * BOUNDARY_DEPTH_PROMINENCE_WEIGHT
-            val waterPos = domain.cells[core.cellIndex].waterPos
-            Candidate(
-                core.cellIndex,
-                ModUtilities.horizontalPositionKey(waterPos.x, waterPos.z),
-                tier,
-                prominence
-            )
-        }
 
         val countRange = when (wave.size) {
             BioluminescenceWaveSize.SMALL -> configuredRange(
@@ -174,41 +84,22 @@ class PlanktonBloomManager private constructor(
         }
         val targetCount = pickInRange(countRange, wave.seed xor BLOOM_COUNT_SALT)
         if (targetCount <= 0) return emptyList()
-        val selectedCells = candidates.sortedWith(
-            compareBy<Candidate> { it.tier }
-                .thenByDescending { it.prominence }
-                .thenBy { candidate ->
-                    ModUtilities.stableUnitValue(
-                        RandomSupport.mixStafford13(wave.seed xor candidate.positionKey xor BLOOM_ORDER_SALT)
-                    )
-                }
-        ).take(targetCount).mapTo(mutableListOf()) { candidate -> candidate.cellIndex }
-        val coreCount = selectedCells.size
 
         val usedPositionKeys = savedData.blooms.values.mapTo(HashSet()) { bloom ->
             ModUtilities.horizontalPositionKey(bloom.position.x, bloom.position.z)
         }
-        val chosenPositions = selectedCells.mapTo(mutableListOf()) { cellIndex ->
-            domain.cells[cellIndex].waterPos
-        }
-        chosenPositions.forEach { waterPos ->
-            usedPositionKeys.add(ModUtilities.horizontalPositionKey(waterPos.x, waterPos.z))
-        }
-
-        if (selectedCells.size < targetCount) {
-            selectedCells += PlanktonBloomPlacement.topUpCells(
-                domain,
-                fullIntensityLimit,
-                wave.seed,
-                targetCount - selectedCells.size,
-                chosenPositions,
-                usedPositionKeys
-            )
-        }
-        if (selectedCells.size < targetCount) {
+        val selectedPositions = PlanktonBloomPlacement.selectPositions(
+            waterArea,
+            placementRadius,
+            wave.seed,
+            targetCount,
+            mutableListOf(),
+            usedPositionKeys
+        )
+        if (selectedPositions.size < targetCount) {
             SquAbyssalBloom.LOGGER.warn(
-                "[Bioluminescence] Wave {}: lit area supplied only {}/{} bloom position(s) (radius {}, {} local water cell(s), {} core(s))",
-                wave.eventId, selectedCells.size, targetCount, fullIntensityLimit, domain.localSize, cores.size
+                "[Bioluminescence] Wave {}: water area supplied only {}/{} bloom position(s) from {} connected cell(s)",
+                wave.eventId, selectedPositions.size, targetCount, waterArea.cells.size
             )
         }
 
@@ -216,8 +107,7 @@ class PlanktonBloomManager private constructor(
             ModServerConfig.BIOLUMINESCENCE_BLOOM_MIN_HARVESTS.get(),
             ModServerConfig.BIOLUMINESCENCE_BLOOM_MAX_HARVESTS.get()
         )
-        val created = selectedCells.map { cellIndex ->
-            val waterPos = domain.cells[cellIndex].waterPos
+        val created = selectedPositions.map { waterPos ->
             val positionKey = ModUtilities.horizontalPositionKey(waterPos.x, waterPos.z)
             val maxHarvests = pickInRange(
                 harvestRange,
@@ -235,9 +125,8 @@ class PlanktonBloomManager private constructor(
         }
 
         SquAbyssalBloom.LOGGER.debug(
-            "[Bioluminescence] Wave {}: {} core(s), full-intensity radius {}, target={}, {} from core(s), {} from top-up, {} bloom(s) created",
-            wave.eventId, cores.size, fullIntensityLimit, targetCount,
-            coreCount, selectedCells.size - coreCount, created.size
+            "[Bioluminescence] Wave {}: target={}, {} connected water cell(s), {} bloom(s) created",
+            wave.eventId, targetCount, waterArea.cells.size, created.size
         )
 
         if (created.isNotEmpty()) {
@@ -413,28 +302,6 @@ class PlanktonBloomManager private constructor(
             val previous = lastKnownPositions.put(entity.uuid, current)
             if (previous == null) 0.0 else current.distanceTo(previous)
         }
-    }
-
-    private fun findInitialCell(anchor: BlockPos): BioluminescentWaterCell? {
-        if (!ModUtilities.hasLoadedChunk(level, anchor.x shr 4, anchor.z shr 4)) return null
-        BioluminescentWaterDomainCollector.sampleWaterCell(level, anchor.x, anchor.z, anchor.y)?.let { return it }
-        for (radius in 1..4) {
-            for (offsetX in -radius..radius) {
-                for (offsetZ in -radius..radius) {
-                    if (maxOf(abs(offsetX), abs(offsetZ)) != radius) continue
-                    val worldX = anchor.x + offsetX
-                    val worldZ = anchor.z + offsetZ
-                    if (!ModUtilities.hasLoadedChunk(level, worldX shr 4, worldZ shr 4)) continue
-                    BioluminescentWaterDomainCollector.sampleWaterCell(level, worldX, worldZ, anchor.y)
-                        ?.let { return it }
-                }
-            }
-        }
-        return null
-    }
-
-    private fun selectGeodesicRadius(zoneSeed: Long, preset: BioluminescentZonePreset): Int {
-        return pickInRange(preset.geodesicRadiusRange, zoneSeed xor GEODESIC_RADIUS_SALT)
     }
 
     private fun configuredRange(minimum: Int, maximum: Int): IntRange {

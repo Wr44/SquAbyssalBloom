@@ -7,6 +7,7 @@ import dev.isxander.yacl3.api.OptionDescription
 import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
+import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.DynamicLightController
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import net.minecraft.network.chat.Component
 
@@ -18,7 +19,7 @@ object DynamicLightSubMenu : AbstractModSubMenu(ModCompat.dynLightsModId ?: "lam
     override val headerOption: Option<*> = Option.createBuilder<Boolean>()
         .name(Component.translatable("config.squ_abyssal_bloom.enableDynamicLights"))
         .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableDynamicLights.desc")))
-        .binding(Binding.generic(true, { ModConfig.enableDynamicLights }, { ModConfig.enableDynamicLights = it }))
+        .binding(Binding.generic(true, { ModConfig.enableDynamicLights }, DynamicLightController::setEnabled))
         .controller(TickBoxControllerBuilder::create)
         .build()
 

@@ -1,12 +1,14 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone
 
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
+
 object BioluminescentZonePresets {
     val SMALL = BioluminescentZonePreset(
-        size = BioluminescentZoneSize.SMALL,
-        geodesicRadiusRange = 20..36,
-        analysisMargin = 8,
-        maxWaterCells = 4096,
-        minWaterCells = 96,
+        size = BioluminescenceWaveSize.SMALL,
+        geodesicRadiusRange = BioluminescenceWaveSize.SMALL.geodesicRadiusRange,
+        analysisMargin = BioluminescenceWaveSize.SMALL.analysisMargin,
+        maxWaterCells = BioluminescenceWaveSize.SMALL.maximumWaterCells,
+        minWaterCells = BioluminescenceWaveSize.SMALL.minimumWaterCells,
         coreCountRange = 2..4,
         macroCoverageRange = 0.35..0.55,
         visiblePixelCoverageRange = 0.30..0.50,
@@ -20,11 +22,11 @@ object BioluminescentZonePresets {
     )
 
     val LARGE = BioluminescentZonePreset(
-        size = BioluminescentZoneSize.LARGE,
-        geodesicRadiusRange = 48..80,
-        analysisMargin = 18,
-        maxWaterCells = 16384,
-        minWaterCells = 384,
+        size = BioluminescenceWaveSize.LARGE,
+        geodesicRadiusRange = BioluminescenceWaveSize.LARGE.geodesicRadiusRange,
+        analysisMargin = BioluminescenceWaveSize.LARGE.analysisMargin,
+        maxWaterCells = BioluminescenceWaveSize.LARGE.maximumWaterCells,
+        minWaterCells = BioluminescenceWaveSize.LARGE.minimumWaterCells,
         coreCountRange = 5..8,
         macroCoverageRange = 0.72..0.88,
         visiblePixelCoverageRange = 0.44..0.64,
@@ -37,8 +39,8 @@ object BioluminescentZonePresets {
         minConnectionEmission = 0.08
     )
 
-    fun forSize(size: BioluminescentZoneSize): BioluminescentZonePreset = when (size) {
-        BioluminescentZoneSize.SMALL -> SMALL
-        BioluminescentZoneSize.LARGE -> LARGE
+    fun forSize(size: BioluminescenceWaveSize): BioluminescentZonePreset = when (size) {
+        BioluminescenceWaveSize.SMALL -> SMALL
+        BioluminescenceWaveSize.LARGE -> LARGE
     }
 }

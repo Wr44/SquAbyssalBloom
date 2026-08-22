@@ -62,7 +62,11 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             state.isHeld = false
         }
         state.releaseYaw = -entity.releaseYaw
-        state.ticksSinceRelease = if (entity.releaseTick >= 0) (entity.tickCount - entity.releaseTick) + partialTicks else -1f
+        state.ticksSinceRelease = if (entity.clientReleaseTick >= 0) {
+            (entity.tickCount - entity.clientReleaseTick) + partialTicks
+        } else {
+            -1f
+        }
 
         val playerId = entity.attachedPlayerId
 
@@ -119,18 +123,14 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             poseStack.mulPose(Axis.YP.rotationDegrees(-renderState.heldYaw))
         } else {
             val spinSpeed = when (renderState.bubbleStage) { 2 -> 1.2f; 1 -> 2.5f; else -> 4.5f }
-            val spinAngle = (renderState.ageInTicks * spinSpeed) % 360f
+            val spinAngle = if (renderState.ticksSinceRelease >= 0f) {
+                renderState.releaseYaw + renderState.ticksSinceRelease * spinSpeed
+            } else {
+                renderState.ageInTicks * spinSpeed
+            }
             val wobble = sin((renderState.ageInTicks * 0.08f).toDouble()).toFloat() * 8f
 
-            val finalYaw = if (renderState.ticksSinceRelease in 0f..15f) {
-                val t = renderState.ticksSinceRelease / 15f
-                val smooth = t * t * (3f - 2f * t)
-                rotLerp(smooth, renderState.releaseYaw, spinAngle)
-            } else {
-                spinAngle
-            }
-
-            poseStack.mulPose(Axis.YP.rotationDegrees(finalYaw))
+            poseStack.mulPose(Axis.YP.rotationDegrees(spinAngle))
             poseStack.mulPose(Axis.XP.rotationDegrees(wobble))
         }
 

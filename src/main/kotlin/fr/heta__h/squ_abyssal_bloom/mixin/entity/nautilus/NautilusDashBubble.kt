@@ -1,13 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.mixin.entity.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
-import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
-import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
@@ -66,10 +64,6 @@ abstract class NautilusDashBubble {
         }
 
         self.isDashing = true
-        val extraStack = self.getData(ModAttachments.NAUTILUS_EXTRA_SLOT.get())
-        val damage = (5 + ratio * 10).toInt()
-        extraStack.hurtAndBreak(damage, self, EquipmentSlot.BODY)
-        self.setData(ModAttachments.NAUTILUS_EXTRA_SLOT.get(), extraStack)
     }
 
     @Inject(method = ["executeRidersJump"], at = [At("HEAD")], cancellable = true)

@@ -1,11 +1,13 @@
 package fr.heta__h.squ_abyssal_bloom.entity.custom.bubble
 
+import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
 import fr.heta__h.squ_abyssal_bloom.damage_type.ModDamagesTypes
 import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterData
 import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterEntry
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.event.nautilus.bubble.NautilusBubbleSlowHandler
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ColorParticleOption
 import net.minecraft.core.particles.ParticleTypes
@@ -140,6 +142,8 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
         private val IS_HELD: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.BOOLEAN)
+        private val RELEASE_YAW: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.FLOAT)
         private val HOLD_TICKS_SYNC: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.INT)
         private val ATTACHED_PLAYER_ID: EntityDataAccessor<Int> =
@@ -152,11 +156,18 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
             SynchedEntityData.defineId(BubbleProjectile::class.java, EntityDataSerializers.BOOLEAN)
     }
 
-    var releaseYaw: Float = 0f
-    var releaseTick: Int = -1
+    var releaseYaw: Float
+        get() = entityData.get(RELEASE_YAW)
+        private set(value) { entityData.set(RELEASE_YAW, value) }
+
+    var clientReleaseTick: Int = -1
+        private set
+
     var player: Player? = null
 
     private var cachedEffectColor: Int = 0
+    private var clientWasHeld = false
+    private var chargeCostApplied = false
 
     var splatterEntries: List<SplatterEntry> = emptyList()
     private var isChildBubble = false
@@ -164,6 +175,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         builder.define(BUBBLE_STAGE, 0)
         builder.define(IS_HELD, false)
+        builder.define(RELEASE_YAW, 0f)
         builder.define(HOLD_TICKS_SYNC, 0)
         builder.define(ATTACHED_PLAYER_ID, -1)
         builder.define(EFFECT_COLOR, 0)
@@ -182,6 +194,7 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         get() = entityData.get(IS_HELD)
         set(value) {
             val previous = entityData.get(IS_HELD)
+            if (!level().isClientSide && previous && !value) applyChargeDurabilityCost()
             entityData.set(IS_HELD, value)
             if (!level().isClientSide && previous != value) {
                 val ownerNautilus = owner?.getEntity(level(), Entity::class.java) as? AbstractNautilus
@@ -343,6 +356,11 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         val nautilus = o.getEntity(level(), Entity::class.java) as? AbstractNautilus
             ?: run { if (!level().isClientSide) discard(); return }
 
+        if (!nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT).`is`(NautilusLayerItems.BUBBLE)) {
+            if (!level().isClientSide) discard()
+            return
+        }
+
         if (!level().isClientSide) {
             val newTicks = holdTicks + 1
             holdTicks = newTicks
@@ -390,11 +408,10 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
     }
 
     fun release(velocity: Vec3) {
-        isHeld = false
-        releaseTick = tickCount
         val nautilus = owner?.getEntity(level(), Entity::class.java) as? AbstractNautilus
         val controller = nautilus?.controllingPassenger ?: nautilus
         releaseYaw = controller?.yRot ?: 0f
+        isHeld = false
         deltaMovement = velocity
         playSound(ModSounds.BUBBLE_PROJECTILE_LAUNCH.get(), stageData.burstVolume, stageData.burstPitch)
         player = nautilus?.controllingPassenger as? Player
@@ -738,10 +755,16 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         if (key == BUBBLE_STAGE) refreshDimensions()
         if (key == EFFECT_COLOR) cachedEffectColor = entityData.get(EFFECT_COLOR)
         if (key == TORPEDO_LEVEL && entityData.get(TORPEDO_LEVEL) > 0) torpedoFactor = 1.0
+        if (key == IS_HELD && level().isClientSide) {
+            val held = entityData.get(IS_HELD)
+            if (clientWasHeld && !held) clientReleaseTick = tickCount
+            clientWasHeld = held
+        }
     }
 
     override fun remove(reason: RemovalReason) {
         if (!level().isClientSide && isHeld) {
+            applyChargeDurabilityCost()
             (owner?.getEntity(level(), Entity::class.java) as? AbstractNautilus)?.let {
                 NautilusBubbleSlowHandler.onBubbleReleased(it.uuid)
             }
@@ -760,6 +783,21 @@ class BubbleProjectile(val entityType: EntityType<out BubbleProjectile>, level: 
         this,
         player ?: owner?.getEntity(level(), Entity::class.java)
     )
+
+    private fun applyChargeDurabilityCost() {
+        if (chargeCostApplied || level().isClientSide || isChildBubble) return
+        chargeCostApplied = true
+
+        val serverLevel = level() as? ServerLevel ?: return
+        val nautilus = owner?.getEntity(level(), Entity::class.java) as? AbstractNautilus ?: return
+        val stack = nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+        if (!stack.`is`(NautilusLayerItems.BUBBLE)) return
+
+        val ratio = (holdTicks.toDouble() / TICKS_TO_OVERCHARGE).coerceIn(0.0, 1.0)
+        val damage = (5 + ratio * 10).toInt()
+        stack.hurtAndBreak(damage, serverLevel, nautilus) {}
+        nautilus.setData(ModAttachments.NAUTILUS_EXTRA_SLOT, stack)
+    }
 
     private fun detachWithLeash() {
         val serverLevel = level() as? ServerLevel ?: return

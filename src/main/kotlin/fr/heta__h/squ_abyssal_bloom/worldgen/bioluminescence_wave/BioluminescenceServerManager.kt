@@ -214,9 +214,15 @@ class BioluminescenceServerManager private constructor(
     ): ActiveBioluminescenceWave? {
         val level = player.level()
         if (!ModUtilities.isOverworldLikeDimension(level)) return null
-        val wave = BioluminescenceLevelManager.forLevel(level).triggerNormalWaveIfOnBeach(player, settings)
-        if (wave != null) consumeOpportunity(player, settings)
-        return wave
+        val outcome = BioluminescenceLevelManager.forLevel(level).triggerNormalWaveIfOnBeach(player, settings)
+        if (outcome is BioluminescenceLevelManager.WaveCreationOutcome.Created) {
+            consumeOpportunity(player, settings)
+        }
+        return when (outcome) {
+            is BioluminescenceLevelManager.WaveCreationOutcome.Created -> outcome.wave
+            is BioluminescenceLevelManager.WaveCreationOutcome.Reused -> outcome.wave
+            BioluminescenceLevelManager.WaveCreationOutcome.NoValidBeach, null -> null
+        }
     }
 
     private fun stateFor(

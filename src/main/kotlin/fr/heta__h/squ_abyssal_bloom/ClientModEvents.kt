@@ -23,7 +23,8 @@ object ClientModEvents {
         ModConfig.loadConfig()
         IrisPipelineBootstrap.registerBioluminescentSurfaces(
             BioluminescentRenderPipelines.SHADER_UNDERWATER_SURFACE,
-            BioluminescentRenderPipelines.SHADER_VISIBILITY_COMPENSATION
+            BioluminescentRenderPipelines.SHADER_VISIBILITY_COMPENSATION,
+            BioluminescentRenderPipelines.SHADER_FOOTPRINT
         )
         AbstractFishTypeCache.load()
 

@@ -16,6 +16,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.Biolumine
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomainCollector
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.footprint.BioluminescentFootprintField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPaletteFamily
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalettes
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
@@ -133,6 +134,7 @@ object BioluminescentZoneManager {
             zone.revalidateWaterStep(level, WATER_REVALIDATION_BUDGET_PER_ZONE)
             zone.tickBlooms(level, level.gameTime)
         }
+        BioluminescentFootprintField.tick(level, zonesByEventId.values, level.gameTime)
         BioluminescentZoneDynamicLights.updateDynamicState(zonesByEventId.values, level.gameTime)
     }
 
@@ -494,6 +496,7 @@ object BioluminescentZoneManager {
         endingZoneIds.clear()
         pendingWaveStartSounds.clear()
         BioluminescentZoneDynamicLights.clear()
+        BioluminescentFootprintField.clear()
         generationRoundRobin = 0
     }
 

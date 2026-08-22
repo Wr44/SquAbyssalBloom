@@ -30,14 +30,10 @@ internal class BioluminescentNoiseSampler(
         COLOR_SEED_SALT
     )
 
-    fun sampleLarge(x: Double, z: Double): Double = sample2d(largeNoise, x, z)
+    fun sampleLarge(x: Double, z: Double): Double = ModUtilities.sampleNoise2d(largeNoise, x, z)
 
-    fun sampleDetail(x: Double, z: Double): Double = sample2d(detailNoise, x, z)
+    fun sampleDetail(x: Double, z: Double): Double = ModUtilities.sampleNoise2d(detailNoise, x, z)
 
-    fun sampleColor(x: Double, z: Double): Double = sample2d(colorNoise, x, z)
-
-    private fun sample2d(noise: NormalNoise, x: Double, z: Double): Double {
-        return ModUtilities.sampleNoise2d(noise, x, z)
-    }
+    fun sampleColor(x: Double, z: Double): Double = ModUtilities.sampleNoise2d(colorNoise, x, z)
 
 }

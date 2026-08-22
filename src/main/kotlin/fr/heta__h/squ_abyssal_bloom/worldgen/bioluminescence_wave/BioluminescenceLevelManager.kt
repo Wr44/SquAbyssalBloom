@@ -11,6 +11,7 @@ import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CBioluminescenceWa
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceLevelSavedData
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceServerSettings
+import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaterAreaSampler
 import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.bloom.PlanktonBloomManager
 import net.minecraft.core.BlockPos
 import net.minecraft.server.MinecraftServer
@@ -20,6 +21,8 @@ import net.minecraft.world.level.ChunkPos
 import net.neoforged.neoforge.network.PacketDistributor
 import java.util.UUID
 import java.util.WeakHashMap
+import kotlin.math.ceil
+import kotlin.math.sqrt
 
 class BioluminescenceLevelManager private constructor(
     private val level: ServerLevel
@@ -27,6 +30,9 @@ class BioluminescenceLevelManager private constructor(
     companion object {
         private const val SPATIAL_SECTOR_SIZE = 64
         private const val MAXIMUM_NORMAL_DURATION_TICKS = 72000L
+        private const val BLOOM_PLACEMENT_RADIUS_RATIO = 0.55
+        private const val TOTAL_NIGHT_RETRY_MOVEMENT_SQUARED = 16.0 * 16.0
+        private const val TOTAL_NIGHT_RETRY_DELAY_TICKS = 200L
         private val INSTANCES: MutableMap<ServerLevel, BioluminescenceLevelManager> = WeakHashMap()
 
         @JvmStatic
@@ -52,6 +58,7 @@ class BioluminescenceLevelManager private constructor(
     private val savedData = level.dataStorage.computeIfAbsent(BioluminescenceLevelSavedData.TYPE)
     private val beachResolver = BioluminescenceBeachResolver(level)
     private val previousBeachByPlayer: MutableMap<UUID, BioluminescenceBeachResolver.BeachZone?> = hashMapOf()
+    private val lastTotalNightAttemptByPlayer: MutableMap<UUID, TotalNightCoverageAttempt> = hashMapOf()
     private val visibleEventsByPlayer: MutableMap<UUID, MutableSet<UUID>> = hashMapOf()
     private val waveIdsBySector: MutableMap<Long, MutableSet<UUID>> = hashMapOf()
     private val waveIdsByBeach: MutableMap<UUID, MutableSet<UUID>> = hashMapOf()
@@ -62,6 +69,17 @@ class BioluminescenceLevelManager private constructor(
     private var previousNightActive = false
     private var pendingNightStartTrigger = false
     private var pendingTotalNightStartTrigger = false
+
+    private data class WaveCoverageMatch(
+        val wave: ActiveBioluminescenceWave,
+        val horizontalDistanceSquared: Double,
+        val coverageRadius: Double
+    )
+
+    private data class TotalNightCoverageAttempt(
+        val anchor: BlockPos,
+        val gameTime: Long
+    )
 
     var nextNormalWaveEndGameTime: Long = Long.MAX_VALUE
         private set
@@ -107,6 +125,7 @@ class BioluminescenceLevelManager private constructor(
                 endWaves { true }
                 savedData.nightState.totalNightActive = false
                 previousBeachByPlayer.clear()
+                lastTotalNightAttemptByPlayer.clear()
                 visibleEventsByPlayer.clear()
                 beachResolver.clear()
                 savedData.setDirty()
@@ -121,6 +140,7 @@ class BioluminescenceLevelManager private constructor(
                 savedData.setDirty()
             }
             previousBeachByPlayer.clear()
+            lastTotalNightAttemptByPlayer.clear()
             visibleEventsByPlayer.clear()
             beachResolver.clear()
             return
@@ -208,6 +228,7 @@ class BioluminescenceLevelManager private constructor(
 
     fun forgetPlayer(playerId: UUID) {
         previousBeachByPlayer.remove(playerId)
+        lastTotalNightAttemptByPlayer.remove(playerId)
         visibleEventsByPlayer.remove(playerId)
     }
 
@@ -229,7 +250,9 @@ class BioluminescenceLevelManager private constructor(
 
     fun overlappingWaveCount(wave: ActiveBioluminescenceWave, settings: BioluminescenceServerSettings): Int {
         return wavesIntersecting(wave.bounds.expanded(settings.overlapMargin))
-            .count { other -> other.eventId != wave.eventId }
+            .count { other ->
+                other.eventId != wave.eventId && wavesVisiblyOverlap(wave, other, settings.overlapMargin)
+            }
     }
 
     fun sectorCount(bounds: BioluminescenceBounds): Int {
@@ -274,6 +297,7 @@ class BioluminescenceLevelManager private constructor(
         if (savedData.nightState.totalNightActive) return false
         savedData.nightState.lastRolledNightIndex = settings.nightIndex(level.overworldClockTime)
         savedData.nightState.totalNightActive = true
+        lastTotalNightAttemptByPlayer.clear()
         pendingTotalNightStartTrigger = true
         nextBeachCheckGameTime = level.gameTime
         savedData.setDirty()
@@ -287,6 +311,7 @@ class BioluminescenceLevelManager private constructor(
     fun forceStopTotalNight(): Boolean {
         if (!savedData.nightState.totalNightActive) return false
         savedData.nightState.totalNightActive = false
+        lastTotalNightAttemptByPlayer.clear()
         endWaves { wave -> wave.mode == BioluminescenceWaveMode.TOTAL_NIGHT }
         savedData.setDirty()
         SquAbyssalBloom.LOGGER.info(
@@ -321,8 +346,7 @@ class BioluminescenceLevelManager private constructor(
         durationTicksOverride: Long? = null
     ): WaveCreationOutcome {
         val beach = beachResolver.resolve(player, settings) ?: return WaveCreationOutcome.NoValidBeach
-        val countBefore = savedData.waves.size
-        val wave = createOrReuseWave(
+        return createOrReuseWave(
             player,
             beach,
             size,
@@ -332,21 +356,16 @@ class BioluminescenceLevelManager private constructor(
             durationTicksOverride,
             createdByCommand = true
         )
-        return if (savedData.waves.size > countBefore) {
-            WaveCreationOutcome.Created(wave)
-        } else {
-            WaveCreationOutcome.Reused(wave)
-        }
     }
 
     fun triggerNormalWaveIfOnBeach(
         player: ServerPlayer,
         settings: BioluminescenceServerSettings
-    ): ActiveBioluminescenceWave? {
+    ): WaveCreationOutcome? {
         if (savedData.nightState.totalNightActive) return null
         if (!player.isAlive || player.isSpectator) return null
         if (!settings.isNight(level.overworldClockTime)) return null
-        val beach = beachResolver.resolve(player, settings) ?: return null
+        val beach = beachResolver.resolve(player, settings) ?: return WaveCreationOutcome.NoValidBeach
         return createOrReuseWave(
             player,
             beach,
@@ -362,6 +381,7 @@ class BioluminescenceLevelManager private constructor(
         if (!isNight) {
             if (nightState.totalNightActive) {
                 nightState.totalNightActive = false
+                lastTotalNightAttemptByPlayer.clear()
                 endWaves { wave -> wave.mode == BioluminescenceWaveMode.TOTAL_NIGHT }
                 savedData.setDirty()
             }
@@ -373,6 +393,7 @@ class BioluminescenceLevelManager private constructor(
         if (nightState.totalNightActive) {
             endWaves { wave -> wave.mode == BioluminescenceWaveMode.TOTAL_NIGHT }
         }
+        lastTotalNightAttemptByPlayer.clear()
         nightState.lastRolledNightIndex = nightIndex
         nightState.totalNightActive = level.random.nextDouble() < settings.totalNightChance
         if (nightState.totalNightActive) {
@@ -403,10 +424,28 @@ class BioluminescenceLevelManager private constructor(
             val hadPreviousState = previousBeachByPlayer.containsKey(player.uuid)
             val previousBeach = previousBeachByPlayer.put(player.uuid, beach)
             if (beach == null || !night) continue
-            val enteredBeach = !hadPreviousState || previousBeach == null
-            if (!enteredBeach && !nightJustStarted && !totalNightJustStarted) continue
+            val enteredBeach = !hadPreviousState || previousBeach == null || previousBeach.id != beach.id
+            val entryTrigger = enteredBeach || nightJustStarted || totalNightJustStarted
 
             if (savedData.nightState.totalNightActive) {
+                val alreadyCovered = hasWaveCoverageAt(
+                    beach.waterSurface,
+                    BioluminescenceWaveMode.TOTAL_NIGHT,
+                    settings.overlapMargin
+                )
+                if (!entryTrigger && alreadyCovered) continue
+
+                val previousAttempt = lastTotalNightAttemptByPlayer[player.uuid]
+                val previousAttemptStillRecent = previousAttempt != null &&
+                    level.gameTime - previousAttempt.gameTime < TOTAL_NIGHT_RETRY_DELAY_TICKS
+                if (!entryTrigger && previousAttemptStillRecent &&
+                    horizontalDistanceSquared(previousAttempt.anchor, beach.waterSurface) <
+                    TOTAL_NIGHT_RETRY_MOVEMENT_SQUARED
+                ) continue
+                lastTotalNightAttemptByPlayer[player.uuid] = TotalNightCoverageAttempt(
+                    beach.waterSurface,
+                    level.gameTime
+                )
                 createOrReuseWave(
                     player,
                     beach,
@@ -414,19 +453,22 @@ class BioluminescenceLevelManager private constructor(
                     BioluminescenceWaveMode.TOTAL_NIGHT,
                     settings
                 )
-            } else if (serverManager.isArmed(player.uuid)) {
-                createOrReuseWave(
+            } else if (entryTrigger && serverManager.isArmed(player.uuid)) {
+                val outcome = createOrReuseWave(
                     player,
                     beach,
                     settings.sampleSize(level.random),
                     BioluminescenceWaveMode.NORMAL,
                     settings
                 )
-                serverManager.consumeOpportunity(player, settings)
+                if (outcome is WaveCreationOutcome.Created) {
+                    serverManager.consumeOpportunity(player, settings)
+                }
             }
         }
 
         previousBeachByPlayer.keys.removeIf { playerId -> playerId !in onlinePlayerIds }
+        lastTotalNightAttemptByPlayer.keys.removeIf { playerId -> playerId !in onlinePlayerIds }
         visibleEventsByPlayer.keys.removeIf { playerId -> playerId !in onlinePlayerIds }
         beachResolver.cleanExpired()
     }
@@ -440,35 +482,64 @@ class BioluminescenceLevelManager private constructor(
         seedOverride: Long? = null,
         durationTicksOverride: Long? = null,
         createdByCommand: Boolean = false
-    ): ActiveBioluminescenceWave {
+    ): WaveCreationOutcome {
         val candidateBounds = BioluminescenceBounds.around(
             beach.waterSurface.x,
             beach.waterSurface.z,
             size.maximumRadius
         )
-        val compatibleWaveIds = linkedSetOf<UUID>()
-        compatibleWaveIds.addAll(waveIdsByBeach[beach.id].orEmpty())
-        compatibleWaveIds.addAll(waveIdsIntersecting(candidateBounds.expanded(settings.overlapMargin)))
-        val existing = compatibleWaveIds.asSequence()
-            .mapNotNull(savedData.waves::get)
-            .firstOrNull { wave ->
-                wave.mode == mode &&
-                    (wave.beachId == beach.id ||
-                        wave.bounds.expanded(settings.overlapMargin).intersects(candidateBounds))
+        val coverageQueryRadius = ceil(settings.overlapMargin.coerceAtLeast(0.0)).toInt()
+        val coverageQueryBounds = BioluminescenceBounds.around(
+            beach.waterSurface.x,
+            beach.waterSurface.z,
+            coverageQueryRadius
+        )
+        val existingMatch = wavesIntersecting(coverageQueryBounds)
+            .mapNotNull { wave ->
+                if (wave.mode != mode) return@mapNotNull null
+                coverageMatch(wave, beach.waterSurface, settings.overlapMargin)
             }
-        if (existing != null) {
+            .minByOrNull(WaveCoverageMatch::horizontalDistanceSquared)
+        if (existingMatch != null) {
+            val existing = existingMatch.wave
             synchronizePlayers(settings)
-            if (createdByCommand) {
-                SquAbyssalBloom.LOGGER.info(
-                    "[Bioluminescence] Reused {} {} {} wave {} for beach {} (command)",
-                    mode.name.lowercase(),
-                    existing.size.name.lowercase(),
-                    existing.activity.name.lowercase(),
-                    existing.eventId,
-                    beach.id.toString().take(8)
-                )
-            }
-            return existing
+            SquAbyssalBloom.LOGGER.info(
+                "[Bioluminescence] Reused {} {} {} wave {} for beach {} at {}: " +
+                    "anchorDistance={} coverageRadius={} sameBeach={} source={}",
+                mode.name.lowercase(),
+                existing.size.name.lowercase(),
+                existing.activity.name.lowercase(),
+                existing.eventId,
+                beach.id.toString().take(8),
+                beach.waterSurface,
+                sqrt(existingMatch.horizontalDistanceSquared),
+                existingMatch.coverageRadius,
+                existing.beachId == beach.id,
+                if (createdByCommand) "command" else "automatic"
+            )
+            return WaveCreationOutcome.Reused(existing)
+        }
+
+        val waveSeed = seedOverride ?: level.random.nextLong()
+        val geodesicRadius = size.selectGeodesicRadius(waveSeed)
+        val placementRadius = (geodesicRadius * BLOOM_PLACEMENT_RADIUS_RATIO).toInt().coerceAtLeast(1)
+        val waterArea = BioluminescenceWaterAreaSampler.collect(
+            level,
+            beach.waterSurface,
+            geodesicRadius,
+            placementRadius,
+            size.minimumWaterCells
+        )
+        if (waterArea == null || waterArea.cells.size < size.minimumWaterCells) {
+            SquAbyssalBloom.LOGGER.debug(
+                "[Bioluminescence] Rejected {} wave at {}: {}/{} connected water cells inside geodesic radius {}",
+                size.name.lowercase(),
+                beach.waterSurface,
+                waterArea?.cells?.size ?: 0,
+                size.minimumWaterCells,
+                geodesicRadius
+            )
+            return WaveCreationOutcome.NoValidBeach
         }
 
         val startGameTime = level.gameTime + settings.preparationDelayTicks
@@ -484,7 +555,7 @@ class BioluminescenceLevelManager private constructor(
         }
         val wave = ActiveBioluminescenceWave(
             eventId = UUID.randomUUID(),
-            seed = seedOverride ?: level.random.nextLong(),
+            seed = waveSeed,
             dimension = level.dimension().identifier(),
             beachId = beach.id,
             anchor = beach.waterSurface,
@@ -503,21 +574,22 @@ class BioluminescenceLevelManager private constructor(
             nextNormalWaveEndGameTime = minOf(nextNormalWaveEndGameTime, endGameTime)
         }
         savedData.setDirty()
-        PlanktonBloomManager.forLevel(level).createBloomsForWave(wave)
+        PlanktonBloomManager.forLevel(level).createBloomsForWave(wave, waterArea, placementRadius)
         synchronizePlayers(settings)
-        if (createdByCommand) {
-            SquAbyssalBloom.LOGGER.info(
-                "[Bioluminescence] Created {} {} {} wave {} at {} in {} for beach {} (command)",
-                mode.name.lowercase(),
-                size.name.lowercase(),
-                activity.name.lowercase(),
-                wave.eventId,
-                wave.anchor,
-                wave.dimension,
-                beach.id.toString().take(8)
-            )
-        }
-        return wave
+        SquAbyssalBloom.LOGGER.info(
+            "[Bioluminescence] Created {} {} {} wave {} at {} in {} for beach {} " +
+                "visibleRadius={} source={}",
+            mode.name.lowercase(),
+            size.name.lowercase(),
+            activity.name.lowercase(),
+            wave.eventId,
+            wave.anchor,
+            wave.dimension,
+            beach.id.toString().take(8),
+            geodesicRadius,
+            if (createdByCommand) "command" else "automatic"
+        )
+        return WaveCreationOutcome.Created(wave)
     }
 
     private fun synchronizePlayers(settings: BioluminescenceServerSettings) {
@@ -575,6 +647,7 @@ class BioluminescenceLevelManager private constructor(
 
     private fun close() {
         previousBeachByPlayer.clear()
+        lastTotalNightAttemptByPlayer.clear()
         visibleEventsByPlayer.clear()
         beachResolver.clear()
         waveIdsBySector.clear()
@@ -605,6 +678,48 @@ class BioluminescenceLevelManager private constructor(
         return waveIdsIntersecting(bounds).asSequence()
             .mapNotNull(savedData.waves::get)
             .filter { wave -> wave.bounds.intersects(bounds) }
+    }
+
+    private fun coverageMatch(
+        wave: ActiveBioluminescenceWave,
+        candidateAnchor: BlockPos,
+        margin: Double
+    ): WaveCoverageMatch? {
+        val coverageRadius = visibleRadius(wave) + margin.coerceAtLeast(0.0)
+        val horizontalDistanceSquared = horizontalDistanceSquared(wave.anchor, candidateAnchor)
+        if (horizontalDistanceSquared > coverageRadius * coverageRadius) return null
+        return WaveCoverageMatch(wave, horizontalDistanceSquared, coverageRadius)
+    }
+
+    private fun hasWaveCoverageAt(
+        candidateAnchor: BlockPos,
+        mode: BioluminescenceWaveMode,
+        margin: Double
+    ): Boolean {
+        val queryRadius = ceil(margin.coerceAtLeast(0.0)).toInt()
+        val queryBounds = BioluminescenceBounds.around(candidateAnchor.x, candidateAnchor.z, queryRadius)
+        return wavesIntersecting(queryBounds).any { wave ->
+            wave.mode == mode && coverageMatch(wave, candidateAnchor, margin) != null
+        }
+    }
+
+    private fun wavesVisiblyOverlap(
+        first: ActiveBioluminescenceWave,
+        second: ActiveBioluminescenceWave,
+        margin: Double
+    ): Boolean {
+        val overlapDistance = visibleRadius(first) + visibleRadius(second) + margin.coerceAtLeast(0.0)
+        return horizontalDistanceSquared(first.anchor, second.anchor) <= overlapDistance * overlapDistance
+    }
+
+    private fun visibleRadius(wave: ActiveBioluminescenceWave): Double {
+        return wave.size.selectGeodesicRadius(wave.seed).toDouble()
+    }
+
+    private fun horizontalDistanceSquared(first: BlockPos, second: BlockPos): Double {
+        val deltaX = first.x.toDouble() - second.x
+        val deltaZ = first.z.toDouble() - second.z
+        return deltaX * deltaX + deltaZ * deltaZ
     }
 
     private fun isPersistedWaveValid(wave: ActiveBioluminescenceWave): Boolean {

@@ -369,7 +369,9 @@ object BioluminescenceServerCommands {
                 {
                     Component.literal(
                         "${wave.eventId.toString().take(8)} ${wave.mode.name.lowercase()} ${wave.size.name.lowercase()} " +
-                            "${wave.activity.name.lowercase()} anchor=${wave.anchor} age=$age remaining=$remaining " +
+                            "${wave.activity.name.lowercase()} anchor=${wave.anchor} " +
+                            "visibleRadius=${wave.size.selectGeodesicRadius(wave.seed)} " +
+                            "age=$age remaining=$remaining " +
                             "overlaps=${manager.overlappingWaveCount(wave, settings)} " +
                             "blooms=${blooms.size}"
                     )
@@ -406,6 +408,7 @@ object BioluminescenceServerCommands {
             "${wave.eventId} seed=${wave.seed} dim=${wave.dimension} beach=${wave.beachId}",
             "${wave.mode.name.lowercase()} ${wave.size.name.lowercase()} ${wave.activity.name.lowercase()} " +
                 "anchor=${wave.anchor} " +
+                "visibleRadius=${wave.size.selectGeodesicRadius(wave.seed)} " +
                 "bounds=[${wave.bounds.minimumX},${wave.bounds.minimumZ}]..[${wave.bounds.maximumX},${wave.bounds.maximumZ}]",
             "start=${wave.startGameTime} end=${wave.endGameTime} age=$age remaining=$remaining",
             "origin=${if (wave.createdByCommand) "command" else "natural"}" +

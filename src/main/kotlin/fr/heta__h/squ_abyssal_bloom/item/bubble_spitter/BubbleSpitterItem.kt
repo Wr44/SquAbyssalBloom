@@ -35,7 +35,9 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         if (action != ClickAction.SECONDARY) return false
         if (!hasSplatter(slotStack, player)) return false
 
-        if (carried.`is`(ModItems.PLANKTON_BOTTLE.get())) return pourPlankton(slotStack, carried, access, player)
+        if (carried.`is`(ModItems.PLANKTON_BOTTLE.get())) {
+            return pourPlankton(slotStack, carried, slot, access, player)
+        }
 
         if (!isPotion(carried)) return false
 
@@ -45,6 +47,7 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         if (newEffects.isEmpty()) {
             slotStack.remove(ModDataComponents.SPLATTER_DATA.get())
             slotStack.remove(ModDataComponents.PLANKTON_LUMINESCENCE.get())
+            slot.setChanged()
             replaceWithBottle(carried, access, player)
             player.level().playSound(player, player.blockPosition(), ModSounds.CLEAN_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.5f, 0.8f + 0.4f*random().toFloat())
             return true
@@ -61,6 +64,7 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         val avgColor = SplatterData.averageColor(allColors)
 
         slotStack.set(ModDataComponents.SPLATTER_DATA.get(), SplatterData(merged, avgColor))
+        slot.setChanged()
         replaceWithBottle(carried, access, player)
         player.level().playSound(player, player.blockPosition(), ModSounds.POTION_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.7f, 0.8f + 0.4f*random().toFloat())
         return true
@@ -69,12 +73,14 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
     private fun pourPlankton(
         slotStack: ItemStack,
         carried: ItemStack,
+        slot: Slot,
         access: SlotAccess,
         player: Player
     ): Boolean {
         if (slotStack.getOrDefault(ModDataComponents.PLANKTON_LUMINESCENCE.get(), false)) return false
 
         slotStack.set(ModDataComponents.PLANKTON_LUMINESCENCE.get(), true)
+        slot.setChanged()
         replaceWithBottle(carried, access, player)
         player.level().playSound(player, player.blockPosition(), ModSounds.POTION_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.7f, 1.2f + 0.3f*random().toFloat())
         return true

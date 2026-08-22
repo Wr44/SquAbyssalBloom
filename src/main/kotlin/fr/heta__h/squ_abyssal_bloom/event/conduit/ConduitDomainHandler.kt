@@ -35,6 +35,7 @@ import net.neoforged.neoforge.event.level.BlockEvent
 import net.neoforged.neoforge.event.level.block.BreakBlockEvent
 import net.neoforged.neoforge.event.level.ChunkEvent
 import net.neoforged.neoforge.event.level.LevelEvent
+import net.neoforged.neoforge.event.server.ServerStoppedEvent
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
 import net.neoforged.neoforge.event.tick.ServerTickEvent
 import net.neoforged.neoforge.network.PacketDistributor
@@ -77,11 +78,21 @@ object ConduitDomainHandler {
         val entityId: Int = -1
     )
 
+    data class FlightLease(
+        var restoreMayfly: Boolean,
+        var restoreFlying: Boolean,
+        var restoreFlyingSpeed: Float,
+        var appliedMayfly: Boolean? = null,
+        var appliedFlying: Boolean? = null,
+        var appliedFlyingSpeed: Float? = null,
+    )
+
     private val conduitRegistry = ConcurrentHashMap<Level, MutableSet<BlockPos>>()
     private val playerAttachment = ConcurrentHashMap<UUID, ConduitTarget>()
     private val playerNextAmbientSound = ConcurrentHashMap<UUID, Long>()
     private val pendingConduitEquipmentChange = ConcurrentHashMap.newKeySet<UUID>()
     private val lastSentDomain = ConcurrentHashMap<UUID, S2CConduitDomainPayload>()
+    private val flightLeases = ConcurrentHashMap<UUID, FlightLease>()
 
     private fun getConduits(level: Level) = conduitRegistry.getOrPut(level) { ConcurrentHashMap.newKeySet() }
 
@@ -109,7 +120,18 @@ object ConduitDomainHandler {
             lastSentDomain.keys.removeIf { it !in onlinePlayers }
             playerNextAmbientSound.keys.removeIf { it !in onlinePlayers }
             pendingConduitEquipmentChange.removeIf { it !in onlinePlayers }
+            flightLeases.keys.removeIf { it !in onlinePlayers }
         }
+    }
+
+    @SubscribeEvent
+    fun onServerStopped(event: ServerStoppedEvent) {
+        conduitRegistry.clear()
+        playerAttachment.clear()
+        playerNextAmbientSound.clear()
+        pendingConduitEquipmentChange.clear()
+        lastSentDomain.clear()
+        flightLeases.clear()
     }
 
     @SubscribeEvent
@@ -237,7 +259,7 @@ object ConduitDomainHandler {
         val currentEffect = player.getEffect(MobEffects.CONDUIT_POWER)
         val justEntered = currentEffect == null
 
-        grantFlight(player, domain.isHunting, justEntered)
+        grantFlight(player, domain.isHunting)
 
         player.airSupply = player.maxAirSupply
 
@@ -362,24 +384,57 @@ object ConduitDomainHandler {
         PacketDistributor.sendToPlayer(serverPlayer, payload)
     }
 
-    private fun grantFlight(player: Player, isHunting: Boolean, justEntered: Boolean = false) {
+    private fun grantFlight(player: Player, isHunting: Boolean) {
         val abilities = player.abilities
         val targetSpeed = if (isHunting) FLYING_SPEED_HUNTING else FLYING_SPEED_NORMAL
+        var enteredDomain = false
+        val lease = flightLeases[player.uuid] ?: FlightLease(
+            restoreMayfly = abilities.mayfly,
+            restoreFlying = abilities.flying,
+            restoreFlyingSpeed = abilities.flyingSpeed,
+        ).also {
+            flightLeases[player.uuid] = it
+            enteredDomain = true
+        }
 
         var updateNeeded = false
 
-        if (!abilities.mayfly) {
+        lease.appliedMayfly?.let { appliedValue ->
+            if (abilities.mayfly != appliedValue) {
+                lease.restoreMayfly = abilities.mayfly
+                lease.appliedMayfly = null
+            }
+        }
+        lease.appliedFlying?.let { appliedValue ->
+            if (abilities.flying != appliedValue) {
+                lease.restoreFlying = abilities.flying
+                lease.appliedFlying = null
+            }
+        }
+        lease.appliedFlyingSpeed?.let { appliedValue ->
+            if (abilities.flyingSpeed != appliedValue) {
+                lease.restoreFlyingSpeed = abilities.flyingSpeed
+                lease.appliedFlyingSpeed = null
+            }
+        }
+
+        if (!abilities.mayfly && !player.isCreative && !player.isSpectator) {
+            if (lease.appliedMayfly == null) lease.restoreMayfly = false
             abilities.mayfly = true
+            lease.appliedMayfly = true
             updateNeeded = true
         }
 
-        if (justEntered && !abilities.flying && !player.onGround()) {
+        if (enteredDomain && !abilities.flying && !player.onGround() && !player.isCreative && !player.isSpectator) {
             abilities.flying = true
+            lease.appliedFlying = true
             updateNeeded = true
         }
 
         if (abilities.flyingSpeed != targetSpeed) {
+            if (lease.appliedFlyingSpeed == null) lease.restoreFlyingSpeed = abilities.flyingSpeed
             abilities.flyingSpeed = targetSpeed
+            lease.appliedFlyingSpeed = targetSpeed
             updateNeeded = true
         }
 
@@ -389,22 +444,34 @@ object ConduitDomainHandler {
     }
 
     private fun revokeFlight(player: Player) {
+        val lease = flightLeases.remove(player.uuid) ?: return
         val abilities = player.abilities
+        val gameModeOwnsFlight = player.isCreative || player.isSpectator
+        var updateNeeded = false
 
-        if (player.isCreative || player.isSpectator) {
-            if (abilities.flyingSpeed != 0.05f) {
-                abilities.flyingSpeed = 0.05f
-                player.onUpdateAbilities()
+        if (!gameModeOwnsFlight) {
+            lease.appliedMayfly?.let { appliedValue ->
+                if (abilities.mayfly == appliedValue && abilities.mayfly != lease.restoreMayfly) {
+                    abilities.mayfly = lease.restoreMayfly
+                    updateNeeded = true
+                }
             }
-            return
+            lease.appliedFlying?.let { appliedValue ->
+                if (abilities.flying == appliedValue && abilities.flying != lease.restoreFlying) {
+                    abilities.flying = lease.restoreFlying
+                    updateNeeded = true
+                }
+            }
         }
 
-        if (!abilities.mayfly) return
-        abilities.apply {
-            mayfly = false
-            flying = false
+        lease.appliedFlyingSpeed?.let { appliedValue ->
+            if (abilities.flyingSpeed == appliedValue && abilities.flyingSpeed != lease.restoreFlyingSpeed) {
+                abilities.flyingSpeed = lease.restoreFlyingSpeed
+                updateNeeded = true
+            }
         }
-        player.onUpdateAbilities()
+
+        if (updateNeeded) player.onUpdateAbilities()
     }
 
     private fun deactivateAstralBlocks(level: ServerLevel, pos: BlockPos) {

@@ -28,6 +28,7 @@
     "enable.LivingEntityFluidAccessor",
     "enable.ConduitBlockEntityAccessor",
     "enable.ChunkAccessAccessor",
+    "enable.ExperienceOrbAccessor",
 
     "item.BoneMealItemMixin",
 
