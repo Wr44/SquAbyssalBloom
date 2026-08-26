@@ -25,7 +25,12 @@ class BioluminescentBloomPulse internal constructor(
         val frontRadius = frontRadiusAt(renderGameTime) ?: return 0.0
         val deltaX = worldX - originX
         val deltaZ = worldZ - originZ
-        val distance = sqrt(deltaX * deltaX + deltaZ * deltaZ)
+        val distanceSquared = deltaX * deltaX + deltaZ * deltaZ
+        val outerRadius = frontRadius + RING_WIDTH
+        if (distanceSquared > outerRadius * outerRadius) return 0.0
+        val innerRadius = frontRadius - RING_WIDTH
+        if (innerRadius > 0.0 && distanceSquared < innerRadius * innerRadius) return 0.0
+        val distance = sqrt(distanceSquared)
         return intensityForRingError(abs(distance - frontRadius), frontRadius, renderGameTime)
     }
 

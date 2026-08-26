@@ -2,6 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone
 
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveMode
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloom
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloomPulse
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloomPulseField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationResult
@@ -10,6 +11,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.Biolu
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentAmbientParticleEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentBloomParticleEmitter
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWave
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWaveField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentShimmeringSoundEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
@@ -115,6 +117,9 @@ class BioluminescentZone(
 
     val activeMovementWaveCount: Int
         get() = movementWaves.activeWaveCount
+
+    val activeBloomPulseCount: Int
+        get() = bloomPulses.activePulseCount
 
     val movingEntityCount: Int
         get() = movementWaves.movingSourceCount
@@ -268,6 +273,22 @@ class BioluminescentZone(
     fun movementWaveIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float =
         movementWaves.intensityAt(worldX, worldZ, renderGameTime)
 
+    fun movementWaveIntensityAt(
+        worldX: Double,
+        worldZ: Double,
+        renderGameTime: Double,
+        candidates: Iterable<BioluminescentMovementWave>
+    ): Float = movementWaves.intensityAt(worldX, worldZ, renderGameTime, candidates)
+
+    fun collectMovementWavesAffecting(
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
+        renderGameTime: Double,
+        destination: MutableList<BioluminescentMovementWave>
+    ) = movementWaves.collectAffecting(minX, minZ, maxX, maxZ, renderGameTime, destination)
+
     fun movementWavesAffect(
         minX: Double,
         minZ: Double,
@@ -281,13 +302,21 @@ class BioluminescentZone(
     fun bloomPulseIntensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float =
         bloomPulses.intensityAt(worldX, worldZ, renderGameTime)
 
-    fun bloomPulsesAffect(
+    fun bloomPulseIntensityAt(
+        worldX: Double,
+        worldZ: Double,
+        renderGameTime: Double,
+        candidates: Iterable<BioluminescentBloomPulse>
+    ): Float = bloomPulses.intensityAt(worldX, worldZ, renderGameTime, candidates)
+
+    fun collectBloomPulsesAffecting(
         minX: Double,
         minZ: Double,
         maxX: Double,
         maxZ: Double,
-        renderGameTime: Double
-    ): Boolean = bloomPulses.affects(minX, minZ, maxX, maxZ, renderGameTime)
+        renderGameTime: Double,
+        destination: MutableList<BioluminescentBloomPulse>
+    ) = bloomPulses.collectAffecting(minX, minZ, maxX, maxZ, renderGameTime, destination)
 
     fun bloomPulseMaxIntensityIn(
         minX: Double,

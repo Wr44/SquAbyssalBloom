@@ -35,6 +35,7 @@ class BioluminescentZoneGenerator(
         const val MAX_WORK_STEPS_PER_TICK = 4
         const val GENERATION_TIME_SLICE_NANOS = 4_000_000L
         const val UPLOAD_STEPS_PER_ADVANCE = 2
+        const val MAX_STAGED_TILES = 4
         const val MIN_MACRO_COMPONENT_RATIO = 0.95
         const val MACRO_COVERAGE_SALT = 0x428A2F98D728AE22L
         const val VISIBLE_COVERAGE_SALT = 0x3956C25BF348B538L
@@ -44,7 +45,7 @@ class BioluminescentZoneGenerator(
     val targetMacroCoverage = selectDouble(preset.macroCoverageRange, MACRO_COVERAGE_SALT)
     val targetVisibleCoverage = selectDouble(preset.visiblePixelCoverageRange, VISIBLE_COVERAGE_SALT)
 
-    private val domainCollector = BioluminescentWaterDomainCollector(
+    private var domainCollector: BioluminescentWaterDomainCollector? = BioluminescentWaterDomainCollector(
         anchor,
         initialCell,
         geodesicRadius,
@@ -67,12 +68,14 @@ class BioluminescentZoneGenerator(
     private var macroBuilder: BioluminescentMacroFieldBuilder? = null
     private var macroField: BioluminescentMacroField? = null
     private var reactionDiffusion: BioluminescentReactionDiffusion? = null
+    private var reactionStats: BioluminescentReactionDiffusionStats? = null
     private var emissionGenerator: BioluminescentEmissionGenerator? = null
     private var emissionField: BioluminescentEmissionField? = null
     private var tileOrigins: List<Long> = emptyList()
     private var tileCursor = 0
     private var currentTile: BioluminescentZoneTile? = null
     private var tileBudgetLimit = 0
+    private var tileCreationComplete = false
     private var uploadCursor = 0
     private var completedResult: BioluminescentZoneGenerationResult? = null
     private var transferred = false
@@ -166,10 +169,10 @@ class BioluminescentZoneGenerator(
         val reaction = reactionDiffusion
         return BioluminescentZoneGenerationSnapshot(
             stage,
-            domain?.size ?: domainCollector.cellCount,
+            domain?.size ?: domainCollector?.cellCount ?: 0,
             geodesicRadius,
             topologyBuilder?.selectedCoreCount ?: topology?.cores?.size ?: 0,
-            reaction?.completedIterations ?: 0,
+            reaction?.completedIterations ?: reactionStats?.iterations ?: 0,
             reaction?.targetIterations ?: preset.reactionDiffusionIterations,
             preparedTiles.size,
             preparedTiles.count(BioluminescentZoneTile::uploaded),
@@ -195,16 +198,18 @@ class BioluminescentZoneGenerator(
     }
 
     private fun collectDomain(level: ClientLevel) {
+        val collector = checkNotNull(domainCollector)
         val budget = waterCellBudget.suggestedUnits(TARGET_STEP_NANOS)
         val startedAt = System.nanoTime()
-        domainCollector.advance(level, budget)
+        collector.advance(level, budget)
         waterCellBudget.recordSample(budget, System.nanoTime() - startedAt)
-        if (!domainCollector.complete) return
-        val createdDomain = domainCollector.build()
+        if (!collector.complete) return
+        val createdDomain = collector.build()
         check(createdDomain.localSize >= preset.minWaterCells) {
             "domaine aquatique local insuffisant: ${createdDomain.localSize}/${preset.minWaterCells}"
         }
         domain = createdDomain
+        domainCollector = null
         topologyBuilder = BioluminescentTopologyBuilder(createdDomain, preset, zoneSeed)
         stage = BioluminescentZoneGenerationStage.SELECT_CORES
     }
@@ -227,13 +232,17 @@ class BioluminescentZoneGenerator(
 
     private fun buildSkeleton() {
         val createdTopology = checkNotNull(topologyBuilder).build()
+
         check(createdTopology.cores.size in preset.coreCountRange) {
             "invalid core count: ${createdTopology.cores.size}"
         }
+
         check(createdTopology.skeleton.connectionCount >= createdTopology.cores.size - 1) {
             "incomplete geodesic skeleton"
         }
+
         topology = createdTopology
+        topologyBuilder = null
         macroBuilder = BioluminescentMacroFieldBuilder(
             checkNotNull(domain),
             createdTopology,
@@ -252,11 +261,14 @@ class BioluminescentZoneGenerator(
         macroCellBudget.recordSample(budget, System.nanoTime() - startedAt)
         if (!builder.complete) return
         val createdField = builder.build()
+
         check(createdField.achievedCoverage in preset.macroCoverageRange) {
             "couverture macro hors preset: ${(createdField.achievedCoverage * 100.0).roundToInt()}%"
         }
+
         validateMacroConnectivity(createdField)
         macroField = createdField
+        macroBuilder = null
         stage = BioluminescentZoneGenerationStage.INITIALIZE_REACTION_DIFFUSION
     }
 
@@ -301,6 +313,7 @@ class BioluminescentZoneGenerator(
         val startedAt = System.nanoTime()
         generator.advance(sampleUnits, calibrationUnits, finalizationUnits)
         val elapsedNanos = System.nanoTime() - startedAt
+
         when (stageBeforeAdvance) {
             BioluminescentEmissionGenerator.Stage.SAMPLE_PATTERNS ->
                 emissionSampleBudget.recordSample(sampleUnits, elapsedNanos)
@@ -310,6 +323,7 @@ class BioluminescentZoneGenerator(
                 emissionFinalizationBudget.recordSample(finalizationUnits, elapsedNanos)
             BioluminescentEmissionGenerator.Stage.COMPLETE -> Unit
         }
+
         stage = when (generator.stage) {
             BioluminescentEmissionGenerator.Stage.SAMPLE_PATTERNS,
             BioluminescentEmissionGenerator.Stage.FINALIZE_EMISSION ->
@@ -320,6 +334,9 @@ class BioluminescentZoneGenerator(
                 val createdEmission = generator.build()
                 emissionField = createdEmission
                 tileOrigins = collectTileOrigins(createdEmission)
+                reactionStats = checkNotNull(reactionDiffusion).toStats()
+                reactionDiffusion = null
+                emissionGenerator = null
                 BioluminescentZoneGenerationStage.CREATE_TILES
             }
         }
@@ -334,7 +351,16 @@ class BioluminescentZoneGenerator(
         if (tileBudgetLimit < tileOrigins.size) {
             tileBudgetLimit = maxOf(tileBudgetLimit, minOf(tileOrigins.size, maxTileCount))
         }
-        if (tileCursor >= tileBudgetLimit && currentTile == null && preparedTiles.isEmpty()) return
+        if (tileCursor >= tileBudgetLimit && currentTile == null) {
+            if (tileBudgetLimit == 0) return
+            tileCreationComplete = true
+            stage = BioluminescentZoneGenerationStage.UPLOAD_TILES
+            return
+        }
+        if (preparedTiles.size - uploadCursor >= MAX_STAGED_TILES) {
+            stage = BioluminescentZoneGenerationStage.UPLOAD_TILES
+            return
+        }
         var tile = currentTile
         while (tile == null && tileCursor < tileBudgetLimit) {
             val key = tileOrigins[tileCursor++]
@@ -358,6 +384,10 @@ class BioluminescentZoneGenerator(
             if (done) {
                 preparedTiles.add(tile)
                 currentTile = null
+                if (tileCursor >= tileBudgetLimit) tileCreationComplete = true
+                if (tileCreationComplete || preparedTiles.size - uploadCursor >= MAX_STAGED_TILES) {
+                    stage = BioluminescentZoneGenerationStage.UPLOAD_TILES
+                }
             }
             return
         }
@@ -367,29 +397,30 @@ class BioluminescentZoneGenerator(
 
     private fun uploadTiles(gameTime: Long) {
         if (uploadCursor >= preparedTiles.size) {
-            finalizeResult()
+            if (tileCreationComplete) {
+                finalizeResult()
+            } else {
+                stage = BioluminescentZoneGenerationStage.CREATE_TILES
+            }
             return
         }
         if (preparedTiles[uploadCursor].uploadStep(gameTime)) {
             uploadCursor++
-            if (uploadCursor >= preparedTiles.size) finalizeResult()
+            if (tileCreationComplete && uploadCursor >= preparedTiles.size) {
+                finalizeResult()
+            } else if (!tileCreationComplete && preparedTiles.size - uploadCursor < MAX_STAGED_TILES) {
+                stage = BioluminescentZoneGenerationStage.CREATE_TILES
+            }
         }
     }
 
     private fun finalizeResult() {
-        val reaction = checkNotNull(reactionDiffusion)
         completedResult = BioluminescentZoneGenerationResult(
             checkNotNull(domain),
             checkNotNull(topology),
             checkNotNull(macroField),
             checkNotNull(emissionField),
-            BioluminescentReactionDiffusionStats(
-                reaction.width,
-                reaction.length,
-                reaction.feed,
-                reaction.kill,
-                reaction.completedIterations
-            ),
+            checkNotNull(reactionStats),
             preparedTiles.toList(),
             cpuNanos,
             preparedTiles.sumOf(BioluminescentZoneTile::uploadCount)
@@ -461,5 +492,13 @@ class BioluminescentZoneGenerator(
         val centered = 0.10 + unit * 0.80
         return range.start + centered * (range.endInclusive - range.start)
     }
+
+    private fun BioluminescentReactionDiffusion.toStats() = BioluminescentReactionDiffusionStats(
+        width,
+        length,
+        feed,
+        kill,
+        completedIterations
+    )
 
 }

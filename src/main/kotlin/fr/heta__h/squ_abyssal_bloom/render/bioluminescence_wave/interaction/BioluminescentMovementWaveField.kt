@@ -18,10 +18,10 @@ import kotlin.math.max
 
 class BioluminescentMovementWaveField {
     companion object {
-        const val SCAN_INTERVAL_TICKS = 2L
-        const val DUPLICATE_WINDOW_TICKS = 2L
+        const val SCAN_INTERVAL_TICKS = 3L
+        const val DUPLICATE_WINDOW_TICKS = 4L
         const val MAX_MOVING_SOURCES = 16
-        const val MAX_ACTIVE_WAVES = 96
+        const val MAX_ACTIVE_WAVES = 32
         const val WATER_CELL_SEARCH_RADIUS = 0
         const val HORIZONTAL_SEARCH_MARGIN = 0.5
         const val VERTICAL_SEARCH_RANGE = 4.0
@@ -102,12 +102,35 @@ class BioluminescentMovementWaveField {
     }
 
     fun intensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float {
+        return intensityAt(worldX, worldZ, renderGameTime, waves)
+    }
+
+    fun intensityAt(
+        worldX: Double,
+        worldZ: Double,
+        renderGameTime: Double,
+        candidates: Iterable<BioluminescentMovementWave>
+    ): Float {
         var intensity = 0.0
-        for (wave in waves) {
+        for (wave in candidates) {
             intensity = max(intensity, wave.intensityAt(worldX, worldZ, renderGameTime))
             if (intensity >= 0.999) break
         }
         return intensity.toFloat().coerceIn(0.0f, 1.0f)
+    }
+
+    fun collectAffecting(
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
+        renderGameTime: Double,
+        destination: MutableList<BioluminescentMovementWave>
+    ) {
+        destination.clear()
+        for (wave in waves) {
+            if (wave.affects(minX, minZ, maxX, maxZ, renderGameTime)) destination.add(wave)
+        }
     }
 
     fun affects(

@@ -15,11 +15,13 @@ import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentComp
 import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation.VISIBILITY_EPSILON_FLOAT
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import com.mojang.blaze3d.pipeline.RenderPipeline
+import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.MultiBufferSource
 import net.minecraft.client.renderer.rendertype.RenderSetup
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.resources.Identifier
+import net.minecraft.world.phys.AABB
 import net.minecraft.world.phys.Vec3
 import kotlin.math.PI
 import kotlin.math.cos
@@ -39,6 +41,11 @@ object BioluminescentBloomRenderer {
     private const val SATELLITE_SHIMMER_MIN = 0.55
     private const val LOBE_PEAK_ALPHA = 0.8f
     private const val LOBE_WEDGES = 12
+    private const val CULLING_RADIUS = 5.0
+
+    private val haloCircle = createCircle(HALO_WEDGES)
+    private val satelliteCircle = createCircle(SATELLITE_WEDGES)
+    private val lobeCircle = createCircle(LOBE_WEDGES)
 
     private val renderTypeVanilla: RenderType by lazy {
         createRenderType("squ_plankton_bloom_vanilla", BioluminescentRenderPipelines.VANILLA_SURFACE)
@@ -65,7 +72,7 @@ object BioluminescentBloomRenderer {
     ) {
         val consumer = bufferSource.getBuffer(renderTypeVanilla)
         val pose = poseStack.last()
-        forEachVisibleBloom(renderGameTime) { palette, bloom, geometry, opacity, tint ->
+        forEachVisibleBloom(renderGameTime, cameraPosition) { palette, bloom, geometry, opacity, tint ->
             val renderTop = bloom.resolveRenderTop(cameraPosition.y, geometry.surfaceY)
             val signedOffset = if (renderTop) VANILLA_SURFACE_OFFSET else -VANILLA_SURFACE_OFFSET
             emitBloom(consumer, pose, cameraPosition, geometry, palette, bloom, opacity, tint, signedOffset, renderGameTime)
@@ -83,7 +90,7 @@ object BioluminescentBloomRenderer {
     ) {
         val consumer = bufferSource.getBuffer(renderTypeShaderUnderwater)
         val pose = poseStack.last()
-        forEachVisibleBloom(renderGameTime) { palette, bloom, geometry, opacity, tint ->
+        forEachVisibleBloom(renderGameTime, cameraPosition) { palette, bloom, geometry, opacity, tint ->
             emitBloom(
                 consumer, pose, cameraPosition, geometry, palette, bloom,
                 (opacity * alphaMultiplier).toFloat(), tint, -subsurfaceOffset, renderGameTime
@@ -103,7 +110,7 @@ object BioluminescentBloomRenderer {
     ) {
         val consumer = bufferSource.getBuffer(renderTypeShaderCompensation)
         val pose = poseStack.last()
-        forEachVisibleBloom(renderGameTime) { palette, bloom, geometry, opacity, tint ->
+        forEachVisibleBloom(renderGameTime, cameraPosition) { palette, bloom, geometry, opacity, tint ->
             val depthMultiplier = BioluminescentCompensation.depthMultiplier(
                 BioluminescentCompensation.depthFactor(geometry.waterDepth)
             )
@@ -121,17 +128,23 @@ object BioluminescentBloomRenderer {
 
     fun hasVisibleBlooms(renderGameTime: Double): Boolean {
         var found = false
-        forEachVisibleBloom(renderGameTime) { _, _, _, _, _ -> found = true }
+        val cameraPosition = Minecraft.getInstance().gameRenderer.mainCamera.position()
+        forEachVisibleBloom(renderGameTime, cameraPosition) { _, _, _, _, _ -> found = true }
         return found
     }
 
     private inline fun forEachVisibleBloom(
         renderGameTime: Double,
+        cameraPosition: Vec3,
         action: (BioluminescentPalette, BioluminescentBloom, BioluminescentBloomGeometry, Float, Float) -> Unit
     ) {
         if (!ModConfig.enableBioluminescenceBloomRendering) return
+
         val glowIntensity = ModConfig.bioluminescenceBloomGlowIntensity.toFloat()
         if (glowIntensity <= 0.0f) return
+        val renderDistance = ModConfig.bioluminescenceRenderDistance.coerceIn(32.0, 256.0) + CULLING_RADIUS
+        val maxDistanceSquared = renderDistance * renderDistance
+        val frustum = Minecraft.getInstance().gameRenderer.mainCamera.cullFrustum
 
         for (zone in BioluminescentZoneManager.activeZones) {
             if (zone.blooms.isEmpty()) continue
@@ -140,13 +153,32 @@ object BioluminescentBloomRenderer {
             for (bloom in zone.blooms.values) {
                 if (bloom.lifecycle == PlanktonBloomLifecycle.DORMANT) continue
                 val geometry = bloom.geometry ?: continue
+                val deltaX = geometry.centerX - cameraPosition.x
+                val deltaZ = geometry.centerZ - cameraPosition.z
+                if (deltaX * deltaX + deltaZ * deltaZ > maxDistanceSquared) continue
+                if (!frustum.isVisible(
+                        AABB(
+                            geometry.centerX - CULLING_RADIUS,
+                            geometry.surfaceY - 0.25,
+                            geometry.centerZ - CULLING_RADIUS,
+                            geometry.centerX + CULLING_RADIUS,
+                            geometry.surfaceY + 0.25,
+                            geometry.centerZ + CULLING_RADIUS
+                        )
+                    )
+                ) continue
                 val appearance = bloom.appearanceFadeAt(renderGameTime, zone.serverGameTimeOffset)
                 val terminal = bloom.terminalFadeAt(renderGameTime)
+
                 if (appearance <= 0.0f || terminal <= 0.0f) continue
+
                 val pulse = bloom.pulseIntensityAt(renderGameTime, zone.serverGameTimeOffset)
                 val opacity = appearance * terminal * pulse * waveLifecycle * glowIntensity
+
                 if (opacity <= VISIBILITY_EPSILON_FLOAT) continue
+
                 val invalidatedTint = if (bloom.lifecycle == PlanktonBloomLifecycle.INVALIDATED) 1.0f - terminal else 0.0f
+
                 action(zone.palette, bloom, geometry, opacity, invalidatedTint)
             }
         }
@@ -266,13 +298,14 @@ object BioluminescentBloomRenderer {
         rimColor: Int,
         wedges: Int
     ) {
+        val circle = circleFor(wedges)
         for (wedge in 0 until wedges) {
-            val angleA = 2.0 * PI * wedge / wedges
-            val angleB = 2.0 * PI * (wedge + 1) / wedges
-            val cosA = cos(angleA)
-            val sinA = sin(angleA)
-            val cosB = cos(angleB)
-            val sinB = sin(angleB)
+            val offsetA = wedge * 2
+            val offsetB = (wedge + 1) * 2
+            val cosA = circle[offsetA].toDouble()
+            val sinA = circle[offsetA + 1].toDouble()
+            val cosB = circle[offsetB].toDouble()
+            val sinB = circle[offsetB + 1].toDouble()
 
             emitDoubleSidedQuad(
                 consumer, pose,
@@ -287,6 +320,23 @@ object BioluminescentBloomRenderer {
     }
 
     private fun rimU(unitOffset: Double): Float = (UV_CENTER + unitOffset * UV_CENTER).toFloat()
+
+    private fun circleFor(wedges: Int): FloatArray = when (wedges) {
+        HALO_WEDGES -> haloCircle
+        SATELLITE_WEDGES -> satelliteCircle
+        LOBE_WEDGES -> lobeCircle
+        else -> createCircle(wedges)
+    }
+
+    private fun createCircle(wedges: Int): FloatArray {
+        return FloatArray((wedges + 1) * 2).also { circle ->
+            for (index in 0..wedges) {
+                val angle = 2.0 * PI * index / wedges
+                circle[index * 2] = cos(angle).toFloat()
+                circle[index * 2 + 1] = sin(angle).toFloat()
+            }
+        }
+    }
 
     private fun emitDoubleSidedQuad(
         consumer: VertexConsumer, pose: PoseStack.Pose,

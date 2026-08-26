@@ -6,11 +6,17 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.Bioluminesc
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation.VISIBILITY_EPSILON
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
+import net.minecraft.client.Minecraft
+import java.util.ArrayDeque
+import java.util.UUID
+import kotlin.math.floor
 
 object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
 
-    private const val UPDATE_INTERVAL_TICKS = 1L
-    private const val SMOOTHING_DELTA = UPDATE_INTERVAL_TICKS / 20.0
+    private const val UPDATE_INTERVAL_TICKS = 4L
+    private const val PULSE_UPDATE_INTERVAL_TICKS = 1L
+    private const val LIGHT_BUILDS_PER_TICK = 4
+    private const val ACTIVE_CHUNK_RADIUS = 3
     private const val ACTIVE_BASE_FACTOR = 0.60
     private const val ACTIVE_WAVE_BOOST_FACTOR = 0.20
     private const val ACTIVE_WAVE_MIN_FACTOR = 0.60
@@ -19,7 +25,40 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
     private const val BLOOM_INACTIVE_FACTOR = 0.55
     private const val BLOOM_GLOW_RADIUS = 4.0
 
-    private val lightsByZone = HashMap<java.util.UUID, List<BioluminescentSurfaceLight>>()
+    private data class PendingChunk(val chunkX: Int, val chunkZ: Int) {
+        val key: Long = chunkKey(chunkX, chunkZ)
+    }
+
+    private data class ChunkOffset(val x: Int, val z: Int)
+
+    private class ZoneLightState(
+        val minChunkX: Int,
+        val maxChunkX: Int,
+        val minChunkZ: Int,
+        val maxChunkZ: Int
+    ) {
+        val pendingChunks = ArrayDeque<PendingChunk>()
+        val desiredChunkKeys = HashSet<Long>()
+        val activeLights = HashMap<Long, BioluminescentSurfaceLight>()
+        val cachedLights = HashMap<Long, BioluminescentSurfaceLight>()
+        val emptyChunkKeys = HashSet<Long>()
+        var priorityChunkX = Int.MIN_VALUE
+        var priorityChunkZ = Int.MIN_VALUE
+    }
+
+    private val activeChunkOffsets = buildList {
+        for (offsetX in -ACTIVE_CHUNK_RADIUS..ACTIVE_CHUNK_RADIUS) {
+            for (offsetZ in -ACTIVE_CHUNK_RADIUS..ACTIVE_CHUNK_RADIUS) {
+                add(ChunkOffset(offsetX, offsetZ))
+            }
+        }
+    }.sortedWith(
+        compareBy<ChunkOffset> { offset -> offset.x * offset.x + offset.z * offset.z }
+            .thenBy(ChunkOffset::x)
+            .thenBy(ChunkOffset::z)
+    )
+
+    private val lightsByZone = HashMap<UUID, ZoneLightState>()
     private var tickCounter = 0L
 
     fun onZoneReady(zone: BioluminescentZone) {
@@ -31,26 +70,15 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
         val minChunkZ = bounds.minZ shr 4
         val maxChunkZ = bounds.maxZ shr 4
 
-        val lights = ArrayList<BioluminescentSurfaceLight>()
-        for (chunkX in minChunkX..maxChunkX) {
-            for (chunkZ in minChunkZ..maxChunkZ) {
-                val light = BioluminescentSurfaceLight.build(
-                    chunkX shl 4,
-                    chunkZ shl 4,
-                    data.domain,
-                    data.emissionField
-                ) ?: continue
-                lights.add(light)
-                addDynamicLight(light)
-            }
-        }
-        lightsByZone[zone.eventId] = lights
+        val state = ZoneLightState(minChunkX, maxChunkX, minChunkZ, maxChunkZ)
+        lightsByZone[zone.eventId] = state
+        refreshActiveWindow(zone, state)
     }
 
     fun onZoneRemoved(zone: BioluminescentZone) {
-        val lights = lightsByZone.remove(zone.eventId) ?: return
-        lights.forEach {
-            it.markRemoved()
+        val state = lightsByZone.remove(zone.eventId) ?: return
+        state.cachedLights.values.forEach(BioluminescentSurfaceLight::markRemoved)
+        state.activeLights.values.forEach {
             removeDynamicLight(it)
         }
     }
@@ -63,36 +91,130 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
         if (!isInitialized) return
         zones.forEach { zone ->
             if (zone.eventId !in lightsByZone) onZoneReady(zone)
+            lightsByZone[zone.eventId]?.let { state -> refreshActiveWindow(zone, state) }
         }
         if (lightsByZone.isEmpty()) return
-        tickCounter++
-        if (tickCounter % UPDATE_INTERVAL_TICKS != 0L) return
 
+        var remainingBuilds = LIGHT_BUILDS_PER_TICK
+        for (zone in zones) {
+            if (remainingBuilds <= 0) break
+            val state = lightsByZone[zone.eventId] ?: continue
+            remainingBuilds -= buildLightsStep(zone, state, remainingBuilds)
+        }
+
+        tickCounter++
         val renderGameTime = gameTime.toDouble()
         for (zone in zones) {
-            val lights = lightsByZone[zone.eventId] ?: continue
-            updateZoneLights(zone, lights, renderGameTime)
+            val state = lightsByZone[zone.eventId] ?: continue
+            val updateInterval = if (zone.activeBloomPulseCount > 0) {
+                PULSE_UPDATE_INTERVAL_TICKS
+            } else {
+                UPDATE_INTERVAL_TICKS
+            }
+            if (tickCounter % updateInterval != 0L) continue
+            updateZoneLights(
+                zone,
+                state.activeLights.values,
+                renderGameTime,
+                updateInterval / 20.0
+            )
         }
     }
 
-    fun registeredLightCount(zone: BioluminescentZone): Int = lightsByZone[zone.eventId]?.size ?: 0
+    fun registeredLightCount(zone: BioluminescentZone): Int =
+        lightsByZone[zone.eventId]?.activeLights?.size ?: 0
 
-    fun totalRegisteredLightCount(): Int = lightsByZone.values.sumOf { it.size }
+    fun pendingLightBuildCount(zone: BioluminescentZone): Int =
+        lightsByZone[zone.eventId]?.pendingChunks?.size ?: 0
+
+    fun totalRegisteredLightCount(): Int = lightsByZone.values.sumOf { it.activeLights.size }
 
     fun clear() {
-        lightsByZone.values.forEach { lights ->
-            lights.forEach {
-                it.markRemoved()
+        lightsByZone.values.forEach { state ->
+            state.cachedLights.values.forEach(BioluminescentSurfaceLight::markRemoved)
+            state.activeLights.values.forEach {
                 removeDynamicLight(it)
             }
         }
         lightsByZone.clear()
+        tickCounter = 0L
+    }
+
+    private fun refreshActiveWindow(zone: BioluminescentZone, state: ZoneLightState) {
+        val player = Minecraft.getInstance().player
+        val priorityChunkX = floor(player?.x ?: (zone.anchor.x + 0.5)).toInt() shr 4
+        val priorityChunkZ = floor(player?.z ?: (zone.anchor.z + 0.5)).toInt() shr 4
+        if (priorityChunkX == state.priorityChunkX && priorityChunkZ == state.priorityChunkZ) return
+        state.priorityChunkX = priorityChunkX
+        state.priorityChunkZ = priorityChunkZ
+
+        state.desiredChunkKeys.clear()
+        for (offset in activeChunkOffsets) {
+            val chunkX = priorityChunkX + offset.x
+            val chunkZ = priorityChunkZ + offset.z
+            if (chunkX !in state.minChunkX..state.maxChunkX || chunkZ !in state.minChunkZ..state.maxChunkZ) {
+                continue
+            }
+            state.desiredChunkKeys.add(chunkKey(chunkX, chunkZ))
+        }
+
+        val activeIterator = state.activeLights.entries.iterator()
+        while (activeIterator.hasNext()) {
+            val entry = activeIterator.next()
+            if (entry.key in state.desiredChunkKeys) continue
+            entry.value.markRemoved()
+            removeDynamicLight(entry.value)
+            activeIterator.remove()
+        }
+
+        state.pendingChunks.clear()
+        for (offset in activeChunkOffsets) {
+            val chunkX = priorityChunkX + offset.x
+            val chunkZ = priorityChunkZ + offset.z
+            val key = chunkKey(chunkX, chunkZ)
+            if (key !in state.desiredChunkKeys || key in state.activeLights || key in state.emptyChunkKeys) continue
+            state.pendingChunks.addLast(PendingChunk(chunkX, chunkZ))
+        }
+    }
+
+    private fun buildLightsStep(
+        zone: BioluminescentZone,
+        state: ZoneLightState,
+        budget: Int
+    ): Int {
+        val data = zone.spatialData ?: return 0
+        var processed = 0
+        while (processed < budget && state.pendingChunks.isNotEmpty()) {
+            val chunk = state.pendingChunks.removeFirst()
+            processed++
+            if (chunk.key !in state.desiredChunkKeys || chunk.key in state.activeLights) continue
+            val cachedLight = state.cachedLights[chunk.key]
+            val light = if (cachedLight != null) {
+                cachedLight.markActive()
+                cachedLight
+            } else {
+                BioluminescentSurfaceLight.build(
+                    chunk.chunkX shl 4,
+                    chunk.chunkZ shl 4,
+                    data.domain,
+                    data.emissionField
+                )?.also { built -> state.cachedLights[chunk.key] = built }
+                    ?: run {
+                        state.emptyChunkKeys.add(chunk.key)
+                        continue
+                    }
+            }
+            state.activeLights[chunk.key] = light
+            addDynamicLight(light)
+        }
+        return processed
     }
 
     private fun updateZoneLights(
         zone: BioluminescentZone,
-        lights: List<BioluminescentSurfaceLight>,
-        renderGameTime: Double
+        lights: Collection<BioluminescentSurfaceLight>,
+        renderGameTime: Double,
+        smoothingDelta: Double
     ) {
         val lifecycle = zone.lifecycleIntensityAt(renderGameTime)
         val isActive = zone.activity == BioluminescentZoneActivity.ACTIVE
@@ -102,7 +224,7 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
                 zone.bloomPulseVisibilityStrength() <= VISIBILITY_EPSILON
             )
         if (dormant) {
-            lights.forEach { it.setIntensityFactor(0.0, SMOOTHING_DELTA) }
+            lights.forEach { it.setIntensityFactor(0.0, smoothingDelta) }
             return
         }
 
@@ -129,7 +251,7 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
                 val bloomFactor = lifecycle * bloomIntensity * BLOOM_INACTIVE_FACTOR
                 maxOf(waveFactor, bloomFactor) * ModConfig.dynamicLightsBioluminescenceInactiveIntensity
             }
-            light.setIntensityFactor(factor, SMOOTHING_DELTA)
+            light.setIntensityFactor(factor, smoothingDelta)
         }
     }
 
@@ -158,4 +280,7 @@ object BioluminescentZoneDynamicLights : AbstractDynamicLightCompat() {
 
         return maxOf(pulseIntensity, glowIntensity)
     }
+
+    private fun chunkKey(chunkX: Int, chunkZ: Int): Long =
+        (chunkX.toLong() shl 32) xor (chunkZ.toLong() and 0xFFFFFFFFL)
 }

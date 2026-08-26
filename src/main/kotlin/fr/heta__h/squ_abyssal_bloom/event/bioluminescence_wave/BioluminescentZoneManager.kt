@@ -228,6 +228,10 @@ object BioluminescentZoneManager {
                     "rd=${snapshot?.reactionIterations ?: 0}/${snapshot?.targetReactionIterations ?: 0} " +
                     "tiles=${snapshot?.preparedTiles ?: 0}/${snapshot?.uploadedTiles ?: 0}/${zone?.tiles?.size ?: 0} " +
                     "cpu=${(snapshot?.cpuNanos ?: 0L) / 1_000_000}ms " +
+                    "movement=${zone?.activeMovementWaveCount ?: 0}/${zone?.movingEntityCount ?: 0} " +
+                    "pulses=${zone?.activeBloomPulseCount ?: 0} " +
+                    "lights=${zone?.let(BioluminescentZoneDynamicLights::registeredLightCount) ?: 0}" +
+                    "+${zone?.let(BioluminescentZoneDynamicLights::pendingLightBuildCount) ?: 0} " +
                     "attempts=${generationAttemptsByEventId[eventId] ?: 0} distance=$distance"
             )
             val serverGameTimeOffset = zone?.serverGameTimeOffset ?: 0L

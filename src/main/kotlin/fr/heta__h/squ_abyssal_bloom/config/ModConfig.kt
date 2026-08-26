@@ -28,7 +28,7 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.subScreenButton
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.ACTIVE_WAVE_MAXIMUM_OPACITY
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalTerrainSettings
 import net.minecraft.ChatFormatting
@@ -85,7 +85,7 @@ object ModConfig {
     var bioluminescenceTileFadeInTicks: Int = 20
     var bioluminescenceRenderDistance: Double = 128.0
     var enableBioluminescenceFootprints: Boolean = true
-    var bioluminescenceFootprintOpacity: Double = ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble()
+    var bioluminescenceFootprintOpacity: Double = BioluminescentZoneActivity.ACTIVE.maximumOpacity.toDouble()
     var bioluminescenceFootprintLifetimeTicks: Int = 100
     var bioluminescenceFootprintSmallRadius: Int = BioluminescenceWaveSize.SMALL.shorelineFootprintRadius
     var bioluminescenceFootprintLargeRadius: Int = BioluminescenceWaveSize.LARGE.shorelineFootprintRadius
@@ -144,23 +144,11 @@ object ModConfig {
             bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 20
             bioluminescenceRenderDistance = json.get("bioluminescenceRenderDistance")?.asDouble ?: 128.0
             enableBioluminescenceFootprints = json.get("enableBioluminescenceFootprints")?.asBoolean ?: true
-            bioluminescenceFootprintOpacity =
-                (json.get("bioluminescenceFootprintOpacity")?.asDouble
-                    ?: ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble())
-                    .coerceIn(0.0, ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble())
-            bioluminescenceFootprintLifetimeTicks =
-                (json.get("bioluminescenceFootprintLifetimeTicks")?.asInt ?: 100).coerceIn(20, 300)
-            bioluminescenceFootprintSmallRadius =
-                (json.get("bioluminescenceFootprintSmallRadius")?.asInt
-                    ?: BioluminescenceWaveSize.SMALL.shorelineFootprintRadius).coerceIn(1, 30)
-            bioluminescenceFootprintLargeRadius =
-                (json.get("bioluminescenceFootprintLargeRadius")?.asInt
-                    ?: BioluminescenceWaveSize.LARGE.shorelineFootprintRadius).coerceIn(1, 64)
-            if (bioluminescenceFootprintLargeRadius < bioluminescenceFootprintSmallRadius) {
-                bioluminescenceFootprintLargeRadius = bioluminescenceFootprintSmallRadius
-            }
-            bioluminescenceFootprintDistanceFadeStart =
-                (json.get("bioluminescenceFootprintDistanceFadeStart")?.asDouble ?: 0.0).coerceIn(0.0, 0.95)
+            bioluminescenceFootprintOpacity = json.get("bioluminescenceFootprintOpacity")?.asDouble ?: BioluminescentZoneActivity.ACTIVE.maximumOpacity.toDouble()
+            bioluminescenceFootprintLifetimeTicks = json.get("bioluminescenceFootprintLifetimeTicks")?.asInt ?: 100
+            bioluminescenceFootprintSmallRadius = json.get("bioluminescenceFootprintSmallRadius")?.asInt ?: BioluminescenceWaveSize.SMALL.shorelineFootprintRadius
+            bioluminescenceFootprintLargeRadius = json.get("bioluminescenceFootprintLargeRadius")?.asInt ?: BioluminescenceWaveSize.LARGE.shorelineFootprintRadius
+            bioluminescenceFootprintDistanceFadeStart = json.get("bioluminescenceFootprintDistanceFadeStart")?.asDouble ?: 0.0
             enableBioluminescenceBloomRendering = json.get("enableBioluminescenceBloomRendering")?.asBoolean ?: true
             bioluminescenceBloomGlowIntensity = json.get("bioluminescenceBloomGlowIntensity")?.asDouble ?: 1.0
             bioluminescenceBloomParticleDensity = json.get("bioluminescenceBloomParticleDensity")?.asDouble ?: 1.0
@@ -692,13 +680,13 @@ object ModConfig {
                             "config.squ_abyssal_bloom.bioluminescenceFootprintOpacity.desc"
                         )))
                         .binding(Binding.generic(
-                            ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble(),
+                            BioluminescentZoneActivity.ACTIVE.maximumOpacity.toDouble(),
                             { bioluminescenceFootprintOpacity },
                             { bioluminescenceFootprintOpacity = it }
                         ))
                         .controller { option ->
                             DoubleSliderControllerBuilder.create(option)
-                                .range(0.0, ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble()).step(0.05)
+                                .range(0.0, BioluminescentZoneActivity.ACTIVE.maximumOpacity.toDouble()).step(0.05)
                                 .formatValue(ModUtilities.percentFormat())
                         }
                         .build())

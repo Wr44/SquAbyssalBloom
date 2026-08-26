@@ -7,6 +7,9 @@ import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.compat.iris.IrisRenderState
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.bloom.BioluminescentBloomRenderer
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloomGeometry
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloomPulse
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWave
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
@@ -15,8 +18,6 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.WHITE_RGB
 import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation
 import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentCompensation.VISIBILITY_EPSILON
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.ACTIVE_WAVE_MAXIMUM_OPACITY
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.INACTIVE_WAVE_MAXIMUM_OPACITY
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.OverlayTexture
@@ -47,19 +48,14 @@ object BioluminescentWaterRenderer {
 
     private var framePlan: FramePlan? = null
     private var irisPassPrepared = false
+    private val movementWaveCandidates = ArrayList<BioluminescentMovementWave>(16)
+    private val bloomPulseCandidates = ArrayList<BioluminescentBloomPulse>(8)
+    private val bloomGeometryCandidates = ArrayList<BioluminescentBloomGeometry>(4)
 
     private fun currentRenderGameTime(): Double {
         val minecraft = Minecraft.getInstance()
         val level = minecraft.level ?: return 0.0
         return level.gameTime + minecraft.deltaTracker.gameTimeDeltaTicks.toDouble()
-    }
-
-    private class VertexShade(val color: Int, val alpha: Int) {
-        fun scaledAlpha(multiplier: Double): VertexShade {
-            if (multiplier == 1.0) return this
-            return VertexShade(color, (alpha * multiplier).toInt().coerceIn(0, 255))
-        }
-
     }
 
     private class ResolvedQuad(
@@ -73,10 +69,10 @@ object BioluminescentWaterRenderer {
         val maxU: Float,
         val minV: Float,
         val maxV: Float,
-        val northWest: VertexShade,
-        val southWest: VertexShade,
-        val southEast: VertexShade,
-        val northEast: VertexShade,
+        val northWest: Int,
+        val southWest: Int,
+        val southEast: Int,
+        val northEast: Int,
         val northWestWaterDepth: Double,
         val southWestWaterDepth: Double,
         val southEastWaterDepth: Double,
@@ -152,23 +148,11 @@ object BioluminescentWaterRenderer {
                 if (!tile.uploaded) continue
                 if (tile.horizontalDistanceSqr(cameraPosition.x, cameraPosition.z) > maxDistanceSqr) continue
                 if (!frustum.isVisible(tile.bounds)) continue
-                val movementWavesAffectTile = zone.movementWavesAffect(
-                    tile.originX.toDouble(),
-                    tile.originZ.toDouble(),
-                    (tile.originX + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                    (tile.originZ + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                    renderGameTime
-                )
-                val movementFadeStrength = tile.updateMovementFade(movementWavesAffectTile)
+                prepareTileEffectCandidates(zone, tile, renderGameTime)
+                val movementFadeStrength = tile.updateMovementFade(movementWaveCandidates.isNotEmpty())
                 if (zone.activity == BioluminescentZoneActivity.INACTIVE &&
                     movementFadeStrength <= VISIBILITY_EPSILON &&
-                    !zone.bloomPulsesAffect(
-                        tile.originX.toDouble(),
-                        tile.originZ.toDouble(),
-                        (tile.originX + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                        (tile.originZ + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                        renderGameTime
-                    )
+                    bloomPulseCandidates.isEmpty()
                 ) continue
                 val localLoadingIntensity = tile.localLoadingIntensityAt(renderGameTime)
                 if (localLoadingIntensity <= VISIBILITY_EPSILON) continue
@@ -251,10 +235,10 @@ object BioluminescentWaterRenderer {
             for (quad in resolvedTile.quads) {
                 emitQuad(
                     consumer, pose, quad, cameraPosition, subsurfaceOffset,
-                    quad.northWest.scaledAlpha(alphaMultiplier),
-                    quad.southWest.scaledAlpha(alphaMultiplier),
-                    quad.southEast.scaledAlpha(alphaMultiplier),
-                    quad.northEast.scaledAlpha(alphaMultiplier)
+                    scaledShadeAlpha(quad.northWest, alphaMultiplier),
+                    scaledShadeAlpha(quad.southWest, alphaMultiplier),
+                    scaledShadeAlpha(quad.southEast, alphaMultiplier),
+                    scaledShadeAlpha(quad.northEast, alphaMultiplier)
                 )
             }
             bufferSource.endBatch(renderType)
@@ -331,14 +315,14 @@ object BioluminescentWaterRenderer {
     }
 
     private fun compensationShade(
-        base: VertexShade,
+        base: Int,
         waterDepth: Double,
         baseStrength: Double,
         angleFactor: Double,
         cameraEnvironmentMultiplier: Double
-    ): VertexShade {
+    ): Int {
         val depthMultiplier = BioluminescentCompensation.depthMultiplier(depthFactorOf(waterDepth))
-        return base.scaledAlpha(baseStrength * depthMultiplier * angleFactor * cameraEnvironmentMultiplier)
+        return scaledShadeAlpha(base, baseStrength * depthMultiplier * angleFactor * cameraEnvironmentMultiplier)
     }
 
     private fun emitQuad(
@@ -347,10 +331,10 @@ object BioluminescentWaterRenderer {
         quad: ResolvedQuad,
         cameraPosition: Vec3,
         subsurfaceOffset: Double,
-        northWest: VertexShade,
-        southWest: VertexShade,
-        southEast: VertexShade,
-        northEast: VertexShade
+        northWest: Int,
+        southWest: Int,
+        southEast: Int,
+        northEast: Int
     ) {
         val minX = (quad.worldMinX - cameraPosition.x).toFloat()
         val maxX = (quad.worldMaxX - cameraPosition.x).toFloat()
@@ -401,23 +385,11 @@ object BioluminescentWaterRenderer {
                     maxDistanceSqr
                 ) continue
                 if (!frustum.isVisible(tile.bounds)) continue
-                val movementWavesAffectTile = zone.movementWavesAffect(
-                    tile.originX.toDouble(),
-                    tile.originZ.toDouble(),
-                    (tile.originX + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                    (tile.originZ + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                    renderGameTime
-                )
-                val movementFadeStrength = tile.updateMovementFade(movementWavesAffectTile)
+                prepareTileEffectCandidates(zone, tile, renderGameTime)
+                val movementFadeStrength = tile.updateMovementFade(movementWaveCandidates.isNotEmpty())
                 if (zone.activity == BioluminescentZoneActivity.INACTIVE &&
                     movementFadeStrength <= VISIBILITY_EPSILON &&
-                    !zone.bloomPulsesAffect(
-                        tile.originX.toDouble(),
-                        tile.originZ.toDouble(),
-                        (tile.originX + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                        (tile.originZ + BioluminescentZoneTile.TILE_SIZE).toDouble(),
-                        renderGameTime
-                    )
+                    bloomPulseCandidates.isEmpty()
                 ) continue
                 val localLoadingIntensity = tile.localLoadingIntensityAt(renderGameTime)
                 if (localLoadingIntensity <= VISIBILITY_EPSILON) continue
@@ -525,6 +497,52 @@ object BioluminescentWaterRenderer {
         return resolved
     }
 
+    private fun prepareTileEffectCandidates(
+        zone: BioluminescentZone,
+        tile: BioluminescentZoneTile,
+        renderGameTime: Double
+    ) {
+        val minX = tile.originX.toDouble()
+        val minZ = tile.originZ.toDouble()
+        val maxX = (tile.originX + BioluminescentZoneTile.TILE_SIZE).toDouble()
+        val maxZ = (tile.originZ + BioluminescentZoneTile.TILE_SIZE).toDouble()
+        zone.collectMovementWavesAffecting(
+            minX,
+            minZ,
+            maxX,
+            maxZ,
+            renderGameTime,
+            movementWaveCandidates
+        )
+
+        bloomPulseCandidates.clear()
+        bloomGeometryCandidates.clear()
+        if (!ModConfig.enableBioluminescenceBloomRendering) return
+        if (ModConfig.bioluminescenceBloomPulseIntensity > 0.0) {
+            zone.collectBloomPulsesAffecting(
+                minX,
+                minZ,
+                maxX,
+                maxZ,
+                renderGameTime,
+                bloomPulseCandidates
+            )
+        }
+
+        val moatRadiusSquared = BLOOM_MOAT_OUTER_RADIUS * BLOOM_MOAT_OUTER_RADIUS
+        for (bloom in zone.blooms.values) {
+            if (bloom.lifecycle != PlanktonBloomLifecycle.ACTIVE) continue
+            val geometry = bloom.geometry ?: continue
+            val nearestX = geometry.centerX.coerceIn(minX, maxX)
+            val nearestZ = geometry.centerZ.coerceIn(minZ, maxZ)
+            val deltaX = geometry.centerX - nearestX
+            val deltaZ = geometry.centerZ - nearestZ
+            if (deltaX * deltaX + deltaZ * deltaZ <= moatRadiusSquared) {
+                bloomGeometryCandidates.add(geometry)
+            }
+        }
+    }
+
     private fun vertexShadeAt(
         zone: BioluminescentZone,
         renderGameTime: Double,
@@ -534,22 +552,27 @@ object BioluminescentWaterRenderer {
         worldX: Double,
         worldZ: Double,
         movementFadeStrength: Float
-    ): VertexShade {
+    ): Int {
         val baseOpacity = if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
             val rawBaseOpacity = temporalIntensity * zone.localPulseIntensityAt(renderGameTime, spatialPhase)
-            rawBaseOpacity.coerceAtMost(lifecycleIntensity * ACTIVE_WAVE_MAXIMUM_OPACITY)
+            rawBaseOpacity.coerceAtMost(lifecycleIntensity * zone.activity.maximumOpacity)
         } else {
             0.0f
         }
         val waveIntensity = if (movementFadeStrength > 0.0f) {
-            zone.movementWaveIntensityAt(worldX, worldZ, renderGameTime) * movementFadeStrength
+            zone.movementWaveIntensityAt(
+                worldX,
+                worldZ,
+                renderGameTime,
+                movementWaveCandidates
+            ) * movementFadeStrength
         } else {
             0.0f
         }
         val waveStrength = if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
             ACTIVE_MOVEMENT_WAVE_OPACITY
         } else {
-            INACTIVE_WAVE_MAXIMUM_OPACITY
+            zone.activity.maximumOpacity
         }
         val waveOpacity = lifecycleIntensity * waveStrength * waveIntensity
         val baseAlpha = (baseOpacity * 255.0f).toInt().coerceIn(0, MAX_TEMPORAL_ALPHA)
@@ -557,7 +580,7 @@ object BioluminescentWaterRenderer {
         var alpha = (baseAlpha + waveAlpha).coerceIn(0, 255)
         if (zone.activity == BioluminescentZoneActivity.ACTIVE && waveIntensity > 0.0f) {
             val floorAlpha =
-                (lifecycleIntensity * ACTIVE_WAVE_MAXIMUM_OPACITY * waveIntensity * 255.0f).toInt()
+                (lifecycleIntensity * zone.activity.maximumOpacity * waveIntensity * 255.0f).toInt()
             alpha = maxOf(alpha, floorAlpha).coerceIn(0, 255)
         }
 
@@ -571,16 +594,21 @@ object BioluminescentWaterRenderer {
             WHITE_RGB
         }
 
-        if (!ModConfig.enableBioluminescenceBloomRendering) return VertexShade(color, alpha)
+        if (!ModConfig.enableBioluminescenceBloomRendering) return packShade(color, alpha)
 
         val pulseStrength = ModConfig.bioluminescenceBloomPulseIntensity
         val bloomPulse = if (pulseStrength > 0.0) {
-            (zone.bloomPulseIntensityAt(worldX, worldZ, renderGameTime) * pulseStrength).toFloat()
+            (zone.bloomPulseIntensityAt(
+                worldX,
+                worldZ,
+                renderGameTime,
+                bloomPulseCandidates
+            ) * pulseStrength).toFloat()
         } else {
             0.0f
         }
         if (zone.activity == BioluminescentZoneActivity.ACTIVE) {
-            val proximityDim = bloomProximityDimFactor(zone, worldX, worldZ)
+            val proximityDim = bloomProximityDimFactor(worldX, worldZ)
             if (proximityDim < 1.0) {
                 alpha = (alpha * proximityDim).toInt().coerceIn(0, 255)
             }
@@ -594,18 +622,17 @@ object BioluminescentWaterRenderer {
             alpha = maxOf(alpha, revealAlpha).coerceIn(0, 255)
         }
 
-        return VertexShade(color, alpha)
+        return packShade(color, alpha)
     }
 
-    private fun bloomProximityDimFactor(zone: BioluminescentZone, worldX: Double, worldZ: Double): Double {
+    private fun bloomProximityDimFactor(worldX: Double, worldZ: Double): Double {
         var factor = 1.0
-        for (bloom in zone.blooms.values) {
-            if (bloom.lifecycle != PlanktonBloomLifecycle.ACTIVE) continue
-            val geometry = bloom.geometry ?: continue
+        for (geometry in bloomGeometryCandidates) {
             val deltaX = worldX - geometry.centerX
             val deltaZ = worldZ - geometry.centerZ
-            val distance = sqrt(deltaX * deltaX + deltaZ * deltaZ)
-            if (distance >= BLOOM_MOAT_OUTER_RADIUS) continue
+            val distanceSquared = deltaX * deltaX + deltaZ * deltaZ
+            if (distanceSquared >= BLOOM_MOAT_OUTER_RADIUS * BLOOM_MOAT_OUTER_RADIUS) continue
+            val distance = sqrt(distanceSquared)
             val local = BLOOM_MOAT_MIN_FACTOR +
                 (1.0 - BLOOM_MOAT_MIN_FACTOR) *
                 ModUtilities.smooth(BLOOM_MOAT_INNER_RADIUS, BLOOM_MOAT_OUTER_RADIUS, distance)
@@ -623,17 +650,28 @@ object BioluminescentWaterRenderer {
         u: Float,
         v: Float,
         normalY: Float,
-        shade: VertexShade
+        shade: Int
     ) {
-        val red = shade.color shr 16 and 0xFF
-        val green = shade.color shr 8 and 0xFF
-        val blue = shade.color and 0xFF
+        val red = shade shr 16 and 0xFF
+        val green = shade shr 8 and 0xFF
+        val blue = shade and 0xFF
+        val alpha = shade ushr 24 and 0xFF
         consumer.addVertex(pose, x, y, z)
-            .setColor(red, green, blue, shade.alpha)
+            .setColor(red, green, blue, alpha)
             .setUv(u, v)
             .setOverlay(OverlayTexture.NO_OVERLAY)
             .setLight(FULL_BRIGHT_LIGHTMAP)
             .setNormal(pose, 0.0f, normalY, 0.0f)
+    }
+
+    private fun packShade(color: Int, alpha: Int): Int {
+        return (alpha.coerceIn(0, 255) shl 24) or (color and 0xFFFFFF)
+    }
+
+    private fun scaledShadeAlpha(shade: Int, multiplier: Double): Int {
+        if (multiplier == 1.0) return shade
+        val alpha = shade ushr 24 and 0xFF
+        return packShade(shade, (alpha * multiplier).toInt())
     }
 
 }

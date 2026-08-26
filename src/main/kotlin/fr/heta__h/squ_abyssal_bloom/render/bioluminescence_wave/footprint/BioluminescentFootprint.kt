@@ -1,8 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.footprint
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.ACTIVE_WAVE_MAXIMUM_OPACITY
 
 data class BioluminescentFootprint(
     val centerX: Double,
@@ -33,7 +33,7 @@ data class BioluminescentFootprint(
         }
         val configuredMaximum = ModConfig.bioluminescenceFootprintOpacity.coerceIn(
             0.0,
-            ACTIVE_WAVE_MAXIMUM_OPACITY.toDouble()
+            BioluminescentZoneActivity.ACTIVE.maximumOpacity.toDouble()
         ).toFloat()
         val effectiveMaximum = minOf(waveMaximumOpacity, configuredMaximum)
         return (effectiveMaximum * visibilityFactor * temporalFade).toFloat()

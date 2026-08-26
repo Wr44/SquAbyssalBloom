@@ -79,11 +79,11 @@ class BioluminescentEmissionGenerator(
     }
 
     private val pixelCount = macroField.domain.size * PIXELS_PER_CELL
-    private val macroSupport = FloatArray(pixelCount)
+    private val cellMacroSupport = FloatArray(macroField.domain.size)
     private val organicPattern = FloatArray(pixelCount)
     private val holeAvailability = FloatArray(pixelCount)
-    private val connectionSupport = FloatArray(pixelCount)
-    private val coreSupport = FloatArray(pixelCount)
+    private val cellConnectionSupport = FloatArray(macroField.domain.size)
+    private val cellCoreSupport = FloatArray(macroField.domain.size)
     private val concentration = FloatArray(pixelCount)
     private val finalAlpha = FloatArray(pixelCount)
     private val finalColors = IntArray(pixelCount)
@@ -184,6 +184,11 @@ class BioluminescentEmissionGenerator(
                 cachedMacroSupport = macroSample.support
                 cachedMacroCore = macroSample.core
                 cachedMacroConnection = macroSample.connection
+                cellMacroSupport[cellIndex] = cachedMacroSupport.toFloat()
+                cellCoreSupport[cellIndex] = cachedMacroCore.toFloat()
+                cellConnectionSupport[cellIndex] = (
+                    cachedMacroSupport * cachedMacroConnection.pow(CONNECTION_SPINE_EXPONENT)
+                    ).toFloat()
                 cachedConcentrationNoise = noiseSampler.sampleLarge(
                     (cellCenterX - 137.0) * CONCENTRATION_NOISE_SCALE,
                     (cellCenterZ + 193.0) * CONCENTRATION_NOISE_SCALE
@@ -197,7 +202,6 @@ class BioluminescentEmissionGenerator(
                 ) * 0.38
             }
             val macro = cachedMacroSupport
-            macroSupport[pixelIndex] = macro.toFloat()
             if (macro < MACRO_SUPPORT_MIN) continue
             supportPixels++
             val concentrationNoise = cachedConcentrationNoise
@@ -247,8 +251,6 @@ class BioluminescentEmissionGenerator(
             holeAvailability[pixelIndex] = hole.toFloat()
 
             val core = cachedMacroCore
-            coreSupport[pixelIndex] = core.toFloat()
-            val connection = cachedMacroConnection
             val broadConcentration = ModUtilities.smooth(
                 0.18,
                 0.76,
@@ -263,7 +265,6 @@ class BioluminescentEmissionGenerator(
                 0.18 + broadConcentration * 0.66 + reaction * 0.16 +
                     sparkle * 0.38 + core * 0.22
                 ).coerceIn(0.0, 1.36).toFloat()
-            connectionSupport[pixelIndex] = (macro * connection.pow(CONNECTION_SPINE_EXPONENT)).toFloat()
         }
         samplingCursor = end
         if (samplingCursor >= pixelCount) {
@@ -279,7 +280,7 @@ class BioluminescentEmissionGenerator(
         }
         val end = minOf(pixelCount, calibrationCursor + budget)
         for (index in calibrationCursor until end) {
-            if (macroSupport[index] < MACRO_SUPPORT_MIN) continue
+            if (cellMacroSupport[index / PIXELS_PER_CELL] < MACRO_SUPPORT_MIN) continue
             if (emissionAt(index, calibrationCandidate) >= VISIBLE_EMISSION_THRESHOLD) {
                 calibrationVisible++
             }
@@ -344,11 +345,12 @@ class BioluminescentEmissionGenerator(
     }
 
     private fun emissionAt(index: Int, threshold: Double): Double {
-        val macro = macroSupport[index].toDouble()
+        val cellIndex = index / PIXELS_PER_CELL
+        val macro = cellMacroSupport[cellIndex].toDouble()
         if (macro < MACRO_SUPPORT_MIN) return 0.0
         val organic = organicPattern[index].toDouble()
         val holes = holeAvailability[index].toDouble()
-        val localThreshold = threshold - coreSupport[index] * CORE_POROSITY_BIAS
+        val localThreshold = threshold - cellCoreSupport[cellIndex] * CORE_POROSITY_BIAS
         val porousMask = ModUtilities.smooth(
             localThreshold - POROUS_FEATHER,
             localThreshold + POROUS_FEATHER,
@@ -360,7 +362,7 @@ class BioluminescentEmissionGenerator(
             CONNECTION_PATTERN_HIGH,
             organic
         ) * (1.0 - CONNECTION_PATTERN_FLOOR)
-        val connectionEmission = connectionSupport[index].toDouble() *
+        val connectionEmission = cellConnectionSupport[cellIndex].toDouble() *
             (preset.minConnectionEmission + organic * CONNECTION_VARIATION) *
             connectionPattern *
             (CONNECTION_HOLE_FLOOR + holes * (1.0 - CONNECTION_HOLE_FLOOR))

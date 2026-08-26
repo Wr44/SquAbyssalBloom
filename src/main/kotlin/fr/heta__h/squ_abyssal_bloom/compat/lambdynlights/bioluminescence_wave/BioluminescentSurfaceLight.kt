@@ -45,6 +45,7 @@ class BioluminescentSurfaceLight private constructor(
             val localCellIndex = IntArray(localCount) { -1 }
             val localLuminance = DoubleArray(localCount)
             val localSurfaceY = DoubleArray(localCount)
+            val luminanceSamples = FloatArray(BioluminescentLuminanceMap.SAMPLE_COUNT)
 
             var qualifiedCount = 0
             var minWorldX = Int.MAX_VALUE
@@ -59,7 +60,11 @@ class BioluminescentSurfaceLight private constructor(
                     val worldX = chunkOriginX + localX
                     val worldZ = chunkOriginZ + localZ
                     val cellIndex = domain.cellIndexAt(worldX, worldZ) ?: continue
-                    val luminance = BioluminescentLuminanceMap.columnLuminance(emissionField, cellIndex)
+                    val luminance = BioluminescentLuminanceMap.columnLuminance(
+                        emissionField,
+                        cellIndex,
+                        luminanceSamples
+                    )
                     if (luminance <= 0.0) continue
 
                     val localIndex = localZ * CHUNK_SIZE + localX
@@ -185,6 +190,11 @@ class BioluminescentSurfaceLight private constructor(
 
     fun markRemoved() {
         removed = true
+        dirty = true
+    }
+
+    fun markActive() {
+        removed = false
         dirty = true
     }
 

@@ -23,8 +23,9 @@ class BioluminescentMovementWave internal constructor(
         if (age !in 0.0..<LIFETIME_TICKS) return 0.0
         val deltaX = worldX - originX
         val deltaZ = worldZ - originZ
-        val distance = sqrt(deltaX * deltaX + deltaZ * deltaZ)
-        if (distance >= radius) return 0.0
+        val distanceSquared = deltaX * deltaX + deltaZ * deltaZ
+        if (distanceSquared >= radius * radius) return 0.0
+        val distance = sqrt(distanceSquared)
 
         val radialFade = 1.0 - ModUtilities.smooth(radius * CORE_RADIUS_FRACTION, radius, distance)
         return radialFade * envelopeAt(age) * amplitude

@@ -2,10 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.footprint
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.ACTIVE_WAVE_MAXIMUM_OPACITY
-import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentRenderOpacity.INACTIVE_WAVE_MAXIMUM_OPACITY
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.world.entity.player.Player
 import kotlin.math.abs
@@ -199,10 +196,7 @@ object BioluminescentFootprintField {
 
         val color = BioluminescentFootprintPlacement.continuousFootprintColor(zone, player, stepIndex)
         val lifecycle = zone.lifecycleIntensityAt(gameTime.toDouble()).coerceIn(0.0f, 1.0f)
-        val waveMaximumOpacity = when (zone.activity) {
-            BioluminescentZoneActivity.ACTIVE -> ACTIVE_WAVE_MAXIMUM_OPACITY
-            BioluminescentZoneActivity.INACTIVE -> INACTIVE_WAVE_MAXIMUM_OPACITY
-        }
+        val waveMaximumOpacity = zone.activity.maximumOpacity
 
         footprints.addLast(
             BioluminescentFootprint(

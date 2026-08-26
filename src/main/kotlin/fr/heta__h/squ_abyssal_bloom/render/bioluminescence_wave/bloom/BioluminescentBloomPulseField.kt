@@ -27,6 +27,9 @@ class BioluminescentBloomPulseField {
     var visibilityStrength: Double = 0.0
         private set
 
+    val activePulseCount: Int
+        get() = pulses.size
+
     fun tick(
         blooms: Collection<BioluminescentBloom>,
         bounds: BioluminescentWaterBounds,
@@ -73,12 +76,35 @@ class BioluminescentBloomPulseField {
     }
 
     fun intensityAt(worldX: Double, worldZ: Double, renderGameTime: Double): Float {
+        return intensityAt(worldX, worldZ, renderGameTime, pulses)
+    }
+
+    fun intensityAt(
+        worldX: Double,
+        worldZ: Double,
+        renderGameTime: Double,
+        candidates: Iterable<BioluminescentBloomPulse>
+    ): Float {
         var intensity = 0.0
-        for (pulse in pulses) {
+        for (pulse in candidates) {
             intensity = max(intensity, pulse.intensityAt(worldX, worldZ, renderGameTime))
             if (intensity >= 0.999) break
         }
         return intensity.toFloat().coerceIn(0.0f, 1.0f)
+    }
+
+    fun collectAffecting(
+        minX: Double,
+        minZ: Double,
+        maxX: Double,
+        maxZ: Double,
+        renderGameTime: Double,
+        destination: MutableList<BioluminescentBloomPulse>
+    ) {
+        destination.clear()
+        for (pulse in pulses) {
+            if (pulse.affects(minX, minZ, maxX, maxZ, renderGameTime)) destination.add(pulse)
+        }
     }
 
     fun affects(
