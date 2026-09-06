@@ -20,6 +20,10 @@
   "block.squ_abyssal_bloom.rhodophyta_infested_marine_bricks_stairs": "Escalier en briques marines infestées de rhodophyta",
   "block.squ_abyssal_bloom.rhodophyta_infested_marine_bricks_slab": "Dalle de briques marines infestées de rhodophyta",
   "block.squ_abyssal_bloom.rhodophyta_infested_marine_bricks_wall": "Mur en briques marines infestées de rhodophyta",
+  "block.squ_abyssal_bloom.coral_infested_marine_bricks": "Briques marines infestées de corail",
+  "block.squ_abyssal_bloom.coral_infested_marine_bricks_stairs": "Escalier en briques marines infestées de corail",
+  "block.squ_abyssal_bloom.coral_infested_marine_bricks_slab": "Dalle de briques marines infestées de corail",
+  "block.squ_abyssal_bloom.coral_infested_marine_bricks_wall": "Mur en briques marines infestées de corail",
   "block.squ_abyssal_bloom.bioluminescent_crystal_block": "Block de cristal bioluminescent",
 
   "creativetab.squ_abyssal_bloom.spawn_eggs": "Oeufs d'apparition de l'Abyssal Bloom",

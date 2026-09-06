@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/template_wall_post",
+  "textures": {
+    "wall": "squ_abyssal_bloom:block/coral_infested_marine_bricks"
+  }
+}

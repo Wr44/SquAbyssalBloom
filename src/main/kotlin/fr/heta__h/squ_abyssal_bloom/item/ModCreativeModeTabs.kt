@@ -74,6 +74,10 @@ object ModCreativeModeTabs {
                 output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_STAIRS.get())
                 output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_SLAB.get())
                 output.accept(ModItems.RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL.get())
+                output.accept(ModItems.CORAL_INFESTED_MARINE_BRICKS.get())
+                output.accept(ModItems.CORAL_INFESTED_MARINE_BRICKS_STAIRS.get())
+                output.accept(ModItems.CORAL_INFESTED_MARINE_BRICKS_SLAB.get())
+                output.accept(ModItems.CORAL_INFESTED_MARINE_BRICKS_WALL.get())
                 output.accept(ModItems.CHISELED_MARINE_BRICKS.get())
 
                 output.accept(ModItems.BABY_RED_SLOBBERER_BUCKET.get())

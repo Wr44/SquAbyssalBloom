@@ -189,8 +189,7 @@ class CrystalJellySpawnManager(
             MAXIMUM_PLAYER_DISTANCE * MAXIMUM_PLAYER_DISTANCE
     }
 
-    private fun countJellies(eventId: UUID, bounds: BioluminescenceBounds): Int =
-        jelliesForWave(eventId, bounds).size
+    private fun countJellies(eventId: UUID, bounds: BioluminescenceBounds): Int = jelliesForWave(eventId, bounds).size
 
     private fun jelliesForWave(
         eventId: UUID,

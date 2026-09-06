@@ -12,9 +12,13 @@
     "squ_abyssal_bloom:rhodophyta_infested_marine_bricks",
     "squ_abyssal_bloom:rhodophyta_infested_marine_bricks_stairs",
     "squ_abyssal_bloom:rhodophyta_infested_marine_bricks_slab",
+    "squ_abyssal_bloom:coral_infested_marine_bricks",
+    "squ_abyssal_bloom:coral_infested_marine_bricks_stairs",
+    "squ_abyssal_bloom:coral_infested_marine_bricks_slab",
     "squ_abyssal_bloom:marine_bricks_wall",
     "squ_abyssal_bloom:algea_infested_marine_bricks_wall",
     "squ_abyssal_bloom:rhodophyta_infested_marine_bricks_wall",
+    "squ_abyssal_bloom:coral_infested_marine_bricks_wall",
     "squ_abyssal_bloom:bioluminescent_crystal_block"
   ]
 }

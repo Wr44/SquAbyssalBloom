@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    "squ_abyssal_bloom:marine_bricks",
+    "#squ_abyssal_bloom:is_coral"
+  ],
+  "result": {
+    "id": "squ_abyssal_bloom:coral_infested_marine_bricks"
+  }
+}

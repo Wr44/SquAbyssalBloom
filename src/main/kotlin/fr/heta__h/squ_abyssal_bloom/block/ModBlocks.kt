@@ -127,6 +127,8 @@ object ModBlocks {
 
     val RHODOPHYTA_INFESTED_MARINE_BRICKS = REGISTRY.registerBlock("rhodophyta_infested_marine_bricks") { props -> Block(props.marineBricks()) }
 
+    val CORAL_INFESTED_MARINE_BRICKS = REGISTRY.registerBlock("coral_infested_marine_bricks") { props -> Block(props.marineBricks()) }
+
     val CHISELED_MARINE_BRICKS = REGISTRY.registerBlock("chiseled_marine_bricks") { props -> Block(props.marineBricks()) }
 
     val MARINE_BRICKS_STAIRS = REGISTRY.registerBlock("marine_bricks_stairs") { props ->
@@ -153,6 +155,14 @@ object ModBlocks {
         SlabBlock(props.marineBricks())
     }
 
+    val CORAL_INFESTED_MARINE_BRICKS_STAIRS = REGISTRY.registerBlock("coral_infested_marine_bricks_stairs") { props ->
+        StairBlock(CORAL_INFESTED_MARINE_BRICKS.get().defaultBlockState(), props.marineBricks())
+    }
+
+    val CORAL_INFESTED_MARINE_BRICKS_SLAB = REGISTRY.registerBlock("coral_infested_marine_bricks_slab") { props ->
+        SlabBlock(props.marineBricks())
+    }
+
     val MARINE_BRICKS_WALL = REGISTRY.registerBlock("marine_bricks_wall") { props ->
         WallBlock(props.marineBricks().forceSolidOn())
     }
@@ -162,6 +172,10 @@ object ModBlocks {
     }
 
     val RHODOPHYTA_INFESTED_MARINE_BRICKS_WALL = REGISTRY.registerBlock("rhodophyta_infested_marine_bricks_wall") { props ->
+        WallBlock(props.marineBricks().forceSolidOn())
+    }
+
+    val CORAL_INFESTED_MARINE_BRICKS_WALL = REGISTRY.registerBlock("coral_infested_marine_bricks_wall") { props ->
         WallBlock(props.marineBricks().forceSolidOn())
     }
 
