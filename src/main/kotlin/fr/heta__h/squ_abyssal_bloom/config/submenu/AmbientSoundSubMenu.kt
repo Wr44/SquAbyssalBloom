@@ -28,6 +28,12 @@ object AmbientSoundSubMenu {
                 .binding(Binding.generic(true, { ModConfig.enableBeachWaveSound }, { ModConfig.enableBeachWaveSound = it }))
                 .controller(TickBoxControllerBuilder::create)
                 .build())
+            .option(Option.createBuilder<Boolean>()
+                .name(Component.translatable("config.squ_abyssal_bloom.enableAbyssalAmbientSound"))
+                .description(OptionDescription.of(Component.translatable("config.squ_abyssal_bloom.enableAbyssalAmbientSound.desc")))
+                .binding(Binding.generic(true, { ModConfig.enableAbyssalAmbientSound }, { ModConfig.enableAbyssalAmbientSound = it }))
+                .controller(TickBoxControllerBuilder::create)
+                .build())
             .build())
     }
 }

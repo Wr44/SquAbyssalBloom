@@ -217,6 +217,22 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val ABYSSAL_LOOP = SOUNDS.register("abyssal_loop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val ABYSSAL_WATER_SHIFT = SOUNDS.register("abyssal_water_shift") { id ->
+        SoundEvent.createFixedRangeEvent(id, 80.0f)
+    }
+
+    val ABYSSAL_DISTANT_BUBBLES = SOUNDS.register("abyssal_distant_bubbles") { id ->
+        SoundEvent.createFixedRangeEvent(id, 80.0f)
+    }
+
+    val ABYSSAL_MOOD = SOUNDS.register("abyssal_mood") { id ->
+        SoundEvent.createFixedRangeEvent(id, 112.0f)
+    }
+
 
     // Bioluminescent wave
 

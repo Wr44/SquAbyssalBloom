@@ -98,6 +98,7 @@ object ModConfig {
     var bioluminescenceBloomPulseIntensity: Double = 1.0
     var bioluminescenceBloomPulseIntervalTicks: Int = 170
     var enableBeachWaveSound: Boolean = true
+    var enableAbyssalAmbientSound: Boolean = true
 
     fun loadConfig() {
         if (!configFile.exists()) { saveConfig(); return }
@@ -157,6 +158,7 @@ object ModConfig {
             bioluminescenceBloomPulseIntensity = json.get("bioluminescenceBloomPulseIntensity")?.asDouble ?: 1.0
             bioluminescenceBloomPulseIntervalTicks = json.get("bioluminescenceBloomPulseIntervalTicks")?.asInt ?: 170
             enableBeachWaveSound = json.get("enableBeachWaveSound")?.asBoolean ?: true
+            enableAbyssalAmbientSound = json.get("enableAbyssalAmbientSound")?.asBoolean ?: true
 
         } catch (e: Exception) {
             SquAbyssalBloom.LOGGER.error("Failed to read the client config, keeping defaults", e)
@@ -219,6 +221,7 @@ object ModConfig {
                 addProperty("bioluminescenceBloomPulseIntensity", bioluminescenceBloomPulseIntensity)
                 addProperty("bioluminescenceBloomPulseIntervalTicks", bioluminescenceBloomPulseIntervalTicks)
                 addProperty("enableBeachWaveSound", enableBeachWaveSound)
+                addProperty("enableAbyssalAmbientSound", enableAbyssalAmbientSound)
             }
             configFile.parentFile?.mkdirs()
             configFile.writeText(gson.toJson(json))

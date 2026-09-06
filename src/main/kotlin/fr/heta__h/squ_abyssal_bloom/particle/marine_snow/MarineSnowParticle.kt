@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.particle.marine_snow
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthProfile
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.particle.SingleQuadParticle
 import net.minecraft.client.renderer.texture.TextureAtlasSprite
@@ -42,7 +42,7 @@ class MarineSnowParticle(
             else -> 1.0f
         }
 
-        alpha = (fadeAlpha * AbyssDepthCache.displayedDepthFactor.toFloat()).coerceIn(0.0f, 1.0f)
+        alpha = (fadeAlpha * AbyssDepthProfile.entry.toFloat()).coerceIn(0.0f, 1.0f)
 
         super.tick()
     }

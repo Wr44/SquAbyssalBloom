@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthProfile
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.core.BlockPos
@@ -13,7 +14,6 @@ import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderGuiEvent
-import kotlin.math.pow
 
 @EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object AbyssVignetteOverlay {
@@ -34,11 +34,11 @@ object AbyssVignetteOverlay {
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
-        val rawFactor = AbyssDepthCache.displayedDepthFactor
+        val rawFactor = AbyssDepthProfile.oppression
         val lampInfluence = AbyssDepthCache.displayedAmbientFogRepellerInfluence
         val effectiveFactor = rawFactor * (1.0 - lampInfluence * ModConfig.fogRepellerInfluence)
 
-        val alpha = (effectiveFactor.pow(0.8) * ModConfig.vignetteIntensity).toFloat().coerceIn(0f, 0.7f)
+        val alpha = (effectiveFactor * ModConfig.vignetteIntensity).toFloat().coerceIn(0f, 0.7f)
         if (alpha < 0.02f) return
 
         val guiGraphics = event.guiGraphics

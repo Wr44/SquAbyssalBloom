@@ -145,6 +145,12 @@
   "config.squ_abyssal_bloom.group.ambient_sounds.desc": "Lets you enable or disable each ambient sound individually",
   "config.squ_abyssal_bloom.enableBeachWaveSound": "Beach Wave Sound",
   "config.squ_abyssal_bloom.enableBeachWaveSound.desc": "Turns the ambient wave sound heard near beaches on or off",
+  "config.squ_abyssal_bloom.enableAbyssalAmbientSound": "Abyssal ambient sounds",
+  "config.squ_abyssal_bloom.enableAbyssalAmbientSound.desc": "Enables the depth loop, distant water movements and abyssal mood sounds",
+  "subtitles.squ_abyssal_bloom.abyssal_ambience": "The abyss resonates",
+  "subtitles.squ_abyssal_bloom.abyssal_water_shift": "Water shifts in the distance",
+  "subtitles.squ_abyssal_bloom.abyssal_distant_bubbles": "Distant bubbles",
+  "subtitles.squ_abyssal_bloom.abyssal_mood": "Eerie abyssal noise",
 
   "config.squ_abyssal_bloom.group.surface_occluder": "Surface Darkening",
   "config.squ_abyssal_bloom.group.surface_occluder.desc": "Visually darkens the water surface.\n\nWarning: this option can hit your FPS when you're in deep oceans.",

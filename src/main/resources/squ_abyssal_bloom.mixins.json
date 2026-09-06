@@ -42,6 +42,8 @@
     "block.brine_bubble_column.BrineBubbleColumnAmbientSoundMixin",
     "block.conduit.ConduitRendererMixin",
 
+    "sound.UnderwaterAmbientCrossfadeMixin",
+
     "entity.nautilus.NautilusScreenMixin",
 
     "enable.FrustumAccessor",

@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthProfile
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
@@ -44,7 +45,7 @@ object AbyssOverlayRender {
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
         val physicalDepth = AbyssDepthCache.rawPhysicalDepth
-        val alpha = AbyssDepthCache.displayedDepthFactor.toFloat()
+        val alpha = AbyssDepthProfile.presence.toFloat()
 
         if (alpha < 0.005f) return
 
@@ -103,7 +104,7 @@ object AbyssOverlayRender {
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
-        val alpha = AbyssDepthCache.displayedDepthFactor.toFloat()
+        val alpha = AbyssDepthProfile.presence.toFloat()
         if (alpha < 0.005f) return
 
         val lampInfluence = AbyssDepthCache.displayedAmbientFogRepellerInfluence

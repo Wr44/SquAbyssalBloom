@@ -145,6 +145,12 @@
   "config.squ_abyssal_bloom.group.ambient_sounds.desc": "Permet d'activer ou de désactiver chaque son ambiant individuellement",
   "config.squ_abyssal_bloom.enableBeachWaveSound": "Son des vagues",
   "config.squ_abyssal_bloom.enableBeachWaveSound.desc": "Active ou désactive le son ambiant des vagues entendu près des plages",
+  "config.squ_abyssal_bloom.enableAbyssalAmbientSound": "Ambiance sonore abyssale",
+  "config.squ_abyssal_bloom.enableAbyssalAmbientSound.desc": "Active la boucle de profondeur, les mouvements d'eau et les sons d'ambiance abyssaux",
+  "subtitles.squ_abyssal_bloom.abyssal_ambience": "Résonance des abysses",
+  "subtitles.squ_abyssal_bloom.abyssal_water_shift": "L'eau remue au loin",
+  "subtitles.squ_abyssal_bloom.abyssal_distant_bubbles": "Bulles lointaines",
+  "subtitles.squ_abyssal_bloom.abyssal_mood": "Bruit inquiétant des abysses",
 
   "config.squ_abyssal_bloom.group.surface_occluder": "Assombrissement de la Surface",
   "config.squ_abyssal_bloom.group.surface_occluder.desc": "Assombrit visuellement la surface de l'eau.\n\nAttention : Cette option peut impacter vos FPS (chute de performances) lorsque vous êtes dans des océans profonds.",

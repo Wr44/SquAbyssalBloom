@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.fx
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthProfile
 import net.minecraft.core.BlockPos
 import net.minecraft.util.Mth
 import net.minecraft.world.effect.MobEffects
@@ -12,7 +13,6 @@ import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.ViewportEvent
-import kotlin.math.pow
 
 @EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object WaterFogHandler {
@@ -39,12 +39,8 @@ object WaterFogHandler {
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
-        var rawFactor = AbyssDepthCache.displayedDepthFactor
-
-        if (rawFactor <= 0.0) return
-
-        val safeFactor = maxOf(0.0, rawFactor)
-        val depthEased = safeFactor.pow(0.3).toFloat()
+        val depthEased = AbyssDepthProfile.presence.toFloat()
+        if (depthEased <= 0.0f) return
         val intensityScale = ModConfig.fogDarknessIntensity.toFloat()
         val finalLerpFactor = (depthEased * intensityScale).coerceIn(0.0f, 1.0f)
 
@@ -72,10 +68,7 @@ object WaterFogHandler {
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
-        val rawFactor = AbyssDepthCache.displayedDepthFactor
-
-        val safeFactor = rawFactor.coerceIn(0.0, 1.0)
-        val depthEased = safeFactor.pow(0.3).toFloat()
+        val depthEased = AbyssDepthProfile.presence.toFloat()
 
         val intensityScale = ModConfig.fogDarknessIntensity.toFloat()
 

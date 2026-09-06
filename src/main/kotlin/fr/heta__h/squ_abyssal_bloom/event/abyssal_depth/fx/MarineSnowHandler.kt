@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.fx
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthProfile
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
@@ -35,7 +36,7 @@ object MarineSnowHandler {
 
         AbyssDepthCache.refreshIfNeeded(level, camPos)
 
-        val depthFactor = AbyssDepthCache.displayedDepthFactor
+        val depthFactor = AbyssDepthProfile.entry
         if (depthFactor < 0.05) return
 
         val count = kotlin.math.ceil(

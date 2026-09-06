@@ -127,25 +127,31 @@ object SquAbyssalBloom {
     @SubscribeEvent
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
         AbyssalWorldgenScope.clear()
+
         OceanTerritory.seed(event.server.worldGenSettings.options().seed(), ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS.get())
     }
 
     @SubscribeEvent
     fun onServerStopped(event: ServerStoppedEvent) {
         AbyssalWorldgenScope.clear()
+
         BioluminescenceLevelManager.releaseServerLevels(event.server)
         BioluminescenceServerManager.releaseServer(event.server)
     }
 
     @SubscribeEvent
     fun onLevelLoad(event: LevelEvent.Load) {
+
         val serverLevel = event.level as? ServerLevel ?: return
+
         AbyssalWorldgenScope.register(serverLevel)
     }
 
     @SubscribeEvent
     fun onLevelUnload(event: LevelEvent.Unload) {
+
         val serverLevel = event.level as? ServerLevel ?: return
+
         AbyssalWorldgenScope.unregister(serverLevel)
         FishCollectiveManager.releaseLevel(serverLevel)
         RedSlobbererReefManager.releaseLevel(serverLevel)
