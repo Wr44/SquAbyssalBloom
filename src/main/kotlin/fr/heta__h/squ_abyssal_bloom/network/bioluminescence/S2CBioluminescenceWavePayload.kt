@@ -30,6 +30,7 @@ data class S2CBioluminescenceWavePayload(
     val size: BioluminescenceWaveSize,
     val mode: BioluminescenceWaveMode,
     val activity: BioluminescenceWaveActivity,
+    val playStartSound: Boolean = false,
     val blooms: List<BloomSnapshot> = emptyList()
 ) : CustomPacketPayload {
 
@@ -81,6 +82,7 @@ data class S2CBioluminescenceWavePayload(
                 buffer.writeEnum(payload.size)
                 buffer.writeEnum(payload.mode)
                 buffer.writeEnum(payload.activity)
+                buffer.writeBoolean(payload.playStartSound)
                 buffer.writeCollection(payload.blooms) { buf, bloom ->
                     buf.writeUUID(bloom.id)
                     buf.writeBlockPos(bloom.position)
@@ -110,6 +112,7 @@ data class S2CBioluminescenceWavePayload(
                     size = buffer.readEnum(BioluminescenceWaveSize::class.java),
                     mode = buffer.readEnum(BioluminescenceWaveMode::class.java),
                     activity = buffer.readEnum(BioluminescenceWaveActivity::class.java),
+                    playStartSound = buffer.readBoolean(),
                     blooms = buffer.readList { buf ->
                         BloomSnapshot(
                             id = buf.readUUID(),
@@ -128,6 +131,7 @@ data class S2CBioluminescenceWavePayload(
         fun from(
             wave: ActiveBioluminescenceWave,
             serverGameTime: Long,
+            playStartSound: Boolean,
             blooms: List<PlanktonBloomState> = emptyList()
         ): S2CBioluminescenceWavePayload {
             return S2CBioluminescenceWavePayload(
@@ -143,6 +147,7 @@ data class S2CBioluminescenceWavePayload(
                 wave.size,
                 wave.mode,
                 wave.activity,
+                playStartSound,
                 blooms.map(BloomSnapshot::from)
             )
         }
@@ -164,6 +169,7 @@ data class S2CBioluminescenceWavePayload(
         if (anchor.x !in bounds.minimumX..bounds.maximumX) return false
         if (anchor.z !in bounds.minimumZ..bounds.maximumZ) return false
         if (endGameTime <= startGameTime) return false
+
         return when (mode) {
             BioluminescenceWaveMode.NORMAL ->
                 endGameTime - startGameTime in 1L..MAXIMUM_NORMAL_DURATION_TICKS

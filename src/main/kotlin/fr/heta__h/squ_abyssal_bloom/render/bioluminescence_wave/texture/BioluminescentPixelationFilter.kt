@@ -4,7 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.Biolumines
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
-internal object BioluminescentPixelationFilter {
+object BioluminescentPixelationFilter {
     private const val MAX_ALPHA_LEVEL = 15
     private const val MIN_COLOR_WEIGHT = 1.0e-6
 
@@ -87,7 +87,7 @@ internal object BioluminescentPixelationFilter {
         return (alphaBits shl 32) or color
     }
 
-    internal fun interpolate(
+    fun interpolate(
         northWest: Long,
         northEast: Long,
         southWest: Long,

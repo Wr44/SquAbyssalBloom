@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.Biolumines
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentMacroField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.skeleton.BioluminescentTopology
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentReactionDiffusionStats
 
 data class BioluminescentZoneGenerationResult(
     val domain: BioluminescentWaterDomain,

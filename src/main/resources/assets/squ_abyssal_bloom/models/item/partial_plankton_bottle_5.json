@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "squ_abyssal_bloom:item/plankton_bottle_outline",
+    "layer1": "squ_abyssal_bloom:item/plankton_bottle_liquid_5",
+    "layer2": "squ_abyssal_bloom:item/plankton_bottle_glow_5",
+    "layer3": "minecraft:item/potion"
+  }
+}

@@ -33,6 +33,12 @@ object ModDataComponents {
             .build()
     })
 
+    val PLANKTON_FILL: Supplier<DataComponentType<Int>> = REGISTRY.register("plankton_fill", Supplier {
+        DataComponentType.builder<Int>()
+            .persistent(Codec.INT)
+            .networkSynchronized(ByteBufCodecs.VAR_INT)
+            .build()
+    })
 
     fun register(modBus: IEventBus) {
         REGISTRY.register(modBus)

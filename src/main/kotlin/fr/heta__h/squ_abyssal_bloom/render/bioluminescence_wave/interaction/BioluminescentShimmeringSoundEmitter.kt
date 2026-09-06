@@ -20,8 +20,6 @@ class BioluminescentShimmeringSoundEmitter {
         private const val VOLUME = 1.2f
         private const val PITCH_SPREAD = 0.2f
         private const val MIN_LISTENER_DISTANCE = 5.0
-        // The sound event has a variable range, so it carries only volume * 16 blocks: placing
-        // a shimmer past that is placing one nobody hears.
         private const val MAX_LISTENER_DISTANCE = 18.0
     }
 

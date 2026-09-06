@@ -7,10 +7,6 @@ import fr.heta__h.squ_abyssal_bloom.worldgen.terrain.AbyssalFloorShaper.MUSHROOM
 import fr.heta__h.squ_abyssal_bloom.worldgen.terrain.AbyssalFloorShaper.OCEAN_MAX_CONT
 import kotlin.math.max
 
-/**
- * One validated snapshot per NoiseChunk. Besides keeping a chunk deterministic
- * during a config reload, this avoids dozens of config/cache lookups per column.
- */
 data class AbyssalTerrainSettings(
     val shallowDeepEdge: Double,
     val deepAbyssalEdge: Double,

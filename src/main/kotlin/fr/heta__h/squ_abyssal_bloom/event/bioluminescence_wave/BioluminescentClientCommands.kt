@@ -15,7 +15,7 @@ import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent
 object BioluminescentClientCommands {
     @SubscribeEvent
     fun registerCommands(event: RegisterClientCommandsEvent) {
-        val root = Commands.literal("squ_bioluminescence")
+        val root = Commands.literal("bioluminescence")
         root.then(
             Commands.literal("debug")
                 .executes { context ->

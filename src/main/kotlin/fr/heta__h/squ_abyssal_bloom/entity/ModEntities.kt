@@ -10,6 +10,8 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage1Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage2Model
 import fr.heta__h.squ_abyssal_bloom.entity.client.bubble.BubbleStage3Model
+import fr.heta__h.squ_abyssal_bloom.entity.client.crystal_jelly.CrystalJellyModel
+import fr.heta__h.squ_abyssal_bloom.entity.client.crystal_jelly.CrystalJellyRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraModel
 import fr.heta__h.squ_abyssal_bloom.entity.client.ghost_chimaera.GhostChimaeraRenderer
 import fr.heta__h.squ_abyssal_bloom.entity.client.mackerel.MackerelModel
@@ -20,6 +22,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererRend
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.guardian_spike.GuardianSpikeModel
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.BarnacleEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
+import fr.heta__h.squ_abyssal_bloom.entity.custom.crystal_jelly.CrystalJellyEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.ghost_chimaera.GhostChimaeraEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.custom.mackerel.MackerelEntity
@@ -31,6 +34,8 @@ import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLampModel
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.findLocalWaterFloor
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.AbyssalOceanBiomes
+import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanBiomeRegistry
 import net.minecraft.client.Minecraft
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.model.geom.ModelLayers
@@ -139,10 +144,22 @@ object ModEntities {
     val MACKEREL: DeferredHolder<EntityType<*>, EntityType<MackerelEntity>> =
         ENTITY_TYPES.register("mackerel") { _: Identifier ->
             EntityType.Builder.of({ type, level -> MackerelEntity(type, level) }, MobCategory.WATER_AMBIENT)
-                .sized(0.5f, 0.3f)
+                .sized(0.33f, 0.15f)
                 .clientTrackingRange(4)
                 .updateInterval(3)
                 .build(MACKEREL_KEY)
+        }
+
+    val CRYSTAL_JELLY_KEY: ResourceKey<EntityType<*>> =
+        ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "crystal_jelly"))
+
+    val CRYSTAL_JELLY: DeferredHolder<EntityType<*>, EntityType<CrystalJellyEntity>> =
+        ENTITY_TYPES.register("crystal_jelly") { _: Identifier ->
+            EntityType.Builder.of({ type, level -> CrystalJellyEntity(type, level) }, MobCategory.WATER_CREATURE)
+                .sized(0.7f, 0.4f)
+                .clientTrackingRange(8)
+                .updateInterval(3)
+                .build(CRYSTAL_JELLY_KEY)
         }
 
     val BUBBLE_KEY = ResourceKey.create(Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "bubble_projectile"))
@@ -163,6 +180,7 @@ object ModEntities {
         event.registerEntityRenderer(BRINE.get() as EntityType<out BrineEntity>, ::BrineRenderer)
         event.registerEntityRenderer(RED_SLOBBERER.get() as EntityType<out RedSlobbererEntity>, ::RedSlobbererRenderer)
         event.registerEntityRenderer(MACKEREL.get() as EntityType<out MackerelEntity>, ::MackerelRenderer)
+        event.registerEntityRenderer(CRYSTAL_JELLY.get() as EntityType<out CrystalJellyEntity>, ::CrystalJellyRenderer)
 
         //Projectile
         event.registerEntityRenderer(BUBBLE.get() as EntityType<out BubbleProjectile>, ::BubbleRenderer)
@@ -215,6 +233,11 @@ object ModEntities {
             MackerelModel::createBodyLayer
         )
 
+        event.registerLayerDefinition(
+            CrystalJellyModel.LAYER_LOCATION,
+            CrystalJellyModel::createBodyLayer
+        )
+
 
         //Render layer
         event.registerLayerDefinition(
@@ -245,6 +268,7 @@ object ModEntities {
         event.put(BRINE.get(), BrineEntity.createAttributes().build())
         event.put(RED_SLOBBERER.get(), RedSlobbererEntity.createAttributes().build())
         event.put(MACKEREL.get(), MackerelEntity.createAttributes().build())
+        event.put(CRYSTAL_JELLY.get(), CrystalJellyEntity.createAttributes().build())
     }
 
     fun onAddLayers(event: EntityRenderersEvent.AddLayers) {
@@ -325,12 +349,21 @@ object ModEntities {
         if (
             !ModServerConfig.MACKEREL_SPAWN_ENABLED.get() ||
             !level.getFluidState(pos).`is`(FluidTags.WATER) ||
-            oceanTemperatureAt(level, pos) >= ModServerConfig.MACKEREL_MAX_SPAWN_TEMPERATURE.get()
+            isTooWarmForMackerel(level, pos)
         ) {
             return false
         }
 
         return WaterAnimal.checkSurfaceWaterAnimalSpawnRules(entityType, level, reason, pos, random)
+    }
+
+    private fun isTooWarmForMackerel(level: ServerLevelAccessor, pos: BlockPos): Boolean {
+        val maxTemperature = ModServerConfig.MACKEREL_MAX_SPAWN_TEMPERATURE.get()
+        val biomeKey = level.getBiome(pos).unwrapKey().orElse(null)
+        val entry = biomeKey?.let { OceanBiomeRegistry.entryFor(it) }
+            ?: return oceanTemperatureAt(level, pos) >= maxTemperature
+
+        return entry.tempBand >= AbyssalOceanBiomes.temperatureIndex(maxTemperature.toFloat())
     }
 
     private fun oceanTemperatureAt(level: ServerLevelAccessor, pos: BlockPos): Double {

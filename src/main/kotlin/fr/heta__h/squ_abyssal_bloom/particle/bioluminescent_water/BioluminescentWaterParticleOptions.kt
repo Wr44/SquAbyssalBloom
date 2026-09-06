@@ -44,21 +44,5 @@ class BioluminescentWaterParticleOptions(
                 ::BioluminescentWaterParticleOptions
             )
 
-        @JvmStatic
-        fun rgb(
-            red: Int,
-            green: Int,
-            blue: Int,
-            alpha: Float = 1f
-        ): BioluminescentWaterParticleOptions {
-            val clampedRed = red.coerceIn(0, 255)
-            val clampedGreen = green.coerceIn(0, 255)
-            val clampedBlue = blue.coerceIn(0, 255)
-
-            return BioluminescentWaterParticleOptions(
-                clampedRed shl 16 or (clampedGreen shl 8) or clampedBlue,
-                alpha
-            )
-        }
     }
 }

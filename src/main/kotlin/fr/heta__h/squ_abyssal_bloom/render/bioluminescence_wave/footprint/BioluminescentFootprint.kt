@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.footprint
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 
 data class BioluminescentFootprint(

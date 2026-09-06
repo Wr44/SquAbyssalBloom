@@ -1,5 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone
 
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveMode
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloomPulse
@@ -7,17 +8,19 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.Biolumines
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationResult
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationSnapshot
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentAmbientParticleEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentBloomParticleEmitter
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWave
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWaveField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentShimmeringSoundEmitter
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.palette.BioluminescentPalette
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneActivity
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZonePreset
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.texture.TextureManager
@@ -48,12 +51,8 @@ class BioluminescentZone(
         const val PULSE_PERIOD_TICKS = 320.0
         const val MIN_PULSE_INTENSITY = 0.30
         const val MAX_PULSE_INTENSITY = 0.70
-        const val APPEARANCE_END = 0.20
-        const val DISAPPEARANCE_START = 0.80
         const val MAX_RENDER_INTENSITY = 1.15f
         const val BRIGHTNESS_SEED_SALT = 0x6A09E667F3BCC909L
-        const val TOTAL_NIGHT_APPEARANCE_TICKS = 60.0
-        const val TOTAL_NIGHT_FADE_OUT_TICKS = 60.0
         const val BLOOM_PULSE_VOLUME = 2.0f
         const val SOUND_PITCH_SPREAD = 0.2f
     }
@@ -85,6 +84,8 @@ class BioluminescentZone(
 
     private var endingAtServerGameTime: Long? = null
 
+    private var readyAtGameTime: Long? = null
+
     var generationStage = BioluminescentZoneGenerationStage.COLLECT_WATER_DOMAIN
         private set
 
@@ -95,7 +96,7 @@ class BioluminescentZone(
         private set
 
     val tiles: List<BioluminescentZoneTile>
-        get() = spatialData?.tiles ?: generator?.renderableTiles ?: emptyList()
+        get() = spatialData?.tiles ?: emptyList()
 
     val hasRenderableTiles: Boolean
         get() = tiles.isNotEmpty()
@@ -130,7 +131,8 @@ class BioluminescentZone(
         identifierFactory: () -> Identifier,
         maxTileCount: Int,
         gameTime: Long,
-        priorityPosition: BlockPos
+        priorityPosition: BlockPos,
+        sliceNanos: Long
     ) {
         val activeGenerator = generator ?: return
         activeGenerator.advance(
@@ -139,15 +141,19 @@ class BioluminescentZone(
             identifierFactory,
             maxTileCount,
             gameTime,
-            BioluminescentZoneGenerator.GENERATION_TIME_SLICE_NANOS,
-            BioluminescentZoneGenerator.UPLOAD_STEPS_PER_ADVANCE,
+            sliceNanos,
+            BioluminescentZoneGenerator.workStepsForSlice(sliceNanos),
+            BioluminescentZoneGenerator.uploadStepsForSlice(sliceNanos),
             priorityPosition.x + 0.5,
             priorityPosition.z + 0.5
         )
         generationStage = activeGenerator.stage
         generationCpuNanos = activeGenerator.cpuNanos
         if (activeGenerator.stage == BioluminescentZoneGenerationStage.READY) {
-            spatialData = checkNotNull(activeGenerator.takeCompletedResult())
+            val completed = checkNotNull(activeGenerator.takeCompletedResult())
+            for (tile in completed.tiles) tile.beginFadeIn(gameTime)
+            readyAtGameTime = gameTime
+            spatialData = completed
             activeGenerator.close()
             generator = null
         } else if (activeGenerator.stage == BioluminescentZoneGenerationStage.FAILED) {
@@ -181,6 +187,16 @@ class BioluminescentZone(
             .toFloat().coerceIn(0.0f, MAX_RENDER_INTENSITY)
     }
 
+    private val configuredFadeTicks: Double
+        get() = ModConfig.bioluminescenceTileFadeInTicks.coerceAtLeast(0).toDouble()
+
+    fun loadingIntensityAt(renderGameTime: Double): Float {
+        val readyAt = readyAtGameTime ?: return 0.0f
+        val fade = configuredFadeTicks
+        if (fade <= 0.0) return 1.0f
+        return ((renderGameTime - readyAt) / fade).toFloat().coerceIn(0.0f, 1.0f)
+    }
+
     fun lifecycleIntensityAt(renderGameTime: Double): Float {
         val start = activatedAt ?: return 0.0f
         val serverTime = renderGameTime + serverGameTimeOffset
@@ -189,7 +205,7 @@ class BioluminescentZone(
         val endingAt = endingAtServerGameTime
         if (endingAt != null) {
             val fadeOutElapsed = (serverTime - endingAt).coerceAtLeast(0.0)
-            intensity *= 1.0 - ModUtilities.smooth(0.0, TOTAL_NIGHT_FADE_OUT_TICKS, fadeOutElapsed)
+            intensity *= 1.0 - ModUtilities.smooth(0.0, configuredFadeTicks, fadeOutElapsed)
         }
         return intensity.toFloat().coerceIn(0.0f, 1.0f)
     }
@@ -200,7 +216,7 @@ class BioluminescentZone(
 
     fun endingFadeComplete(renderGameTime: Double): Boolean {
         val endingAt = endingAtServerGameTime ?: return false
-        return renderGameTime + serverGameTimeOffset - endingAt >= TOTAL_NIGHT_FADE_OUT_TICKS
+        return renderGameTime + serverGameTimeOffset - endingAt >= configuredFadeTicks
     }
 
     fun localPulseIntensityAt(renderGameTime: Double, spatialPhase: Double): Float {
@@ -385,16 +401,12 @@ class BioluminescentZone(
     }
 
     private fun lifecycleIntensity(elapsedTicks: Double): Double {
-        if (mode == BioluminescenceWaveMode.TOTAL_NIGHT) {
-            return ModUtilities.smooth(0.0, TOTAL_NIGHT_APPEARANCE_TICKS, elapsedTicks)
-        }
-        if (elapsedTicks >= lifetime) return 0.0
-        val progress = elapsedTicks / lifetime
-        return when {
-            progress < APPEARANCE_END -> ModUtilities.smooth(0.0, APPEARANCE_END, progress)
-            progress < DISAPPEARANCE_START -> 1.0
-            else -> 1.0 - ModUtilities.smooth(DISAPPEARANCE_START, 1.0, progress)
-        }
+        if (mode == BioluminescenceWaveMode.TOTAL_NIGHT) return 1.0
+        val remainingTicks = lifetime - elapsedTicks
+        if (remainingTicks <= 0.0) return 0.0
+        val fade = configuredFadeTicks
+        if (fade <= 0.0) return 1.0
+        return ModUtilities.smooth(0.0, fade, remainingTicks)
     }
 
     private fun brightnessScaleFromSeed(): Double {

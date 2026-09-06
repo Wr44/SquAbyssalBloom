@@ -21,7 +21,8 @@ data class ActiveBioluminescenceWave(
     val mode: BioluminescenceWaveMode,
     val activity: BioluminescenceWaveActivity,
     val originPlayerId: UUID? = null,
-    val createdByCommand: Boolean = false
+    val createdByCommand: Boolean = false,
+    val startSoundPlayerIds: MutableSet<UUID> = linkedSetOf()
 ) {
     companion object {
         @JvmField
@@ -52,9 +53,12 @@ data class ActiveBioluminescenceWave(
                 UUIDUtil.CODEC.optionalFieldOf("origin_player_id")
                     .forGetter { wave: ActiveBioluminescenceWave -> Optional.ofNullable(wave.originPlayerId) },
                 Codec.BOOL.optionalFieldOf("created_by_command", false)
-                    .forGetter { wave: ActiveBioluminescenceWave -> wave.createdByCommand }
+                    .forGetter { wave: ActiveBioluminescenceWave -> wave.createdByCommand },
+                UUIDUtil.CODEC.listOf().optionalFieldOf("start_sound_player_ids", emptyList())
+                    .forGetter { wave: ActiveBioluminescenceWave -> wave.startSoundPlayerIds.toList() }
             ).apply(instance) { eventId, seed, dimension, beachId, anchor, bounds,
-                                startGameTime, endGameTime, size, mode, activity, originPlayerId, createdByCommand ->
+                                startGameTime, endGameTime, size, mode, activity, originPlayerId, createdByCommand,
+                                startSoundPlayerIds ->
                 ActiveBioluminescenceWave(
                     eventId,
                     seed,
@@ -68,7 +72,8 @@ data class ActiveBioluminescenceWave(
                     mode,
                     activity,
                     originPlayerId.orElse(null),
-                    createdByCommand
+                    createdByCommand,
+                    startSoundPlayerIds.toCollection(linkedSetOf())
                 )
             }
         }

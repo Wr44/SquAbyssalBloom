@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.entity.client.mackerel
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
+import fr.heta__h.squ_abyssal_bloom.entity.client.red_slobberer.RedSlobbererRenderState
 import fr.heta__h.squ_abyssal_bloom.entity.custom.mackerel.MackerelEntity
 import net.minecraft.client.model.EntityModel
 import net.minecraft.client.renderer.entity.EntityRendererProvider
@@ -43,4 +44,9 @@ class MackerelRenderer(context: EntityRendererProvider.Context) :
             poseStack.mulPose(Axis.ZP.rotationDegrees(90.0f))
         }
     }
+
+    override fun scale(state: MackerelRenderState, poseStack: PoseStack) {
+        poseStack.scale(0.58f, 0.58f, 0.58f)
+    }
+
 }

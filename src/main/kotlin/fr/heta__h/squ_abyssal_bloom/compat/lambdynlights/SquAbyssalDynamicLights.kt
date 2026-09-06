@@ -3,6 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights
 import dev.lambdaurora.lambdynlights.api.DynamicLightsContext
 import dev.lambdaurora.lambdynlights.api.DynamicLightsInitializer
 import dev.lambdaurora.lambdynlights.api.item.ItemLightSource
+import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity.CrystalJellyLuminance
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity.LuminescentBubbleLuminance
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.entity.NautilusEquipmentLuminance
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
@@ -24,6 +25,7 @@ class SquAbyssalDynamicLights : DynamicLightsInitializer {
             ctx.register(EntityType.NAUTILUS, NautilusEquipmentLuminance.INSTANCE)
             ctx.register(EntityType.ZOMBIE_NAUTILUS, NautilusEquipmentLuminance.INSTANCE)
             ctx.register(ModEntities.BUBBLE.get(), LuminescentBubbleLuminance.INSTANCE)
+            ctx.register(ModEntities.CRYSTAL_JELLY.get(), CrystalJellyLuminance.INSTANCE)
         }
 
         context.itemLightSourceManager().onRegisterEvent().register { ctx ->
@@ -32,6 +34,7 @@ class SquAbyssalDynamicLights : DynamicLightsInitializer {
             ctx.register(ModItems.BIOLUMINESCENT_CRYSTAL.get(), ModDynamicLightLevels.BIOLUMINESCENT_CRYSTAL)
             ctx.register(ModItems.NAUTILUS_LAMP.get(), ModDynamicLightLevels.NAUTILUS_LAMP)
             ctx.register(ModItems.PLANKTON_BOTTLE.get(), ModDynamicLightLevels.PLANKTON_BOTTLE)
+            ctx.register(ModItems.CRYSTAL_JELLY_BUCKET.get(), ModDynamicLightLevels.CRYSTAL_JELLY)
             ctx.register(
                 ItemLightSource(
                     ItemPredicate.Builder.item()

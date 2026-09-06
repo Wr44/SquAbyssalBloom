@@ -13,7 +13,7 @@ import net.minecraft.world.level.block.state.StateDefinition
 import net.minecraft.world.level.block.state.properties.BooleanProperty
 
 
-class BrineBubbleColumnBlock(properties: BlockBehaviour.Properties) : BubbleColumnBlock(properties) {
+class BrineBubbleColumnBlock(properties: Properties) : BubbleColumnBlock(properties) {
     companion object {
         val REFRESHED: BooleanProperty = BooleanProperty.create("refreshed")
         const val STALE_CHECK_TICKS = 20
@@ -30,11 +30,11 @@ class BrineBubbleColumnBlock(properties: BlockBehaviour.Properties) : BubbleColu
 
     override fun tick(state: BlockState, level: ServerLevel, pos: BlockPos, random: RandomSource) {
         if (!state.getValue(REFRESHED)) {
-            level.setBlock(pos, Blocks.WATER.defaultBlockState(), Block.UPDATE_ALL)
+            level.setBlock(pos, Blocks.WATER.defaultBlockState(), UPDATE_ALL)
             return
         }
 
-        level.setBlock(pos, state.setValue(REFRESHED, false), Block.UPDATE_NONE)
+        level.setBlock(pos, state.setValue(REFRESHED, false), UPDATE_NONE)
         level.scheduleTick(pos, this, STALE_CHECK_TICKS)
     }
 

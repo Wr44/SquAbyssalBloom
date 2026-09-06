@@ -14,16 +14,17 @@ import fr.heta__h.squ_abyssal_bloom.network.bioluminescence.S2CPlanktonBloomStat
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterCell
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomainCollector
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerationStage
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.footprint.BioluminescentFootprintField
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPaletteFamily
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalettes
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.palette.BioluminescentPaletteFamily
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.palette.BioluminescentPalettes
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePresets
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneActivity
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZonePresets
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.cache.AdaptiveWorkBudget
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation.BioluminescentZoneGenerator
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.bloom.PlanktonBloomLifecycle
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
@@ -47,6 +48,7 @@ import kotlin.math.sqrt
     value = [Dist.CLIENT]
 )
 object BioluminescentZoneManager {
+
     private const val MAX_SYNCHRONIZED_EVENTS = 64
     private const val MAX_RETAINED_FAILURES = 6
     private const val MAX_GENERATION_ATTEMPTS = 3
@@ -57,7 +59,6 @@ object BioluminescentZoneManager {
     private const val MAX_GPU_TILES = 128
     private const val COLOR_PHASE_SALT = 0x3956C25BF348B538L
     private const val WATER_REVALIDATION_BUDGET_PER_ZONE = 4
-    private const val WAVE_START_SOUND_GRACE_TICKS = 40L
 
     private data class ClientWave(
         val payload: S2CBioluminescenceWavePayload,
@@ -151,6 +152,7 @@ object BioluminescentZoneManager {
     fun synchronizeWave(level: ClientLevel, payload: S2CBioluminescenceWavePayload) {
         ensureLevel(level)
         if (payload.dimension != level.dimension().identifier()) return
+        if (payload.playStartSound) pendingWaveStartSounds.add(payload.eventId)
         val synchronized = ClientWave(
             payload,
             payload.serverGameTimeAtSend - level.gameTime
@@ -169,6 +171,7 @@ object BioluminescentZoneManager {
         while (synchronizedWaves.size > MAX_SYNCHRONIZED_EVENTS) {
             val oldestEventId = synchronizedWaves.entries.first().key
             synchronizedWaves.remove(oldestEventId)
+            pendingWaveStartSounds.remove(oldestEventId)
             retryAtGameTime.remove(oldestEventId)
             generationAttemptsByEventId.remove(oldestEventId)
             removeZone(oldestEventId)
@@ -178,11 +181,12 @@ object BioluminescentZoneManager {
 
     fun removeWave(eventId: UUID, gameTime: Long) {
         val wave = synchronizedWaves.remove(eventId) ?: return
+        pendingWaveStartSounds.remove(eventId)
         retryAtGameTime.remove(eventId)
         generationAttemptsByEventId.remove(eventId)
         val zone = zonesByEventId[eventId]
         playWaveEdgeSound(zone, wave.payload.bounds, started = false)
-        if (zone != null && zone.mode == BioluminescenceWaveMode.TOTAL_NIGHT && zone.hasRenderableTiles) {
+        if (zone != null && zone.hasRenderableTiles) {
             zone.beginEnding(gameTime + zone.serverGameTimeOffset)
             endingZoneIds.add(eventId)
         } else {
@@ -231,7 +235,8 @@ object BioluminescentZoneManager {
                     "movement=${zone?.activeMovementWaveCount ?: 0}/${zone?.movingEntityCount ?: 0} " +
                     "pulses=${zone?.activeBloomPulseCount ?: 0} " +
                     "lights=${zone?.let(BioluminescentZoneDynamicLights::registeredLightCount) ?: 0}" +
-                    "+${zone?.let(BioluminescentZoneDynamicLights::pendingLightBuildCount) ?: 0} " +
+                    "+${zone?.let(BioluminescentZoneDynamicLights::pendingLightBuildCount) ?: 0}" +
+                    "/${zone?.let(BioluminescentZoneDynamicLights::cachedLightCount) ?: 0} " +
                     "attempts=${generationAttemptsByEventId[eventId] ?: 0} distance=$distance"
             )
             val serverGameTimeOffset = zone?.serverGameTimeOffset ?: 0L
@@ -305,9 +310,6 @@ object BioluminescentZoneManager {
                 )
             }
             zonesByEventId[eventId] = zone
-            val startedRecently = level.gameTime + synchronized.serverGameTimeOffset -
-                synchronized.payload.startGameTime <= WAVE_START_SOUND_GRACE_TICKS
-            if (startedRecently) pendingWaveStartSounds.add(eventId)
         }
     }
 
@@ -384,6 +386,15 @@ object BioluminescentZoneManager {
         return null
     }
 
+    private fun generationSliceNanos(): Long {
+        val framesPerSecond = Minecraft.getInstance().fps.coerceAtLeast(1)
+        return AdaptiveWorkBudget.sliceNanosForFrameTime(
+            1_000_000_000L / framesPerSecond,
+            BioluminescentZoneGenerator.MINIMUM_SLICE_NANOS,
+            BioluminescentZoneGenerator.MAXIMUM_SLICE_NANOS
+        )
+    }
+
     private fun advanceOneGeneration(level: ClientLevel) {
         val priorityPosition = Minecraft.getInstance().player?.blockPosition() ?: return
         var totalReservedTiles = 0
@@ -409,11 +420,9 @@ object BioluminescentZoneManager {
             ::nextTextureIdentifier,
             (MAX_GPU_TILES - otherTiles).coerceAtLeast(0),
             level.gameTime,
-            priorityPosition
+            priorityPosition,
+            generationSliceNanos()
         )
-        if (zone.hasRenderableTiles && pendingWaveStartSounds.remove(zone.eventId)) {
-            playWaveEdgeSound(zone, synchronizedWaves[zone.eventId]?.payload?.bounds, started = true)
-        }
         if (zone.isFailed) {
             rememberFailure(zone, zone.failureReason ?: "raison inconnue")
             val attempts = (generationAttemptsByEventId[zone.eventId] ?: 0) + 1
@@ -428,6 +437,9 @@ object BioluminescentZoneManager {
             retryAtGameTime.remove(zone.eventId)
             generationAttemptsByEventId.remove(zone.eventId)
             BioluminescentZoneDynamicLights.onZoneReady(zone)
+            if (pendingWaveStartSounds.remove(zone.eventId)) {
+                playWaveEdgeSound(zone, synchronizedWaves[zone.eventId]?.payload?.bounds, started = true)
+            }
         }
     }
 
@@ -453,6 +465,7 @@ object BioluminescentZoneManager {
             .mapTo(mutableListOf()) { wave -> wave.payload.eventId }
         for (eventId in expired) {
             val wave = synchronizedWaves.remove(eventId)
+            pendingWaveStartSounds.remove(eventId)
             retryAtGameTime.remove(eventId)
             generationAttemptsByEventId.remove(eventId)
             playWaveEdgeSound(zonesByEventId[eventId], wave?.payload?.bounds, started = false)
@@ -469,7 +482,6 @@ object BioluminescentZoneManager {
     }
 
     private fun removeZone(eventId: UUID) {
-        pendingWaveStartSounds.remove(eventId)
         val zone = zonesByEventId.remove(eventId) ?: return
         BioluminescentZoneDynamicLights.onZoneRemoved(zone)
         zone.close()

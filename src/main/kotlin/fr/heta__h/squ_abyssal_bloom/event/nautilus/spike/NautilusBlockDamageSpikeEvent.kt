@@ -16,49 +16,38 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent
 @EventBusSubscriber(modid = SquAbyssalBloom.ID)
 object NautilusBlockDamageSpikeEvent {
 
-    private const val FRONT_SHIELD_DOT_THRESHOLD = 0.5
-
     @SubscribeEvent
     fun onNautilusShieldBlock(event: LivingIncomingDamageEvent) {
-        val entity = event.entity
+        val victim = event.entity
+        val nautilus = victim as? AbstractNautilus ?: victim.vehicle as? AbstractNautilus ?: return
 
-        if (entity !is AbstractNautilus) return
-        if (!entity.isDashing) return
-
-        val extraItemStack = entity.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
+        val extraItemStack = nautilus.getData(ModAttachments.NAUTILUS_EXTRA_SLOT)
         if (extraItemStack.item != NautilusLayerItems.SHIELD) return
 
+        if (!nautilus.isDashing && nautilus.level().gameTime >= nautilus.getData(ModAttachments.NAUTILUS_CHARGE_GRACE)) return
+
         val attacker = event.source.entity ?: return
+        if (attacker === nautilus || nautilus.hasPassenger(attacker)) return
 
-        val toAttacker = attacker.position()
-            .subtract(entity.position())
-            .normalize()
+        event.isCanceled = true
 
-        val lookVec = entity.deltaMovement.normalize()
-
-        val dot = lookVec.dot(toAttacker)
-
-        if (dot > FRONT_SHIELD_DOT_THRESHOLD) {
-            event.isCanceled = true
-
-            val level = entity.level()
-            if (level is ServerLevel) {
-                level.sendParticles(
-                    ParticleTypes.CRIT,
-                    entity.x, entity.y + (entity.bbHeight / 2.0), entity.z,
-                    4, 0.2, 0.2, 0.2, 0.05
-                )
-            }
-
-            if (attacker !is LivingEntity) return
-
-            ModUtilities.playSoundLocal(
-                attacker,
-                SoundEvents.SHIELD_BLOCK.value(),
-                entity.soundSource,
-                1.0f,
-                1.0f
+        val level = nautilus.level()
+        if (level is ServerLevel) {
+            level.sendParticles(
+                ParticleTypes.CRIT,
+                nautilus.x, nautilus.y + (nautilus.bbHeight / 2.0), nautilus.z,
+                4, 0.2, 0.2, 0.2, 0.05
             )
         }
+
+        if (attacker !is LivingEntity) return
+
+        ModUtilities.playSoundLocal(
+            attacker,
+            SoundEvents.SHIELD_BLOCK.value(),
+            nautilus.soundSource,
+            1.0f,
+            1.0f
+        )
     }
 }

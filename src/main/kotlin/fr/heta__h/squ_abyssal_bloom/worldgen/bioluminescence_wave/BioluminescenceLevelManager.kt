@@ -13,6 +13,7 @@ import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.Biolumine
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceServerSettings
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaterAreaSampler
 import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.bloom.PlanktonBloomManager
+import fr.heta__h.squ_abyssal_bloom.worldgen.bioluminescence_wave.crystal_jelly.CrystalJellySpawnManager
 import net.minecraft.core.BlockPos
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
@@ -24,13 +25,13 @@ import java.util.WeakHashMap
 import kotlin.math.ceil
 import kotlin.math.sqrt
 
-class BioluminescenceLevelManager private constructor(
+class BioluminescenceLevelManager(
     private val level: ServerLevel
 ) {
     companion object {
         private const val SPATIAL_SECTOR_SIZE = 64
         private const val MAXIMUM_NORMAL_DURATION_TICKS = 72000L
-        private const val BLOOM_PLACEMENT_RADIUS_RATIO = 0.55
+        const val PLACEMENT_RADIUS_RATIO = 0.55
         private const val TOTAL_NIGHT_RETRY_MOVEMENT_SQUARED = 16.0 * 16.0
         private const val TOTAL_NIGHT_RETRY_DELAY_TICKS = 200L
         private val INSTANCES: MutableMap<ServerLevel, BioluminescenceLevelManager> = WeakHashMap()
@@ -162,6 +163,12 @@ class BioluminescenceLevelManager private constructor(
         }
 
         PlanktonBloomManager.forLevel(level).tick(gameTime)
+        CrystalJellySpawnManager.forLevel(level).tick(
+            gameTime,
+            savedData.waves.values.filter { wave ->
+                gameTime >= wave.startGameTime && isWaveActive(wave, gameTime, settings)
+            }
+        )
     }
 
     fun synchronizePlayer(
@@ -522,7 +529,7 @@ class BioluminescenceLevelManager private constructor(
 
         val waveSeed = seedOverride ?: level.random.nextLong()
         val geodesicRadius = size.selectGeodesicRadius(waveSeed)
-        val placementRadius = (geodesicRadius * BLOOM_PLACEMENT_RADIUS_RATIO).toInt().coerceAtLeast(1)
+        val placementRadius = (geodesicRadius * PLACEMENT_RADIUS_RATIO).toInt().coerceAtLeast(1)
         val waterArea = BioluminescenceWaterAreaSampler.collect(
             level,
             beach.waterSurface,
@@ -598,9 +605,11 @@ class BioluminescenceLevelManager private constructor(
 
     private fun sendWave(player: ServerPlayer, wave: ActiveBioluminescenceWave) {
         val blooms = PlanktonBloomManager.forLevel(level).bloomsForWave(wave.eventId)
+        val playStartSound = wave.startSoundPlayerIds.add(player.uuid)
+        if (playStartSound) savedData.setDirty()
         PacketDistributor.sendToPlayer(
             player,
-            S2CBioluminescenceWavePayload.from(wave, level.gameTime, blooms)
+            S2CBioluminescenceWavePayload.from(wave, level.gameTime, playStartSound, blooms)
         )
     }
 
@@ -627,10 +636,14 @@ class BioluminescenceLevelManager private constructor(
         val removedIds = savedData.waves.values.asSequence()
             .filter(predicate)
             .mapTo(linkedSetOf()) { wave -> wave.eventId }
+
         if (removedIds.isEmpty()) return
+
         for (eventId in removedIds) {
-            savedData.waves.remove(eventId)?.let(::unindexWave)
+            val removed = savedData.waves.remove(eventId)
+            removed?.let(::unindexWave)
             PlanktonBloomManager.forLevel(level).removeBloomsForWave(eventId)
+            removed?.let { wave -> CrystalJellySpawnManager.forLevel(level).releaseWave(wave) }
             for (player in level.players()) {
                 val visible = visibleEventsByPlayer[player.uuid] ?: continue
                 if (!visible.remove(eventId)) continue
@@ -640,6 +653,7 @@ class BioluminescenceLevelManager private constructor(
                 )
             }
         }
+
         visibleEventsByPlayer.entries.removeIf { (_, visible) -> visible.isEmpty() }
         refreshNextNormalWaveEndGameTime()
         savedData.setDirty()

@@ -8,12 +8,14 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.Biolumines
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentMacroField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentMacroFieldBuilder
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentReactionDiffusion
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.palette.BioluminescentPalette
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.skeleton.BioluminescentTopology
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.skeleton.BioluminescentTopologyBuilder
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZonePreset
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentReactionDiffusionStats
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneGenerationStage
 import fr.heta__h.squ_abyssal_bloom.util.cache.AdaptiveWorkBudget
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.texture.TextureManager
@@ -32,13 +34,26 @@ class BioluminescentZoneGenerator(
 ) : AutoCloseable {
     companion object {
         const val TARGET_STEP_NANOS = 1_200_000L
-        const val MAX_WORK_STEPS_PER_TICK = 4
-        const val GENERATION_TIME_SLICE_NANOS = 4_000_000L
-        const val UPLOAD_STEPS_PER_ADVANCE = 2
+        const val REFERENCE_SLICE_NANOS = 4_000_000L
+        const val MINIMUM_SLICE_NANOS = 2_000_000L
+        const val MAXIMUM_SLICE_NANOS = 12_000_000L
+        const val REFERENCE_WORK_STEPS = 4
+        const val REFERENCE_UPLOAD_STEPS = 2
+        const val MAXIMUM_WORK_STEPS = 12
+        const val MAXIMUM_UPLOAD_STEPS = 6
         const val MAX_STAGED_TILES = 4
         const val MIN_MACRO_COMPONENT_RATIO = 0.95
         const val MACRO_COVERAGE_SALT = 0x428A2F98D728AE22L
         const val VISIBLE_COVERAGE_SALT = 0x3956C25BF348B538L
+
+        fun workStepsForSlice(sliceNanos: Long): Int =
+            stepsForSlice(sliceNanos, REFERENCE_WORK_STEPS, MAXIMUM_WORK_STEPS)
+
+        fun uploadStepsForSlice(sliceNanos: Long): Int =
+            stepsForSlice(sliceNanos, REFERENCE_UPLOAD_STEPS, MAXIMUM_UPLOAD_STEPS)
+
+        private fun stepsForSlice(sliceNanos: Long, referenceSteps: Int, maximumSteps: Int): Int =
+            (referenceSteps * sliceNanos / REFERENCE_SLICE_NANOS).toInt().coerceIn(1, maximumSteps)
     }
 
     val geodesicRadius = preset.size.selectGeodesicRadius(zoneSeed)
@@ -108,6 +123,7 @@ class BioluminescentZoneGenerator(
         maxTileCount: Int,
         gameTime: Long,
         generationTimeSliceNanos: Long,
+        maximumWorkSteps: Int,
         maximumUploadSteps: Int,
         priorityWorldX: Double,
         priorityWorldZ: Double
@@ -125,7 +141,7 @@ class BioluminescentZoneGenerator(
                 workSteps++
                 if (stageBeforeStep == BioluminescentZoneGenerationStage.UPLOAD_TILES) uploadSteps++
             } while (!isTerminal &&
-                workSteps < MAX_WORK_STEPS_PER_TICK &&
+                workSteps < maximumWorkSteps.coerceAtLeast(1) &&
                 System.nanoTime() - startedAt < generationTimeSliceNanos &&
                 (stage != BioluminescentZoneGenerationStage.UPLOAD_TILES ||
                     uploadSteps < maximumUploadSteps.coerceAtLeast(1))

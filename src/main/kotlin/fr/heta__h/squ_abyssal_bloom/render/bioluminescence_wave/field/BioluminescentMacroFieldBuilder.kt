@@ -4,7 +4,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.core.Bioluminesc
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise.BioluminescentNoiseSampler
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.skeleton.BioluminescentTopology
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZonePreset
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.level.levelgen.RandomSupport
 import kotlin.math.PI
@@ -115,7 +115,7 @@ class BioluminescentMacroFieldBuilder(
                 .minOrNull() ?: Double.MIN_VALUE
         }
         check(threshold > 0.0) {
-            "enveloppe macroscopique trop petite pour ${(targetCoverage * 100.0).toInt()}%"
+            "macroscopic envelopp is too small ${(targetCoverage * 100.0).toInt()}%"
         }
         val achieved = domain.localCellIndices.count { index -> mask[index] }.toDouble() / domain.localSize
         return provisionalField(threshold, achieved, mask)

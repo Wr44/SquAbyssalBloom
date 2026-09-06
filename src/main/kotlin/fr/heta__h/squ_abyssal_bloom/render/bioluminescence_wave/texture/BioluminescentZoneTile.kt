@@ -6,6 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field.BioluminescentEmissionField
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.pipeline.BioluminescentRenderPipelines
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentTileState
 import net.minecraft.client.renderer.rendertype.RenderSetup
 import net.minecraft.client.renderer.rendertype.RenderType
 import net.minecraft.client.renderer.texture.TextureManager
@@ -26,6 +27,7 @@ class BioluminescentZoneTile private constructor(
     private var preparedPixels: IntArray?,
     private var pixelationContext: BioluminescentPixelationContext?
 ) : AutoCloseable {
+
     companion object {
         const val TILE_SIZE = 32
         const val MIP_LEVELS = 4
@@ -38,7 +40,7 @@ class BioluminescentZoneTile private constructor(
         private const val PULSE_MESH_SIZE = 4
         private const val MOVEMENT_FADE_RATE = 3.0
 
-        internal fun prepare(
+        fun prepare(
             textureManager: TextureManager,
             identifier: Identifier,
             emission: BioluminescentEmissionField,
@@ -263,9 +265,9 @@ class BioluminescentZoneTile private constructor(
         BioluminescentRenderPipelines.SHADER_UNDERWATER_SURFACE,
         identifier
     )
-    val renderTypeShaderCompensation: RenderType = createRenderType(
-        "squ_bioluminescent_wave_shader_compensation",
-        BioluminescentRenderPipelines.SHADER_VISIBILITY_COMPENSATION,
+    val renderTypePostShaderRadiance: RenderType = createRenderType(
+        "squ_bioluminescent_wave_post_shader_radiance",
+        BioluminescentRenderPipelines.POST_SHADER_RADIANCE,
         identifier
     )
     val pixelCount: Int = texture.pixelCount
@@ -330,6 +332,10 @@ class BioluminescentZoneTile private constructor(
         )
     }
 
+    fun beginFadeIn(gameTime: Long) {
+        readyAtGameTime = gameTime
+    }
+
     fun localLoadingIntensityAt(renderGameTime: Double): Float {
         val readyAt = readyAtGameTime ?: return 0.0f
         val fadeTicks = ModConfig.bioluminescenceTileFadeInTicks.coerceAtLeast(0)
@@ -367,7 +373,7 @@ class BioluminescentZoneTile private constructor(
         state = BioluminescentTileState.CLOSED
     }
 
-    class RenderQuad internal constructor(
+    class RenderQuad(
         val minLocalX: Int,
         val minLocalZ: Int,
         val maxLocalX: Int,

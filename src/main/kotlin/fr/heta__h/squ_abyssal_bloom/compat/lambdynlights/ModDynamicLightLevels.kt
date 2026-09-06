@@ -5,4 +5,5 @@ object ModDynamicLightLevels {
     const val NAUTILUS_LAMP = 15
     const val PLANKTON_BOTTLE = 10
     const val PLANKTON_LUMINESCENCE = 12
+    const val CRYSTAL_JELLY = 10
 }

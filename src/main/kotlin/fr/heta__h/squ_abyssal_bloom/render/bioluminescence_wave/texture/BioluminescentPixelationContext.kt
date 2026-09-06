@@ -1,6 +1,6 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture
 
-internal class BioluminescentPixelationContext(
+class BioluminescentPixelationContext(
     private val samples: LongArray,
     private val sampleWidth: Int,
     private val minSampleX: Int,

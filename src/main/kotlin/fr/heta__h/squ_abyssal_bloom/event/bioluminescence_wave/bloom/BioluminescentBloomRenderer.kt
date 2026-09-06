@@ -6,7 +6,7 @@ import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave.BioluminescentZoneManager
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.BioluminescentBloomGeometry
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.palette.BioluminescentPalette
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.pipeline.BioluminescentRenderPipelines
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -53,8 +53,8 @@ object BioluminescentBloomRenderer {
     private val renderTypeShaderUnderwater: RenderType by lazy {
         createRenderType("squ_plankton_bloom_shader_underwater", BioluminescentRenderPipelines.SHADER_UNDERWATER_SURFACE)
     }
-    private val renderTypeShaderCompensation: RenderType by lazy {
-        createRenderType("squ_plankton_bloom_shader_compensation", BioluminescentRenderPipelines.SHADER_VISIBILITY_COMPENSATION)
+    private val renderTypePostShaderRadiance: RenderType by lazy {
+        createRenderType("squ_plankton_bloom_post_shader_radiance", BioluminescentRenderPipelines.POST_SHADER_RADIANCE)
     }
 
     private fun createRenderType(name: String, pipeline: RenderPipeline): RenderType {
@@ -99,16 +99,16 @@ object BioluminescentBloomRenderer {
         bufferSource.endBatch(renderTypeShaderUnderwater)
     }
 
-    fun renderShaderCompensation(
+    fun renderPostShaderRadiance(
         poseStack: PoseStack,
         cameraPosition: Vec3,
         bufferSource: MultiBufferSource.BufferSource,
         renderGameTime: Double,
-        subsurfaceOffset: Double,
         baseStrength: Double,
-        cameraEnvironmentMultiplier: Double
+        cameraEnvironmentMultiplier: Double,
+        depthPull: Double
     ) {
-        val consumer = bufferSource.getBuffer(renderTypeShaderCompensation)
+        val consumer = bufferSource.getBuffer(renderTypePostShaderRadiance)
         val pose = poseStack.last()
         forEachVisibleBloom(renderGameTime, cameraPosition) { palette, bloom, geometry, opacity, tint ->
             val depthMultiplier = BioluminescentCompensation.depthMultiplier(
@@ -120,10 +120,10 @@ object BioluminescentBloomRenderer {
             val multiplier = baseStrength * depthMultiplier * angleFactor * cameraEnvironmentMultiplier
             emitBloom(
                 consumer, pose, cameraPosition, geometry, palette, bloom,
-                (opacity * multiplier).toFloat(), tint, -subsurfaceOffset, renderGameTime
+                (opacity * multiplier).toFloat(), tint, 0.0, renderGameTime, depthPull
             )
         }
-        bufferSource.endBatch(renderTypeShaderCompensation)
+        bufferSource.endBatch(renderTypePostShaderRadiance)
     }
 
     fun hasVisibleBlooms(renderGameTime: Double): Boolean {
@@ -194,16 +194,30 @@ object BioluminescentBloomRenderer {
         opacity: Float,
         invalidatedTint: Float,
         surfaceOffset: Double,
-        renderGameTime: Double
+        renderGameTime: Double,
+        depthPull: Double = 0.0
     ) {
         if (opacity <= VISIBILITY_EPSILON_FLOAT) return
-        val y = (geometry.surfaceY + surfaceOffset - cameraPosition.y).toFloat()
-        val centerX = (geometry.centerX - cameraPosition.x).toFloat()
-        val centerZ = (geometry.centerZ - cameraPosition.z).toFloat()
+        val relativeX = geometry.centerX - cameraPosition.x
+        val relativeY = geometry.surfaceY + surfaceOffset - cameraPosition.y
+        val relativeZ = geometry.centerZ - cameraPosition.z
+        val projectionScale = BioluminescentCompensation.depthPullScale(
+            relativeX, relativeY, relativeZ, depthPull
+        )
+        val y = (relativeY * projectionScale).toFloat()
+        val centerX = (relativeX * projectionScale).toFloat()
+        val centerZ = (relativeZ * projectionScale).toFloat()
 
-        emitHalo(consumer, pose, centerX, y, centerZ, geometry, palette, opacity, invalidatedTint)
-        emitSatellites(consumer, pose, centerX, y, centerZ, geometry, palette, opacity, invalidatedTint, renderGameTime)
-        emitLobes(consumer, pose, centerX, y, centerZ, geometry, palette, bloom, opacity, invalidatedTint)
+        emitHalo(
+            consumer, pose, centerX, y, centerZ, geometry, palette, opacity, invalidatedTint, projectionScale
+        )
+        emitSatellites(
+            consumer, pose, centerX, y, centerZ, geometry, palette, opacity, invalidatedTint,
+            renderGameTime, projectionScale
+        )
+        emitLobes(
+            consumer, pose, centerX, y, centerZ, geometry, palette, bloom, opacity, invalidatedTint, projectionScale
+        )
     }
 
     private fun tintedColor(baseColor: Int, palette: BioluminescentPalette, invalidatedTint: Float): Int {
@@ -220,7 +234,8 @@ object BioluminescentBloomRenderer {
         geometry: BioluminescentBloomGeometry,
         palette: BioluminescentPalette,
         opacity: Float,
-        invalidatedTint: Float
+        invalidatedTint: Float,
+        projectionScale: Double
     ) {
         val alpha = (HALO_PEAK_ALPHA * opacity).coerceIn(0.0f, 1.0f)
         if (alpha <= VISIBILITY_EPSILON_FLOAT) return
@@ -228,7 +243,10 @@ object BioluminescentBloomRenderer {
             ModUtilities.lerpColor(palette.accentColor, palette.highlightColor, HALO_COLOR_MIX),
             palette, invalidatedTint
         )
-        emitGradientDisc(consumer, pose, centerX, y, centerZ, geometry.haloRadius, color, alpha, color, HALO_WEDGES)
+        emitGradientDisc(
+            consumer, pose, centerX, y, centerZ,
+            geometry.haloRadius * projectionScale, color, alpha, color, HALO_WEDGES
+        )
     }
 
     private fun emitSatellites(
@@ -241,7 +259,8 @@ object BioluminescentBloomRenderer {
         palette: BioluminescentPalette,
         opacity: Float,
         invalidatedTint: Float,
-        renderGameTime: Double
+        renderGameTime: Double,
+        projectionScale: Double
     ) {
         for (satellite in geometry.satellites) {
             val shimmerWave = 0.5 + 0.5 * sin(renderGameTime * PI * 2.0 / SATELLITE_SHIMMER_PERIOD_TICKS + satellite.phaseOffset)
@@ -254,8 +273,10 @@ object BioluminescentBloomRenderer {
             )
             emitGradientDisc(
                 consumer, pose,
-                centerX + satellite.offsetX.toFloat(), y, centerZ + satellite.offsetZ.toFloat(),
-                satellite.radius, color, alpha, color, SATELLITE_WEDGES
+                centerX + (satellite.offsetX * projectionScale).toFloat(),
+                y,
+                centerZ + (satellite.offsetZ * projectionScale).toFloat(),
+                satellite.radius * projectionScale, color, alpha, color, SATELLITE_WEDGES
             )
         }
     }
@@ -270,7 +291,8 @@ object BioluminescentBloomRenderer {
         palette: BioluminescentPalette,
         bloom: BioluminescentBloom,
         opacity: Float,
-        invalidatedTint: Float
+        invalidatedTint: Float,
+        projectionScale: Double
     ) {
         val centerAlpha = (LOBE_PEAK_ALPHA * opacity).coerceIn(0.0f, 1.0f)
         if (centerAlpha <= VISIBILITY_EPSILON_FLOAT) return
@@ -280,9 +302,12 @@ object BioluminescentBloomRenderer {
         for (index in geometry.lobeAngles.indices) {
             if (bloom.remainingHarvests <= (bloom.maxHarvests - 1 - index)) continue
             val angle = geometry.lobeAngles[index]
-            val lx = centerX + (cos(angle) * geometry.lobeOrbitRadius).toFloat()
-            val lz = centerZ + (sin(angle) * geometry.lobeOrbitRadius).toFloat()
-            emitGradientDisc(consumer, pose, lx, y, lz, geometry.lobeRadius, centerColor, centerAlpha, rimColor, LOBE_WEDGES)
+            val lx = centerX + (cos(angle) * geometry.lobeOrbitRadius * projectionScale).toFloat()
+            val lz = centerZ + (sin(angle) * geometry.lobeOrbitRadius * projectionScale).toFloat()
+            emitGradientDisc(
+                consumer, pose, lx, y, lz,
+                geometry.lobeRadius * projectionScale, centerColor, centerAlpha, rimColor, LOBE_WEDGES
+            )
         }
     }
 

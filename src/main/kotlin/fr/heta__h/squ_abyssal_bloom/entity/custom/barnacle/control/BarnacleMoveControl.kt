@@ -72,8 +72,6 @@ class BarnacleMoveControl(private val barnacle: BarnacleEntity) : MoveControl(ba
             direction = turnTowards(currentDirection, desiredDirection)
             steeringDirection = direction
 
-            // Never cross a nearby waypoint in one impulse. Slowing while the requested
-            // turn is still sharp also prevents a smoothed heading from driving into it.
             val waypointSpeedLimit = requestedDirection.length() * WAYPOINT_APPROACH_FACTOR
             val turnAlignment = direction.dot(desiredDirection).coerceIn(0.0, 1.0)
             appliedSpeed = minOf(
@@ -100,10 +98,6 @@ class BarnacleMoveControl(private val barnacle: BarnacleEntity) : MoveControl(ba
         barnacle.speed = appliedSpeed.toFloat()
     }
 
-    /**
-     * Spherical interpolation with angular acceleration avoids both node snapping and
-     * the zero-vector/opposite-vector failure of a linear interpolation.
-     */
     private fun turnTowards(current: Vec3, target: Vec3): Vec3 {
         val from = current.normalize()
         val to = target.normalize()

@@ -2,9 +2,12 @@ package fr.heta__h.squ_abyssal_bloom.item
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
+import fr.heta__h.squ_abyssal_bloom.effect.ModEffects
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
+import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.item.bubble_spitter.BubbleSpitterItem
+import fr.heta__h.squ_abyssal_bloom.item.plankton_bottle.PartialPlanktonBottleItem
 import fr.heta__h.squ_abyssal_bloom.item.respiration_bubble.RespirationBubbleItem
 import fr.heta__h.squ_abyssal_bloom.item.lifeline_bubble.LifelineBubbleItem
 import net.minecraft.core.Direction
@@ -30,6 +33,10 @@ import net.neoforged.neoforge.registries.DeferredRegister
 
 object ModItems {
     private const val PLANKTON_BOTTLE_GLOW_DURATION_TICKS = 1800
+    private const val RAW_JELLY_POISON_DURATION_TICKS = 420
+    private const val RAW_JELLY_NAUSEA_DURATION_TICKS = 460
+    private const val RAW_JELLY_NUMBNESS_DURATION_TICKS = 400
+    private const val BRINED_JELLY_PROPULSION_DURATION_TICKS = 900
 
     val ITEMS: DeferredRegister.Items = DeferredRegister.createItems(SquAbyssalBloom.ID)
 
@@ -45,6 +52,14 @@ object ModItems {
         "red_slobberer_spawn_egg"
     )  { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.RED_SLOBBERER.get())) }
 
+    val MACKEREL_SPAWN_EGG: DeferredItem<Item> = ITEMS.registerItem(
+        "mackerel_spawn_egg"
+    ) { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.MACKEREL.get())) }
+
+    val CRYSTAL_JELLY_SPAWN_EGG: DeferredItem<Item> = ITEMS.registerItem(
+        "crystal_jelly_spawn_egg"
+    ) { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.CRYSTAL_JELLY.get())) }
+
     val BABY_RED_SLOBBERER_BUCKET: DeferredItem<Item> = ITEMS.registerItem(
         "baby_red_slobberer_bucket"
     ) { properties ->
@@ -58,15 +73,24 @@ object ModItems {
         )
     }
 
-    val MACKEREL_SPAWN_EGG: DeferredItem<Item> = ITEMS.registerItem(
-        "mackerel_spawn_egg"
-    ) { properties -> SpawnEggItem(properties.spawnEgg(ModEntities.MACKEREL.get())) }
-
     val MACKEREL_BUCKET: DeferredItem<Item> = ITEMS.registerItem(
         "mackerel_bucket"
     ) { properties ->
         MobBucketItem(
             ModEntities.MACKEREL.get(),
+            Fluids.WATER,
+            SoundEvents.BUCKET_EMPTY_FISH,
+            properties
+                .stacksTo(1)
+                .component(DataComponents.BUCKET_ENTITY_DATA, CustomData.EMPTY)
+        )
+    }
+
+    val CRYSTAL_JELLY_BUCKET: DeferredItem<Item> = ITEMS.registerItem(
+        "crystal_jelly_bucket"
+    ) { properties ->
+        MobBucketItem(
+            ModEntities.CRYSTAL_JELLY.get(),
             Fluids.WATER,
             SoundEvents.BUCKET_EMPTY_FISH,
             properties
@@ -82,6 +106,36 @@ object ModItems {
     val COOKED_MACKEREL: DeferredItem<Item> = ITEMS.registerItem(
         "cooked_mackerel"
     ) { properties -> Item(properties.food(FoodProperties.Builder().nutrition(5).saturationModifier(0.6f).build())) }
+
+    val CRYSTAL_JELLY_GEL: DeferredItem<Item> = ITEMS.registerItem(
+        "crystal_jelly_gel"
+    ) { properties -> Item(properties.food(
+        FoodProperties.Builder().nutrition(1).saturationModifier(0.1f).build(),
+        Consumables.defaultFood()
+            .onConsume(
+                ApplyStatusEffectsConsumeEffect(
+                    listOf(
+                        MobEffectInstance(MobEffects.POISON, RAW_JELLY_POISON_DURATION_TICKS),
+                        MobEffectInstance(MobEffects.NAUSEA, RAW_JELLY_NAUSEA_DURATION_TICKS),
+                        MobEffectInstance(MobEffects.SLOWNESS, RAW_JELLY_NUMBNESS_DURATION_TICKS, 1)
+                    )
+                )
+            )
+            .build()
+    )) }
+
+    val BRINED_CRYSTAL_JELLY: DeferredItem<Item> = ITEMS.registerItem(
+        "brined_crystal_jelly"
+    ) { properties -> Item(properties.food(
+        FoodProperties.Builder().nutrition(4).saturationModifier(0.5f).alwaysEdible().build(),
+        Consumables.defaultFood()
+            .onConsume(
+                ApplyStatusEffectsConsumeEffect(
+                    MobEffectInstance(ModEffects.PROPULSION, BRINED_JELLY_PROPULSION_DURATION_TICKS)
+                )
+            )
+            .build()
+    )) }
 
     val BARNACLE_TOOTH: DeferredItem<Item> = ITEMS.registerItem(
         "barnacle_tooth"
@@ -174,6 +228,14 @@ object ModItems {
                 )
                 .build()
         )
+    ) }
+
+
+    val PARTIAL_PLANKTON_BOTTLE: DeferredItem<Item> = ITEMS.registerItem(
+        "partial_plankton_bottle"
+    ) { properties -> PartialPlanktonBottleItem(properties
+        .stacksTo(1)
+        .component(ModDataComponents.PLANKTON_FILL.get(), 1)
     ) }
 
     val ABYSSAL_GUARDIAN_FOCALIST: DeferredItem<Item> = ITEMS.registerItem(

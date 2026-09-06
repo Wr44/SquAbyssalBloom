@@ -20,6 +20,7 @@ object HarvestPrismarineBulb {
 
     @SubscribeEvent
     fun onHarvestPrismarineBulb(event: PlayerInteractEvent.RightClickBlock) {
+
         val level = event.level
         val pos = event.pos
         val state = level.getBlockState(pos)

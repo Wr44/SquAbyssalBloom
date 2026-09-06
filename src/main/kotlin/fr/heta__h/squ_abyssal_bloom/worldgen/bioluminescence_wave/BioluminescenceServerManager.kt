@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.PacketDistributor
 import java.util.UUID
 import java.util.WeakHashMap
 
-class BioluminescenceServerManager private constructor(
+class BioluminescenceServerManager(
     private val server: MinecraftServer
 ) {
     companion object {

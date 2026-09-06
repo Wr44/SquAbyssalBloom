@@ -23,7 +23,7 @@ import net.neoforged.neoforge.network.PacketDistributor
 import java.util.UUID
 import java.util.WeakHashMap
 
-class PlanktonBloomManager private constructor(
+class PlanktonBloomManager(
     private val level: ServerLevel
 ) {
     companion object {

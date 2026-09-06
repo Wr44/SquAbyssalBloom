@@ -34,7 +34,7 @@ object BioluminescenceServerCommands {
 
     @SubscribeEvent
     fun onRegisterCommands(event: RegisterCommandsEvent) {
-        val root = Commands.literal("squ_bioluminescence")
+        val root = Commands.literal("bioluminescence")
             .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 
         root.then(Commands.literal("status").executes(::executeStatus))

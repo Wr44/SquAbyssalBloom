@@ -1,5 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.generation
 
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneGenerationStage
+
 data class BioluminescentZoneGenerationSnapshot(
     val stage: BioluminescentZoneGenerationStage,
     val waterCells: Int,

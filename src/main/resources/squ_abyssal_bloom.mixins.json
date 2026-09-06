@@ -21,6 +21,7 @@
     "entity.nautilus.NautilusBubbleColumnTidal",
     "entity.nautilus.NautilusChestMixin",
     "entity.nautilus.NautilusRegenMixin",
+    "entity.crystal_jelly.CrystalJellyBucketMixin",
     "entity.red_slobberer.RedSlobbererBucketMixin",
 
     "enable.AbstractContainerMenuAccessor",
@@ -45,6 +46,7 @@
 
     "enable.FrustumAccessor",
 
+    "render.GameRendererBioluminescenceMixin",
     "render.LivingEntityRenderStateMixin",
     "render.LivingEntityRendererMixin",
     "render.LevelRendererSkyMixin"

@@ -66,8 +66,6 @@ class BarnaclePathController(private val barnacle: BarnacleEntity) {
         val destinationLoaded = barnacle.level().isLoaded(destinationPos)
         val destinationDistanceSqr = barnacle.position().distanceToSqr(destination)
 
-        // Once the complete short corridor to the target is clear, leave the old final
-        // waypoint immediately instead of lunging toward it for another refresh period.
         if (
             pathing &&
             destinationLoaded &&

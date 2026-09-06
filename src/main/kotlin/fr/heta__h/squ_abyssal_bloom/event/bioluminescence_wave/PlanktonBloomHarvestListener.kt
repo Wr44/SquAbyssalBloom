@@ -43,7 +43,7 @@ object PlanktonBloomHarvestListener {
         }
         level.playSound(
             null, player.x, player.y, player.z,
-            ModSounds.BOTTLE_FILL_BIOLUMINESCENT.get(), SoundSource.PLAYERS, 1.0f, 1.0f
+            ModSounds.BOTTLE_FILL_BIOLUMINESCENT.get(), SoundSource.PLAYERS, 0.8f, 1.0f
         )
         player.swing(event.hand)
         event.isCanceled = true

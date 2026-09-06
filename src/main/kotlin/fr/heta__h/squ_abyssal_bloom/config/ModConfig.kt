@@ -17,6 +17,7 @@ import fr.heta__h.squ_abyssal_bloom.config.submenu.AmbientSoundSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BioluminescenceServerSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BrineSubMenu
+import fr.heta__h.squ_abyssal_bloom.config.submenu.CrystalJellySubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.FishSchoolSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.MackerelSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.mods.DynamicLightSubMenu
@@ -28,7 +29,7 @@ import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.subScreenButton
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.bioluminescence_wave.BioluminescenceWaveSize
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.terrain.AbyssalTerrainSettings
 import net.minecraft.ChatFormatting
@@ -81,8 +82,9 @@ object ModConfig {
     var dynamicLightsNautilusIntensity: Double = 1.0
     var dynamicLightsBioluminescenceActiveIntensity: Double = 1.0
     var dynamicLightsBioluminescenceInactiveIntensity: Double = 1.0
+
     var enableBioluminescenceRendering: Boolean = true
-    var bioluminescenceTileFadeInTicks: Int = 20
+    var bioluminescenceTileFadeInTicks: Int = 50
     var bioluminescenceRenderDistance: Double = 128.0
     var enableBioluminescenceFootprints: Boolean = true
     var bioluminescenceFootprintOpacity: Double = BioluminescentZoneActivity.ACTIVE.maximumOpacity.toDouble()
@@ -141,7 +143,7 @@ object ModConfig {
             dynamicLightsBioluminescenceActiveIntensity = json.get("dynamicLightsBioluminescenceActiveIntensity")?.asDouble ?: 1.0
             dynamicLightsBioluminescenceInactiveIntensity = json.get("dynamicLightsBioluminescenceInactiveIntensity")?.asDouble ?: 1.0
             enableBioluminescenceRendering = json.get("enableBioluminescenceRendering")?.asBoolean ?: true
-            bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 20
+            bioluminescenceTileFadeInTicks = json.get("bioluminescenceTileFadeInTicks")?.asInt ?: 50
             bioluminescenceRenderDistance = json.get("bioluminescenceRenderDistance")?.asDouble ?: 128.0
             enableBioluminescenceFootprints = json.get("enableBioluminescenceFootprints")?.asBoolean ?: true
             bioluminescenceFootprintOpacity = json.get("bioluminescenceFootprintOpacity")?.asDouble ?: BioluminescentZoneActivity.ACTIVE.maximumOpacity.toDouble()
@@ -577,7 +579,7 @@ object ModConfig {
                             Component.translatable("config.squ_abyssal_bloom.bioluminescenceTileFadeInTicks.desc")
                         ))
                         .binding(Binding.generic(
-                            20,
+                            50,
                             { bioluminescenceTileFadeInTicks },
                             { bioluminescenceTileFadeInTicks = it }
                         ))
@@ -861,6 +863,15 @@ object ModConfig {
                             .build(),
                         screenTitle = Component.translatable("entity.squ_abyssal_bloom.mackerel"),
                         buildGroups = MackerelSubMenu::buildGroups
+                    ))
+                    .option(subScreenButton(
+                        name = Component.translatable("entity.squ_abyssal_bloom.crystal_jelly"),
+                        description = OptionDescription.createBuilder()
+                            .text(Component.translatable("config.squ_abyssal_bloom.crystal_jelly.desc"))
+                            .customImage(CrystalJellySubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = Component.translatable("entity.squ_abyssal_bloom.crystal_jelly"),
+                        buildGroups = CrystalJellySubMenu::buildGroups
                     ))
                     .option(subScreenButton(
                         name = Component.translatable("config.squ_abyssal_bloom.group.fish_schools"),

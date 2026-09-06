@@ -1,12 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.config.submenu
 
 import dev.isxander.yacl3.api.ConfigCategory
-import dev.isxander.yacl3.api.Option
 import dev.isxander.yacl3.api.OptionDescription
-import dev.isxander.yacl3.api.OptionEventListener
 import dev.isxander.yacl3.api.OptionGroup
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.bindOrderedPair
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverBool
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverDouble
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.serverInt
@@ -20,19 +19,6 @@ object BioluminescenceServerSubMenu {
     private val durationFormat: (Int) -> Component = { Component.literal(ModUtilities.formatTicksAsDuration(it)) }
     private val countFormat: (Int) -> Component = ModUtilities.unitInt("blooms")
     private val harvestFormat: (Int) -> Component = ModUtilities.unitInt("harvests")
-
-    private fun bindOrderedPair(minimum: Option<Int>, maximum: Option<Int>) {
-        minimum.addEventListener { option, event ->
-            if (event == OptionEventListener.Event.STATE_CHANGE &&
-                maximum.pendingValue() < option.pendingValue()
-            ) maximum.requestSet(option.pendingValue())
-        }
-        maximum.addEventListener { option, event ->
-            if (event == OptionEventListener.Event.STATE_CHANGE &&
-                minimum.pendingValue() > option.pendingValue()
-            ) minimum.requestSet(option.pendingValue())
-        }
-    }
 
     fun buildGroups(category: ConfigCategory.Builder) {
         val opportunityMinimum = serverInt(

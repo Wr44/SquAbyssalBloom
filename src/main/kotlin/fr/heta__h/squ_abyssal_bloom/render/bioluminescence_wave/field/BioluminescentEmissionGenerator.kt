@@ -2,8 +2,8 @@ package fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.field
 
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise.BioluminescentCellularNoise
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise.BioluminescentNoiseSampler
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.palette.BioluminescentPalette
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.palette.BioluminescentPalette
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZonePreset
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.level.levelgen.RandomSupport
 import kotlin.math.abs

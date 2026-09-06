@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "squ_abyssal_bloom:crystal_jelly_gel",
+    "squ_abyssal_bloom:brine_bubbles"
+  ],
+  "result": {
+    "id": "squ_abyssal_bloom:brined_crystal_jelly",
+    "count": 1
+  }
+}

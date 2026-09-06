@@ -5,7 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.core.Bioluminesc
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.core.BioluminescentCoreShape
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.domain.BioluminescentWaterDomain
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.noise.BioluminescentNoiseSampler
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZonePreset
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZonePreset
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.level.levelgen.RandomSupport
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource
@@ -447,6 +447,24 @@ class BioluminescentTopologyBuilder(
         return range.start + source.nextDouble() * (range.endInclusive - range.start)
     }
 
-    private data class PathSearch(val distances: IntArray, val parents: IntArray)
+    private data class PathSearch(val distances: IntArray, val parents: IntArray) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+
+            other as PathSearch
+
+            if (!distances.contentEquals(other.distances)) return false
+            if (!parents.contentEquals(other.parents)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = distances.contentHashCode()
+            result = 31 * result + parents.contentHashCode()
+            return result
+        }
+    }
 
 }

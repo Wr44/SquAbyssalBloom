@@ -14,6 +14,7 @@ import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnaclePursueGo
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnacleSwallowGoal
 import fr.heta__h.squ_abyssal_bloom.entity.custom.barnacle.goal.BarnacleTargetGoal
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.core.registries.Registries
@@ -45,7 +46,6 @@ import net.minecraft.world.level.storage.ValueOutput
 import net.minecraft.world.phys.Vec3
 import java.util.*
 import kotlin.math.atan2
-import kotlin.math.pow
 import kotlin.math.sqrt
 
 class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type, level) {
@@ -108,8 +108,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val XP_REWARD = 15
         const val CRITICAL_HEALTH_RATIO = 0.25f
         const val REGEN_HEAL_AMOUNT = 1.0f
-        const val MAX_AIR_TICKS = 200
-        const val DROWN_DAMAGE = 2.0f
         const val TARGET_SCAN_INTERVAL_TICKS = 5
 
         // FLOP
@@ -166,6 +164,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         const val IDLE_MIN_TICKS = 60
         const val IDLE_MAX_TICKS = 150
         const val IDLE_MAX_SPEED = 1.0f
+        const val PROPULSION_VOLUME_SCALE = 0.85
         const val IDLE_WATER_CHECK_DIST = 10
         const val IDLE_DIR_CHANCE_1 = 0.33
         const val IDLE_DIR_CHANCE_2 = 0.55
@@ -421,10 +420,13 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
     override fun aiStep() {
         super.aiStep()
         if (level().isClientSide) return
-        if (isUnderWater) {
-            timeExposedInAir = 0
-            airSupply = maxAirSupply
+        timeExposedInAir = ModUtilities.tickOutOfWaterAsphyxiation(
+            this,
+            level() as ServerLevel,
+            timeExposedInAir
+        )
 
+        if (isUnderWater) {
             val regenCooldownTicks = ModServerConfig.BARNACLE_REGEN_COOLDOWN.get()
             val notInCombat = lastHurtByMobTimestamp + regenCooldownTicks < tickCount
             if (notInCombat && health < maxHealth) {
@@ -438,14 +440,6 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
             }
 
         } else {
-            timeExposedInAir++
-            if (timeExposedInAir >= MAX_AIR_TICKS) {
-                hurtServer(
-                    level() as ServerLevel,
-                    damageSources().drown(),
-                    DROWN_DAMAGE)
-            }
-
             if (onGround() && tickCount > FLOP_DELAY_TICKS) {
                 deltaMovement = deltaMovement.add(0.0, FLOP_MOTION_Y, 0.0)
                 val horizontalDir = getRandomDirection().normalize()
@@ -510,10 +504,7 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         this.yHeadRot = this.yRot
     }
 
-    fun barnacleSpeed(t: Float, tMax: Float, vMax: Float, k: Float = 2.0f): Float {
-        val ratio = (t / tMax).coerceIn(0.0f, 1.0f)
-        return vMax * (1.0f - ratio).pow(k)
-    }
+    fun barnacleSpeed(t: Float, tMax: Float, vMax: Float, k: Float = 2.0f): Float = ModUtilities.decayingImpulseSpeed(t, tMax, vMax, k)
 
     fun hasWaterAhead(
         direction: Vec3,
@@ -618,6 +609,23 @@ class BarnacleEntity(type: EntityType<out Monster>, level: Level) : Monster(type
         return Vec3(x, y, z)
     }
 
+
+    fun beginRush(peakSpeed: Float) {
+        rushPhase = true
+        ModUtilities.playWaterPropulsion(
+            this,
+            ModSounds.BARNACLE_PROPULSION.get(),
+            rushSpeedStrength(peakSpeed),
+            SoundSource.HOSTILE,
+            PROPULSION_VOLUME_SCALE
+        )
+    }
+
+    private fun rushSpeedStrength(peakSpeed: Float): Double {
+        val fastestRush = maxOf(IDLE_MAX_SPEED, pursuitSpeed, fleeSpeed)
+        if (fastestRush <= 0.0f) return 1.0
+        return (peakSpeed / fastestRush).toDouble()
+    }
 
     var rushPhase: Boolean
         get() = entityData.get(RUSH_PHASE)

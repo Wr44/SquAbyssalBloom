@@ -10,8 +10,8 @@ enum class BioluminescenceWaveSize(
     val minimumWaterCells: Int,
     val shorelineFootprintRadius: Int
 ) {
-    SMALL(20..36, 8, 96, 15),
-    LARGE(48..80, 18, 384, 30);
+    SMALL(32..46, 12, 160, 22),
+    LARGE(48..80, 18, 384, 40);
 
     val maximumRadius: Int = geodesicRadiusRange.last + analysisMargin
     val maximumWaterCells: Int = 1 + 2 * maximumRadius * (maximumRadius + 1)

@@ -67,7 +67,6 @@ import kotlin.math.sqrt
 class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(type, level) {
 
     companion object {
-        const val MAX_AIR_TICKS = 200
 
         private const val BABY_START_AGE_TICKS = -72_000
         private const val ADULT_MAX_HEALTH = 50.0
@@ -435,15 +434,7 @@ class RedSlobbererEntity(type: EntityType<out Animal>, level: Level) : Animal(ty
             stopDefenseMovement()
         }
 
-        if (isUnderWater) {
-            timeExposedInAir = 0
-            airSupply = maxAirSupply
-        } else {
-            timeExposedInAir++
-            if (timeExposedInAir >= MAX_AIR_TICKS) {
-                hurtServer(serverLevel, damageSources().drown(), 2.0f)
-            }
-        }
+        timeExposedInAir = ModUtilities.tickOutOfWaterAsphyxiation(this, serverLevel, timeExposedInAir)
 
         groupController.tick()
         RedSlobbererReefManager.forLevel(serverLevel).observe(this)

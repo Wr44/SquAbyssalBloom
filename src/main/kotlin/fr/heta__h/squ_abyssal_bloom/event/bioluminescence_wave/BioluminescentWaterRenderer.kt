@@ -1,5 +1,8 @@
 package fr.heta__h.squ_abyssal_bloom.event.bioluminescence_wave
 
+import com.mojang.blaze3d.ProjectionType
+import com.mojang.blaze3d.buffers.GpuBufferSlice
+import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.blaze3d.vertex.VertexConsumer
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
@@ -12,7 +15,7 @@ import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.bloom.Biolumines
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.interaction.BioluminescentMovementWave
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.texture.BioluminescentZoneTile
 import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZone
-import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.zone.BioluminescentZoneActivity
+import fr.heta__h.squ_abyssal_bloom.util.bioluminescence_wave.BioluminescentZoneActivity
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.WHITE_RGB
@@ -27,6 +30,7 @@ import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent
+import org.joml.Matrix4f
 import kotlin.math.sqrt
 
 @EventBusSubscriber(
@@ -47,16 +51,9 @@ object BioluminescentWaterRenderer {
     private const val BLOOM_MOAT_MIN_FACTOR = 0.35
 
     private var framePlan: FramePlan? = null
-    private var irisPassPrepared = false
     private val movementWaveCandidates = ArrayList<BioluminescentMovementWave>(16)
     private val bloomPulseCandidates = ArrayList<BioluminescentBloomPulse>(8)
     private val bloomGeometryCandidates = ArrayList<BioluminescentBloomGeometry>(4)
-
-    private fun currentRenderGameTime(): Double {
-        val minecraft = Minecraft.getInstance()
-        val level = minecraft.level ?: return 0.0
-        return level.gameTime + minecraft.deltaTracker.gameTimeDeltaTicks.toDouble()
-    }
 
     private class ResolvedQuad(
         val worldMinX: Double,
@@ -84,12 +81,16 @@ object BioluminescentWaterRenderer {
         val quads: List<ResolvedQuad>
     )
 
-    private class FramePlan(val tiles: List<ResolvedTile>)
+    private class FramePlan(
+        val tiles: List<ResolvedTile>,
+        val renderGameTime: Double,
+        val modelViewMatrix: Matrix4f,
+        val projectionMatrixBuffer: GpuBufferSlice
+    )
 
     @SubscribeEvent
     fun onRenderLevelOpaque(event: RenderLevelStageEvent.AfterOpaqueBlocks) {
         framePlan = null
-        irisPassPrepared = false
         if (!ModConfig.enableBioluminescenceRendering) return
         if (BioluminescentZoneManager.activeZones.isEmpty()) return
         if (!ModCompat.hasIris) return
@@ -98,10 +99,9 @@ object BioluminescentWaterRenderer {
         if (IrisRenderState.renderingShadowPass) return
         if (!IrisRenderState.shaderPackInUse) return
 
-        val plan = prepareFrameState()
+        val plan = prepareFrameState(event) ?: return
+        if (plan.tiles.isEmpty() && !BioluminescentBloomRenderer.hasVisibleBlooms(plan.renderGameTime)) return
         framePlan = plan
-        if (plan == null && !BioluminescentBloomRenderer.hasVisibleBlooms(currentRenderGameTime())) return
-        irisPassPrepared = true
         renderShaderPrimary(event, plan)
     }
 
@@ -109,22 +109,12 @@ object BioluminescentWaterRenderer {
     fun onRenderLevelTranslucent(event: RenderLevelStageEvent.AfterTranslucentBlocks) {
         if (!ModConfig.enableBioluminescenceRendering) return
         if (BioluminescentZoneManager.activeZones.isEmpty()) return
-        if (ModCompat.hasIris && IrisRenderState.shaderPackInUse) {
-            val plan = framePlan
-            val prepared = irisPassPrepared
-            framePlan = null
-            irisPassPrepared = false
-            val compensationRequested = ModConfig.shaderBioluminescenceVisibilityCompensation > 0.0
-            if (prepared && compensationRequested) {
-                renderShaderCompensation(event, plan)
-            }
-            return
-        }
+        if (ModCompat.hasIris && IrisRenderState.shaderPackInUse) return
 
         renderVanillaPass(event)
     }
 
-    private fun prepareFrameState(): FramePlan? {
+    private fun prepareFrameState(event: RenderLevelStageEvent): FramePlan? {
         val minecraft = Minecraft.getInstance()
         val camera = minecraft.gameRenderer.mainCamera
         val cameraPosition = camera.position()
@@ -215,11 +205,15 @@ object BioluminescentWaterRenderer {
                 }
             }
         }
-        if (resolvedTiles.isEmpty()) return null
-        return FramePlan(resolvedTiles)
+        return FramePlan(
+            resolvedTiles,
+            renderGameTime,
+            Matrix4f(event.modelViewMatrix),
+            RenderSystem.getProjectionMatrixBuffer() ?: return null
+        )
     }
 
-    private fun renderShaderPrimary(event: RenderLevelStageEvent, plan: FramePlan?) {
+    private fun renderShaderPrimary(event: RenderLevelStageEvent, plan: FramePlan) {
         val minecraft = Minecraft.getInstance()
         val cameraPosition = minecraft.gameRenderer.mainCamera.position()
         val bufferSource = minecraft.renderBuffers().bufferSource()
@@ -229,7 +223,7 @@ object BioluminescentWaterRenderer {
         poseStack.pushPose()
         val pose = poseStack.last()
         val subsurfaceOffset = ModConfig.shaderBioluminescenceSubsurfaceOffset
-        for (resolvedTile in plan?.tiles.orEmpty()) {
+        for (resolvedTile in plan.tiles) {
             val renderType = resolvedTile.tile.renderTypeShaderUnderwater
             val consumer = bufferSource.getBuffer(renderType)
             for (quad in resolvedTile.quads) {
@@ -243,66 +237,86 @@ object BioluminescentWaterRenderer {
             }
             bufferSource.endBatch(renderType)
         }
-        val renderGameTime = currentRenderGameTime()
         BioluminescentBloomRenderer.renderShaderPrimary(
-            poseStack, cameraPosition, bufferSource, renderGameTime, subsurfaceOffset, alphaMultiplier
+            poseStack, cameraPosition, bufferSource, plan.renderGameTime, subsurfaceOffset, alphaMultiplier
         )
         poseStack.popPose()
     }
 
-    private fun renderShaderCompensation(event: RenderLevelStageEvent, plan: FramePlan?) {
+    fun renderPostShaderRadiance() {
+        val plan = framePlan
+        framePlan = null
+        if (plan == null || !ModConfig.enableBioluminescenceRendering) return
+        if (!ModCompat.hasIris) return
+
+        IrisRenderState.refresh()
+        if (!IrisRenderState.shaderPackInUse || IrisRenderState.renderingShadowPass) return
+
+        val baseStrength = ModConfig.shaderBioluminescenceVisibilityCompensation
+        if (baseStrength <= 0.0) return
+
         val minecraft = Minecraft.getInstance()
         val camera = minecraft.gameRenderer.mainCamera
         val cameraPosition = camera.position()
         val bufferSource = minecraft.renderBuffers().bufferSource()
-        val poseStack = event.poseStack
-        val baseStrength = ModConfig.shaderBioluminescenceVisibilityCompensation
         val cameraUnderwater = camera.fluidInCamera == FogType.WATER
         val cameraEnvironmentMultiplier = if (cameraUnderwater) {
             ModConfig.shaderBioluminescenceUnderwaterCompensation
         } else {
             1.0
         }
-        val offset = ModConfig.shaderBioluminescenceSubsurfaceOffset
+        val savedProjectionMatrix = RenderSystem.getProjectionMatrixBuffer() ?: return
+        val savedProjectionType = RenderSystem.getProjectionType()
+        val modelViewStack = RenderSystem.getModelViewStack()
+        val poseStack = PoseStack()
 
-        poseStack.pushPose()
-        val pose = poseStack.last()
-        for (resolvedTile in plan?.tiles.orEmpty()) {
-            val renderType = resolvedTile.tile.renderTypeShaderCompensation
-            val consumer = bufferSource.getBuffer(renderType)
-            for (quad in resolvedTile.quads) {
-                val angleFactor = angleFactorOf(quad, cameraPosition)
-                emitQuad(
-                    consumer, pose, quad, cameraPosition, offset,
-                    compensationShade(
-                        quad.northWest, quad.northWestWaterDepth,
-                        baseStrength, angleFactor, cameraEnvironmentMultiplier
-                    ),
-                    compensationShade(
-                        quad.southWest, quad.southWestWaterDepth,
-                        baseStrength, angleFactor, cameraEnvironmentMultiplier
-                    ),
-                    compensationShade(
-                        quad.southEast, quad.southEastWaterDepth,
-                        baseStrength, angleFactor, cameraEnvironmentMultiplier
-                    ),
-                    compensationShade(
-                        quad.northEast, quad.northEastWaterDepth,
-                        baseStrength, angleFactor, cameraEnvironmentMultiplier
+        modelViewStack.pushMatrix()
+        try {
+            RenderSystem.setProjectionMatrix(plan.projectionMatrixBuffer, ProjectionType.PERSPECTIVE)
+            modelViewStack.set(plan.modelViewMatrix)
+            poseStack.pushPose()
+            val pose = poseStack.last()
+            for (resolvedTile in plan.tiles) {
+                val renderType = resolvedTile.tile.renderTypePostShaderRadiance
+                val consumer = bufferSource.getBuffer(renderType)
+                for (quad in resolvedTile.quads) {
+                    val angleFactor = angleFactorOf(quad, cameraPosition)
+                    emitRadianceQuad(
+                        consumer, pose, quad, cameraPosition,
+                        radianceShade(
+                            quad.northWest, quad.northWestWaterDepth,
+                            baseStrength, angleFactor, cameraEnvironmentMultiplier
+                        ),
+                        radianceShade(
+                            quad.southWest, quad.southWestWaterDepth,
+                            baseStrength, angleFactor, cameraEnvironmentMultiplier
+                        ),
+                        radianceShade(
+                            quad.southEast, quad.southEastWaterDepth,
+                            baseStrength, angleFactor, cameraEnvironmentMultiplier
+                        ),
+                        radianceShade(
+                            quad.northEast, quad.northEastWaterDepth,
+                            baseStrength, angleFactor, cameraEnvironmentMultiplier
+                        )
                     )
-                )
+                }
+                bufferSource.endBatch(renderType)
             }
-            bufferSource.endBatch(renderType)
+            BioluminescentBloomRenderer.renderPostShaderRadiance(
+                poseStack,
+                cameraPosition,
+                bufferSource,
+                plan.renderGameTime,
+                baseStrength,
+                cameraEnvironmentMultiplier,
+                BioluminescentCompensation.POST_SHADER_DEPTH_PULL
+            )
+            poseStack.popPose()
+        } finally {
+            modelViewStack.popMatrix()
+            RenderSystem.setProjectionMatrix(savedProjectionMatrix, savedProjectionType)
         }
-        val renderGameTime = currentRenderGameTime()
-        BioluminescentBloomRenderer.renderShaderCompensation(
-            poseStack, cameraPosition, bufferSource, renderGameTime, offset, baseStrength, cameraEnvironmentMultiplier
-        )
-        poseStack.popPose()
-    }
-
-    private fun depthFactorOf(waterDepth: Double): Double {
-        return BioluminescentCompensation.depthFactor(waterDepth)
     }
 
     private fun angleFactorOf(quad: ResolvedQuad, cameraPosition: Vec3): Double {
@@ -314,15 +328,55 @@ object BioluminescentWaterRenderer {
         )
     }
 
-    private fun compensationShade(
+    private fun radianceShade(
         base: Int,
         waterDepth: Double,
         baseStrength: Double,
         angleFactor: Double,
         cameraEnvironmentMultiplier: Double
     ): Int {
-        val depthMultiplier = BioluminescentCompensation.depthMultiplier(depthFactorOf(waterDepth))
+        val depthMultiplier = BioluminescentCompensation.depthMultiplier(
+            BioluminescentCompensation.depthFactor(waterDepth)
+        )
         return scaledShadeAlpha(base, baseStrength * depthMultiplier * angleFactor * cameraEnvironmentMultiplier)
+    }
+
+    private fun emitRadianceQuad(
+        consumer: VertexConsumer,
+        pose: PoseStack.Pose,
+        quad: ResolvedQuad,
+        cameraPosition: Vec3,
+        northWest: Int,
+        southWest: Int,
+        southEast: Int,
+        northEast: Int
+    ) {
+        val centerX = (quad.worldMinX + quad.worldMaxX) * 0.5 - cameraPosition.x
+        val centerY = quad.surfaceY - cameraPosition.y
+        val centerZ = (quad.worldMinZ + quad.worldMaxZ) * 0.5 - cameraPosition.z
+        val depthScale = BioluminescentCompensation.depthPullScale(
+            centerX,
+            centerY,
+            centerZ,
+            BioluminescentCompensation.POST_SHADER_DEPTH_PULL
+        )
+        val minX = ((quad.worldMinX - cameraPosition.x) * depthScale).toFloat()
+        val maxX = ((quad.worldMaxX - cameraPosition.x) * depthScale).toFloat()
+        val minZ = ((quad.worldMinZ - cameraPosition.z) * depthScale).toFloat()
+        val maxZ = ((quad.worldMaxZ - cameraPosition.z) * depthScale).toFloat()
+        val y = (centerY * depthScale).toFloat()
+
+        if (quad.renderTop) {
+            vertex(consumer, pose, minX, y, minZ, quad.minU, quad.minV, 1.0f, northWest)
+            vertex(consumer, pose, minX, y, maxZ, quad.minU, quad.maxV, 1.0f, southWest)
+            vertex(consumer, pose, maxX, y, maxZ, quad.maxU, quad.maxV, 1.0f, southEast)
+            vertex(consumer, pose, maxX, y, minZ, quad.maxU, quad.minV, 1.0f, northEast)
+        } else {
+            vertex(consumer, pose, minX, y, minZ, quad.minU, quad.minV, -1.0f, northWest)
+            vertex(consumer, pose, maxX, y, minZ, quad.maxU, quad.minV, -1.0f, northEast)
+            vertex(consumer, pose, maxX, y, maxZ, quad.maxU, quad.maxV, -1.0f, southEast)
+            vertex(consumer, pose, minX, y, maxZ, quad.minU, quad.maxV, -1.0f, southWest)
+        }
     }
 
     private fun emitQuad(

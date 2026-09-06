@@ -5,6 +5,7 @@ import dev.isxander.yacl3.api.ButtonOption
 import dev.isxander.yacl3.api.ConfigCategory
 import dev.isxander.yacl3.api.Option
 import dev.isxander.yacl3.api.OptionDescription
+import dev.isxander.yacl3.api.OptionEventListener
 import dev.isxander.yacl3.api.YetAnotherConfigLib
 import dev.isxander.yacl3.api.controller.DoubleSliderControllerBuilder
 import dev.isxander.yacl3.api.controller.IntegerSliderControllerBuilder
@@ -12,7 +13,6 @@ import dev.isxander.yacl3.api.controller.TickBoxControllerBuilder
 import dev.isxander.yacl3.gui.YACLScreen
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
-import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssDepthStart
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig.abyssMaxDepth
@@ -23,18 +23,23 @@ import fr.heta__h.squ_abyssal_bloom.config.server.types.BoolOption
 import fr.heta__h.squ_abyssal_bloom.config.server.types.DoubleOption
 import fr.heta__h.squ_abyssal_bloom.config.server.types.IntOption
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
+import fr.heta__h.squ_abyssal_bloom.entity.custom.brine.BrineEntity
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
+import fr.heta__h.squ_abyssal_bloom.entity.custom.crystal_jelly.CrystalJellyEntity
+import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.network.config.C2SServerConfigPacket
 import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import net.minecraft.client.Minecraft
 import net.neoforged.neoforge.client.network.ClientPacketDistributor
 import net.minecraft.core.BlockPos
+import net.minecraft.core.component.DataComponents
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ClientboundSoundPacket
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundSource
@@ -72,13 +77,42 @@ import kotlin.jvm.optionals.getOrNull
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 object ModUtilities {
 
+    const val ASPHYXIATION_GRACE_TICKS = 320
+    const val ASPHYXIATION_DAMAGE = 2.0f
     const val FULL_BRIGHT_LIGHTMAP = 15728880
     const val WHITE_RGB = 0xFFFFFF
+    const val ASPHYXIATION_DAMAGE_INTERVAL = 20
+    const val PROPULSION_WEAK_VOLUME = 0.45
+    const val PROPULSION_STRONG_VOLUME = 1.0
+    const val PROPULSION_WEAK_PITCH = 1.35
+    const val PROPULSION_STRONG_PITCH = 0.8
+    const val PROPULSION_PITCH_JITTER = 0.08
+
+    fun tickOutOfWaterAsphyxiation(
+        mob: LivingEntity,
+        level: ServerLevel,
+        ticksOutOfWater: Int,
+        graceTicks: Int = ASPHYXIATION_GRACE_TICKS,
+        damage: Float = ASPHYXIATION_DAMAGE
+    ): Int {
+
+        if (mob is BrineEntity && mob.isUnderWater) return 0
+
+        if (mob.isInWater && mob !is BrineEntity) return 0
+
+        val elapsed = ticksOutOfWater + 1
+        val overdue = elapsed - graceTicks
+        if (overdue >= 0 && overdue % ASPHYXIATION_DAMAGE_INTERVAL == 0) {
+            mob.hurtServer(level, mob.damageSources().drown(), damage)
+        }
+        return elapsed
+    }
 
     fun hasLoadedChunk(level: LevelReader, chunkX: Int, chunkZ: Int): Boolean {
         return level.getChunk(chunkX, chunkZ, ChunkStatus.FULL, false) != null
@@ -128,43 +162,6 @@ object ModUtilities {
         return level.getFluidState(pos).type.isSame(Fluids.WATER)
     }
 
-    fun findNearbyWaterBlock(
-        level: LevelReader,
-        center: BlockPos,
-        horizontalRadius: Int,
-        verticalRadius: Int
-    ): BlockPos? {
-        require(horizontalRadius >= 0)
-        require(verticalRadius >= 0)
-
-        val minY = maxOf(level.minY, center.y - verticalRadius)
-        val maxY = minOf(level.maxY - 1, center.y + verticalRadius)
-        if (minY > maxY) return null
-
-        val cursor = BlockPos.MutableBlockPos()
-
-        for (radius in 0..horizontalRadius) {
-            for (offsetX in -radius..radius) {
-                for (offsetZ in -radius..radius) {
-                    if (maxOf(abs(offsetX), abs(offsetZ)) != radius) continue
-
-                    val x = center.x + offsetX
-                    val z = center.z + offsetZ
-                    if (!hasLoadedChunk(level, x shr 4, z shr 4)) continue
-
-                    for (y in minY..maxY) {
-                        cursor.set(x, y, z)
-                        if (isWaterBlock(level, cursor)) {
-                            return cursor.immutable()
-                        }
-                    }
-                }
-            }
-        }
-
-        return null
-    }
-
     fun findTopWaterBlock(level: LevelReader, waterBlock: BlockPos): BlockPos? {
         if (!isWaterBlock(level, waterBlock)) return null
 
@@ -211,16 +208,6 @@ object ModUtilities {
 
     fun getFluidSurfaceHeight(level: LevelReader, fluidBlock: BlockPos): Double {
         return fluidBlock.y + level.getFluidState(fluidBlock).getHeight(level, fluidBlock).toDouble()
-    }
-
-    fun findNearbyWaterSurface(
-        level: LevelReader,
-        center: BlockPos,
-        horizontalRadius: Int,
-        verticalRadius: Int
-    ): BlockPos? {
-        val waterBlock = findNearbyWaterBlock(level, center, horizontalRadius, verticalRadius) ?: return null
-        return findTopWaterBlock(level, waterBlock)
     }
 
     fun findNearbyRenderableWaterSurface(
@@ -384,21 +371,26 @@ object ModUtilities {
     }
 
 
+    fun decayingImpulseSpeed(t: Float, tMax: Float, vMax: Float, k: Float = 2.0f): Float {
+        val ratio = (t / tMax).coerceIn(0.0f, 1.0f)
+        return vMax * (1.0f - ratio).pow(k)
+    }
+
     fun getDepthFactor(depth: Double): Double {
         return ((depth - abyssDepthStart) / (abyssMaxDepth - abyssDepthStart)).coerceIn(0.0, 1.0)
     }
 
-    fun hasClearPath(level: Level, from: LivingEntity, to: LivingEntity): Boolean {
-        val start = from.eyePosition
-        val end = to.eyePosition
+    fun hasClearPath(level: Level, from: LivingEntity, to: LivingEntity): Boolean =
+        hasClearPath(level, from.eyePosition, to.eyePosition, from)
 
+    fun hasClearPath(level: Level, from: Vec3, to: Vec3, source: Entity): Boolean {
         val hit = level.clip(
             ClipContext(
-                start,
-                end,
+                from,
+                to,
                 ClipContext.Block.COLLIDER,
                 ClipContext.Fluid.NONE,
-                from
+                source
             )
         )
 
@@ -479,6 +471,29 @@ object ModUtilities {
         level.playLocalSound(worldX, worldY, worldZ, sound, source, volume, pitch, false)
     }
 
+    fun playWaterPropulsion(
+        entity: Entity,
+        sound: SoundEvent,
+        strength: Double,
+        source: SoundSource,
+        volumeScale: Double = 1.0
+    ) {
+        val level = entity.level()
+        val amount = strength.coerceIn(0.0, 1.0)
+        val random = level.random
+        val volume = (lerp(PROPULSION_WEAK_VOLUME, PROPULSION_STRONG_VOLUME, amount) * volumeScale)
+            .coerceAtMost(1.0)
+            .toFloat()
+        val pitch = (lerp(PROPULSION_WEAK_PITCH, PROPULSION_STRONG_PITCH, amount) +
+            (random.nextDouble() - random.nextDouble()) * PROPULSION_PITCH_JITTER).toFloat()
+
+        if (level.isClientSide) {
+            level.playLocalSound(entity.x, entity.y, entity.z, sound, source, volume, pitch, false)
+        } else {
+            level.playSound(null, entity.x, entity.y, entity.z, sound, source, volume, pitch)
+        }
+    }
+
     fun isNautilusExtraEquipment(stack: ItemStack): Boolean {
         if (stack.isEmpty) return false
         return stack.typeHolder().`is`(ModTags.Items.NAUTILUS_EQUIPMENT)
@@ -504,7 +519,7 @@ object ModUtilities {
         maxInfluence: Double
     ): Double {
         if (distanceSquared > rangeSquared) return 0.0
-        val distance = kotlin.math.sqrt(distanceSquared)
+        val distance = sqrt(distanceSquared)
         return (1.0 - distance / maxRange).coerceIn(0.0, 1.0) * maxInfluence
     }
 
@@ -543,17 +558,27 @@ object ModUtilities {
             maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
         }
 
+        for (crystalJelly in level.getEntitiesOfClass(CrystalJellyEntity::class.java, aabb)) {
+            val distanceSquared = crystalJelly.position().distanceToSqr(center)
+            val influence = distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence)
+            maxFound = maxOf(maxFound, influence * crystalJelly.glowStrength)
+        }
+
         if (ModCompat.hasDynLights) {
             for (itemEntity in level.getEntitiesOfClass(ItemEntity::class.java, aabb)) {
-                if (!isFogRepellerStack(itemEntity.item)) continue
+                val itemStrength = fogRepellerStrength(itemEntity.item, level)
+                if (itemStrength <= 0.0) continue
                 val distanceSquared = itemEntity.position().distanceToSqr(center)
-                maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
+                val influence = distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence)
+                maxFound = maxOf(maxFound, influence * itemStrength)
             }
 
             for (itemFrame in level.getEntitiesOfClass(ItemFrame::class.java, aabb)) {
-                if (!isFogRepellerStack(itemFrame.item)) continue
+                val frameStrength = fogRepellerStrength(itemFrame.item, level)
+                if (frameStrength <= 0.0) continue
                 val distanceSquared = itemFrame.position().distanceToSqr(center)
-                maxFound = maxOf(maxFound, distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence))
+                val influence = distanceFalloffInfluence(distanceSquared, rangeSquared, maxRange, maxInfluence)
+                maxFound = maxOf(maxFound, influence * frameStrength)
             }
         }
 
@@ -642,14 +667,19 @@ object ModUtilities {
         val mainHand = entity.mainHandItem
         val offHand = entity.offhandItem
 
-        if ( ModCompat.hasDynLights && (isFogRepellerStack(mainHand) || isFogRepellerStack(offHand))) return 1.0
+        if (ModCompat.hasDynLights) {
+            val handStrength = maxOf(
+                fogRepellerStrength(mainHand, entity.level()),
+                fogRepellerStrength(offHand, entity.level())
+            )
+            if (handStrength > 0.0) return handStrength
+        }
 
         val vehicle = entity.vehicle
 
         if (vehicle is AbstractNautilus) {
-            if (isFogRepellerStack(vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT))) {
-                return 1.0
-            }
+            val mountStrength = fogRepellerStrength(vehicle.getData(ModAttachments.NAUTILUS_EXTRA_SLOT), entity.level())
+            if (mountStrength > 0.0) return mountStrength
         }
 
         return 0.0
@@ -658,6 +688,15 @@ object ModUtilities {
     fun isFogRepellerStack(stack: ItemStack): Boolean {
         if (stack.isEmpty) return false
         return stack.`is`(ModTags.Items.FOG_REPELLER) || stack.getOrDefault(ModDataComponents.PLANKTON_LUMINESCENCE.get(), false)
+    }
+
+    fun fogRepellerStrength(stack: ItemStack, level: Level): Double {
+        if (!isFogRepellerStack(stack)) return 0.0
+        if (!stack.`is`(ModItems.CRYSTAL_JELLY_BUCKET.get())) return 1.0
+
+        val bucketData = stack.get(DataComponents.BUCKET_ENTITY_DATA) ?: return 1.0
+        val readyGameTime = bucketData.copyTag().getLongOr(CrystalJellyEntity.TAG_BOTTLE_READY, 0L)
+        return CrystalJellyEntity.glowStrengthAt(level, readyGameTime).toDouble()
     }
 
     fun preferWaterWalkTarget(pos: BlockPos, level: LevelReader, fallback: () -> Float): Float {
@@ -746,7 +785,7 @@ object ModUtilities {
 
     fun isQualifyingWaterMover(entity: Entity): Boolean {
         return entity.isAlive && !entity.isSpectator && !entity.isPassenger &&
-            entity !is AbstractFish && entity !is Squid &&
+            entity !is AbstractFish && entity !is Squid && entity !is CrystalJellyEntity &&
             (entity.isInWater || entity is AbstractBoat)
     }
 
@@ -904,6 +943,19 @@ object ModUtilities {
                 c
             }
             .build()
+
+    fun <T : Comparable<T>> bindOrderedPair(minimum: Option<T>, maximum: Option<T>) {
+        minimum.addEventListener { option, event ->
+            if (event == OptionEventListener.Event.STATE_CHANGE &&
+                maximum.pendingValue() < option.pendingValue()
+            ) maximum.requestSet(option.pendingValue())
+        }
+        maximum.addEventListener { option, event ->
+            if (event == OptionEventListener.Event.STATE_CHANGE &&
+                minimum.pendingValue() > option.pendingValue()
+            ) minimum.requestSet(option.pendingValue())
+        }
+    }
 
     fun serverBool(opt: BoolOption): Option<Boolean> =
         Option.createBuilder<Boolean>()

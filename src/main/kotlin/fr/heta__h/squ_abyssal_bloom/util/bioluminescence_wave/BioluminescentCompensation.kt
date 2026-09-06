@@ -11,12 +11,14 @@ object BioluminescentCompensation {
     const val VISIBILITY_EPSILON = 0.01
     const val VISIBILITY_EPSILON_FLOAT = 0.01f
     const val RENDER_SIDE_HYSTERESIS = 0.05
+    const val POST_SHADER_DEPTH_PULL = 0.45
 
-    private const val SHALLOW_DEPTH = 4.0
-    private const val DEEP_DEPTH = 24.0
+    private const val SHALLOW_DEPTH = 2.0
+    private const val DEEP_DEPTH = 12.0
     private const val SHALLOW_MULTIPLIER = 0.65
     private const val GRAZING_VISIBILITY_START = 0.15
     private const val TOP_VIEW_VISIBILITY_FULL = 0.65
+    private const val MAX_DEPTH_PULL_FRACTION = 0.2
     private const val MIN_DISTANCE = 1.0e-6
 
     fun depthFactor(waterDepth: Double): Double {
@@ -35,6 +37,13 @@ object BioluminescentCompensation {
         val viewAlignment = if (distance > MIN_DISTANCE) abs(deltaY) / distance else 1.0
         val aligned = ModUtilities.smooth(GRAZING_VISIBILITY_START, TOP_VIEW_VISIBILITY_FULL, viewAlignment)
         return ModUtilities.lerp(ModConfig.shaderBioluminescenceGrazingStrength, 1.0, aligned)
+    }
+
+    fun depthPullScale(relativeX: Double, relativeY: Double, relativeZ: Double, requestedPull: Double): Double {
+        val distance = sqrt(relativeX * relativeX + relativeY * relativeY + relativeZ * relativeZ)
+        if (distance <= MIN_DISTANCE || requestedPull <= 0.0) return 1.0
+        val pull = minOf(requestedPull, distance * MAX_DEPTH_PULL_FRACTION)
+        return (distance - pull) / distance
     }
 
     fun resolveRenderTop(previous: Boolean?, cameraY: Double, surfaceY: Double): Boolean {
