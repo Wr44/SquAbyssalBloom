@@ -1,8 +1,10 @@
 package fr.heta__h.squ_abyssal_bloom
 
+import fr.heta__h.squ_abyssal_bloom.compat.iris.IrisPipelineBootstrap
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import fr.heta__h.squ_abyssal_bloom.entity.ModEntities
 import fr.heta__h.squ_abyssal_bloom.particle.ModParticles
+import fr.heta__h.squ_abyssal_bloom.render.bioluminescence_wave.pipeline.BioluminescentRenderPipelines
 import fr.heta__h.squ_abyssal_bloom.util.cache.AbstractFishTypeCache
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
@@ -19,6 +21,10 @@ object ClientModEvents {
     fun onClientSetup(event: FMLClientSetupEvent) {
         SquAbyssalBloom.LOGGER.info("Initializing client...")
         ModConfig.loadConfig()
+        IrisPipelineBootstrap.registerBioluminescentSurfaces(
+            BioluminescentRenderPipelines.SHADER_UNDERWATER_SURFACE,
+            BioluminescentRenderPipelines.SHADER_FOOTPRINT
+        )
         AbstractFishTypeCache.load()
 
         event.container.registerExtensionPoint(

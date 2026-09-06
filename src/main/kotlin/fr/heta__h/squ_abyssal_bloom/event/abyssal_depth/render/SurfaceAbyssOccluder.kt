@@ -2,8 +2,10 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.util.cache.SurfaceHeightCache
+import fr.heta__h.squ_abyssal_bloom.mixin.enable.FrustumAccessor
+import fr.heta__h.squ_abyssal_bloom.render.surface_occluder.SurfaceHeightCache
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import it.unimi.dsi.fastutil.longs.Long2FloatOpenHashMap
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
@@ -14,7 +16,6 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.levelgen.Heightmap
 import net.minecraft.world.level.material.FogType
-import net.minecraft.world.phys.AABB
 import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -31,7 +32,7 @@ import kotlin.math.max
 @EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object SurfaceAbyssOccluder {
 
-    private val WHITE_TEXTURE = Identifier.withDefaultNamespace("textures/misc/white.png")
+    private val WHITE_TEXTURE = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/misc/white.png")
 
     private const val BASE_STEP = 4
 
@@ -49,7 +50,6 @@ object SurfaceAbyssOccluder {
     private const val LAMP_REDUCTION_MULTIPLIER = 0.15f
     private const val ALPHA_RENDER_THRESHOLD = 0.01f
 
-    private const val FULL_BRIGHT_LIGHTMAP = 15728880
     private const val DEFAULT_OVERLAY = 655360
     private const val UV_CENTER = 0.5f
 
@@ -127,46 +127,34 @@ object SurfaceAbyssOccluder {
         return cachedBands
     }
 
+    private fun probeWaterSurfaceY(level: Level, bx: Int, bz: Int): Int {
+        if (!level.hasChunk(bx shr 4, bz shr 4)) return Int.MAX_VALUE
+
+        val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz)
+        val waterBlock = ModUtilities.findFluidBlockBelow(
+            level = level,
+            x = bx,
+            z = bz,
+            startY = topY,
+            fluidTag = FluidTags.WATER,
+            maxConsecutiveSolidBlocks = 10
+        ) ?: return Int.MAX_VALUE
+
+        return waterBlock.y
+    }
+
     private fun findMinWaterSurface(level: Level, camPos: Vec3): Int {
         val cx = camPos.x.toInt()
         val cz = camPos.z.toInt()
-        val mutPos = BlockPos.MutableBlockPos()
-
-        val beams = mutableListOf<Pair<Int, Int>>()
         val spread = intArrayOf(-16, -8, 0, 8, 16)
-
-        for (s in spread) {
-            beams.add(Pair(cx + s, cz - 32))
-            beams.add(Pair(cx + s, cz + 32))
-            beams.add(Pair(cx - 32, cz + s))
-            beams.add(Pair(cx + 32, cz + s))
-        }
 
         var minSurface = Int.MAX_VALUE
 
-        for ((bx, bz) in beams) {
-            if (!level.hasChunk(bx shr 4, bz shr 4)) continue
-
-            val topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, bx, bz)
-            var solidStreak = 0
-
-            for (y in topY downTo level.minY) {
-                mutPos.set(bx, y, bz)
-                val fluidState = level.getFluidState(mutPos)
-
-                if (fluidState.`is`(FluidTags.WATER)) {
-                    minSurface = minOf(minSurface, y)
-                    break
-                }
-
-                val blockState = level.getBlockState(mutPos)
-                if (blockState.blocksMotion()) {
-                    solidStreak++
-                    if (solidStreak > 10) break
-                } else {
-                    solidStreak = 0
-                }
-            }
+        for (s in spread) {
+            minSurface = minOf(minSurface, probeWaterSurfaceY(level, cx + s, cz - 32))
+            minSurface = minOf(minSurface, probeWaterSurfaceY(level, cx + s, cz + 32))
+            minSurface = minOf(minSurface, probeWaterSurfaceY(level, cx - 32, cz + s))
+            minSurface = minOf(minSurface, probeWaterSurfaceY(level, cx + 32, cz + s))
         }
 
         return minSurface
@@ -234,7 +222,7 @@ object SurfaceAbyssOccluder {
 
         val depthStep = targetDarknessDepth / numLayers.toFloat()
 
-        val frustum = mc.gameRenderer.mainCamera.cullFrustum
+        val frustum = mc.gameRenderer.mainCamera.cullFrustum as? FrustumAccessor
 
         activeKeysThisFrame.clear()
 
@@ -264,21 +252,21 @@ object SurfaceAbyssOccluder {
                     val waterSurfaceY = SurfaceHeightCache.unpackSurfaceY(cellData)
                     val floorY = SurfaceHeightCache.unpackFloorY(cellData).toFloat()
 
-                    if (!(frustum?.isVisible(
-                            AABB(
-                                x.toDouble(), floorY.toDouble(), z.toDouble(),
-                                (x + step).toDouble(), waterSurfaceY.toDouble(), (z + step).toDouble()
-                            )
-                        ) ?: true)
-                    ) continue
-
-                    val key = chunkKey(cx, cz)
+                    val key = ModUtilities.horizontalPositionKey(cx shr 4, cz shr 4)
                     val rawFade = chunkFadeProgress.get(key)
                     val newFade = (rawFade + dt * fadeSpeed).coerceAtMost(1.0f)
                     chunkFadeProgress.put(key, newFade)
                     activeKeysThisFrame.add(key)
 
-                    val fadeFactor = newFade * newFade * (3f - 2f * newFade)
+                    if (frustum != null) {
+                        val intersection = frustum.invokeCubeInFrustum(
+                            x.toDouble(), floorY.toDouble(), z.toDouble(),
+                            (x + step).toDouble(), waterSurfaceY.toDouble(), (z + step).toDouble()
+                        )
+                        if (intersection != -2 && intersection != -1) continue
+                    }
+
+                    val fadeFactor = ModUtilities.smooth(newFade)
 
                     val size = step.toFloat()
                     val rx = x.toFloat() - camPos.x.toFloat()
@@ -313,12 +301,6 @@ object SurfaceAbyssOccluder {
             val entry = iter.next()
             if (!activeKeysThisFrame.contains(entry.longKey)) iter.remove()
         }
-    }
-
-    private fun chunkKey(cx: Int, cz: Int): Long {
-        val chunkX = cx shr 4
-        val chunkZ = cz shr 4
-        return (chunkX.toLong() shl 32) or (chunkZ.toLong() and 0xFFFFFFFFL)
     }
 
     private fun snapToGrid(value: Int, snap: Int): Int {

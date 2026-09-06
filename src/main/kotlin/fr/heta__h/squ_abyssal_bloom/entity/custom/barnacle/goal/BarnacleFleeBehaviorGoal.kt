@@ -88,7 +88,7 @@ class BarnacleFleeBehaviorGoal(private val barnacle: BarnacleEntity) : Goal() {
         if (elapsed >= moveStillDuration) {
             isPlaying = true
             barnacle.spawnInk()
-            barnacle.rushPhase = true
+            barnacle.beginRush(barnacle.fleeSpeed)
             barnacle.behaviorAnimationStartTick = barnacle.tickCount
         }
     }

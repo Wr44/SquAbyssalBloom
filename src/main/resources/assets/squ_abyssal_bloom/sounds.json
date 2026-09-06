@@ -36,6 +36,27 @@
       { "name": "minecraft:mob/guardian/flop4", "pitch": 0.5 }
     ]
   },
+  "barnacle_propulsion": {
+    "subtitle": "subtitles.squ_abyssal_bloom.barnacle_propulsion",
+    "sounds": [
+      "squ_abyssal_bloom:misc/water_propulsion_01",
+      "squ_abyssal_bloom:misc/water_propulsion_02",
+      "squ_abyssal_bloom:misc/water_propulsion_03",
+      "squ_abyssal_bloom:misc/water_propulsion_04",
+      "squ_abyssal_bloom:misc/water_propulsion_05",
+      "squ_abyssal_bloom:misc/water_propulsion_06",
+      "squ_abyssal_bloom:misc/water_propulsion_07",
+      "squ_abyssal_bloom:misc/water_propulsion_08",
+      "squ_abyssal_bloom:misc/water_propulsion_09",
+      "squ_abyssal_bloom:misc/water_propulsion_10",
+      "squ_abyssal_bloom:misc/water_propulsion_11",
+      "squ_abyssal_bloom:misc/water_propulsion_12",
+      "squ_abyssal_bloom:misc/water_propulsion_13",
+      "squ_abyssal_bloom:misc/water_propulsion_14",
+      "squ_abyssal_bloom:misc/water_propulsion_15",
+      "squ_abyssal_bloom:misc/water_propulsion_16"
+    ]
+  },
 
 
 
@@ -55,6 +76,37 @@
     "sounds": ["minecraft:entity/fish/flop1", "minecraft:entity/fish/flop2", "minecraft:entity/fish/flop3", "minecraft:entity/fish/flop4"]
   },
 
+
+
+  "crystal_jelly_hurt": {
+    "subtitle": "subtitles.squ_abyssal_bloom.crystal_jelly_hurt",
+    "sounds": [ "squ_abyssal_bloom:entity/jellyfish/jellyfish_hurt_1", "squ_abyssal_bloom:entity/jellyfish/jellyfish_hurt_2", "squ_abyssal_bloom:entity/jellyfish/jellyfish_hurt_3", "squ_abyssal_bloom:entity/jellyfish/jellyfish_hurt_4", "squ_abyssal_bloom:entity/jellyfish/jellyfish_hurt_5" ]
+  },
+  "crystal_jelly_death": {
+    "subtitle": "subtitles.squ_abyssal_bloom.crystal_jelly_death",
+    "sounds": [ "squ_abyssal_bloom:entity/jellyfish/jellyfish_death" ]
+  },
+  "crystal_jelly_propulsion": {
+    "subtitle": "subtitles.squ_abyssal_bloom.crystal_jelly_propulsion",
+    "sounds": [
+      "squ_abyssal_bloom:misc/water_propulsion_01",
+      "squ_abyssal_bloom:misc/water_propulsion_02",
+      "squ_abyssal_bloom:misc/water_propulsion_03",
+      "squ_abyssal_bloom:misc/water_propulsion_04",
+      "squ_abyssal_bloom:misc/water_propulsion_05",
+      "squ_abyssal_bloom:misc/water_propulsion_06",
+      "squ_abyssal_bloom:misc/water_propulsion_07",
+      "squ_abyssal_bloom:misc/water_propulsion_08",
+      "squ_abyssal_bloom:misc/water_propulsion_09",
+      "squ_abyssal_bloom:misc/water_propulsion_10",
+      "squ_abyssal_bloom:misc/water_propulsion_11",
+      "squ_abyssal_bloom:misc/water_propulsion_12",
+      "squ_abyssal_bloom:misc/water_propulsion_13",
+      "squ_abyssal_bloom:misc/water_propulsion_14",
+      "squ_abyssal_bloom:misc/water_propulsion_15",
+      "squ_abyssal_bloom:misc/water_propulsion_16"
+    ]
+  },
 
 
   "brine_ambient": {
@@ -148,6 +200,36 @@
     "subtitle": "subtitles.squ_abyssal_bloom.abyssal_guardian_focalist_ready",
     "sounds": [ "squ_abyssal_bloom:item/abyssal_guardian_focalist/abyssal_guardian_focalist_ready" ]
   },
+  "abyssal_guardian_focalist_siphon": {
+    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_guardian_focalist_siphon",
+    "sounds": [ "squ_abyssal_bloom:item/abyssal_guardian_focalist/abyssal_guardian_focalist_siphon" ]
+  },
+  "abyssal_guardian_focalist_singularity": {
+    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_guardian_focalist_singularity",
+    "sounds": [ "squ_abyssal_bloom:item/abyssal_guardian_focalist/abyssal_guardian_focalist_singularity" ]
+  },
+
+  "propulsion_burst": {
+    "subtitle": "subtitles.squ_abyssal_bloom.propulsion_burst",
+    "sounds": [
+      "squ_abyssal_bloom:misc/water_propulsion_01",
+      "squ_abyssal_bloom:misc/water_propulsion_02",
+      "squ_abyssal_bloom:misc/water_propulsion_03",
+      "squ_abyssal_bloom:misc/water_propulsion_04",
+      "squ_abyssal_bloom:misc/water_propulsion_05",
+      "squ_abyssal_bloom:misc/water_propulsion_06",
+      "squ_abyssal_bloom:misc/water_propulsion_07",
+      "squ_abyssal_bloom:misc/water_propulsion_08",
+      "squ_abyssal_bloom:misc/water_propulsion_09",
+      "squ_abyssal_bloom:misc/water_propulsion_10",
+      "squ_abyssal_bloom:misc/water_propulsion_11",
+      "squ_abyssal_bloom:misc/water_propulsion_12",
+      "squ_abyssal_bloom:misc/water_propulsion_13",
+      "squ_abyssal_bloom:misc/water_propulsion_14",
+      "squ_abyssal_bloom:misc/water_propulsion_15",
+      "squ_abyssal_bloom:misc/water_propulsion_16"
+    ]
+  },
   "respiration_bubble": {
     "subtitle": "subtitles.squ_abyssal_bloom.respiration_bubble",
     "sounds": [ "squ_abyssal_bloom:item/respiration_bubble/respiration_bubble" ]
@@ -155,6 +237,14 @@
   "fill_baby_red_slobberer_bucket": {
     "subtitle": "subtitles.squ_abyssal_bloom.fill_baby_red_slobberer_bucket",
     "sounds": [ "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_1", "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_2", "squ_abyssal_bloom:item/bucket/fill_baby_red_slobberer_bucket_3" ]
+  },
+  "fill_crystal_jelly_bucket": {
+    "subtitle": "subtitles.squ_abyssal_bloom.fill_crystal_jelly_bucket",
+    "sounds": [ "minecraft:item/bucket/fill_fish1", "minecraft:item/bucket/fill_fish2", "minecraft:item/bucket/fill_fish3" ]
+  },
+  "bottle_fill_bioluminescent": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bottle_fill_bioluminescent",
+    "sounds": [ "squ_abyssal_bloom:item/bioluminescent_bottle/bottle_fill_bioluminescent_1", "squ_abyssal_bloom:item/bioluminescent_bottle/bottle_fill_bioluminescent_2", "squ_abyssal_bloom:item/bioluminescent_bottle/bottle_fill_bioluminescent_3", "squ_abyssal_bloom:item/bioluminescent_bottle/bottle_fill_bioluminescent_4" ]
   },
 
   "conduit_entering": {
@@ -168,8 +258,75 @@
   },
 
 
+  "bioluminescent_wave_ambient": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bioluminescent_wave_ambient",
+    "sounds": [
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_ambient_1",
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_ambient_2",
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_ambient_3",
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_ambient_4",
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_ambient_5",
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_ambient_6"
+    ]
+  },
+
+  "bioluminescent_wave_shimmering": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bioluminescent_wave_shimmering",
+    "sounds": [
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_shimmering_1",
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_shimmering_2",
+      "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_shimmering_3"
+    ]
+  },
+
+  "bioluminescent_wave_start": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bioluminescent_wave_start",
+    "sounds": [ "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_start" ]
+  },
+
+  "bioluminescent_wave_stop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bioluminescent_wave_stop",
+    "sounds": [ "squ_abyssal_bloom:bioluminescence_wave/bioluminescent_wave_stop" ]
+  },
+
+  "bloom_pulse": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bloom_pulse",
+    "sounds": [
+      "squ_abyssal_bloom:bioluminescence_wave/bloom_pulse_1",
+      "squ_abyssal_bloom:bioluminescence_wave/bloom_pulse_2",
+      "squ_abyssal_bloom:bioluminescence_wave/bloom_pulse_3"
+    ]
+  },
+
+  "bloom_start": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bloom_start",
+    "sounds": [
+      "squ_abyssal_bloom:bioluminescence_wave/bloom_start_1",
+      "squ_abyssal_bloom:bioluminescence_wave/bloom_start_2"
+    ]
+  },
+
+  "bloom_stop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.bloom_stop",
+    "sounds": [ "squ_abyssal_bloom:bioluminescence_wave/bloom_stop" ]
+  },
+
+
+
   "pressure_damage": {
     "subtitle": "subtitles.squ_abyssal_bloom.pressure_damage",
     "sounds": [ "squ_abyssal_bloom:damage_type/pressure_damage" ]
+  },
+
+
+  "beach_wave_loop": {
+    "subtitle": "subtitles.squ_abyssal_bloom.beach_waves",
+    "sounds": [
+      {
+        "name": "squ_abyssal_bloom:ambient/beach_wave_loop",
+        "stream": true
+      }
+    ]
   }
+
 }

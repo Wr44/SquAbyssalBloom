@@ -53,6 +53,31 @@ object ModPotions {
             MobEffectInstance(ModEffects.GUARDIAN_S_REDISTRIBUTION, 1200, 2))
         }
 
+
+    val PROPULSION: Holder<Potion> =
+        POTIONS.register("propulsion") { _ -> Potion(
+            "propulsion",
+            MobEffectInstance(ModEffects.PROPULSION, 1800))
+        }
+
+    val LONG_PROPULSION: Holder<Potion> =
+        POTIONS.register("long_propulsion") { _ -> Potion(
+            "propulsion",
+            MobEffectInstance(ModEffects.PROPULSION, 4800))
+        }
+
+    val STRONG_PROPULSION: Holder<Potion> =
+        POTIONS.register("strong_propulsion") { _ -> Potion(
+            "propulsion",
+            MobEffectInstance(ModEffects.PROPULSION, 900, 1))
+        }
+
+    val LONG_STRONG_PROPULSION: Holder<Potion> =
+        POTIONS.register("long_strong_propulsion") { _ -> Potion(
+            "propulsion",
+            MobEffectInstance(ModEffects.PROPULSION, 2400, 1))
+        }
+
     fun register(eventBus: IEventBus) {
         POTIONS.register(eventBus)
     }
@@ -94,6 +119,30 @@ object ModPotions {
             STRONGER_GUARDIAN_S_REDISTRIBUTION,
             Items.REDSTONE,
             LONG_STRONGER_GUARDIAN_S_REDISTRIBUTION
+        )
+
+        builder.addMix(
+            Potions.AWKWARD,
+            ModItems.CRYSTAL_JELLY_GEL.get(),
+            PROPULSION
+        )
+
+        builder.addMix(
+            PROPULSION,
+            Items.REDSTONE,
+            LONG_PROPULSION
+        )
+
+        builder.addMix(
+            PROPULSION,
+            Items.GLOWSTONE_DUST,
+            STRONG_PROPULSION
+        )
+
+        builder.addMix(
+            STRONG_PROPULSION,
+            Items.REDSTONE,
+            LONG_STRONG_PROPULSION
         )
     }
 }

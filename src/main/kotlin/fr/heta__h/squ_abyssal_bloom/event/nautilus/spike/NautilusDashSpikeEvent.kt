@@ -32,6 +32,7 @@ object NautilusDashSpikeEvent {
     private const val DURABILITY_LOSS_PER_HIT = 4
     private const val SOUND_VOLUME = 1.0f
     private const val DASH_IFRAMES = 10L
+    private const val CHARGE_GRACE_TICKS = 20L
     private const val RECOIL_Y = 0.3
 
     private val hitTracker = WeakHashMap<LivingEntity, Long>()
@@ -69,6 +70,7 @@ object NautilusDashSpikeEvent {
 
         val targets = level.getEntities(entity, attackBox)
         val currentTick = level.gameTime
+        entity.setData(ModAttachments.NAUTILUS_CHARGE_GRACE, currentTick + CHARGE_GRACE_TICKS)
         val dashSpeed = entity.deltaMovement.length()
         val calculatedKnockback = (BASE_KNOCKBACK + (dashSpeed * SPEED_KNOCKBACK_MULTIPLIER)).coerceAtMost(MAX_KNOCKBACK)
 

@@ -43,6 +43,10 @@ data class FishCollectiveSettings(
     val herdCompression: Double
 ) {
     companion object {
+        const val NEIGHBOR_REFRESH_INTERVAL = 6
+        const val THREAT_REFRESH_INTERVAL = 6
+        const val LONG_RANGE_REFRESH_INTERVAL = 24
+
         fun fromConfig(): FishCollectiveSettings {
             val neighborSearchRadius =
                 ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_NEIGHBOR_SEARCH_RADIUS)
@@ -97,12 +101,9 @@ data class FishCollectiveSettings(
                     ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_VERTICAL_MOVEMENT_WEIGHT),
                 verticalDriftSpeed =
                     ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_VERTICAL_DRIFT_SPEED),
-                neighborRefreshInterval =
-                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_NEIGHBOR_REFRESH_INTERVAL),
-                threatRefreshInterval =
-                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_THREAT_REFRESH_INTERVAL),
-                longRangeRefreshInterval =
-                    ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_LONG_RANGE_REFRESH_INTERVAL),
+                neighborRefreshInterval = NEIGHBOR_REFRESH_INTERVAL,
+                threatRefreshInterval = THREAT_REFRESH_INTERVAL,
+                longRangeRefreshInterval = LONG_RANGE_REFRESH_INTERVAL,
                 threatDetectionRadius =
                     ServerConfigCache.current(ModServerConfig.FISH_SCHOOL_THREAT_DETECTION_RADIUS),
                 threatPropagationSpeed =

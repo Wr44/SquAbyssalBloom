@@ -48,7 +48,7 @@ object NautilusAddExtraElementRightClick {
                     ConduitDomainHandler.markConduitEquipmentChange(player.uuid)
                 }
 
-                if (!player.abilities.instabuild) itemInHand.shrink(1)
+                itemInHand.consume(1, player)
             }
             event.isCanceled = true
             event.cancellationResult = InteractionResult.SUCCESS

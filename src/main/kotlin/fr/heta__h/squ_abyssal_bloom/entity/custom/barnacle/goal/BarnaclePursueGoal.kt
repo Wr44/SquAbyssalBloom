@@ -68,7 +68,7 @@ class BarnaclePursueGoal(private val barnacle: BarnacleEntity) : Goal() {
     private fun tickStill() {
         barnacle.behaviorPathController.pause()
         if (barnacle.tickCount - barnacle.behaviorAnimationStartTick >= stillDuration) {
-            barnacle.rushPhase = true
+            barnacle.beginRush(barnacle.pursuitSpeed)
             barnacle.behaviorAnimationStartTick = barnacle.tickCount
         }
         barnacle.deltaMovement = Vec3.ZERO

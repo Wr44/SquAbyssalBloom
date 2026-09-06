@@ -11,6 +11,18 @@ class AbyssalShapingContext(
     val settings: AbyssalTerrainSettings,
     val blender: Blender
 ) {
+    private class BlendedPointContext(
+        private val x: Int,
+        private val y: Int,
+        private val z: Int,
+        private val blender: Blender
+    ) : DensityFunction.FunctionContext {
+        override fun blockX(): Int = x
+        override fun blockY(): Int = y
+        override fun blockZ(): Int = z
+        override fun getBlender(): Blender = blender
+    }
+
     val shallowDeepEdge: Double get() = settings.shallowDeepEdge
     val abyssalDeepSplit: Double get() = settings.abyssalDeepSplit
     val continentalFull: Double get() = settings.continentalFull
@@ -21,16 +33,4 @@ class AbyssalShapingContext(
 
     fun densityContext(x: Int, y: Int, z: Int): DensityFunction.FunctionContext =
         BlendedPointContext(x, y, z, blender)
-}
-
-private class BlendedPointContext(
-    private val x: Int,
-    private val y: Int,
-    private val z: Int,
-    private val blender: Blender
-) : DensityFunction.FunctionContext {
-    override fun blockX(): Int = x
-    override fun blockY(): Int = y
-    override fun blockZ(): Int = z
-    override fun getBlender(): Blender = blender
 }

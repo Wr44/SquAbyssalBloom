@@ -95,6 +95,13 @@ ordering = "AFTER"
 side = "CLIENT"
 
 [[dependencies."${mod_id}"]]
+modId = "iris"
+type = "optional"
+versionRange = "*"
+ordering = "AFTER"
+side = "CLIENT"
+
+[[dependencies."${mod_id}"]]
 modId = "terrablender"
 type = "required"
 versionRange = "[26.1.2-26.1.2.0.2,)"

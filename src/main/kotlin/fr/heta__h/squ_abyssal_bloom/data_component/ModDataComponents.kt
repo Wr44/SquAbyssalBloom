@@ -5,6 +5,7 @@ import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterData
 import net.minecraft.core.component.DataComponentType
 import net.minecraft.core.registries.Registries
+import net.minecraft.network.codec.ByteBufCodecs
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.registries.DeferredRegister
 import java.util.function.Supplier
@@ -25,6 +26,19 @@ object ModDataComponents {
             .build()
     })
 
+    val PLANKTON_LUMINESCENCE: Supplier<DataComponentType<Boolean>> = REGISTRY.register("plankton_luminescence", Supplier {
+        DataComponentType.builder<Boolean>()
+            .persistent(Codec.BOOL)
+            .networkSynchronized(ByteBufCodecs.BOOL)
+            .build()
+    })
+
+    val PLANKTON_FILL: Supplier<DataComponentType<Int>> = REGISTRY.register("plankton_fill", Supplier {
+        DataComponentType.builder<Int>()
+            .persistent(Codec.INT)
+            .networkSynchronized(ByteBufCodecs.VAR_INT)
+            .build()
+    })
 
     fun register(modBus: IEventBus) {
         REGISTRY.register(modBus)

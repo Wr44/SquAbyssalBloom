@@ -8,11 +8,6 @@ import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.WeakHashMap
 
-/**
- * Dimension information is not carried by NoiseChunk or by a climate sampler.
- * Keep the exact worldgen objects owned by the Overworld so mixins can reject
- * identical generator types used by other dimensions.
- */
 object AbyssalWorldgenScope {
     private val randomStates: MutableSet<RandomState> =
         Collections.synchronizedSet(Collections.newSetFromMap(IdentityHashMap<RandomState, Boolean>()))

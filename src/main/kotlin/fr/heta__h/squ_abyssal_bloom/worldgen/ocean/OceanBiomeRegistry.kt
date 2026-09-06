@@ -24,6 +24,7 @@ object OceanBiomeRegistry {
         val deepPoolsByNamespace = Array(5) { mutableMapOf<String, MutableList<OceanBiomeEntry>>() }
         val shallowPoolsByNamespace = Array(5) { mutableMapOf<String, MutableList<OceanBiomeEntry>>() }
         val holderByKey = mutableMapOf<ResourceKey<Biome>, Holder<Biome>>()
+        val entryByKey = mutableMapOf<ResourceKey<Biome>, OceanBiomeEntry>()
         val registeredKeys = mutableSetOf<ResourceKey<Biome>>()
     }
 
@@ -31,6 +32,8 @@ object OceanBiomeRegistry {
     private var state = RegistryState()
 
     fun getHolder(key: ResourceKey<Biome>): Holder<Biome>? = state.holderByKey[key]
+
+    fun entryFor(key: ResourceKey<Biome>): OceanBiomeEntry? = state.entryByKey[key]
 
     fun bootstrap(registry: Registry<Biome>) {
         val newState = RegistryState()
@@ -142,6 +145,7 @@ object OceanBiomeRegistry {
         if (pool.any { it.key == entry.key }) return
         pool.add(entry)
         byNamespace.getOrPut(namespace) { mutableListOf() }.add(entry)
+        newState.entryByKey[entry.key] = entry
         newState.registeredKeys.add(entry.key)
     }
 

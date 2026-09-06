@@ -1,0 +1,12 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "squ_abyssal_bloom:item/plankton_bottle",
+    "tints": [
+      { "type": "squ_abyssal_bloom:plankton_tint", "phase": 0.0, "whiten": 0.72 },
+      { "type": "squ_abyssal_bloom:plankton_tint", "phase": 0.0 },
+      { "type": "squ_abyssal_bloom:plankton_tint", "phase": 0.45, "whiten": 0.25 },
+      { "type": "minecraft:constant", "value": -1 }
+    ]
+  }
+}

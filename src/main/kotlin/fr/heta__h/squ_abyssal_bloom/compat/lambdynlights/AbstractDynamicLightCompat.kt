@@ -1,11 +1,11 @@
 package fr.heta__h.squ_abyssal_bloom.compat.lambdynlights
 
+import dev.lambdaurora.lambdynlights.api.behavior.DynamicLightBehavior
 import dev.lambdaurora.lambdynlights.api.behavior.LineLightBehavior
-import net.neoforged.fml.ModList
+import fr.heta__h.squ_abyssal_bloom.config.ModConfig
 import org.joml.Vector3d
 
 abstract class AbstractDynamicLightCompat {
-
 
     companion object {
         private var managerInstance: Any? = null
@@ -38,13 +38,13 @@ abstract class AbstractDynamicLightCompat {
         }
     }
 
-    protected fun addDynamicLight(light: LineLightBehavior) {
-        if (isInitialized) {
+    protected fun addDynamicLight(light: DynamicLightBehavior) {
+        if (isInitialized && ModConfig.enableDynamicLights) {
             try { addMethod?.invoke(managerInstance, light) } catch (e: Exception) {}
         }
     }
 
-    protected fun removeDynamicLight(light: LineLightBehavior) {
+    protected fun removeDynamicLight(light: DynamicLightBehavior) {
         if (isInitialized) {
             try { removeMethod?.invoke(managerInstance, light) } catch (e: Exception) {}
         }
@@ -58,6 +58,11 @@ abstract class AbstractDynamicLightCompat {
         luminance: Int,
         removedCheck: () -> Boolean
     ) {
+        if (!ModConfig.enableDynamicLights) {
+            removeLineLight(map, id)
+            return
+        }
+
         val existing = map[id]
 
         if (existing != null) {

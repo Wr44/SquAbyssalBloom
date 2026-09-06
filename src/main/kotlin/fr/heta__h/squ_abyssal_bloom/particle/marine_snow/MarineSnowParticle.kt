@@ -1,7 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.particle.marine_snow
 
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.particle.SingleQuadParticle
 import net.minecraft.client.renderer.texture.TextureAtlasSprite

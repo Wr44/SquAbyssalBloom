@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.item.ModItems
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import fr.heta__h.squ_abyssal_bloom.util.accessor.AddPropertiesToRenderState
 import fr.heta__h.squ_abyssal_bloom.util.conduit.ConduitMaterialHolder
 import fr.heta__h.squ_abyssal_bloom.util.nautilus.NautilusLayerItems.BUBBLE
@@ -132,12 +133,18 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                 poseStack.pushPose()
                 this.parentModel.setupAnim(state)
 
+                val bubbleLight = if (extraItem.getOrDefault(ModDataComponents.PLANKTON_LUMINESCENCE.get(), false)) {
+                    FULL_BRIGHT_LIGHTMAP
+                } else {
+                    packedLight
+                }
+
                 collector.submitModel(
                     bubbleModel,
                     state,
                     poseStack,
                     RenderTypes.entityCutout(TEXTURE_BUBBLE_BACK),
-                    packedLight,
+                    bubbleLight,
                     OverlayTexture.NO_OVERLAY,
                     0,
                     null
@@ -156,7 +163,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                     state,
                     poseStack,
                     RenderTypes.entityCutout(TEXTURE_BUBBLE_FRONT),
-                    packedLight,
+                    bubbleLight,
                     OverlayTexture.NO_OVERLAY,
                     tintColor,
                     null,
@@ -165,7 +172,7 @@ class NautilusLayer<S : LivingEntityRenderState, M : EntityModel<S>>(
                 )
 
                 if (extraItem.hasFoil()) {
-                    collector.submitModel(bubbleModel, state, poseStack, RenderTypes.entityGlint(), packedLight, OverlayTexture.NO_OVERLAY, 0, null)
+                    collector.submitModel(bubbleModel, state, poseStack, RenderTypes.entityGlint(), bubbleLight, OverlayTexture.NO_OVERLAY, 0, null)
                 }
                 poseStack.popPose()
             }

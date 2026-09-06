@@ -57,7 +57,7 @@ class BarnacleIdleBehaviorGoal(private val barnacle: BarnacleEntity) : Goal() {
     private fun tickPreRush() {
         barnacle.behaviorPathController.pause()
         if (barnacle.tickCount - barnacle.behaviorAnimationStartTick >= stillAnimationDuration) {
-            barnacle.rushPhase = true
+            barnacle.beginRush(BarnacleEntity.IDLE_MAX_SPEED)
             barnacle.behaviorAnimationStartTick = barnacle.tickCount
             ticksSinceObstacleCheck = 10
         }

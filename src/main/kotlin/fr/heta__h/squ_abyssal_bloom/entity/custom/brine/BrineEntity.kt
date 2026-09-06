@@ -229,7 +229,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     }
 
     override fun die(damageSource: DamageSource) {
-        if (!level().isClientSide && !isInWater) {
+        if (!level().isClientSide && !isUnderWater) {
             val serverLevel = level() as? ServerLevel
             if (serverLevel != null) {
                 val bubble = BubbleProjectile(ModEntities.BUBBLE.get(), serverLevel)
@@ -240,7 +240,7 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
             }
         }
         super.die(damageSource)
-        if (!isInWater) remove(RemovalReason.KILLED)
+        if (!isUnderWater) remove(RemovalReason.KILLED)
     }
 
 
@@ -454,21 +454,18 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
 
 
     override fun playHurtSound(source: DamageSource) {
-        if (!isInWater) return
+        if (!isUnderWater) return
         super.playHurtSound(source)
     }
 
-    override fun getAmbientSound(): SoundEvent? {
-        return ModSounds.BRINE_AMBIENT.get()
-    }
+    override fun getAmbientSound(): SoundEvent = ModSounds.BRINE_AMBIENT.get()
 
-    override fun getDeathSound(): SoundEvent {
-        return  ModSounds.BRINE_DEATH.get()
-    }
 
-    override fun getHurtSound(source: DamageSource): SoundEvent {
-        return ModSounds.BRINE_HURT.get()
-    }
+    override fun getDeathSound(): SoundEvent = ModSounds.BRINE_DEATH.get()
+
+
+    override fun getHurtSound(source: DamageSource): SoundEvent = ModSounds.BRINE_HURT.get()
+
 
 
     override fun tick() {
@@ -525,14 +522,20 @@ class BrineEntity(type: EntityType<out Monster>, level: Level) : Monster(type, l
     override fun aiStep() {
         super.aiStep()
         if (level().isClientSide) return
-        if (!isInWater) {
-            if (++ticksOutOfWater >= TICKS_BEFORE_DEATH)
-                hurtServer(level() as ServerLevel, damageSources().drown(), INSTANT_KILL_DAMAGE)
-        } else {
-            ticksOutOfWater = 0
+
+        ticksOutOfWater = ModUtilities.tickOutOfWaterAsphyxiation(
+            this,
+            level() as ServerLevel,
+            ticksOutOfWater,
+            TICKS_BEFORE_DEATH,
+            INSTANT_KILL_DAMAGE
+        )
+
+        if (isUnderWater) {
             airSupply = maxAirSupply
             if (knockbackTicks > 0) knockbackTicks--
         }
+
         val moving = deltaMovement.lengthSqr() > FLOAT_MOVING_THRESHOLD_SQR
         if (entityData.get(IS_MOVING) != moving) entityData.set(IS_MOVING, moving)
     }

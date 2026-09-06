@@ -30,7 +30,7 @@ class LifelineBubbleItem(properties: Properties) : Item(properties) {
         if (hasAttachedBubble(level, player.id)) return InteractionResult.FAIL
         spawnAndAttachBubble(serverLevel, player, Vec3(player.x, player.eyeY + 1.0, player.z), player.id)
 
-        if (!player.isCreative) player.getItemInHand(hand).shrink(1)
+        player.getItemInHand(hand).consume(1, player)
         return InteractionResult.CONSUME
     }
 
@@ -52,7 +52,7 @@ class LifelineBubbleItem(properties: Properties) : Item(properties) {
         val serverLevel = player.level() as ServerLevel
         spawnAndAttachBubble(serverLevel, player, Vec3(target.x, target.eyeY + 1.0, target.z), target.id)
 
-        if (!player.abilities.instabuild) stack.shrink(1)
+        stack.consume(1, player)
         return InteractionResult.CONSUME
     }
 

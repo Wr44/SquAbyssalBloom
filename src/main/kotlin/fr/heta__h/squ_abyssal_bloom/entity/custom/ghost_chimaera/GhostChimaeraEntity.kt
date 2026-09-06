@@ -16,7 +16,6 @@ import net.minecraft.world.phys.Vec3
 class GhostChimaeraEntity(type: EntityType<out AgeableWaterCreature>, level: Level) : AgeableWaterCreature(type, level) {
 
 
-    private var timeExposedInAir = 0
     private var animationStartTick = 0
 
 
@@ -66,19 +65,6 @@ class GhostChimaeraEntity(type: EntityType<out AgeableWaterCreature>, level: Lev
     }
 
     private fun resetAnimationStates(keepClosing: Boolean = false, keepSwallowStop: Boolean = false) {
-    }
-
-    override fun aiStep() {
-        super.aiStep()
-        if (isUnderWater) {
-            timeExposedInAir = 0
-            airSupply = maxAirSupply
-        } else {
-            timeExposedInAir++
-            if (timeExposedInAir >= 200) {
-                hurtServer(level() as ServerLevel, damageSources().drown(), 2.0f)
-            }
-        }
     }
 
     override fun travel(travelVector: Vec3) {

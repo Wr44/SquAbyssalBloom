@@ -1,6 +1,7 @@
 package fr.heta__h.squ_abyssal_bloom.util.nautilus
 
 import fr.heta__h.squ_abyssal_bloom.attachment.ModAttachments
+import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
 import fr.heta__h.squ_abyssal_bloom.entity.render_layer.nautilus.NautilusLayer
 import fr.heta__h.squ_abyssal_bloom.event.conduit.ConduitDomainHandler
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
@@ -28,6 +29,14 @@ class NautilusEquipmentSlot(
     override fun getMaxStackSize(): Int = 1
 
     override fun mayPickup(player: Player): Boolean {
+        if (this.item.`is`(NautilusLayerItems.BUBBLE)) {
+            val hasHeldBubble = mount.level().getEntitiesOfClass(
+                BubbleProjectile::class.java,
+                mount.boundingBox.inflate(4.0),
+            ) { it.isHeld && it.owner == mount }.isNotEmpty()
+            if (hasHeldBubble) return false
+        }
+
         if (this.item.`is`(Items.CHEST)) {
             val items = mount.getData(ModAttachments.NAUTILUS_CHEST_ITEMS)
             if (items.any { !it.isEmpty }) return false

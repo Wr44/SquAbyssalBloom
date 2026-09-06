@@ -23,4 +23,13 @@ object EntityDynamicLightCompat : AbstractDynamicLightCompat() {
 
         removeLineLight(activeLights, entityId)
     }
+
+    fun clearLights() {
+        if (!isInitialized) {
+            activeLights.clear()
+            return
+        }
+
+        clearLineLights(activeLights)
+    }
 }

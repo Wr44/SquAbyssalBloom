@@ -8,6 +8,7 @@ import fr.heta__h.squ_abyssal_bloom.compat.ModCompat
 import fr.heta__h.squ_abyssal_bloom.compat.lambdynlights.abyssal_guardian_focalist.GuardianBeamDynamicLightCompat
 import fr.heta__h.squ_abyssal_bloom.item.abyssal_guardian_focalist.AbyssalGuardianFocalistItem
 import fr.heta__h.squ_abyssal_bloom.network.abyssal_guardian_focalist.ClientBeamData
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.client.renderer.rendertype.RenderTypes
@@ -190,7 +191,7 @@ object FocalistBeamRenderer {
             .setColor(r, g, b, 255)
             .setUv(u, v)
             .setOverlay(OverlayTexture.NO_OVERLAY)
-            .setLight(15728880)
+            .setLight(ModUtilities.FULL_BRIGHT_LIGHTMAP)
             .setNormal(pose, 0.0f, 1.0f, 0.0f)
     }
 }

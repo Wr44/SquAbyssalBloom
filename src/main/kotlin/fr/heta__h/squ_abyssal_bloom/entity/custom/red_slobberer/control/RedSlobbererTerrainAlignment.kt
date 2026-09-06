@@ -237,8 +237,6 @@ class RedSlobbererTerrainAlignment(
 
         val ledgeTopY = topSolidY + 1.0
         val rise = ledgeTopY - bodyBottom
-        // Anything vanilla can already step over silently (maxUpStep) is left to it —
-        // the explicit climb only takes over for ledges taller than that.
         if (rise <= redSlobberer.maximumStepHeight || rise > MAX_CLIMB_HEIGHT) return
 
         climbTargetTopY = ledgeTopY

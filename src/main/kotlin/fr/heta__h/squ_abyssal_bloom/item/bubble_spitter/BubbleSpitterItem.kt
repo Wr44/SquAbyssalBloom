@@ -3,12 +3,12 @@ package fr.heta__h.squ_abyssal_bloom.item.bubble_spitter
 import fr.heta__h.squ_abyssal_bloom.data_component.ModDataComponents
 import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterData
 import fr.heta__h.squ_abyssal_bloom.data_component.bubble.SplatterEntry
+import fr.heta__h.squ_abyssal_bloom.item.ModItems
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.ChatFormatting
 import net.minecraft.core.component.DataComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.entity.SlotAccess
 import net.minecraft.world.entity.player.Player
@@ -33,14 +33,21 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         access: SlotAccess
     ): Boolean {
         if (action != ClickAction.SECONDARY) return false
-        if (!isPotion(carried)) return false
         if (!hasSplatter(slotStack, player)) return false
+
+        if (carried.`is`(ModItems.PLANKTON_BOTTLE.get())) {
+            return pourPlankton(slotStack, carried, slot, access, player)
+        }
+
+        if (!isPotion(carried)) return false
 
         val potionContents = carried.get(DataComponents.POTION_CONTENTS) ?: return false
         val newEffects = potionContents.allEffects.toList()
 
         if (newEffects.isEmpty()) {
             slotStack.remove(ModDataComponents.SPLATTER_DATA.get())
+            slotStack.remove(ModDataComponents.PLANKTON_LUMINESCENCE.get())
+            slot.setChanged()
             replaceWithBottle(carried, access, player)
             player.level().playSound(player, player.blockPosition(), ModSounds.CLEAN_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.5f, 0.8f + 0.4f*random().toFloat())
             return true
@@ -57,8 +64,25 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         val avgColor = SplatterData.averageColor(allColors)
 
         slotStack.set(ModDataComponents.SPLATTER_DATA.get(), SplatterData(merged, avgColor))
+        slot.setChanged()
         replaceWithBottle(carried, access, player)
         player.level().playSound(player, player.blockPosition(), ModSounds.POTION_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.7f, 0.8f + 0.4f*random().toFloat())
+        return true
+    }
+
+    private fun pourPlankton(
+        slotStack: ItemStack,
+        carried: ItemStack,
+        slot: Slot,
+        access: SlotAccess,
+        player: Player
+    ): Boolean {
+        if (slotStack.getOrDefault(ModDataComponents.PLANKTON_LUMINESCENCE.get(), false)) return false
+
+        slotStack.set(ModDataComponents.PLANKTON_LUMINESCENCE.get(), true)
+        slot.setChanged()
+        replaceWithBottle(carried, access, player)
+        player.level().playSound(player, player.blockPosition(), ModSounds.POTION_BUBBLE_SPITTER.get(), SoundSource.PLAYERS, 0.7f, 1.2f + 0.3f*random().toFloat())
         return true
     }
 
@@ -71,6 +95,14 @@ class BubbleSpitterItem(properties: Properties) : Item(properties) {
         flag: TooltipFlag
     ) {
         super.appendHoverText(stack, context, display, tooltip, flag)
+
+        if (stack.getOrDefault(ModDataComponents.PLANKTON_LUMINESCENCE.get(), false)) {
+            tooltip.accept(
+                Component.translatable("item.squ_abyssal_bloom.bubble_spitter.plankton_luminescence")
+                    .withStyle(ChatFormatting.WHITE)
+            )
+        }
+
         val data = stack.get(ModDataComponents.SPLATTER_DATA.get()) ?: return
 
         tooltip.accept(

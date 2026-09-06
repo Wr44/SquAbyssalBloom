@@ -233,7 +233,7 @@ class RedSlobbererFishInfluence(
     private fun refugeBlend(threatIntensity: Double): Double {
         val linear = ((threatIntensity - MINIMUM_REFUGE_SIGNAL) /
             (FULL_REFUGE_SIGNAL - MINIMUM_REFUGE_SIGNAL)).coerceIn(0.0, 1.0)
-        return ModUtilities.smoothstep(linear)
+        return ModUtilities.smooth(linear)
     }
 
     private fun usesClockwiseOrbit(fish: AbstractFish): Boolean {

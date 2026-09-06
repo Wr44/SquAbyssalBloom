@@ -187,16 +187,14 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
         )
 
         val ticksUsed = getUseDuration(stack, entity) - timeLeft
+        val visionLevel = getEnchantLevel(stack, level, "focused_vision")
+        val actualMinCharge = MIN_CHARGE_TICKS - (visionLevel * VISION_MIN)
+        val actualMaxCharge = MAX_CHARGE_TICKS - (visionLevel * VISION_MAX)
 
-        if (ticksUsed >= MIN_CHARGE_TICKS && target.isAlive) {
-            val visionLevel = getEnchantLevel(stack, level, "focused_vision")
+        if (ticksUsed >= actualMinCharge && target.isAlive) {
             val lensLevel = getEnchantLevel(stack, level, "converging_lens")
             val siphonLevel = getEnchantLevel(stack, level, "siphon")
             val singularityLevel = getEnchantLevel(stack, level, "singularity")
-
-            val actualMinCharge = MIN_CHARGE_TICKS - (visionLevel * VISION_MIN)
-            val actualMaxCharge = MAX_CHARGE_TICKS - (visionLevel * VISION_MAX)
-
 
             val chargeProgress = clamp(
                 (ticksUsed - actualMinCharge).toFloat() / (actualMaxCharge - actualMinCharge).toFloat(),
@@ -240,13 +238,15 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
 
                 playSoundLocal(
                     entity,
-                    SoundEvents.CONDUIT_ACTIVATE,
+                    ModSounds.ABYSSAL_GUARDIAN_FOCALIST_SIPHON.get(),
                     SoundSource.PLAYERS,
-                    1.2f,
-                    1.5f
+                    1.5f,
+                    1f
                 )
 
-            } else if (singularityLevel > 0) {
+            }
+
+            if (singularityLevel > 0) {
                 target.addEffect(
                     MobEffectInstance(MobEffects.SLOWNESS, SINGULARITY_STUN_DURATION, 25, false, false)
                 )
@@ -268,10 +268,10 @@ class AbyssalGuardianFocalistItem(properties: Properties) : Item(properties) {
                     target.x,
                     target.y,
                     target.z,
-                    SoundEvents.ILLUSIONER_CAST_SPELL,
+                    ModSounds.ABYSSAL_GUARDIAN_FOCALIST_SINGULARITY.get(),
                     SoundSource.PLAYERS,
                     1.3f,
-                    0.5f)
+                    1f)
             }
 
 

@@ -2,7 +2,8 @@ package fr.heta__h.squ_abyssal_bloom.event.abyssal_depth.render
 
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.config.ModConfig
-import fr.heta__h.squ_abyssal_bloom.util.cache.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthCache
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.client.Minecraft
 import net.minecraft.core.BlockPos
 import net.minecraft.world.effect.MobEffects
@@ -22,7 +23,7 @@ import org.joml.Matrix4f
 @EventBusSubscriber(modid = SquAbyssalBloom.ID, value = [Dist.CLIENT])
 object AbyssOverlayRender {
 
-    private val WHITE_TEXTURE = Identifier.withDefaultNamespace("textures/misc/white.png")
+    private val WHITE_TEXTURE = Identifier.fromNamespaceAndPath(SquAbyssalBloom.ID, "textures/misc/white.png")
     private const val VERT_HALF_FOV = 22.5f
 
     @SubscribeEvent
@@ -60,7 +61,7 @@ object AbyssOverlayRender {
         val bufferSource = mc.renderBuffers().bufferSource()
         val buffer = bufferSource.getBuffer(renderType)
 
-        drawInsideOutBox(buffer, matrix4f, safeSize, finalBoxAlpha, 0xF000F0)
+        drawInsideOutBox(buffer, matrix4f, safeSize, finalBoxAlpha, ModUtilities.FULL_BRIGHT_LIGHTMAP)
 
         bufferSource.endBatch(renderType)
         poseStack.popPose()

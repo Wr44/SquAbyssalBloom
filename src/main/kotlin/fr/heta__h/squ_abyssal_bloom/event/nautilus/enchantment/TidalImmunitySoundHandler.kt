@@ -36,9 +36,11 @@ object TidalImmunitySoundHandler {
         if (sound.identifier !in BUBBLE_SOUND_IDENTIFIERS) return
 
         val level = Minecraft.getInstance().level ?: return
+
         val x = sound.x
         val y = sound.y
         val z = sound.z
+
         val searchBox = AABB(x - 1.0, y - 1.0, z - 1.0, x + 1.0, y + 1.0, z + 1.0)
 
         val hasProtected = level.getEntitiesOfClass(AbstractNautilus::class.java, searchBox).any { nautilus ->

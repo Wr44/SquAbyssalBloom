@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import fr.heta__h.squ_abyssal_bloom.SquAbyssalBloom
 import fr.heta__h.squ_abyssal_bloom.entity.custom.bubble.BubbleProjectile
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities.FULL_BRIGHT_LIGHTMAP
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.SubmitNodeCollector
 import net.minecraft.client.renderer.entity.EntityRenderer
@@ -45,7 +46,11 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
         partialTicks: Float
     ) {
         super.extractRenderState(entity, state, partialTicks)
-        state.packedLight = getPackedLightCoords(entity, partialTicks)
+        state.packedLight = if (entity.isLuminescent) {
+            FULL_BRIGHT_LIGHTMAP
+        } else {
+            getPackedLightCoords(entity, partialTicks)
+        }
         state.bubbleStage = entity.bubbleStage
         state.ageInTicks = entity.tickCount + partialTicks
         state.effectColor = entity.effectColor
@@ -57,7 +62,11 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             state.isHeld = false
         }
         state.releaseYaw = -entity.releaseYaw
-        state.ticksSinceRelease = if (entity.releaseTick >= 0) (entity.tickCount - entity.releaseTick) + partialTicks else -1f
+        state.ticksSinceRelease = if (entity.clientReleaseTick >= 0) {
+            (entity.tickCount - entity.clientReleaseTick) + partialTicks
+        } else {
+            -1f
+        }
 
         val playerId = entity.attachedPlayerId
 
@@ -114,18 +123,14 @@ class BubbleRenderer(context: EntityRendererProvider.Context) :
             poseStack.mulPose(Axis.YP.rotationDegrees(-renderState.heldYaw))
         } else {
             val spinSpeed = when (renderState.bubbleStage) { 2 -> 1.2f; 1 -> 2.5f; else -> 4.5f }
-            val spinAngle = (renderState.ageInTicks * spinSpeed) % 360f
+            val spinAngle = if (renderState.ticksSinceRelease >= 0f) {
+                renderState.releaseYaw + renderState.ticksSinceRelease * spinSpeed
+            } else {
+                renderState.ageInTicks * spinSpeed
+            }
             val wobble = sin((renderState.ageInTicks * 0.08f).toDouble()).toFloat() * 8f
 
-            val finalYaw = if (renderState.ticksSinceRelease in 0f..15f) {
-                val t = renderState.ticksSinceRelease / 15f
-                val smooth = t * t * (3f - 2f * t)
-                rotLerp(smooth, renderState.releaseYaw, spinAngle)
-            } else {
-                spinAngle
-            }
-
-            poseStack.mulPose(Axis.YP.rotationDegrees(finalYaw))
+            poseStack.mulPose(Axis.YP.rotationDegrees(spinAngle))
             poseStack.mulPose(Axis.XP.rotationDegrees(wobble))
         }
 

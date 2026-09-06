@@ -23,8 +23,7 @@ object ServerConfigCache {
     fun toData(): ServerConfigData = ServerConfigData(HashMap(values))
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> current(option: ConfigOption<T>): T =
-        (values[option.key] as? T) ?: option.default
+    fun <T : Any> current(option: ConfigOption<T>): T = (values[option.key] as? T) ?: option.default
 
     fun <T : Any> set(option: ConfigOption<T>, value: T) {
         values = HashMap(values).also { it[option.key] = value }

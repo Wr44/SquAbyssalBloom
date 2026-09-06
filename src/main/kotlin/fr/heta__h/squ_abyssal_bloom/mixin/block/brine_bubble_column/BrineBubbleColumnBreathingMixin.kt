@@ -35,8 +35,6 @@ abstract class BrineBubbleColumnBreathingMixin {
         shouldRefillAirFromBrineColumn = true
         brineColumnTargetAirSupply = (entity.airSupply + 4).coerceAtMost(entity.maxAirSupply)
 
-        // Vanilla tests its own bubble-column block before applying drowning damage. The
-        // custom block cannot pass that identity check, so protect only the threshold tick.
         if (entity.airSupply <= -19) {
             hadBrineColumnDrowningRisk = true
             entity.airSupply = brineColumnTargetAirSupply.coerceAtLeast(0)

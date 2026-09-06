@@ -21,6 +21,7 @@
     "entity.nautilus.NautilusBubbleColumnTidal",
     "entity.nautilus.NautilusChestMixin",
     "entity.nautilus.NautilusRegenMixin",
+    "entity.crystal_jelly.CrystalJellyBucketMixin",
     "entity.red_slobberer.RedSlobbererBucketMixin",
 
     "enable.AbstractContainerMenuAccessor",
@@ -28,6 +29,7 @@
     "enable.LivingEntityFluidAccessor",
     "enable.ConduitBlockEntityAccessor",
     "enable.ChunkAccessAccessor",
+    "enable.ExperienceOrbAccessor",
 
     "item.BoneMealItemMixin",
 
@@ -42,6 +44,9 @@
 
     "entity.nautilus.NautilusScreenMixin",
 
+    "enable.FrustumAccessor",
+
+    "render.GameRendererBioluminescenceMixin",
     "render.LivingEntityRenderStateMixin",
     "render.LivingEntityRendererMixin",
     "render.LevelRendererSkyMixin"

@@ -40,6 +40,10 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val BARNACLE_PROPULSION = SOUNDS.register("barnacle_propulsion") { id ->
+        SoundEvent.createFixedRangeEvent(id, 12.0f)
+    }
+
     // Mackerel
     val MACKEREL_AMBIENT = SOUNDS.register("mackerel_ambient") { id ->
         SoundEvent.createVariableRangeEvent(id)
@@ -55,6 +59,19 @@ object ModSounds {
 
     val MACKEREL_FLOP = SOUNDS.register("mackerel_flop") { id ->
         SoundEvent.createVariableRangeEvent(id)
+    }
+
+    // Crystal Jelly
+    val CRYSTAL_JELLY_HURT = SOUNDS.register("crystal_jelly_hurt") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val CRYSTAL_JELLY_DEATH = SOUNDS.register("crystal_jelly_death") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val CRYSTAL_JELLY_PROPULSION = SOUNDS.register("crystal_jelly_propulsion") { id ->
+        SoundEvent.createFixedRangeEvent(id, 6.0f)
     }
 
     // Brine
@@ -131,6 +148,14 @@ object ModSounds {
         SoundEvent.createVariableRangeEvent(id)
     }
 
+    val ABYSSAL_GUARDIAN_FOCALIST_SIPHON = SOUNDS.register("abyssal_guardian_focalist_siphon") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val ABYSSAL_GUARDIAN_FOCALIST_SINGULARITY = SOUNDS.register("abyssal_guardian_focalist_singularity") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
     val CLEAN_BUBBLE_SPITTER = SOUNDS.register("clean_bubble_spitter") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
@@ -140,6 +165,20 @@ object ModSounds {
     }
 
     val BABY_RED_SLOBBERER_CAPTURED = SOUNDS.register("fill_baby_red_slobberer_bucket") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val CRYSTAL_JELLY_CAPTURED = SOUNDS.register("fill_crystal_jelly_bucket") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BOTTLE_FILL_BIOLUMINESCENT = SOUNDS.register("bottle_fill_bioluminescent") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    // Propulsion effect
+
+    val PROPULSION_BURST = SOUNDS.register("propulsion_burst") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 
@@ -167,6 +206,45 @@ object ModSounds {
 
     // Pressure
     val PRESSURE_DAMAGE = SOUNDS.register("pressure_damage") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+
+
+    // Ambient
+
+    val BEACH_WAVE_LOOP = SOUNDS.register("beach_wave_loop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+
+    // Bioluminescent wave
+
+    val BIOLUMINESCENT_WAVE_AMBIENT = SOUNDS.register("bioluminescent_wave_ambient") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BIOLUMINESCENT_WAVE_SHIMMERING = SOUNDS.register("bioluminescent_wave_shimmering") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BIOLUMINESCENT_WAVE_START = SOUNDS.register("bioluminescent_wave_start") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BIOLUMINESCENT_WAVE_STOP = SOUNDS.register("bioluminescent_wave_stop") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BLOOM_PULSE = SOUNDS.register("bloom_pulse") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BLOOM_START = SOUNDS.register("bloom_start") { id ->
+        SoundEvent.createVariableRangeEvent(id)
+    }
+
+    val BLOOM_STOP = SOUNDS.register("bloom_stop") { id ->
         SoundEvent.createVariableRangeEvent(id)
     }
 
