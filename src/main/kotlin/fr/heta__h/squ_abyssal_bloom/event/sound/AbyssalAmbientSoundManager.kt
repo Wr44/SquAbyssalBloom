@@ -7,11 +7,9 @@ import fr.heta__h.squ_abyssal_bloom.render.abyssal_depth.AbyssDepthProfile
 import fr.heta__h.squ_abyssal_bloom.sound.ModSounds
 import fr.heta__h.squ_abyssal_bloom.sound.ambient.AbyssalLoopSound
 import fr.heta__h.squ_abyssal_bloom.util.sound.PositionedAmbientSound
-import fr.heta__h.squ_abyssal_bloom.tags.ModTags
 import net.minecraft.client.Minecraft
 import net.minecraft.client.multiplayer.ClientLevel
 import net.minecraft.core.BlockPos
-import net.minecraft.tags.BiomeTags
 import net.minecraft.util.RandomSource
 import net.minecraft.world.level.LightLayer
 import net.minecraft.world.level.material.Fluids
@@ -73,12 +71,7 @@ object AbyssalAmbientSoundManager {
             return
         }
 
-        val biome = level.getBiome(player.blockPosition())
-        val abyssalBiome = biome.`is`(ModTags.Biomes.IS_ABYSSAL)
-        val deepOcean = abyssalBiome || biome.`is`(BiomeTags.IS_DEEP_OCEAN) || biome.`is`(ModTags.Biomes.IS_DEEP_OCEAN)
-
-        val additionIntensity = if (abyssalBiome) maxOf(presence, 0.5f) else presence
-        updateAdditions(minecraft, player.eyePosition, deepOcean, additionIntensity)
+        updateAdditions(minecraft, player.eyePosition, entry > 0.0f, presence)
 
         updateMood(minecraft, level, player.eyePosition, oppression)
     }
@@ -130,8 +123,8 @@ object AbyssalAmbientSoundManager {
         }
     }
 
-    private fun updateAdditions(minecraft: Minecraft, eyes: Vec3, deepOcean: Boolean, intensity: Float) {
-        if (!deepOcean) {
+    private fun updateAdditions(minecraft: Minecraft, eyes: Vec3, inAbyssalZone: Boolean, intensity: Float) {
+        if (!inAbyssalZone) {
             shiftTicksRemaining = -1
             bubbleTicksRemaining = -1
             return
