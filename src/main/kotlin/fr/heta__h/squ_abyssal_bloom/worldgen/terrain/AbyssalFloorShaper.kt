@@ -97,6 +97,15 @@ object AbyssalFloorShaper {
     const val SLOPE_PERTURB_AMP = 0.35
     const val TRANSITION_LOCAL_SCALE = 0.025
     const val TRANSITION_LOCAL_AMP = 4.0
+    const val SHALLOW_MEAN_COMPENSATION = -2.35
+    const val DEEP_MEAN_COMPENSATION = 1.48
+    const val ABYSSAL_MEAN_COMPENSATION = 5.0
+
+    const val SHALLOW_MIN_OFFSET = -16
+    const val SHALLOW_MAX_OFFSET = 16
+    const val DEEP_MIN_OFFSET = -14
+    const val DEEP_MAX_OFFSET = 12
+
     const val ABYSSAL_COMPENSATION = -12.0
 
     fun isWithinOceanBand(shaping: AbyssalShapingContext, cont: Double): Boolean {
@@ -129,8 +138,28 @@ object AbyssalFloorShaper {
             else -> abyssalFloor(shaping, column, mods, finalDensityDf, effectiveCont)
         }
 
+        val zoneCompensation = when {
+            column.cont <= shaping.settings.deepAbyssalEdge -> ABYSSAL_MEAN_COMPENSATION
+            column.cont <= shaping.shallowDeepEdge -> DEEP_MEAN_COMPENSATION
+            else -> SHALLOW_MEAN_COMPENSATION
+        }
         val fault = faultOffset(shaping, column)
-        return (baseFloor + fault).toInt().coerceIn(shaping.abyssalHardLimit, shaping.maxFloorY)
+        val correctedFloor = (baseFloor + zoneCompensation + fault).toInt()
+
+        return when {
+            column.cont <= shaping.settings.deepAbyssalEdge ->
+                correctedFloor.coerceIn(shaping.abyssalHardLimit, shaping.maxFloorY)
+            column.cont <= shaping.shallowDeepEdge ->
+                correctedFloor.coerceIn(
+                    maxOf(shaping.deepHardLimit, shaping.settings.deepFloorY + DEEP_MIN_OFFSET),
+                    minOf(shaping.maxFloorY, shaping.settings.deepFloorY + DEEP_MAX_OFFSET)
+                )
+            else ->
+                correctedFloor.coerceIn(
+                    maxOf(shaping.deepHardLimit, shaping.settings.shallowFloorY + SHALLOW_MIN_OFFSET),
+                    minOf(shaping.maxFloorY, shaping.settings.shallowFloorY + SHALLOW_MAX_OFFSET)
+                )
+        }
     }
 
     private fun faultOffset(shaping: AbyssalShapingContext, column: ColumnSample): Double {

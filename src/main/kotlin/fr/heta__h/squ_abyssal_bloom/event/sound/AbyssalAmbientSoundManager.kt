@@ -44,6 +44,7 @@ object AbyssalAmbientSoundManager {
     private var moodTickDelay = nextDelay(MOOD_MIN_TICK_DELAY, MOOD_MAX_TICK_DELAY).toFloat()
     private var shiftTicksRemaining = -1
     private var bubbleTicksRemaining = -1
+    private val activeOneShots = mutableSetOf<PositionedAmbientSound>()
 
     @SubscribeEvent
     fun onClientTick(event: ClientTickEvent.Post) {
@@ -56,6 +57,13 @@ object AbyssalAmbientSoundManager {
             return
         }
         if (currentLevel !== level) reset(level)
+        if (minecraft.isPaused) {
+            stopActiveSounds(minecraft)
+            return
+        }
+        if (activeOneShots.size > 32) {
+            activeOneShots.removeIf { !minecraft.soundManager.isActive(it) }
+        }
 
         val eyePos = BlockPos.containing(player.eyePosition)
         val underwater = level.getFluidState(eyePos).`is`(Fluids.WATER)
@@ -155,9 +163,9 @@ object AbyssalAmbientSoundManager {
     }
 
     private fun playAddition(minecraft: Minecraft, eyes: Vec3, event: net.minecraft.sounds.SoundEvent) {
-        minecraft.soundManager.play(
-            PositionedAmbientSound(event, randomPosition(eyes, 10.0, 20.0), 1.0f, randomPitch(0.94f, 1.06f))
-        )
+        val sound = PositionedAmbientSound(event, randomPosition(eyes, 10.0, 20.0), 1.0f, randomPitch(0.94f, 1.06f))
+        activeOneShots.add(sound)
+        minecraft.soundManager.play(sound)
     }
 
     private fun playMood(minecraft: Minecraft, eyes: Vec3, sample: BlockPos) {
@@ -165,9 +173,9 @@ object AbyssalAmbientSoundManager {
         val direction = sampleCenter.subtract(eyes).normalize()
         val offset = 4.0 + random.nextDouble() * 4.0
         val position = if (direction.lengthSqr() > 0.0) sampleCenter.add(direction.scale(offset)) else sampleCenter
-        minecraft.soundManager.play(
-            PositionedAmbientSound(ModSounds.ABYSSAL_MOOD.get(), position, 1.0f, randomPitch(0.96f, 1.04f))
-        )
+        val sound = PositionedAmbientSound(ModSounds.ABYSSAL_MOOD.get(), position, 1.0f, randomPitch(0.96f, 1.04f))
+        activeOneShots.add(sound)
+        minecraft.soundManager.play(sound)
     }
 
     private fun randomPosition(origin: Vec3, minDistance: Double, maxDistance: Double): Vec3 {
@@ -185,13 +193,22 @@ object AbyssalAmbientSoundManager {
         (deep + (abyssal - deep) * factor).roundToInt()
 
     private fun reset(level: ClientLevel?) {
-        loop?.stopImmediately()
-        loop = null
+        stopActiveSounds(Minecraft.getInstance())
         moodiness = 0.0f
         moodTickDelay = nextDelay(MOOD_MIN_TICK_DELAY, MOOD_MAX_TICK_DELAY).toFloat()
         shiftTicksRemaining = -1
         bubbleTicksRemaining = -1
         currentLevel = level
+    }
+
+    private fun stopActiveSounds(minecraft: Minecraft) {
+        loop?.let { sound ->
+            sound.stopImmediately()
+            minecraft.soundManager.stop(sound)
+        }
+        loop = null
+        activeOneShots.forEach(minecraft.soundManager::stop)
+        activeOneShots.clear()
     }
 
     @SubscribeEvent

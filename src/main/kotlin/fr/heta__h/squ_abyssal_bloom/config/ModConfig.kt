@@ -13,6 +13,7 @@ import fr.heta__h.squ_abyssal_bloom.config.renderer.StaticImageRenderer
 import fr.heta__h.squ_abyssal_bloom.config.server.ModServerConfig
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigCache
 import fr.heta__h.squ_abyssal_bloom.config.server.ServerConfigData
+import fr.heta__h.squ_abyssal_bloom.config.submenu.AbyssalOreSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.AmbientSoundSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BarnacleSubMenu
 import fr.heta__h.squ_abyssal_bloom.config.submenu.BioluminescenceServerSubMenu
@@ -279,7 +280,7 @@ object ModConfig {
             if (alphaMinOpt.pendingValue() >= newMax) alphaMinOpt.requestSet(newMax - 0.01)
         }
 
-        val shallowDeepOpt = serverDouble(ModServerConfig.SHALLOW_DEEP_BOUNDARY, -0.915..-0.21, 0.001, format = ModUtilities.plainDouble(3))
+        val shallowDeepOpt = serverDouble(ModServerConfig.SHALLOW_DEEP_BOUNDARY, -0.915..-0.19, 0.001, format = ModUtilities.plainDouble(3))
         val deepAbyssalOpt = serverDouble(ModServerConfig.DEEP_ABYSSAL_BOUNDARY, -0.965..-0.24, 0.001, format = ModUtilities.plainDouble(3))
 
         shallowDeepOpt.addListener { _, newShallow ->
@@ -912,6 +913,22 @@ object ModConfig {
                     .option(deepFloorOpt)
                     .option(abyssalFloorOpt)
                     .option(serverInt(ModServerConfig.SHALLOW_CLEARANCE, format = ModUtilities.blocksFormatInt()))
+                    .build())
+
+                .group(OptionGroup.createBuilder()
+                    .name(Component.translatable("config.squ_abyssal_bloom.group.abyssal_ores").withStyle(ChatFormatting.GOLD))
+                    .description(OptionDescription.createBuilder()
+                        .text(Component.translatable("config.squ_abyssal_bloom.group.abyssal_ores.desc"))
+                        .build())
+                    .option(subScreenButton(
+                        name = AbyssalOreSubMenu.displayName,
+                        description = OptionDescription.createBuilder()
+                            .text(AbyssalOreSubMenu.displayDescription)
+                            .customImage(AbyssalOreSubMenu.previewRenderer())
+                            .build(),
+                        screenTitle = AbyssalOreSubMenu.displayName,
+                        buildGroups = AbyssalOreSubMenu::buildGroups
+                    ))
                     .build())
 
                 .group(OptionGroup.createBuilder()

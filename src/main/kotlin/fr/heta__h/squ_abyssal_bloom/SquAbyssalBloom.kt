@@ -26,6 +26,7 @@ import fr.heta__h.squ_abyssal_bloom.feature.ModFeatures
 import fr.heta__h.squ_abyssal_bloom.util.worldgen.AbyssalWorldgenScope
 import fr.heta__h.squ_abyssal_bloom.worldgen.ModBiomes
 import fr.heta__h.squ_abyssal_bloom.worldgen.ocean.OceanTerritory
+import fr.heta__h.squ_abyssal_bloom.worldgen.ore.AbyssalOreCatalog
 import net.minecraft.server.level.ServerLevel
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.fml.common.EventBusSubscriber
@@ -40,6 +41,7 @@ import net.neoforged.neoforge.event.entity.RegisterSpawnPlacementsEvent
 import net.neoforged.neoforge.event.level.LevelEvent
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent
 import net.neoforged.neoforge.event.server.ServerStoppedEvent
+import net.neoforged.neoforge.event.OnDatapackSyncEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import thedarkcolour.kotlinforforge.neoforge.forge.LOADING_CONTEXT
@@ -127,6 +129,7 @@ object SquAbyssalBloom {
     @SubscribeEvent
     fun onServerAboutToStart(event: ServerAboutToStartEvent) {
         AbyssalWorldgenScope.clear()
+        AbyssalOreCatalog.rebuild(event.server)
 
         OceanTerritory.seed(event.server.worldGenSettings.options().seed(), ModServerConfig.OCEAN_TERRITORY_EXTRA_ZOOMS.get())
     }
@@ -134,10 +137,17 @@ object SquAbyssalBloom {
     @SubscribeEvent
     fun onServerStopped(event: ServerStoppedEvent) {
         AbyssalWorldgenScope.clear()
+        AbyssalOreCatalog.clear()
 
         BioluminescenceLevelManager.releaseServerLevels(event.server)
         BioluminescenceServerManager.releaseServer(event.server)
     }
+
+    @SubscribeEvent
+    fun onDatapackSync(event: OnDatapackSyncEvent) {
+        if (event.player == null) AbyssalOreCatalog.rebuild(event.playerList.server)
+    }
+
 
     @SubscribeEvent
     fun onLevelLoad(event: LevelEvent.Load) {

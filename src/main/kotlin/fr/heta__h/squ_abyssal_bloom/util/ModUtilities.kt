@@ -93,6 +93,7 @@ object ModUtilities {
     const val PROPULSION_WEAK_PITCH = 1.35
     const val PROPULSION_STRONG_PITCH = 0.8
     const val PROPULSION_PITCH_JITTER = 0.08
+    const val SPROUTING_CHANCE = 0.05f
 
     fun tickOutOfWaterAsphyxiation(
         mob: LivingEntity,

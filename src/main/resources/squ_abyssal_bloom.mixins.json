@@ -35,6 +35,7 @@
 
     "worldgen.AbyssalNoiseChunkMixin",
     "worldgen.AbyssalCarverFillMixin",
+    "worldgen.PlacedFeatureOreBoostMixin",
     "worldgen.OceanBiomeZoneMixin",
     "worldgen.SurfaceSystemMixin"
   ],

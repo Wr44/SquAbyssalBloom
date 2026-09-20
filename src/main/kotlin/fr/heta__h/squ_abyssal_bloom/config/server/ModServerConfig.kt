@@ -180,8 +180,8 @@ object ModServerConfig {
     val PROPULSION_BURST_SPEED = double("propulsionBurstSpeed", 0.25, 0.01, 1.5, "Peak speed added at the start of a Propulsion jet, in blocks per tick.")
     val PROPULSION_SPEED_DECAY = double("propulsionSpeedDecay", 2.0, 0.5, 5.0, "How sharply a Propulsion jet fades out; matches the Crystal Jelly's own pulse profile.")
 
-    val SHALLOW_DEEP_BOUNDARY = double("shallowDeepBoundary", -0.45, -0.915, -0.19, "Continentalness boundary between shallow and deep ocean. Vanilla: -0.455")
-    val DEEP_ABYSSAL_BOUNDARY = double("deepAbyssalBoundary", -0.70, -0.965, -0.24, "Continentalness boundary between deep ocean and abyssal zone.")
+    val SHALLOW_DEEP_BOUNDARY = double("shallowDeepBoundary", -0.330, -0.915, -0.19, "Continentalness boundary between shallow and deep ocean. Vanilla: -0.455")
+    val DEEP_ABYSSAL_BOUNDARY = double("deepAbyssalBoundary", -0.516, -0.965, -0.24, "Continentalness boundary between deep ocean and abyssal zone.")
     val SHALLOW_FLOOR_Y = int("shallowFloorY", 36, -60, 61, "Base Y target for shallow ocean floor.")
     val DEEP_FLOOR_TARGET = int("deepFloorTarget", 18, -60, 60, "Base Y target for deep ocean floor.")
     val TARGET_FLOOR_Y = int("targetFloorY", -40, -64, 20, "Base Y target for abyssal floor.")
@@ -206,6 +206,12 @@ object ModServerConfig {
     val OCEAN_TERRITORY_DEFAULT_WEIGHT = int("oceanTerritoryDefaultWeight", 10, 1, 1000, "Default weight of an unknown namespace in territorial competition.")
     val OCEAN_TERRITORY_OWN_WEIGHT = int("oceanTerritoryOwnWeight", 20, 1, 1000, "Weight of Abyssal Bloom in territorial competition, relative to the default weight.")
     val OCEAN_TERRITORY_INCLUDE_VANILLA = bool("oceanTerritoryIncludeVanilla", false, "If disabled, vanilla ocean biomes act as a safety net rather than competing with mods for territory.")
+
+    val ABYSSAL_ORE_ENRICHMENT_ENABLED = bool("abyssalOreEnrichmentEnabled", true, "Runs additional deterministic placement passes for ore features already present in abyssal biomes.")
+    val ABYSSAL_ORE_BONUS_PASSES = int("abyssalOreBonusPasses", 1, 0, 4, "Additional placement passes for each detected ore feature in abyssal chunks. One bonus pass doubles the normal attempts.")
+    val ABYSSAL_ORE_CATALOG_DEBUG = bool("abyssalOreCatalogDebug", false, "Logs the placed features detected as ores when a server starts.")
+    val ABYSSAL_ORE_FEATURE_ALLOWLIST = stringList("abyssalOreFeatureAllowlist", emptyList(), "Placed feature identifiers always treated as ores, including custom feature implementations.")
+    val ABYSSAL_ORE_FEATURE_DENYLIST = stringList("abyssalOreFeatureDenylist", emptyList(), "Placed feature identifiers excluded from abyssal enrichment.")
 
     val SPEC: ModConfigSpec = builder.build()
 

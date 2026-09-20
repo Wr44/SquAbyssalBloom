@@ -128,7 +128,7 @@
 
   "red_slobberer_ambient": {
     "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_ambient",
-    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambient_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambiant_3" ]
+    "sounds": [ "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambient_1", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambient_2", "squ_abyssal_bloom:entity/red_slobberer/red_slobberer_ambient_3" ]
   },
   "red_slobberer_moving": {
     "subtitle": "subtitles.squ_abyssal_bloom.red_slobberer_moving",
@@ -330,7 +330,6 @@
   },
 
   "abyssal_loop": {
-    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_ambience",
     "sounds": [
       {
         "name": "squ_abyssal_bloom:ambient/abyssal/abyssal_loop",
@@ -340,21 +339,19 @@
   },
 
   "abyssal_water_shift": {
-    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_water_shift",
     "sounds": [
-      { "name": "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_water_shift_1", "volume": 0.8 },
-      { "name": "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_water_shift_2", "volume": 0.8 },
-      { "name": "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_water_shift_3", "volume": 0.8 }
+      "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_water_shift_1",
+      "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_water_shift_2",
+      "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_water_shift_3"
     ]
   },
 
   "abyssal_distant_bubbles": {
-    "subtitle": "subtitles.squ_abyssal_bloom.abyssal_distant_bubbles",
     "sounds": [
-      { "name": "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_1", "volume": 0.8 },
-      { "name": "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_2", "volume": 0.8 },
-      { "name": "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_3", "volume": 0.8 },
-      { "name": "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_4", "volume": 0.8 }
+      "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_1",
+      "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_2",
+      "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_3",
+      "squ_abyssal_bloom:ambient/abyssal/additions/abyssal_distant_bubbles_4"
     ]
   },
 
@@ -362,8 +359,9 @@
     "subtitle": "subtitles.squ_abyssal_bloom.abyssal_mood",
     "sounds": [
       "squ_abyssal_bloom:ambient/abyssal/mood/abyssal_mood_1",
-      { "name": "squ_abyssal_bloom:ambient/abyssal/mood/abyssal_mood_2", "volume": 0.8 },
-      { "name": "squ_abyssal_bloom:ambient/abyssal/mood/abyssal_mood_3", "volume": 0.8 }
+      "squ_abyssal_bloom:ambient/abyssal/mood/abyssal_mood_2",
+      "squ_abyssal_bloom:ambient/abyssal/mood/abyssal_mood_3",
+      "squ_abyssal_bloom:ambient/abyssal/mood/abyssal_mood_4"
     ]
   }
 

@@ -3,7 +3,7 @@ package fr.heta__h.squ_abyssal_bloom.feature.vegetation
 import com.mojang.serialization.Codec
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.block.blood_seagrass.BloodSeagrassBlock
-import fr.heta__h.squ_abyssal_bloom.util.block.Sprouting
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.world.level.block.Blocks
 import net.minecraft.world.level.block.TallSeagrassBlock
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf
@@ -51,7 +51,7 @@ class BloodSeagrassFeature(codec: Codec<ProbabilityFeatureConfiguration>) : Feat
                     }
                 }
             } else {
-                val finalState = if (random.nextFloat() < Sprouting.SPROUTING_CHANCE) {
+                val finalState = if (random.nextFloat() < ModUtilities.SPROUTING_CHANCE) {
                     seagrassState.setValue(BloodSeagrassBlock.SPROUTING, true)
                 } else {
                     seagrassState

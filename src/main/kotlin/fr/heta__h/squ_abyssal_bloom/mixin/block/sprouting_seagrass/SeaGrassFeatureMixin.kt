@@ -2,7 +2,7 @@ package fr.heta__h.squ_abyssal_bloom.mixin.block.sprouting_seagrass
 
 import fr.heta__h.squ_abyssal_bloom.block.ModBlocks
 import fr.heta__h.squ_abyssal_bloom.block.sprouting_seagrass.SproutingSeagrassBlock
-import fr.heta__h.squ_abyssal_bloom.util.block.Sprouting
+import fr.heta__h.squ_abyssal_bloom.util.ModUtilities
 import net.minecraft.core.BlockPos
 import net.minecraft.world.level.WorldGenLevel
 import net.minecraft.world.level.block.Blocks
@@ -44,7 +44,7 @@ abstract class SeaGrassFeatureMixin {
 
         val baseState = if (isTall) {
             Blocks.TALL_SEAGRASS.defaultBlockState()
-        } else if (random.nextFloat() < Sprouting.SPROUTING_CHANCE) {
+        } else if (random.nextFloat() < ModUtilities.SPROUTING_CHANCE) {
             ModBlocks.SPROUTING_SEAGRASS.get().defaultBlockState().setValue(SproutingSeagrassBlock.HAS_BULB, false)
         } else {
             Blocks.SEAGRASS.defaultBlockState()
