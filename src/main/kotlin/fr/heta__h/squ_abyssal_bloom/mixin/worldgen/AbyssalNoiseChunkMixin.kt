@@ -248,6 +248,11 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
         }
 
         val y = blockY()
+        val currentState = cir.returnValue
+
+        if (currentState?.`is`(Blocks.BEDROCK) == true) {
+            return
+        }
 
         if (y >= cachedSeaLevel) {
             cir.returnValue = Blocks.AIR.defaultBlockState()
@@ -258,8 +263,6 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
             cir.returnValue = Blocks.WATER.defaultBlockState()
             return
         }
-
-        val currentState = cir.returnValue
 
         if (
             currentState == null ||
@@ -273,4 +276,4 @@ abstract class AbyssalNoiseChunkMixin : IAbyssalNoiseChunk {
             }
         }
     }
-} 
+}

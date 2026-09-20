@@ -963,7 +963,7 @@ object ModConfig {
                         .text(Component.translatable("config.squ_abyssal_bloom.group.trenches.desc"))
                         .build())
                     .option(serverDouble(ModServerConfig.TRENCH_FREQUENCY_PERCENT, step = 1.0, format = ModUtilities.percentPointsFormat()))
-                    .option(serverDouble(ModServerConfig.TRENCH_DEPTH_AMP, step = 1.0, format = ModUtilities.blocksFormatDouble()))
+                    .option(serverDouble(ModServerConfig.TRENCH_WALL_STEEPNESS, step = 0.1, format = ModUtilities.plainDouble(1)))
                     .build())
 
                 .group(OptionGroup.createBuilder()

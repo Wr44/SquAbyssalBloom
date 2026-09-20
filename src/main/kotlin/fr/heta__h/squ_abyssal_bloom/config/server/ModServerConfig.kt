@@ -199,7 +199,7 @@ object ModServerConfig {
     val FAULT_BLEND = double("faultBlend", 0.045, 0.001, 0.2, "Blend width for fault line edges.")
     val FAULT_OFFSET_AMP = double("faultOffsetAmp", 10.0, 0.0, 22.0, "Maximum vertical offset caused by fault lines (blocks).")
     val TRENCH_FREQUENCY_PERCENT = double("trenchFrequencyPercent", NoiseThresholdCalibration.percentForTrenchThreshold(0.88), 0.0, 100.0, "Percentage of the abyssal floor eligible to carve into trenches.")
-    val TRENCH_DEPTH_AMP = double("trenchDepthAmp", 10.0, 0.0, 22.0, "Maximum depth of trenches (blocks).")
+    val TRENCH_WALL_STEEPNESS = double("trenchWallSteepness", 2.0, 0.5, 6.0, "Shape exponent of trench walls. Higher values make the bedrock-reaching fissures narrower and steeper.")
     val TERRACE_STEP = double("terraceStep", 13.0, 2.0, 40.0, "Vertical height of each terrace step (blocks).")
     val TERRACE_FREQUENCY_PERCENT = double("terraceFrequencyPercent", NoiseThresholdCalibration.percentForTerraceThreshold(0.80), 0.0, 100.0, "Percentage of eligible abyssal slopes that can develop terraces.")
     val OCEAN_TERRITORY_EXTRA_ZOOMS = int("oceanTerritoryExtraZooms", 6, 0, 10, "Size of ocean territories per mod, in number of extra zooms. Higher = larger territories.")

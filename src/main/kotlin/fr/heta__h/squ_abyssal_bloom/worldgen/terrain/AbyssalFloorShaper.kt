@@ -101,16 +101,14 @@ object AbyssalFloorShaper {
     const val DEEP_MEAN_COMPENSATION = 1.48
     const val ABYSSAL_MEAN_COMPENSATION = 5.0
 
-    const val SHALLOW_MIN_OFFSET = -16
-    const val SHALLOW_MAX_OFFSET = 16
-    const val DEEP_MIN_OFFSET = -14
-    const val DEEP_MAX_OFFSET = 12
-
     const val ABYSSAL_COMPENSATION = -12.0
 
     fun isWithinOceanBand(shaping: AbyssalShapingContext, cont: Double): Boolean {
         return cont in MUSHROOM_MIN..OCEAN_MAX_CONT
     }
+
+    private fun mushroomInfluence(cont: Double): Double =
+        ModUtilities.smooth(((cont - MUSHROOM_MIN) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0))
 
     fun computeFloor(shaping: AbyssalShapingContext, column: ColumnSample, finalDensityDf: DensityFunction): Int {
         val mods = columnMods(shaping, column)
@@ -129,6 +127,7 @@ object AbyssalFloorShaper {
         val shallowBlendLo = shaping.shallowDeepEdge - effectiveBlendWidth
         val shallowBlendHi = shaping.shallowDeepEdge + effectiveBlendWidth
         val abyssalBlendHi = abyssalSplit + abyssalBlendWidth
+        val mushroomInfluence = mushroomInfluence(column.cont)
 
         val baseFloor = when {
             effectiveCont > shallowBlendHi -> shallowFloor(shaping, column, mods, finalDensityDf, effectiveCont)
@@ -139,43 +138,47 @@ object AbyssalFloorShaper {
         }
 
         val zoneCompensation = when {
-            column.cont <= shaping.settings.deepAbyssalEdge -> ABYSSAL_MEAN_COMPENSATION
-            column.cont <= shaping.shallowDeepEdge -> DEEP_MEAN_COMPENSATION
+            effectiveCont <= abyssalSplit -> ABYSSAL_MEAN_COMPENSATION * mushroomInfluence
+            effectiveCont < abyssalBlendHi -> {
+                val t = ModUtilities.smooth((effectiveCont - abyssalSplit) / (abyssalBlendHi - abyssalSplit))
+                (ABYSSAL_MEAN_COMPENSATION +
+                    (DEEP_MEAN_COMPENSATION - ABYSSAL_MEAN_COMPENSATION) * t) * mushroomInfluence
+            }
+            effectiveCont <= shallowBlendLo -> DEEP_MEAN_COMPENSATION
+            effectiveCont < shallowBlendHi -> {
+                val t = ModUtilities.smooth((effectiveCont - shallowBlendLo) / (shallowBlendHi - shallowBlendLo))
+                DEEP_MEAN_COMPENSATION + (SHALLOW_MEAN_COMPENSATION - DEEP_MEAN_COMPENSATION) * t
+            }
             else -> SHALLOW_MEAN_COMPENSATION
         }
-        val fault = faultOffset(shaping, column)
-        val correctedFloor = (baseFloor + zoneCompensation + fault).toInt()
-
-        return when {
-            column.cont <= shaping.settings.deepAbyssalEdge ->
-                correctedFloor.coerceIn(shaping.abyssalHardLimit, shaping.maxFloorY)
-            column.cont <= shaping.shallowDeepEdge ->
-                correctedFloor.coerceIn(
-                    maxOf(shaping.deepHardLimit, shaping.settings.deepFloorY + DEEP_MIN_OFFSET),
-                    minOf(shaping.maxFloorY, shaping.settings.deepFloorY + DEEP_MAX_OFFSET)
-                )
-            else ->
-                correctedFloor.coerceIn(
-                    maxOf(shaping.deepHardLimit, shaping.settings.shallowFloorY + SHALLOW_MIN_OFFSET),
-                    minOf(shaping.maxFloorY, shaping.settings.shallowFloorY + SHALLOW_MAX_OFFSET)
-                )
-        }
+        val fault = faultOffset(shaping, column) * mushroomInfluence
+        val correctedFloor = baseFloor + zoneCompensation + fault
+        return correctedFloor
+            .coerceIn(shaping.abyssalHardLimit.toDouble(), shaping.maxFloorY.toDouble())
+            .toInt()
     }
 
     private fun faultOffset(shaping: AbyssalShapingContext, column: ColumnSample): Double {
+        if (shaping.settings.faultFrequencyPercent <= 0.0) return 0.0
+
         val faultThreshold = shaping.settings.faultThreshold
         val faultBlend = shaping.settings.faultBlend
         val line = shaping.wallNoise.getValue(column.worldX * FAULT_SCALE, 7700.0, column.worldZ * FAULT_SCALE)
         val dist = abs(line)
 
-        if (dist > faultThreshold + faultBlend) return 0.0
+        if (shaping.settings.faultFrequencyPercent < 100.0 && dist > faultThreshold) return 0.0
 
         val centerSmoothWidth = 0.08
         val rawSide = line / centerSmoothWidth
         val clampedSide = rawSide.coerceIn(-1.0, 1.0)
         val side = clampedSide * clampedSide * (3.0 - 2.0 * abs(clampedSide)) * (if (line >= 0) 1.0 else -1.0)
 
-        val t = ((faultThreshold + faultBlend - dist) / faultBlend).coerceIn(0.0, 1.0)
+        if (shaping.settings.faultFrequencyPercent >= 100.0) {
+            return side * shaping.settings.faultOffsetAmp
+        }
+
+        val effectiveBlend = min(faultBlend, faultThreshold.coerceAtLeast(1.0E-6))
+        val t = ((faultThreshold - dist) / effectiveBlend).coerceIn(0.0, 1.0)
         val smooth = ModUtilities.smooth(t)
 
         return side * shaping.settings.faultOffsetAmp * smooth
@@ -354,7 +357,7 @@ object AbyssalFloorShaper {
         val abyssalDenominator = (shaping.continentalFull - mods.effectiveAbyssalSplit).coerceAtMost(-1.0E-6)
         val rawT = ((effectiveCont - mods.effectiveAbyssalSplit) / abyssalDenominator).coerceIn(0.0, 1.0)
         val steepT = (1.0 - (1.0 - rawT) * (1.0 - rawT) * (1.0 - rawT)).pow(0.5)
-        val mushroomProxT = ((effectiveCont - MUSHROOM_MIN) / MUSHROOM_TRANSITION).coerceIn(0.0, 1.0)
+        val mushroomProxT = mushroomInfluence(column.cont)
         val effectiveSteepT = steepT * mushroomProxT
 
         val localDeepY = deepFloor(shaping, column, mods).toDouble()
@@ -400,26 +403,24 @@ object AbyssalFloorShaper {
         val maskCoarse = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK_SCALE, 6100.0, mods.warpZ * TERRACE_MASK_SCALE)
         val maskFine = shaping.topoNoise.getValue(mods.warpX * TERRACE_MASK2_SCALE, 6150.0, mods.warpZ * TERRACE_MASK2_SCALE)
         val terraceMask = maskCoarse * TERRACE_MASK_AMP + maskFine * TERRACE_MASK2_AMP + TERRACE_MASK_OFFSET
-        val terraceActive = terraceMask > terraceMaskThreshold && effectiveSteepT < TERRACE_STEEP_CUTOFF
+        val terraceSelected = when {
+            shaping.settings.terraceFrequencyPercent <= 0.0 -> false
+            shaping.settings.terraceFrequencyPercent >= 100.0 -> true
+            else -> terraceMask > terraceMaskThreshold
+        }
+        val terraceActive = terraceSelected && effectiveSteepT < TERRACE_STEEP_CUTOFF
 
         val terraceStep = shaping.settings.terraceStep
         val rawQuantized = floor(terrainCoarse / terraceStep) * terraceStep
         val coarseQuantized = rawQuantized.coerceAtLeast(shaping.abyssalHardLimit.toDouble())
-        val finalTerrainBase = if (terraceActive) coarseQuantized + terrainFine else terrainBase
-
-        val trenchT = trenchFactor(shaping, mods)
-        val trenchDepthAmp = shaping.settings.trenchDepthAmp
-        val trenchBudget = (finalTerrainBase - shaping.abyssalHardLimit).coerceAtLeast(0.0)
-        val trenchVar = if (trenchDepthAmp > 0.0) {
-            -trenchT * trenchT * trenchDepthAmp * effectiveSteepT *
-                (trenchBudget / trenchDepthAmp).coerceIn(0.0, 1.0)
+        val finalTerrainBase = if (terraceActive) {
+            val terracedTerrain = coarseQuantized + terrainFine
+            terrainBase + (terracedTerrain - terrainBase) * mushroomProxT
         } else {
-            0.0
+            terrainBase
         }
 
-        val finalY = finalTerrainBase + trenchVar
-
-        val softClamped = softClampAbyssalFloor(finalY, shaping.abyssalHardLimit)
+        val softClamped = softClampAbyssalFloor(finalTerrainBase, shaping.abyssalHardLimit)
         val clampProx = ((shaping.abyssalHardLimit + FLOOR_CLAMP_FADE - softClamped) / FLOOR_CLAMP_FADE).coerceIn(0.0, 1.0)
 
         val bumpBase = abs(shaping.detailNoise.getValue(mods.warpX * FLOOR_CLAMP_BUMP_SCALE, 9900.0, mods.warpZ * FLOOR_CLAMP_BUMP_SCALE)) * FLOOR_CLAMP_BUMP_AMP
@@ -427,14 +428,25 @@ object AbyssalFloorShaper {
         val bumpFine = abs(shaping.detailNoise.getValue(mods.warpX * FLOOR_CLAMP_FINE_SCALE, 9960.0, mods.warpZ * FLOOR_CLAMP_FINE_SCALE)) * FLOOR_CLAMP_FINE_AMP
 
         val floorBump = (bumpBase + bumpMid + bumpFine) * clampProx
+        val guardedFloor = softClamped + floorBump
 
-        return (softClamped + floorBump).toInt()
-            .coerceAtLeast(shaping.abyssalHardLimit)
+        val trenchT = trenchFactor(shaping, mods)
+        val trenchStrength = trenchT.pow(shaping.settings.trenchWallSteepness) * effectiveSteepT
+        val finalY = guardedFloor +
+            (shaping.settings.bedrockFloorY - guardedFloor) * trenchStrength
+
+        return finalY.toInt()
+            .coerceAtLeast(shaping.settings.bedrockFloorY)
             .coerceAtMost(shaping.maxFloorY)
     }
 
     private fun trenchFactor(shaping: AbyssalShapingContext, mods: ColumnMods): Double {
-        val raw = 1.0 - abs(shaping.wallNoise.getValue(mods.warpX * TRENCH_SCALE, 500.0, mods.warpZ * TRENCH_SCALE))
+        if (shaping.settings.trenchFrequencyPercent <= 0.0) return 0.0
+
+        val distance = abs(shaping.wallNoise.getValue(mods.warpX * TRENCH_SCALE, 500.0, mods.warpZ * TRENCH_SCALE))
+        if (shaping.settings.trenchFrequencyPercent >= 100.0) return 1.0 / (1.0 + distance)
+
+        val raw = 1.0 - distance
         val trenchThreshold = shaping.settings.trenchThreshold
         return ((raw - trenchThreshold) / (1.0 - trenchThreshold)).coerceIn(0.0, 1.0)
     }

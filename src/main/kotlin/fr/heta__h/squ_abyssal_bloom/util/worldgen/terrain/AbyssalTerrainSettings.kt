@@ -14,6 +14,7 @@ data class AbyssalTerrainSettings(
     val continentalFull: Double,
     val seaLevel: Int,
     val hardLimit: Int,
+    val bedrockFloorY: Int,
     val maxFloorY: Int,
     val shallowFloorY: Int,
     val deepFloorY: Int,
@@ -28,12 +29,15 @@ data class AbyssalTerrainSettings(
     val microAmp: Double,
     val weirdnessAmp: Double,
     val faultThreshold: Double,
+    val faultFrequencyPercent: Double,
     val faultBlend: Double,
     val faultOffsetAmp: Double,
     val trenchThreshold: Double,
-    val trenchDepthAmp: Double,
+    val trenchFrequencyPercent: Double,
+    val trenchWallSteepness: Double,
     val terraceStep: Double,
-    val terraceMaskThreshold: Double
+    val terraceMaskThreshold: Double,
+    val terraceFrequencyPercent: Double
 ) {
     companion object {
         const val MIN_BOUNDARY_GAP = 0.05
@@ -62,6 +66,10 @@ data class AbyssalTerrainSettings(
             val abyssalFloorY = ModServerConfig.TARGET_FLOOR_Y.get()
                 .coerceIn(hardLimit, max(hardLimit, deepFloorY - 1))
 
+            val faultFrequencyPercent = ModServerConfig.FAULT_FREQUENCY_PERCENT.get().coerceIn(0.0, 100.0)
+            val trenchFrequencyPercent = ModServerConfig.TRENCH_FREQUENCY_PERCENT.get().coerceIn(0.0, 100.0)
+            val terraceFrequencyPercent = ModServerConfig.TERRACE_FREQUENCY_PERCENT.get().coerceIn(0.0, 100.0)
+
             return AbyssalTerrainSettings(
                 shallowDeepEdge = shallowDeepEdge,
                 deepAbyssalEdge = deepAbyssalEdge,
@@ -69,6 +77,7 @@ data class AbyssalTerrainSettings(
                 continentalFull = continentalFull,
                 seaLevel = seaLevel,
                 hardLimit = hardLimit,
+                bedrockFloorY = minY,
                 maxFloorY = maxFloorY,
                 shallowFloorY = shallowFloorY,
                 deepFloorY = deepFloorY,
@@ -82,19 +91,16 @@ data class AbyssalTerrainSettings(
                 detailAmp = ModServerConfig.DETAIL_AMP.get(),
                 microAmp = ModServerConfig.MICRO_AMP.get(),
                 weirdnessAmp = ModServerConfig.WEIRDNESS_AMP.get(),
-                faultThreshold = NoiseThresholdCalibration.faultThresholdForPercent(
-                    ModServerConfig.FAULT_FREQUENCY_PERCENT.get()
-                ),
+                faultThreshold = NoiseThresholdCalibration.faultThresholdForPercent(faultFrequencyPercent),
+                faultFrequencyPercent = faultFrequencyPercent,
                 faultBlend = ModServerConfig.FAULT_BLEND.get().coerceAtLeast(NUMERIC_EPSILON),
                 faultOffsetAmp = ModServerConfig.FAULT_OFFSET_AMP.get(),
-                trenchThreshold = NoiseThresholdCalibration.trenchThresholdForPercent(
-                    ModServerConfig.TRENCH_FREQUENCY_PERCENT.get()
-                ).coerceIn(0.0, 1.0 - NUMERIC_EPSILON),
-                trenchDepthAmp = ModServerConfig.TRENCH_DEPTH_AMP.get().coerceAtLeast(0.0),
+                trenchThreshold = NoiseThresholdCalibration.trenchThresholdForPercent(trenchFrequencyPercent),
+                trenchFrequencyPercent = trenchFrequencyPercent,
+                trenchWallSteepness = ModServerConfig.TRENCH_WALL_STEEPNESS.get().coerceIn(0.5, 6.0),
                 terraceStep = ModServerConfig.TERRACE_STEP.get().coerceAtLeast(NUMERIC_EPSILON),
-                terraceMaskThreshold = NoiseThresholdCalibration.terraceThresholdForPercent(
-                    ModServerConfig.TERRACE_FREQUENCY_PERCENT.get()
-                )
+                terraceMaskThreshold = NoiseThresholdCalibration.terraceThresholdForPercent(terraceFrequencyPercent),
+                terraceFrequencyPercent = terraceFrequencyPercent
             )
         }
     }

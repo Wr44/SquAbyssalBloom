@@ -424,8 +424,8 @@
   "config.squ_abyssal_bloom.group.trenches.desc": "Deep cuts in the abyssal floor, trenches are the lowest points in the ocean",
   "config.squ_abyssal_bloom.trenchFrequencyPercent": "Trench Frequency",
   "config.squ_abyssal_bloom.trenchFrequencyPercent.desc": "Percentage of the abyssal floor that can carve into trenches",
-  "config.squ_abyssal_bloom.trenchDepthAmp": "Max Depth",
-  "config.squ_abyssal_bloom.trenchDepthAmp.desc": "Max depth a trench can reach below the surrounding abyssal floor",
+  "config.squ_abyssal_bloom.trenchWallSteepness": "Wall Steepness",
+  "config.squ_abyssal_bloom.trenchWallSteepness.desc": "Controls the wall profile of trenches that descend to bedrock. Higher values create narrower and steeper fissures",
 
   "config.squ_abyssal_bloom.group.terraces": "Terraces",
   "config.squ_abyssal_bloom.group.terraces.desc": "Stair-like ledges cut into abyssal slopes. They only show up in certain areas and give cliffs a layered, geological look",

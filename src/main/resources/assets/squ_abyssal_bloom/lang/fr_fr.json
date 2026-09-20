@@ -424,8 +424,8 @@
   "config.squ_abyssal_bloom.group.trenches.desc": "Entailles profondes dans le sol abyssal, les tranchées sont les points les plus bas de l'océan",
   "config.squ_abyssal_bloom.trenchFrequencyPercent": "Fréquence des tranchées",
   "config.squ_abyssal_bloom.trenchFrequencyPercent.desc": "Pourcentage du fond abyssal pouvant se creuser en tranchées",
-  "config.squ_abyssal_bloom.trenchDepthAmp": "Profondeur maximale",
-  "config.squ_abyssal_bloom.trenchDepthAmp.desc": "Profondeur maximale qu'une tranchée peut atteindre sous le sol abyssal environnant",
+  "config.squ_abyssal_bloom.trenchWallSteepness": "Raideur des parois",
+  "config.squ_abyssal_bloom.trenchWallSteepness.desc": "Contrôle la forme des parois des tranchées qui descendent jusqu'à la bedrock. Une valeur élevée produit des fissures plus étroites et plus abruptes",
 
   "config.squ_abyssal_bloom.group.terraces": "Terrasses",
   "config.squ_abyssal_bloom.group.terraces.desc": "Rebords en escalier taillés dans les pentes abyssales. ils n'apparaissent que dans certaines zones et donnent aux falaises un aspect géologique stratifié",

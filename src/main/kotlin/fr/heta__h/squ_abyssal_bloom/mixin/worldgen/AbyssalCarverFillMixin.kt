@@ -49,7 +49,7 @@ abstract class AbyssalCarverFillMixin {
                     val worldZ = chunk.pos.minBlockZ + localZ
                     val crustBottom = floorY - 4
 
-                    for (y in crustBottom..floorY) {
+                    for (y in maxOf(chunk.minY, crustBottom)..floorY) {
                         mutable.set(worldX, y, worldZ)
                         val state = chunk.getBlockState(mutable)
                         if (state.`is`(Blocks.WATER) || state.`is`(Blocks.LAVA)) {
